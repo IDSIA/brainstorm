@@ -17,6 +17,15 @@ def test_constructor():
     assert repr(cl) == "<ConstructionLayer: Foo>"
 
 
+def test_raises_on_invalid_layer_type():
+    with pytest.raises(InvalidArchitectureError):
+        i = ConstructionLayer('not valid!')
+
+
+def test_raises_on_invalid_layer_name():
+    with pytest.raises(InvalidArchitectureError):
+        i = ConstructionLayer('layertype', name='also invalid.')
+
 def test_connecting_two_layers_sets_sinks_and_sources(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> l2 >> l3

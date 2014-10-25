@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from six import string_types
-from brainstorm.construction import PYTHON_IDENTIFIER
+from brainstorm.utils import PYTHON_IDENTIFIER
 
 
 def get_layer_description(layer):

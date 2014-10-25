@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-import re
 from brainstorm.uniquely_named import UniquelyNamed
-
-
-PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
+from brainstorm.utils import is_valid_python_identifier
 
 
 class InvalidArchitectureError(Exception):
@@ -28,11 +25,12 @@ class ConstructionLayer(UniquelyNamed):
     """
 
     def __init__(self, layer_type, size=None, name=None, **kwargs):
-        assert PYTHON_IDENTIFIER.match(layer_type), \
-            "Invalid layer_type: '{}'".format(layer_type)
-
-        assert name is None or PYTHON_IDENTIFIER.match(name), \
-            "Invalid layer name: '{}'".format(name)
+        if not is_valid_python_identifier(layer_type):
+            raise InvalidArchitectureError(
+                "Invalid layer_type: '{}'".format(layer_type))
+        if not (name is None or is_valid_python_identifier(name)):
+            raise InvalidArchitectureError(
+                "Invalid name for layer: '{}'".format(name))
 
         super(ConstructionLayer, self).__init__(name or layer_type)
         self.layer_type = layer_type
@@ -113,6 +111,12 @@ class ConstructionInjector(UniquelyNamed):
     """
 
     def __init__(self, injector_type, target_from=None, name=None, **kwargs):
+        if not is_valid_python_identifier(injector_type):
+            raise InvalidArchitectureError(
+                "Invalid layer_type: '{}'".format(injector_type))
+        if not (name is None or is_valid_python_identifier(name)):
+            raise InvalidArchitectureError(
+                "Invalid name for layer: '{}'".format(name))
         super(ConstructionInjector, self).__init__(name or injector_type)
         self.injector_type = injector_type
         self.target_from = target_from

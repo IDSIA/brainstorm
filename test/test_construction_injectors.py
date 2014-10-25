@@ -15,6 +15,16 @@ def test_constructor():
     assert repr(i) == "<ConstructionInjector: somename>"
 
 
+def test_raises_on_invalid_injector_type():
+    with pytest.raises(InvalidArchitectureError):
+        i = ConstructionInjector('not valid!')
+
+
+def test_raises_on_invalid_layer_name():
+    with pytest.raises(InvalidArchitectureError):
+        i = ConstructionInjector('layertype', name='also invalid.')
+
+
 def test_connect_injector_to_layer():
     l1 = ConstructionLayer('Foo')
     l2 = ConstructionLayer('Foo')
