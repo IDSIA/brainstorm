@@ -36,6 +36,7 @@ setup(
     include_package_data=True,
     install_requires=[
     ],
+    requires=['six'],
     license='MIT',
     zip_safe=False,
     keywords='brainstorm',
@@ -45,7 +46,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
