@@ -113,7 +113,7 @@ class ConstructionInjector(UniquelyNamed):
     """
 
     def __init__(self, injector_type, target_from=None, name=None, **kwargs):
-        super().__init__(name or injector_type)
+        super(ConstructionInjector, self).__init__(name or injector_type)
         self.injector_type = injector_type
         self.target_from = target_from
         self.output_from = None
