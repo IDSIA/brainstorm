@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import re
-from .uniquely_named import UniquelyNamed
+from brainstorm.uniquely_named import UniquelyNamed
 
 
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
@@ -41,6 +41,7 @@ class ConstructionLayer(UniquelyNamed):
         self.sink_layers = []
         self.traversing = False
         self.layer_kwargs = kwargs
+        self.injectors = []
 
     @property
     def size(self):
@@ -88,6 +89,8 @@ class ConstructionLayer(UniquelyNamed):
         list(self.traverse_sink_layer_tree())  # raises if cycles are found
 
     def __rshift__(self, other):
+        if not isinstance(other, ConstructionLayer):
+            return NotImplemented
         self.sink_layers.append(other)
         other.source_layers.append(self)
         self.assert_no_cycles()
@@ -96,3 +99,44 @@ class ConstructionLayer(UniquelyNamed):
 
     def __repr__(self):
         return "<ConstructionLayer: {}>".format(self.name)
+
+
+class ConstructionInjector(UniquelyNamed):
+    """
+    Used to realize the python interface for setting up injectors.
+
+    It is implementing the shift operations (>> and <<) for wiring up with
+    layers and storing them in targets_from or outputs_from resp..
+
+    It also keeps track of injector_type, name, and kwargs for later
+    instantiation of the actual injector object.
+    """
+
+    def __init__(self, injector_type, target_from=None, name=None, **kwargs):
+        super().__init__(name or injector_type)
+        self.injector_type = injector_type
+        self.target_from = target_from
+        self.output_from = None
+        self.injector_kwargs = kwargs
+
+    def __rlshift__(self, other):
+        if not isinstance(other, ConstructionLayer):
+            return NotImplemented
+        if not (self.output_from is None or self.output_from is other):
+            raise InvalidArchitectureError(
+                "Is already connected to layer: '%s'" % self.output_from)
+        self.output_from = other
+        other.injectors.append(self)
+        return self
+
+    def __rrshift__(self, other):
+        if not isinstance(other, ConstructionLayer):
+            return NotImplemented
+        if not (self.target_from is None or self.target_from is other):
+            raise InvalidArchitectureError(
+                "Is already receiving targets from: '%s'" % self.target_from)
+        self.target_from = other
+        return self
+
+    def __repr__(self):
+        return "<ConstructionInjector: {}>".format(self.name)
