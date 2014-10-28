@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from six import string_types
-from brainstorm.construction import PYTHON_IDENTIFIER
+from brainstorm.utils import PYTHON_IDENTIFIER, InvalidArchitectureError
 
 
 def get_layer_description(layer):
@@ -24,44 +24,47 @@ def generate_architecture(some_layer):
 
 
 def validate_architecture(architecture):
-    # schema
-    for name, layer in architecture.items():
-        assert isinstance(name, string_types)
-        assert 'size' in layer and isinstance(layer['size'], int)
-        assert '@type' in layer and isinstance(layer['@type'], string_types)
-        assert 'sink_layers' in layer and isinstance(layer['sink_layers'], set)
+    try:
+        # schema
+        for name, layer in architecture.items():
+            assert isinstance(name, string_types)
+            assert 'size' in layer and isinstance(layer['size'], int)
+            assert '@type' in layer and isinstance(layer['@type'], string_types)
+            assert 'sink_layers' in layer and isinstance(layer['sink_layers'], set)
 
-    # no layer is called 'default'
-    assert 'default' not in architecture, "'default' is an invalid layer name"
+        # no layer is called 'default'
+        assert 'default' not in architecture, "'default' is an invalid layer name"
 
-    # layer naming
-    for name in architecture:
-        assert PYTHON_IDENTIFIER.match(name), \
-            "Invalid layer name: '{}'".format(name)
+        # layer naming
+        for name in architecture:
+            assert PYTHON_IDENTIFIER.match(name), \
+                "Invalid layer name: '{}'".format(name)
 
-    # all sink_layers are present
-    for layer in architecture.values():
-        for sink_name in layer['sink_layers']:
-            assert sink_name in architecture, \
-                "Could not find sink layer '{}'".format(sink_name)
+        # all sink_layers are present
+        for layer in architecture.values():
+            for sink_name in layer['sink_layers']:
+                assert sink_name in architecture, \
+                    "Could not find sink layer '{}'".format(sink_name)
 
-    # has InputLayer
-    assert 'InputLayer' in architecture
-    assert architecture['InputLayer']['@type'] == 'InputLayer'
+        # has InputLayer
+        assert 'InputLayer' in architecture
+        assert architecture['InputLayer']['@type'] == 'InputLayer'
 
-    # has only one InputLayer
-    inputs_by_type = [l for l in architecture.values()
-                      if l['@type'] == 'InputLayer']
-    assert len(inputs_by_type) == 1
+        # has only one InputLayer
+        inputs_by_type = [l for l in architecture.values()
+                          if l['@type'] == 'InputLayer']
+        assert len(inputs_by_type) == 1
 
-    # no sources for InputLayer
-    input_sources = [l for l in architecture.values()
-                     if 'InputLayer' in l['sink_layers']]
-    assert len(input_sources) == 0
+        # no sources for InputLayer
+        input_sources = [l for l in architecture.values()
+                         if 'InputLayer' in l['sink_layers']]
+        assert len(input_sources) == 0
 
-    # only 1 output
-    outputs = [l for l in architecture.values() if not l['sink_layers']]
-    assert len(outputs) == 1
+        # only 1 output
+        outputs = [l for l in architecture.values() if not l['sink_layers']]
+        assert len(outputs) == 1
+    except AssertionError as e:
+        raise InvalidArchitectureError(e)
 
     # TODO: check if connected
     # TODO: check for cycles
