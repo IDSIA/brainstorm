@@ -96,24 +96,38 @@ def get_canonical_layer_order(architecture):
     return list(reversed(layer_order))
 
 
-def instantiate_layers_from_architecture(architecture):
+def get_extended_architecture(architecture):
     validate_architecture(architecture)
+    extended_architecture = OrderedDict()
+    layer_order = get_canonical_layer_order(architecture)
+    for name in layer_order:
+        layer = architecture[name]
+        kwarg_ignore = {'@type', 'size', 'sink_layers', 'source_layers',
+                        'kwargs'}
+        kwargs = {k: copy(v) for k, v in layer.items()
+                  if k not in kwarg_ignore}
+        extended_architecture[name] = {
+            '@type': layer['@type'],
+            'size': layer.get('size'),
+            'sink_layers': copy(layer['sink_layers']),
+            'kwargs': kwargs,
+            'source_layers': []
+        }
+
+    for n, l in extended_architecture.items():
+        for target_name in l['sink_layers']:
+            extended_architecture[target_name]['source_layers'].append(n)
+    return extended_architecture
+
+
+def instantiate_layers_from_architecture(architecture):
+    extended_architecture = get_extended_architecture(architecture)
     layers = OrderedDict()
-    for layer_name in get_canonical_layer_order(architecture):
-        layer = architecture[layer_name]
+    for layer_name, layer in extended_architecture.items():
         LayerClass = get_layer_class_from_typename(layer['@type'])
 
-        size = layer['size'] if 'size' in layer else None
-
-        source_layers = [n for n, l in architecture.items()
-                         if layer_name in l['sink_layers']]
-
         in_size = sum(layers[l_name].out_size
-                      for l_name in source_layers)
+                      for l_name in layer['source_layers'])
 
-        kwargs = {k: copy(v) for k, v in layer.items()
-                  if k not in ['@type', 'size', 'sink_layers']}
-
-        layers[layer_name] = LayerClass(size, in_size, kwargs)
-
+        layers[layer_name] = LayerClass(layer['size'], in_size, layer['kwargs'])
     return layers

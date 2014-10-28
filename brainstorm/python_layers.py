@@ -13,15 +13,18 @@ class LayerBase(object):
         self.in_size = in_size
         self.validate_kwargs(kwargs)
         self.kwargs = kwargs
-        self.out_size = self.get_output_size(size, in_size, kwargs)
+        self.out_size = self._get_output_size(size, in_size, kwargs)
 
     @classmethod
     def validate_kwargs(cls, kwargs):
         assert not kwargs, "Unexpected kwargs: {}".format(list(kwargs.keys()))
 
     @classmethod
-    def get_output_size(cls, size, in_size, kwargs):
+    def _get_output_size(cls, size, in_size, kwargs):
         return size if size is not None else in_size
+
+    def get_parameter_size(self):
+        return 0
 
 
 class InputLayer(LayerBase):
@@ -40,6 +43,11 @@ class NoOpLayer(LayerBase):
     def __init__(self, size, in_size, kwargs):
         super().__init__(size, in_size, kwargs)
         assert size == in_size, "For NoOpLayer in and out size must be equal"
+
+
+class FeedForwardLayer(LayerBase):
+    def get_parameter_size(self):
+        return self.in_size * self.out_size + self.out_size
 
 
 def get_layer_class_from_typename(typename):

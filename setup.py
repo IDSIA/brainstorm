@@ -34,9 +34,8 @@ setup(
     ],
     package_dir={'brainstorm': 'brainstorm'},
     include_package_data=True,
-    install_requires=[
-    ],
-    requires=['six'],
+    install_requires=[],
+    requires=['six', 'numpy'],
     license='MIT',
     zip_safe=False,
     keywords='brainstorm',
