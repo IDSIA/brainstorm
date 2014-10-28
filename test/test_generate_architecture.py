@@ -2,7 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.construction import ConstructionLayer
-from brainstorm.architecture import generate_architecture, get_layer_description
+from brainstorm.architecture import generate_architecture, get_layer_description, \
+    get_canonical_layer_order
 
 
 def test_get_layer_description():
@@ -66,3 +67,34 @@ def test_generate_architecture():
             'sink_layers': set()
         }
     }
+
+
+def test_get_canonical_architecture_order():
+    arch = {
+        'A': {
+            '@type': 'InputLayer',
+            'size': 10,
+            'sink_layers': {'B1', 'C'}
+        },
+        'B1': {
+            '@type': 'layertype',
+            'size': 20,
+            'sink_layers': {'B2'}
+        },
+        'B2': {
+            '@type': 'layertype',
+            'size': 20,
+            'sink_layers': {'D'}
+        },
+        'C': {
+            '@type': 'layertype',
+            'size': 30,
+            'sink_layers': {'D'}
+        },
+        'D': {
+            '@type': 'layertype',
+            'size': 40,
+            'sink_layers': set()
+        }
+    }
+    assert get_canonical_layer_order(arch) == ['A', 'B1', 'B2', 'C', 'D']

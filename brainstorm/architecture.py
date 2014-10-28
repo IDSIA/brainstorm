@@ -65,3 +65,29 @@ def validate_architecture(architecture):
 
     # TODO: check if connected
     # TODO: check for cycles
+
+
+def get_canonical_layer_order(architecture):
+    """
+    Takes a dictionary representation of an architecture and sorts it
+    by (topological depth, name) and returns this canonical layer order as a
+    list of names.
+    """
+    layer_order = []
+    already_ordered_layers = set()
+    while True:
+        remaining_layers = [l for l in architecture.keys()
+                            if not l in already_ordered_layers]
+        new_layers = [
+            n for n in remaining_layers
+            if set(architecture[n]['sink_layers']) <= already_ordered_layers]
+
+        if not new_layers:
+            break
+        layer_order += sorted(new_layers, reverse=True)
+        already_ordered_layers = set(layer_order)
+
+    remaining_layers = set(architecture.keys()) - already_ordered_layers
+
+    assert not remaining_layers, "couldn't reach %s" % remaining_layers
+    return list(reversed(layer_order))
