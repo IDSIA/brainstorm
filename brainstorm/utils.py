@@ -14,3 +14,18 @@ class InvalidArchitectureError(Exception):
     (E.g. circle)
     """
     pass
+
+
+def get_inheritors(cls):
+    """
+    Get a set of all classes that inherit from the given class.
+    """
+    subclasses = set()
+    work = [cls]
+    while work:
+        parent = work.pop()
+        for child in parent.__subclasses__():
+            if child not in subclasses:
+                subclasses.add(child)
+                work.append(child)
+    return subclasses

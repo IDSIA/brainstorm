@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
+from copy import copy
 from six import string_types
 from brainstorm.utils import PYTHON_IDENTIFIER, InvalidArchitectureError
+from brainstorm.python_layers import get_layer_class_from_typename
 
 
 def get_layer_description(layer):
@@ -19,7 +22,6 @@ def get_layer_description(layer):
 def generate_architecture(some_layer):
     layers = some_layer.collect_connected_layers()
     arch = {layer.name: get_layer_description(layer) for layer in layers}
-    validate_architecture(arch)
     return arch
 
 
@@ -28,7 +30,6 @@ def validate_architecture(architecture):
         # schema
         for name, layer in architecture.items():
             assert isinstance(name, string_types)
-            assert 'size' in layer and isinstance(layer['size'], int)
             assert '@type' in layer and isinstance(layer['@type'], string_types)
             assert 'sink_layers' in layer and isinstance(layer['sink_layers'], set)
 
@@ -63,11 +64,10 @@ def validate_architecture(architecture):
         # only 1 output
         outputs = [l for l in architecture.values() if not l['sink_layers']]
         assert len(outputs) == 1
+        # TODO: check if connected
+        # TODO: check for cycles
     except AssertionError as e:
         raise InvalidArchitectureError(e)
-
-    # TODO: check if connected
-    # TODO: check for cycles
 
 
 def get_canonical_layer_order(architecture):
@@ -94,3 +94,26 @@ def get_canonical_layer_order(architecture):
 
     assert not remaining_layers, "couldn't reach %s" % remaining_layers
     return list(reversed(layer_order))
+
+
+def instantiate_layers_from_architecture(architecture):
+    validate_architecture(architecture)
+    layers = OrderedDict()
+    for layer_name in get_canonical_layer_order(architecture):
+        layer = architecture[layer_name]
+        LayerClass = get_layer_class_from_typename(layer['@type'])
+
+        size = layer['size'] if 'size' in layer else None
+
+        source_layers = [n for n, l in architecture.items()
+                         if layer_name in l['sink_layers']]
+
+        in_size = sum(layers[l_name].out_size
+                      for l_name in source_layers)
+
+        kwargs = {k: copy(v) for k, v in layer.items()
+                  if k not in ['@type', 'size', 'sink_layers']}
+
+        layers[layer_name] = LayerClass(size, in_size, kwargs)
+
+    return layers
