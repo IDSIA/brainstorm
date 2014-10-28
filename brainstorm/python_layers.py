@@ -32,7 +32,7 @@ class InputLayer(LayerBase):
     Special input layer type.
     """
     def __init__(self, size, in_size, kwargs):
-        super().__init__(size, in_size, kwargs)
+        super(InputLayer, self).__init__(size, in_size, kwargs)
         assert not in_size, "InputLayer cannot have an in_size"
 
 
@@ -41,7 +41,7 @@ class NoOpLayer(LayerBase):
     This layer just copies its input into its output.
     """
     def __init__(self, size, in_size, kwargs):
-        super().__init__(size, in_size, kwargs)
+        super(NoOpLayer, self).__init__(size, in_size, kwargs)
         assert size == in_size, "For NoOpLayer in and out size must be equal"
 
 
