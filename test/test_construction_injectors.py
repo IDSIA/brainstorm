@@ -7,7 +7,8 @@ from brainstorm.construction import (ConstructionInjector, ConstructionLayer,
 
 
 def test_constructor():
-    i = ConstructionInjector('bartype', target_from='from', name='somename', kew='l')
+    i = ConstructionInjector('bartype', target_from='from', name='somename',
+                             kew='l')
     assert i.injector_type == 'bartype'
     assert i.target_from == 'from'
     assert i.name == 'somename'

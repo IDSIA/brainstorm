@@ -2,7 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.uniquely_named import UniquelyNamed
-from brainstorm.utils import InvalidArchitectureError, is_valid_python_identifier
+from brainstorm.utils import (
+    InvalidArchitectureError, is_valid_python_identifier)
 
 
 class ConstructionLayer(UniquelyNamed):

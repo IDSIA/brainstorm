@@ -75,6 +75,3 @@ def test_create_in_out_layout(layers):
     assert list(hub3.source_layout.keys()) == ['D']
     assert list(hub3.sink_layout.keys()) == []
     assert hub3.source_layout['D'] == slice(0, 11)
-
-
-

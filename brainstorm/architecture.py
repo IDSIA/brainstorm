@@ -30,11 +30,14 @@ def validate_architecture(architecture):
         # schema
         for name, layer in architecture.items():
             assert isinstance(name, string_types)
-            assert '@type' in layer and isinstance(layer['@type'], string_types)
-            assert 'sink_layers' in layer and isinstance(layer['sink_layers'], set)
+            assert '@type' in layer and isinstance(layer['@type'],
+                                                   string_types)
+            assert 'sink_layers' in layer and isinstance(layer['sink_layers'],
+                                                         set)
 
         # no layer is called 'default'
-        assert 'default' not in architecture, "'default' is an invalid layer name"
+        assert 'default' not in architecture, \
+            "'default' is an invalid layer name"
 
         # layer naming
         for name in architecture:
@@ -80,7 +83,7 @@ def get_canonical_layer_order(architecture):
     already_ordered_layers = set()
     while True:
         remaining_layers = [l for l in architecture.keys()
-                            if not l in already_ordered_layers]
+                            if l not in already_ordered_layers]
         new_layers = [
             n for n in remaining_layers
             if set(architecture[n]['sink_layers']) <= already_ordered_layers]
@@ -129,5 +132,6 @@ def instantiate_layers_from_architecture(architecture):
         in_size = sum(layers[l_name].out_size
                       for l_name in layer['source_layers'])
 
-        layers[layer_name] = LayerClass(layer['size'], in_size, layer['kwargs'])
+        layers[layer_name] = LayerClass(layer['size'], in_size,
+                                        layer['kwargs'])
     return layers

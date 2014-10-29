@@ -72,7 +72,7 @@ def lay_out_buffer_hub(source_set, sink_set, ext_architecture, layers):
             stop_idx = source_bounds[-1]
 
         sink_layout[n] = slice(start_idx, stop_idx)
-        #assert stop_idx - start_idx == layers[n].in_size
+        # assert stop_idx - start_idx == layers[n].in_size
 
     return InOutLayout(total_size, source_layout, sink_layout)
 
