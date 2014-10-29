@@ -5,6 +5,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import namedtuple, OrderedDict
 import itertools
 import numpy as np
+from brainstorm.utils import InvalidArchitectureError
 
 ParameterLayout = namedtuple('ParameterLayout', ['size', 'layout'])
 
@@ -146,7 +147,8 @@ def permute_rows(connection_table):
             final_permutation = perm
             break
     if final_permutation is None:
-        raise RuntimeError("Impossible")
+        raise InvalidArchitectureError("Failed to lay out buffers. "
+                                       "Please change connectivity.")
 
     return final_permutation
 

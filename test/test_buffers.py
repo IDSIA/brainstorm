@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 from brainstorm.buffers import create_param_layout, create_in_out_layout
 from brainstorm.architecture import instantiate_layers_from_architecture
+from brainstorm.utils import InvalidArchitectureError
 
 
 @pytest.fixture
@@ -36,6 +37,43 @@ def layers():
         }
     }
     return instantiate_layers_from_architecture(arch)
+
+
+@pytest.fixture
+def impossible_layers():
+    arch = {
+        'InputLayer': {
+            '@type': 'InputLayer',
+            'size': 2,
+            'sink_layers': {'A', 'B'}
+        },
+        'A': {
+            '@type': 'FeedForwardLayer',
+            'sink_layers': {'C', 'D'}
+        },
+        'B': {
+            '@type': 'FeedForwardLayer',
+            'sink_layers': {'C', 'E'}
+        },
+        'C': {
+            '@type': 'FeedForwardLayer',
+            'sink_layers': {'D', 'E'}
+        },
+        'D': {
+            '@type': 'FeedForwardLayer',
+            'sink_layers': {'out'}
+        },
+        'E': {
+            '@type': 'FeedForwardLayer',
+            'sink_layers': {'out'}
+        },
+        'out': {
+            '@type': 'FeedForwardLayer',
+            'sink_layers': set()
+        }
+    }
+    return instantiate_layers_from_architecture(arch)
+
 
 
 def test_create_param_layout(layers):
@@ -74,3 +112,8 @@ def test_create_in_out_layout(layers):
     assert list(hub3.source_layout.keys()) == ['D']
     assert list(hub3.sink_layout.keys()) == []
     assert hub3.source_layout['D'] == slice(0, 11)
+
+
+def test_raises_for_impossible_layers(impossible_layers):
+    with pytest.raises(InvalidArchitectureError):
+        hubs = create_in_out_layout(impossible_layers)

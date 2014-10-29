@@ -110,6 +110,7 @@ def get_source_layers(layer_name, architecture):
 
 
 def instantiate_layers_from_architecture(architecture):
+    validate_architecture(architecture)
     layers = OrderedDict()
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
