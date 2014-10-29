@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+from collections import namedtuple
 from brainstorm.utils import get_inheritors
 
 
@@ -28,6 +29,10 @@ class LayerBase(object):
     def get_parameter_size(self):
         return 0
 
+    def create_param_view(self, buffer):
+        assert self.get_parameter_size() == buffer.size
+        return None
+
 
 class InputLayer(LayerBase):
     """
@@ -50,8 +55,17 @@ class NoOpLayer(LayerBase):
 
 
 class FeedForwardLayer(LayerBase):
+    Parameters = namedtuple('FeedForwardLayer_Parameters', ['W', 'b'])
+
     def get_parameter_size(self):
         return self.in_size * self.out_size + self.out_size
+
+    def create_param_view(self, buffer):
+        assert self.get_parameter_size() == buffer.size
+        W_size = self.in_size * self.out_size
+        W = buffer[:W_size].reshape(self.in_size, self.out_size)
+        b = buffer[W_size:]
+        return FeedForwardLayer.Parameters(W, b)
 
 
 def get_layer_class_from_typename(typename):
