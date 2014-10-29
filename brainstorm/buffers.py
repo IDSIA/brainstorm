@@ -5,8 +5,6 @@ from __future__ import division, print_function, unicode_literals
 from collections import namedtuple, OrderedDict
 import itertools
 import numpy as np
-from brainstorm.architecture import get_extended_architecture
-
 
 ParameterLayout = namedtuple('ParameterLayout', ['size', 'layout'])
 
@@ -26,25 +24,23 @@ def create_param_layout(layers):
     return ParameterLayout(total_size, layout)
 
 
-def create_in_out_layout(architecture, layers):
-    ext_architecture = get_extended_architecture(architecture)
-    remaining_sources = list(ext_architecture.keys())
+def create_in_out_layout(layers):
+    remaining_sources = list(layers.keys())
     buffer_hubs = []
     while remaining_sources:
         layer = remaining_sources[0]
-        source_set, sink_set = get_forward_closure(layer, ext_architecture)
+        source_set, sink_set = get_forward_closure(layer, layers)
         for s in source_set:
             remaining_sources.remove(s)
-        buffer_hubs.append(lay_out_buffer_hub(source_set, sink_set,
-                                              ext_architecture, layers))
+        buffer_hubs.append(lay_out_buffer_hub(source_set, sink_set, layers))
 
     return buffer_hubs
 
 
-def lay_out_buffer_hub(source_set, sink_set, ext_architecture, layers):
+def lay_out_buffer_hub(source_set, sink_set, layers):
     # Set up connection table
     source_list, sink_list, connection_table = set_up_connection_table(
-        source_set, sink_set, ext_architecture)
+        source_set, sink_set, layers)
     perm = permute_rows(connection_table)
     source_list = [source_list[i] for i in perm]
     connection_table = np.atleast_2d(connection_table[perm])
@@ -77,7 +73,7 @@ def lay_out_buffer_hub(source_set, sink_set, ext_architecture, layers):
     return InOutLayout(total_size, source_layout, sink_layout)
 
 
-def get_forward_closure(layer_name, architecture):
+def get_forward_closure(layer_name, layers):
     """
     For a given layer return two sets of layer names such that:
       - the given layer is in the source_set
@@ -86,10 +82,9 @@ def get_forward_closure(layer_name, architecture):
 
     :param layer_name: The name of the layer to start the forward closure from.
     :type layer_name: unicode
-    :param architecture: Extended architecture of the network mapping the
-        layer name to the layer description. The description has to be a
-        dictionary containing lists for 'source_layers' and 'sink_layers'.
-    :type architecture: dict
+    :param layers: dictionary of instantiated layers. They should have
+        sink_layers and source_layers fields.
+    :type layers: dict
     :return: A tuple (source_set, sink_set) where source_set is set of
         layer names containing the initial layer and all sources of all layers
         in the sink_set. And sink_set is a set of layer names containing all
@@ -97,14 +92,14 @@ def get_forward_closure(layer_name, architecture):
     :rtype: (set, set)
     """
     source_set = {layer_name}
-    sink_set = set(architecture[layer_name]['sink_layers'])
+    sink_set = set(layers[layer_name].sink_layers)
     growing = True
     while growing:
         growing = False
         new_source_set = {s for l in sink_set
-                          for s in architecture[l]['source_layers']}
+                          for s in layers[l].source_layers}
         new_sink_set = {t for l in source_set
-                        for t in architecture[l]['sink_layers']}
+                        for t in layers[l].sink_layers}
         if len(new_source_set) > len(source_set) or\
                 len(new_sink_set) > len(sink_set):
             growing = True
@@ -113,14 +108,14 @@ def get_forward_closure(layer_name, architecture):
     return source_set, sink_set
 
 
-def set_up_connection_table(sources, sinks, architecture):
+def set_up_connection_table(sources, sinks, layers):
     """
     Given a forward closure and the architecture constructs the
     connection table.
 
     :type sources: set[unicode]
     :type sinks: set[unicode]
-    :type architecture: dict
+    :type layers: dict
     :rtype: (list, list, np.ndarray)
     """
     # turn into sorted lists
@@ -129,7 +124,7 @@ def set_up_connection_table(sources, sinks, architecture):
     # set up connection table
     connection_table = np.zeros((len(source_list), len(sink_list)))
     for i, source in enumerate(source_list):
-        for sink in architecture[source]['sink_layers']:
+        for sink in layers[source].sink_layers:
             connection_table[i, sink_list.index(sink)] = 1
 
     return source_list, sink_list, connection_table

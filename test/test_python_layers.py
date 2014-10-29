@@ -19,20 +19,22 @@ def test_get_layer_class_from_typename_raises_typeerror():
 
 
 def test_layer_constructor():
-    l = LayerBase(5, 8, {})
+    l = LayerBase(5, 8, {'A', 'B'}, {'C'}, {})
     assert l.out_size == 5
     assert l.in_size == 8
+    assert l.source_layers == {'C'}
+    assert l.sink_layers == {'A', 'B'}
     assert l.kwargs == {}
 
 
 def test_NoOp_raises_on_size_mismatch():
     with pytest.raises(AssertionError):
-        l = NoOpLayer(5, 8, {})
+        l = NoOpLayer(5, 8, set(), set(), {})
 
 
 def test_InputLayer_raises_on_in_size():
     with pytest.raises(AssertionError):
-        l = InputLayer(5, 1, {})
+        l = InputLayer(5, 1, set(), set(), {})
 
 
 @pytest.mark.parametrize("LayerClass", [
@@ -40,5 +42,5 @@ def test_InputLayer_raises_on_in_size():
 ])
 def test_raises_on_unexpected_kwargs(LayerClass):
     with pytest.raises(AssertionError) as excinfo:
-        l = LayerClass(0, 0, {'some_foo': 16})
+        l = LayerClass(0, 0, set(), set(), {'some_foo': 16})
     assert 'some_foo' in excinfo.value.msg
