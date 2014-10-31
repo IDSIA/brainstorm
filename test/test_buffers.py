@@ -75,7 +75,6 @@ def impossible_layers():
     return instantiate_layers_from_architecture(arch)
 
 
-
 def test_create_param_layout(layers):
     param_layout = create_param_layout(layers)
     assert param_layout.size == 230

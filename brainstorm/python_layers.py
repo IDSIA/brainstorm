@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
-
 from __future__ import division, print_function, unicode_literals
+import numpy as np
 from collections import namedtuple
 from brainstorm.utils import get_inheritors
 
@@ -57,6 +57,11 @@ class NoOpLayer(LayerBase):
 class FeedForwardLayer(LayerBase):
     Parameters = namedtuple('FeedForwardLayer_Parameters', ['W', 'b'])
 
+    def __init__(self, size, in_size, sink_layers, source_layers, kwargs):
+        super(FeedForwardLayer, self).__init__(size, in_size, sink_layers,
+                                               source_layers, kwargs)
+        self.act_func = lambda x: 1. / (1. + np.exp(-x))
+
     def get_parameter_size(self):
         return self.in_size * self.out_size + self.out_size
 
@@ -66,6 +71,11 @@ class FeedForwardLayer(LayerBase):
         W = buffer[:W_size].reshape(self.in_size, self.out_size)
         b = buffer[W_size:]
         return FeedForwardLayer.Parameters(W, b)
+
+    def forward_pass(self, parameters, input_buffer, output_buffer):
+        W, b = parameters
+        for t in range(input_buffer.shape[0]):
+            output_buffer[t, :] = self.act_func(np.dot(input_buffer[t], W) + b)
 
 
 def get_layer_class_from_typename(typename):
