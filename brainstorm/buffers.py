@@ -1,175 +1,119 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from collections import namedtuple, OrderedDict
-import itertools
 import numpy as np
-from brainstorm.utils import InvalidArchitectureError
-
-ParameterLayout = namedtuple('ParameterLayout', ['size', 'layout'])
-
-InOutLayout = namedtuple('InOutLayout',
-                         ['size', 'source_layout', 'sink_layout'])
+from brainstorm.layout import create_param_layout, create_in_out_layout
 
 
-def create_param_layout(layers):
+class ParameterBuffer(dict):
     """
-    Determine the total size and the layout for the parameter buffer.
-    The layout is a dictionary mapping the layer names to slice objects.
+    Handles the parameters of the network.
+    The buffer is allocated at initialization, and the views for all the
+    layers are created.
     """
-    bounds = np.cumsum([0] + [l.get_parameter_size() for l in layers.values()])
-    total_size = bounds[-1]
-    layout = OrderedDict([(name, slice(bounds[i], bounds[i+1]))
-                          for i, name in enumerate(layers)])
-    return ParameterLayout(total_size, layout)
-
-
-def create_in_out_layout(layers):
-    remaining_sources = list(layers.keys())
-    buffer_hubs = []
-    while remaining_sources:
-        layer = remaining_sources[0]
-        source_set, sink_set = get_forward_closure(layer, layers)
-        for s in source_set:
-            remaining_sources.remove(s)
-        buffer_hubs.append(lay_out_buffer_hub(source_set, sink_set, layers))
-
-    return buffer_hubs
-
-
-def lay_out_buffer_hub(source_set, sink_set, layers):
-    # Set up connection table
-    source_list, sink_list, connection_table = set_up_connection_table(
-        source_set, sink_set, layers)
-    perm = permute_rows(connection_table)
-    source_list = [source_list[i] for i in perm]
-    connection_table = np.atleast_2d(connection_table[perm])
-
-    # Source Layout
-    source_bounds = np.cumsum([0] + [layers[n].out_size for n in source_list])
-    total_size = source_bounds[-1]
-    source_layout = OrderedDict([
-        (name, slice(source_bounds[i], source_bounds[i+1]))
-        for i, name in enumerate(source_list)])
-
-    # Sink Layout
-    sink_layout = OrderedDict()
-    for i, n in enumerate(sink_list):
-        connectivity = connection_table[:, i]
-
-        start_idx = -1
-        for j, c in enumerate(connectivity):
-            if start_idx == -1 and c == 1:
-                start_idx = source_bounds[j]
-            if start_idx > -1 and c == 0:
-                stop_idx = source_bounds[j]
-                break
+    def __init__(self, param_layout, layers, memory=None):
+        super(ParameterBuffer, self).__init__()
+        self.size, self.layout = param_layout
+        if memory is None:
+            self.memory = np.zeros(self.size)
         else:
-            stop_idx = source_bounds[-1]
+            assert memory.size == self.size
+            self.memory = memory
 
-        sink_layout[n] = slice(start_idx, stop_idx)
-        # assert stop_idx - start_idx == layers[n].in_size
+        for layer_name in self.layout:
+            view = layers[layer_name].create_param_view(
+                self.get_raw(layer_name))
+            self[layer_name] = view
 
-    return InOutLayout(total_size, source_layout, sink_layout)
+    def get_raw(self, layer_name=None):
+        """
+        Get the part of the memory that corresponds to the given layer, or the
+        the whole buffer if none is specified.
+        """
+        if layer_name is None:
+            return self.memory
+        else:
+            return self.memory.__getitem__(self.layout[layer_name])
 
 
-def get_forward_closure(layer_name, layers):
+class InOutBuffer(dict):
     """
-    For a given layer return two sets of layer names such that:
-      - the given layer is in the source_set
-      - the sink_set contains all the target layers of the source_set
-      - the source_set contains all the source layers of the sink_set
-
-    :param layer_name: The name of the layer to start the forward closure from.
-    :type layer_name: unicode
-    :param layers: dictionary of instantiated layers. They should have
-        sink_layers and source_layers fields.
-    :type layers: dict
-    :return: A tuple (source_set, sink_set) where source_set is set of
-        layer names containing the initial layer and all sources of all layers
-        in the sink_set. And sink_set is a set of layer names containing all
-        the targets for all the layers from the source_set.
-    :rtype: (set, set)
+    Handles input or output buffers. The memory is allocated on demand.
+    There should always be one of this object for the inputs and one for the
+    outputs with corresponding layouts that share the same memory region.
     """
-    source_set = {layer_name}
-    sink_set = set(layers[layer_name].sink_layers)
-    growing = True
-    while growing:
-        growing = False
-        new_source_set = {s for l in sink_set
-                          for s in layers[l].source_layers}
-        new_sink_set = {t for l in source_set
-                        for t in layers[l].sink_layers}
-        if len(new_source_set) > len(source_set) or\
-                len(new_sink_set) > len(sink_set):
-            growing = True
-            source_set = new_source_set
-            sink_set = new_sink_set
-    return source_set, sink_set
+    def __init__(self, hub_sizes, layouts):
+        super(InOutBuffer, self).__init__()
+        self.hub_sizes = hub_sizes
+        self.size = 0
+        self.layouts = layouts
+        self.buffer = None
+        self.shape = None
+
+    def get_size(self, shape):
+        nr_timesteps, nr_sequences = shape[:2]
+        return nr_timesteps * nr_sequences * sum(self.hub_sizes)
+
+    def rearrange_buffer(self, shape, buffer=None):
+        self.size = self.get_size(shape)
+        relocated = self.resize_internal_memory(buffer)
+        self.lay_out(shape, relocated)
+
+    def resize_internal_memory(self, buffer=None):
+        if buffer is not None:
+            assert buffer.size >= self.size
+            self.buffer = buffer
+            return True
+        elif self.buffer is None or self.buffer.size < self.size:
+            self.buffer = np.zeros(self.size)
+            return True
+        return False
+
+    def lay_out(self, shape, relocate=False):
+        if self.shape == shape and not relocate:
+            return
+        self.shape = shape
+        nr_timesteps, nr_sequences = shape[:2]
+        i = 0
+        for hub_feature_size, layout in zip(self.hub_sizes, self.layouts):
+            hub_size = hub_feature_size * nr_timesteps * nr_sequences
+            hub_buffer = self.buffer[i:i+hub_size].reshape((nr_timesteps,
+                                                            nr_sequences,
+                                                            hub_feature_size))
+            i += hub_size
+            for layer_name, feature_slice in layout.items():
+                self[layer_name] = hub_buffer[:, :, feature_slice]
 
 
-def set_up_connection_table(sources, sinks, layers):
-    """
-    Given a forward closure and the architecture constructs the
-    connection table.
+class BufferManager(object):
+    def __init__(self, param_buffer, in_buffer, out_buffer):
+        self.parameters = param_buffer
+        self.inputs = in_buffer
+        self.outputs = out_buffer
+        self.shape = None
 
-    :type sources: set[unicode]
-    :type sinks: set[unicode]
-    :type layers: dict
-    :rtype: (list, list, np.ndarray)
-    """
-    # turn into sorted lists
-    source_list = sorted([l for l in sources])
-    sink_list = sorted([l for l in sinks])
-    # set up connection table
-    connection_table = np.zeros((len(source_list), len(sink_list)))
-    for i, source in enumerate(source_list):
-        for sink in layers[source].sink_layers:
-            connection_table[i, sink_list.index(sink)] = 1
+    def rearrange(self, shape):
+        """
+        Resize the buffers and prepare them.
+        :param shape: Tuple specifying the dimensions. Only the first two are
+            used. They should be (nr_timesteps, nr_sequences).
+        :type shape: tuple[int]
+        """
+        if self.shape == shape:
+            return
+        self.shape = shape[:2]
+        # do nothing to the parameters
+        self.inputs.rearrange_buffer(self.shape)
+        self.outputs.rearrange_buffer(self.shape, self.inputs.buffer)
 
-    return source_list, sink_list, connection_table
+    @classmethod
+    def create_from_layers(cls, layers):
+        param_layout = create_param_layout(layers)
+        param_buffer = ParameterBuffer(param_layout, layers)
 
-
-def permute_rows(connection_table):
-    """
-    Given a list of sources and a connection table, find a permutation of the
-    sources, such that they can be connected to the sinks via a single buffer.
-    @type connection_table: np.ndarray
-    @rtype: list[int]
-    """
-    # systematically try all permutations until one satisfies the condition
-    final_permutation = None
-    for perm in itertools.permutations(range(connection_table.shape[0])):
-        perm = list(perm)
-        ct = np.atleast_2d(connection_table[perm])
-        if can_be_connected_with_single_buffer(ct):
-            final_permutation = perm
-            break
-    if final_permutation is None:
-        raise InvalidArchitectureError("Failed to lay out buffers. "
-                                       "Please change connectivity.")
-
-    return final_permutation
-
-
-def can_be_connected_with_single_buffer(connection_table):
-    """
-    Check for a connection table if it represents a layout that can be realized
-    by a single buffer. This is equivalent to checking if in every column of
-    the table all the ones form a connected block.
-    @type connection_table: np.ndarray
-    @rtype: bool
-    """
-    for i in range(connection_table.shape[1]):
-        region_started = False
-        region_stopped = False
-        for j in range(connection_table.shape[0]):
-            if not region_started and connection_table[j, i]:
-                region_started = True
-            elif region_started and not region_stopped and \
-                    not connection_table[j, i]:
-                region_stopped = True
-            elif region_stopped and connection_table[j, i]:
-                return False
-    return True
+        buffer_hub_layouts = create_in_out_layout(layers)
+        hub_sizes, source_hubs, sink_hubs = zip(*buffer_hub_layouts)
+        out_buffer = InOutBuffer(hub_sizes, source_hubs)
+        in_buffer = InOutBuffer(hub_sizes, sink_hubs)
+        return cls(param_buffer, in_buffer, out_buffer)

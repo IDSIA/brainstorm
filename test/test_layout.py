@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import pytest
-from brainstorm.buffers import create_param_layout, create_in_out_layout
+from brainstorm.layout import create_param_layout, create_in_out_layout
 from brainstorm.architecture import instantiate_layers_from_architecture
 from brainstorm.utils import InvalidArchitectureError
 
