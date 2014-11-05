@@ -4,7 +4,8 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from copy import copy
 from six import string_types
-from brainstorm.utils import PYTHON_IDENTIFIER, InvalidArchitectureError
+from brainstorm.utils import (InvalidArchitectureError,
+                              is_valid_python_identifier)
 from brainstorm.python_layers import get_layer_class_from_typename
 
 
@@ -41,7 +42,7 @@ def validate_architecture(architecture):
 
         # layer naming
         for name in architecture:
-            assert PYTHON_IDENTIFIER.match(name), \
+            assert is_valid_python_identifier(name), \
                 "Invalid layer name: '{}'".format(name)
 
         # all sink_layers are present

@@ -12,18 +12,19 @@ class ParameterBuffer(dict):
     The buffer is allocated at initialization, and the views for all the
     layers are created.
     """
-    def __init__(self, param_layout, layers, memory=None):
+    def __init__(self, param_layout, view_factories, memory=None):
         super(ParameterBuffer, self).__init__()
         self.size, self.layout = param_layout
         if memory is None:
             self.memory = np.zeros(self.size)
         else:
-            assert memory.size == self.size
+            assert memory.size == self.size, \
+                "Given memory is too small {} < {}".format(memory.size,
+                                                           self.size)
             self.memory = memory
 
         for layer_name in self.layout:
-            view = layers[layer_name].create_param_view(
-                self.get_raw(layer_name))
+            view = view_factories[layer_name](self.get_raw(layer_name))
             self[layer_name] = view
 
     def get_raw(self, layer_name=None):
@@ -110,7 +111,8 @@ class BufferManager(object):
     @classmethod
     def create_from_layers(cls, layers):
         param_layout = create_param_layout(layers)
-        param_buffer = ParameterBuffer(param_layout, layers)
+        view_factories = {n: l.create_param_view for n, l in layers.items()}
+        param_buffer = ParameterBuffer(param_layout, view_factories)
 
         buffer_hub_layouts = create_in_out_layout(layers)
         hub_sizes, source_hubs, sink_hubs = zip(*buffer_hub_layouts)
