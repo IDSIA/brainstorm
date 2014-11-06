@@ -18,9 +18,9 @@ class ParameterBuffer(dict):
         if memory is None:
             self.memory = np.zeros(self.size)
         else:
-            assert memory.size == self.size, \
-                "Given memory is too small {} < {}".format(memory.size,
-                                                           self.size)
+            assert len(memory) == self.size, \
+                "Given memory is wrong size: {} != {}".format(len(memory),
+                                                              self.size)
             self.memory = memory
 
         for layer_name in self.layout:
@@ -63,19 +63,21 @@ class InOutBuffer(dict):
 
     def _resize_internal_memory(self, memory=None):
         if memory is not None:
-            assert memory.size >= self.size
+            assert len(memory) >= self.size, \
+                "Given memory is too small: {} < {}".format(len(memory),
+                                                            self.size)
             self.memory = memory
             return True
-        elif self.memory is None or self.memory.size < self.size:
+        elif self.memory is None or len(self.memory) < self.size:
             self.memory = np.zeros(self.size)
             return True
         return False
 
     def _lay_out(self, shape, relocate=False):
-        if self.shape == shape and not relocate:
+        if self.shape == shape[:2] and not relocate:
             return
-        self.shape = shape
-        nr_timesteps, nr_sequences = shape[:2]
+        self.shape = shape[:2]
+        nr_timesteps, nr_sequences = self.shape
         i = 0
         for hub_feature_size, layout in zip(self.hub_sizes, self.layouts):
             hub_size = hub_feature_size * nr_timesteps * nr_sequences

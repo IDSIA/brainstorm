@@ -4,9 +4,27 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import numpy as np
 import pytest
-from brainstorm.buffers import ParameterBuffer
+from brainstorm.buffers import ParameterBuffer, InOutBuffer
 from brainstorm.layout import ParameterLayout
-from mock import MagicMock, call
+from mock import Mock, MagicMock, call
+
+
+# ###################### Memory Mock ######################################
+
+def get_item_mock(item):
+    return memory_mock()
+
+
+def reshape_mock(*args):
+    return memory_mock(*args)
+
+
+def memory_mock(*shape):
+    mem = MagicMock(spec=['__getitem__', '__len__', 'reshape'], shape=shape)
+    mem.__len__.return_value = shape[0] if shape else 0
+    mem.__getitem__ = Mock(wraps=get_item_mock)
+    mem.reshape = Mock(wraps=reshape_mock)
+    return mem
 
 
 # ###################### ParameterBuffer ######################################
@@ -51,7 +69,7 @@ def test_parameter_buffer_uses_passed_memory(param_layout, view_factories):
 
 
 def test_parameter_buffer_memory_interface(param_layout, view_factories):
-    mem = MagicMock(spec=['__getitem__'], size=param_layout.size)
+    mem = memory_mock(param_layout.size)
     ParameterBuffer(param_layout, view_factories, mem)
     calls = [call(slice(0, 5)), call(slice(5, 12)), call(slice(12, 23))]
     mem.__getitem__.assert_has_calls(calls, any_order=True)
@@ -87,4 +105,121 @@ def test_parameter_buffer_get_raw_for_layer(param_layout, view_factories):
     assert pb.get_raw('B').base is mem
     assert pb.get_raw('C').base is mem
 
+
 # ###################### InOutBuffer #######################################
+
+@pytest.fixture
+def inoutlayout():
+    hub_sizes = [3, 12, 11]
+    layout1 = OrderedDict([('A', slice(0, 3))])
+    layout2 = OrderedDict([('B', slice(0, 5)), ('C', slice(5, 12))])
+    layout3 = OrderedDict([('D', slice(0, 11))])
+    source_layouts = [layout1, layout2, layout3]
+    layout4 = OrderedDict([('B', slice(0, 3)), ('C', slice(0, 3))])
+    layout5 = OrderedDict([('D', slice(0, 12))])
+    layout6 = OrderedDict([])
+    sink_layouts = [layout4, layout5, layout6]
+    return hub_sizes, source_layouts, sink_layouts
+
+
+def test_inoutbuffer_initializes_empty(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    assert iob.size == 0
+    assert iob.memory is None
+    assert iob.shape is None
+    assert not iob.keys()
+    assert not iob.values()
+    assert not iob.items()
+
+
+def test_inoutbuffer_rearrange_default(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    iob.rearrange_buffer((1, 1))
+
+    assert iob.size == sum(hub_sizes)
+    assert isinstance(iob.memory, np.ndarray)
+    assert iob.memory.size == iob.size
+    assert iob.shape == (1, 1)
+
+
+def test_inoutbuffer_rearrage_uses_passed_memory(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    mem = memory_mock(26)
+    iob.rearrange_buffer((1, 1), mem)
+    assert iob.memory is mem
+
+
+def test_inoutbuffer_rearrage_raises_on_unsufficient_memory(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    mem = memory_mock(13)
+    with pytest.raises(AssertionError):
+        iob.rearrange_buffer((1, 1), mem)
+
+
+def test_inoutbuffer_rearrage_does_not_raise_on_too_much_memory(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    mem = memory_mock(100)
+    iob.rearrange_buffer((1, 1), mem)
+
+
+def test_inoutbuffer_rearrage_memory_interface(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    mem = memory_mock(26)
+    iob.rearrange_buffer((1, 1), mem)
+
+    calls = [call(slice(0, 3)), call(slice(3, 15)), call(slice(15, 26))]
+    mem.__getitem__.assert_has_calls(calls, any_order=True)
+
+
+def test_inoutbuffer_rearrange_ignore_high_shape_dims(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    iob.rearrange_buffer((2, 3, 5))
+
+    assert iob.size == 3*2*3 + 12*2*3 + 11*2*3
+    assert isinstance(iob.memory, np.ndarray)
+    assert iob.shape == (2, 3)
+
+
+def test_inoutbuffer_layout(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    iob.rearrange_buffer((2, 3))
+
+    assert set(iob.keys()) == {'A', 'B', 'C', 'D'}
+    assert iob['A'].shape == (2, 3, 3)
+    assert iob['B'].shape == (2, 3, 5)
+    assert iob['C'].shape == (2, 3, 7)
+    assert iob['D'].shape == (2, 3, 11)
+
+
+def test_inoutbuffer_rearrange_is_lazy(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    iob.rearrange_buffer((2, 3))
+    iobA = iob['A']
+    iobB = iob['B']
+    iobC = iob['C']
+    iobD = iob['D']
+    m = iob.memory
+    iob.rearrange_buffer((2, 3))
+    assert iob['A'] is iobA
+    assert iob['B'] is iobB
+    assert iob['C'] is iobC
+    assert iob['D'] is iobD
+    assert iob.memory is m
+
+
+def test_inoutbuffer_rearrange_is_lazy_if_smaller(inoutlayout):
+    hub_sizes, source_layouts, sink_layouts = inoutlayout
+    iob = InOutBuffer(hub_sizes, source_layouts)
+    iob.rearrange_buffer((2, 3))
+    m = iob.memory
+    iob.rearrange_buffer((1, 2))
+    assert iob.memory is m
