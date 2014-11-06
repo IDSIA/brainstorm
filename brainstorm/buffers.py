@@ -52,7 +52,7 @@ class InOutBuffer(dict):
         self.memory = None
         self.shape = None
 
-    def rearrange_buffer(self, shape, memory=None):
+    def rearrange(self, shape, memory=None):
         self.size = self._get_size(shape)
         relocated = self._resize_internal_memory(memory)
         self._lay_out(shape, relocated)
@@ -103,12 +103,12 @@ class BufferManager(object):
             used. They should be (nr_timesteps, nr_sequences).
         :type shape: tuple[int]
         """
-        if self.shape == shape:
+        if self.shape == shape[:2]:
             return
         self.shape = shape[:2]
         # do nothing to the parameters
-        self.inputs.rearrange_buffer(self.shape)
-        self.outputs.rearrange_buffer(self.shape, self.inputs.buffer)
+        self.inputs.rearrange(self.shape)
+        self.outputs.rearrange(self.shape, self.inputs.memory)
 
     @classmethod
     def create_from_layers(cls, layers):

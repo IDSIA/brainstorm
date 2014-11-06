@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import numpy as np
 import pytest
-from brainstorm.buffers import ParameterBuffer, InOutBuffer
+from brainstorm.buffers import ParameterBuffer, InOutBuffer, BufferManager
 from brainstorm.layout import ParameterLayout
 from mock import Mock, MagicMock, call
 
@@ -136,7 +136,7 @@ def test_inoutbuffer_initializes_empty(inoutlayout):
 def test_inoutbuffer_rearrange_default(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange_buffer((1, 1))
+    iob.rearrange((1, 1))
 
     assert iob.size == sum(hub_sizes)
     assert isinstance(iob.memory, np.ndarray)
@@ -148,7 +148,7 @@ def test_inoutbuffer_rearrage_uses_passed_memory(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
     mem = memory_mock(26)
-    iob.rearrange_buffer((1, 1), mem)
+    iob.rearrange((1, 1), mem)
     assert iob.memory is mem
 
 
@@ -157,21 +157,21 @@ def test_inoutbuffer_rearrage_raises_on_unsufficient_memory(inoutlayout):
     iob = InOutBuffer(hub_sizes, source_layouts)
     mem = memory_mock(13)
     with pytest.raises(AssertionError):
-        iob.rearrange_buffer((1, 1), mem)
+        iob.rearrange((1, 1), mem)
 
 
 def test_inoutbuffer_rearrage_does_not_raise_on_too_much_memory(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
     mem = memory_mock(100)
-    iob.rearrange_buffer((1, 1), mem)
+    iob.rearrange((1, 1), mem)
 
 
 def test_inoutbuffer_rearrage_memory_interface(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
     mem = memory_mock(26)
-    iob.rearrange_buffer((1, 1), mem)
+    iob.rearrange((1, 1), mem)
 
     calls = [call(slice(0, 3)), call(slice(3, 15)), call(slice(15, 26))]
     mem.__getitem__.assert_has_calls(calls, any_order=True)
@@ -180,7 +180,7 @@ def test_inoutbuffer_rearrage_memory_interface(inoutlayout):
 def test_inoutbuffer_rearrange_ignore_high_shape_dims(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange_buffer((2, 3, 5))
+    iob.rearrange((2, 3, 5))
 
     assert iob.size == 3*2*3 + 12*2*3 + 11*2*3
     assert isinstance(iob.memory, np.ndarray)
@@ -190,7 +190,7 @@ def test_inoutbuffer_rearrange_ignore_high_shape_dims(inoutlayout):
 def test_inoutbuffer_layout(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange_buffer((2, 3))
+    iob.rearrange((2, 3))
 
     assert set(iob.keys()) == {'A', 'B', 'C', 'D'}
     assert iob['A'].shape == (2, 3, 3)
@@ -202,13 +202,13 @@ def test_inoutbuffer_layout(inoutlayout):
 def test_inoutbuffer_rearrange_is_lazy(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange_buffer((2, 3))
+    iob.rearrange((2, 3))
     iobA = iob['A']
     iobB = iob['B']
     iobC = iob['C']
     iobD = iob['D']
     m = iob.memory
-    iob.rearrange_buffer((2, 3))
+    iob.rearrange((2, 3))
     assert iob['A'] is iobA
     assert iob['B'] is iobB
     assert iob['C'] is iobC
@@ -219,7 +219,47 @@ def test_inoutbuffer_rearrange_is_lazy(inoutlayout):
 def test_inoutbuffer_rearrange_is_lazy_if_smaller(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
     iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange_buffer((2, 3))
+    iob.rearrange((2, 3))
     m = iob.memory
-    iob.rearrange_buffer((1, 2))
+    iob.rearrange((1, 2))
     assert iob.memory is m
+
+
+# ###################### BufferManager #######################################
+
+@pytest.fixture
+def buff_man():
+    pb = Mock()
+    sink_buf = Mock()
+    source_buf = Mock()
+    return BufferManager(pb, sink_buf, source_buf)
+
+
+def test_buffermanager_construction():
+    pb = Mock()
+    sink_buf = Mock()
+    source_buf = Mock()
+    bm = BufferManager(pb, sink_buf, source_buf)
+
+    assert bm.parameters is pb
+    assert bm.inputs is sink_buf
+    assert bm.outputs is source_buf
+
+
+def test_buffermanager_rearranges_in_out_buffers(buff_man):
+    buff_man.rearrange((2, 3, 17))
+    assert not buff_man.parameters.method_calls
+    buff_man.inputs.rearrange.assert_called_once_with((2, 3))
+    buff_man.outputs.rearrange.assert_called_once_with((2, 3),
+                                                       buff_man.inputs.memory)
+
+
+def test_buffermanager_rearranges_lazily(buff_man):
+    buff_man.rearrange((2, 3, 17))
+    buff_man.inputs.rearrange.reset_mock()
+    buff_man.outputs.rearrange.reset_mock()
+    buff_man.rearrange((2, 3, 26))
+    assert not buff_man.inputs.rearrange.called
+    assert not buff_man.outputs.rearrange.called
+
+
