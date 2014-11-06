@@ -2,11 +2,14 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+
 import numpy as np
 import pytest
-from brainstorm.buffers import ParameterBuffer, InOutBuffer, BufferManager
-from brainstorm.layout import ParameterLayout
 from mock import Mock, MagicMock, call
+
+from brainstorm.structure.buffers import (ParameterBuffer, InOutBuffer,
+                                          BufferManager)
+from brainstorm.structure.layout import ParameterLayout
 
 
 # ###################### Memory Mock ######################################
@@ -90,7 +93,6 @@ def test_parameter_buffer_repeated_rearrange_with_same_memory_is_ignored(
     layouts = dict(param_buf)
     param_buf.rearrange(mem)
     assert dict(param_buf) == layouts
-
 
 
 def test_parameter_buffer_memory_interface(param_buf):
@@ -297,5 +299,3 @@ def test_create_from_layers(layers):
     assert set(bm.outputs.keys()) == {'InputLayer', 'A', 'B', 'C', 'D'}
 
     assert bm.inputs.hub_sizes == bm.outputs.hub_sizes
-
-

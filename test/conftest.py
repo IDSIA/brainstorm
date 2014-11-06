@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import pytest
-from brainstorm.architecture import instantiate_layers_from_architecture
+
+from brainstorm.structure.architecture import (
+    instantiate_layers_from_architecture)
 
 
 #             /--- A -- C--

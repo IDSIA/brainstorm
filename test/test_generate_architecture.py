@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.construction import ConstructionLayer
-from brainstorm.architecture import (
+from brainstorm.structure.construction import ConstructionLayer
+from brainstorm.structure.architecture import (
     generate_architecture, get_layer_description, get_canonical_layer_order,
     instantiate_layers_from_architecture)
-from brainstorm.python_layers import InputLayer, NoOpLayer
+from layers.python_layers import InputLayer, NoOpLayer
 
 
 def test_get_layer_description():

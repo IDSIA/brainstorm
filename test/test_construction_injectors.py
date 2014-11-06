@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import pytest
-from brainstorm.construction import (ConstructionInjector, ConstructionLayer,
-                                     InvalidArchitectureError)
+
+from brainstorm.structure.construction import (
+    ConstructionInjector, ConstructionLayer, InvalidArchitectureError)
 
 
 def test_constructor():

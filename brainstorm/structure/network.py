@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.architecture import instantiate_layers_from_architecture
-from brainstorm.buffers import BufferManager
+from brainstorm.structure.architecture import (
+    instantiate_layers_from_architecture)
+from brainstorm.structure.buffers import BufferManager
 
 
 def build_network_from_architecture(architecture):

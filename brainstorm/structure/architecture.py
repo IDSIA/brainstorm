@@ -3,10 +3,12 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from copy import copy
+
 from six import string_types
+
 from brainstorm.utils import (InvalidArchitectureError,
                               is_valid_python_identifier)
-from brainstorm.python_layers import get_layer_class_from_typename
+from layers.python_layers import get_layer_class_from_typename
 
 
 def get_layer_description(layer):
