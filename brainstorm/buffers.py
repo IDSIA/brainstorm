@@ -71,37 +71,42 @@ class InOutBuffer(dict):
         self.shape = None
 
     def rearrange(self, shape, memory=None):
-        self.size = self._get_size(shape)
+        shape_changed = self.shape != shape[:2]
+        self.shape = shape[:2]
+        self.size = self._get_size(self.shape)
         relocated = self._resize_internal_memory(memory)
-        self._lay_out(shape, relocated)
+        if relocated or shape_changed:
+            self._lay_out()
 
     def _get_size(self, shape):
         nr_timesteps, nr_sequences = shape[:2]
         return nr_timesteps * nr_sequences * sum(self.hub_sizes)
 
-    def _resize_internal_memory(self, memory=None):
+    def _resize_internal_memory(self, memory):
+        if memory is not None and memory is self.memory:
+            return False
+
         if memory is not None:
             assert len(memory) >= self.size, \
                 "Given memory is too small: {} < {}".format(len(memory),
                                                             self.size)
             self.memory = memory
             return True
-        elif self.memory is None or len(self.memory) < self.size:
+
+        if self.memory is None or len(self.memory) < self.size:
             self.memory = np.zeros(self.size)
             return True
+
         return False
 
-    def _lay_out(self, shape, relocate=False):
-        if self.shape == shape[:2] and not relocate:
-            return
-        self.shape = shape[:2]
+    def _lay_out(self):
         nr_timesteps, nr_sequences = self.shape
         i = 0
         for hub_feature_size, layout in zip(self.hub_sizes, self.layouts):
-            hub_size = hub_feature_size * nr_timesteps * nr_sequences
-            hub_buffer = self.memory[i:i+hub_size].reshape((nr_timesteps,
-                                                            nr_sequences,
-                                                            hub_feature_size))
+            hub_shape = (nr_timesteps, nr_sequences, hub_feature_size)
+            hub_size = nr_timesteps * nr_sequences * hub_feature_size
+            hub_buffer = self.memory[i:i+hub_size]
+            hub_buffer = hub_buffer.reshape(hub_shape)
             i += hub_size
             for layer_name, feature_slice in layout.items():
                 self[layer_name] = hub_buffer[:, :, feature_slice]

@@ -76,14 +76,10 @@ def test_parameter_buffer_rearrange_too_big_memory_raises(param_buf):
 def test_parameter_buffer_repeated_rearrange_is_ignored(param_buf):
     param_buf.rearrange()
     mem = param_buf.memory
-    pbA = param_buf['A']
-    pbB = param_buf['B']
-    pbC = param_buf['C']
+    layouts = dict(param_buf)
     param_buf.rearrange()
     assert param_buf.memory is mem
-    assert param_buf['A'] is pbA
-    assert param_buf['B'] is pbB
-    assert param_buf['C'] is pbC
+    assert dict(param_buf) == layouts
 
 
 def test_parameter_buffer_repeated_rearrange_with_same_memory_is_ignored(
@@ -91,13 +87,9 @@ def test_parameter_buffer_repeated_rearrange_with_same_memory_is_ignored(
     mem = memory_mock(23)
     param_buf.rearrange(mem)
     mem = param_buf.memory
-    pbA = param_buf['A']
-    pbB = param_buf['B']
-    pbC = param_buf['C']
+    layouts = dict(param_buf)
     param_buf.rearrange(mem)
-    assert param_buf['A'] is pbA
-    assert param_buf['B'] is pbB
-    assert param_buf['C'] is pbC
+    assert dict(param_buf) == layouts
 
 
 
@@ -155,107 +147,106 @@ def inoutlayout():
     return hub_sizes, source_layouts, sink_layouts
 
 
-def test_inoutbuffer_initializes_empty(inoutlayout):
+@pytest.fixture
+def inoutbuffer(inoutlayout):
     hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
-    assert iob.size == 0
-    assert iob.memory is None
-    assert iob.shape is None
-    assert not iob.keys()
-    assert not iob.values()
-    assert not iob.items()
+    return InOutBuffer(hub_sizes, source_layouts)
 
 
-def test_inoutbuffer_rearrange_default(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange((1, 1))
-
-    assert iob.size == sum(hub_sizes)
-    assert isinstance(iob.memory, np.ndarray)
-    assert iob.memory.size == iob.size
-    assert iob.shape == (1, 1)
+def test_inoutbuffer_initializes_empty(inoutbuffer):
+    assert inoutbuffer.size == 0
+    assert inoutbuffer.memory is None
+    assert inoutbuffer.shape is None
+    assert not inoutbuffer.keys()
+    assert not inoutbuffer.values()
+    assert not inoutbuffer.items()
 
 
-def test_inoutbuffer_rearrage_uses_passed_memory(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
+def test_inoutbuffer_rearrange_default(inoutbuffer):
+    inoutbuffer.rearrange((1, 1))
+    assert inoutbuffer.size == 26
+    assert isinstance(inoutbuffer.memory, np.ndarray)
+    assert inoutbuffer.memory.size == inoutbuffer.size
+    assert inoutbuffer.shape == (1, 1)
+
+
+def test_inoutbuffer_rearrage_uses_passed_memory(inoutbuffer):
     mem = memory_mock(26)
-    iob.rearrange((1, 1), mem)
-    assert iob.memory is mem
+    inoutbuffer.rearrange((1, 1), mem)
+    assert inoutbuffer.memory is mem
 
 
-def test_inoutbuffer_rearrage_raises_on_unsufficient_memory(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
+def test_inoutbuffer_rearrage_raises_on_unsufficient_memory(inoutbuffer):
     mem = memory_mock(13)
     with pytest.raises(AssertionError):
-        iob.rearrange((1, 1), mem)
+        inoutbuffer.rearrange((1, 1), mem)
 
 
-def test_inoutbuffer_rearrage_does_not_raise_on_too_much_memory(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
+def test_inoutbuffer_rearrage_does_not_raise_on_too_much_memory(inoutbuffer):
     mem = memory_mock(100)
-    iob.rearrange((1, 1), mem)
+    inoutbuffer.rearrange((1, 1), mem)
 
 
-def test_inoutbuffer_rearrage_memory_interface(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
+def test_inoutbuffer_rearrage_memory_interface(inoutbuffer):
     mem = memory_mock(26)
-    iob.rearrange((1, 1), mem)
+    inoutbuffer.rearrange((1, 1), mem)
 
     calls = [call(slice(0, 3)), call(slice(3, 15)), call(slice(15, 26))]
     mem.__getitem__.assert_has_calls(calls, any_order=True)
 
 
-def test_inoutbuffer_rearrange_ignore_high_shape_dims(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange((2, 3, 5))
+def test_inoutbuffer_rearrange_ignore_high_shape_dims(inoutbuffer):
+    inoutbuffer.rearrange((2, 3, 5))
 
-    assert iob.size == 3*2*3 + 12*2*3 + 11*2*3
-    assert isinstance(iob.memory, np.ndarray)
-    assert iob.shape == (2, 3)
+    assert inoutbuffer.size == 3*2*3 + 12*2*3 + 11*2*3
+    assert isinstance(inoutbuffer.memory, np.ndarray)
+    assert inoutbuffer.shape == (2, 3)
 
 
-def test_inoutbuffer_layout(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange((2, 3))
+def test_inoutbuffer_layout(inoutbuffer):
+    inoutbuffer.rearrange((2, 3))
 
-    assert set(iob.keys()) == {'A', 'B', 'C', 'D'}
-    assert iob['A'].shape == (2, 3, 3)
-    assert iob['B'].shape == (2, 3, 5)
-    assert iob['C'].shape == (2, 3, 7)
-    assert iob['D'].shape == (2, 3, 11)
+    assert set(inoutbuffer.keys()) == {'A', 'B', 'C', 'D'}
+    assert inoutbuffer['A'].shape == (2, 3, 3)
+    assert inoutbuffer['B'].shape == (2, 3, 5)
+    assert inoutbuffer['C'].shape == (2, 3, 7)
+    assert inoutbuffer['D'].shape == (2, 3, 11)
 
 
-def test_inoutbuffer_rearrange_is_lazy(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange((2, 3))
-    iobA = iob['A']
-    iobB = iob['B']
-    iobC = iob['C']
-    iobD = iob['D']
-    m = iob.memory
-    iob.rearrange((2, 3))
-    assert iob['A'] is iobA
-    assert iob['B'] is iobB
-    assert iob['C'] is iobC
-    assert iob['D'] is iobD
-    assert iob.memory is m
+def test_inoutbuffer_rearrange_is_lazy(inoutbuffer):
+    inoutbuffer.rearrange((2, 3))
+    layouts = dict(inoutbuffer)
+    m = inoutbuffer.memory
+    inoutbuffer.rearrange((2, 3))
+    assert dict(inoutbuffer) == layouts
+    assert inoutbuffer.memory is m
 
 
-def test_inoutbuffer_rearrange_is_lazy_if_smaller(inoutlayout):
-    hub_sizes, source_layouts, sink_layouts = inoutlayout
-    iob = InOutBuffer(hub_sizes, source_layouts)
-    iob.rearrange((2, 3))
-    m = iob.memory
-    iob.rearrange((1, 2))
-    assert iob.memory is m
+def test_inoutbuffer_rearrange_with_identical_memory_is_lazy(inoutbuffer):
+    mem = memory_mock(26*2*3)
+    inoutbuffer.rearrange((2, 3), mem)
+    layouts = dict(inoutbuffer)
+    m = inoutbuffer.memory
+    inoutbuffer.rearrange((2, 3), mem)
+    assert dict(inoutbuffer) == layouts
+    assert inoutbuffer.memory is m
+
+
+def test_inoutbuffer_rearrange_with_different_memory_updates(inoutbuffer):
+    mem = memory_mock(26*2*3)
+    inoutbuffer.rearrange((2, 3), mem)
+    layouts = dict(inoutbuffer)
+    mem2 = memory_mock(26*2*3)
+    inoutbuffer.rearrange((2, 3), mem2)
+    assert inoutbuffer.memory is mem2
+    assert dict(inoutbuffer) != layouts
+
+
+def test_inoutbuffer_rearrange_is_lazy_if_smaller(inoutbuffer):
+    inoutbuffer.rearrange((2, 3))
+    m = inoutbuffer.memory
+    inoutbuffer.rearrange((1, 2))
+    assert inoutbuffer.memory is m
 
 
 # ###################### BufferManager #######################################
@@ -296,3 +287,15 @@ def test_buffermanager_rearranges_lazily(buff_man):
     assert not buff_man.parameters.rearrange.called
     assert not buff_man.inputs.rearrange.called
     assert not buff_man.outputs.rearrange.called
+
+
+def test_create_from_layers(layers):
+    bm = BufferManager.create_from_layers(layers)
+    bm.rearrange((1, 1))
+    assert set(bm.parameters.keys()) == {'InputLayer', 'A', 'B', 'C', 'D'}
+    assert set(bm.inputs.keys()) == {'A', 'B', 'C', 'D'}
+    assert set(bm.outputs.keys()) == {'InputLayer', 'A', 'B', 'C', 'D'}
+
+    assert bm.inputs.hub_sizes == bm.outputs.hub_sizes
+
+
