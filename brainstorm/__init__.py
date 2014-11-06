@@ -6,4 +6,3 @@ from brainstorm.architecture import generate_architecture
 from brainstorm.network import build_network_from_architecture
 
 __version__ = '0.1'
-

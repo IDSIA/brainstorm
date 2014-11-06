@@ -9,9 +9,7 @@ env:
   - TOX_ENV=py32
   - TOX_ENV=py33
   - TOX_ENV=py34
-  - TOX_ENV=flake8
   - TOX_ENV=pep8
-  - TOX_ENV=coverage
 
 install:
   - pip install -r requirements.txt

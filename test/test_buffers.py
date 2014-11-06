@@ -9,7 +9,7 @@ from brainstorm.layout import ParameterLayout
 from mock import MagicMock, call
 
 
-####################### ParameterBuffer #######################################
+# ###################### ParameterBuffer ######################################
 
 @pytest.fixture
 def param_layout():
@@ -86,3 +86,5 @@ def test_parameter_buffer_get_raw_for_layer(param_layout, view_factories):
     assert pb.get_raw('A').base is mem
     assert pb.get_raw('B').base is mem
     assert pb.get_raw('C').base is mem
+
+# ###################### InOutBuffer #######################################

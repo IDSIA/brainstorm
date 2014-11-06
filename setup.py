@@ -48,7 +48,7 @@ setup(
     url='https://github.com/Qwlouse/brainstorm',
     packages=['brainstorm'],
     install_requires=['six', 'numpy'],
-    tests_requires=['pytest'],
+    tests_requires=['pytest', 'mock'],
     cmdclass={'test': PyTest},
     license='MIT',
     classifiers=[

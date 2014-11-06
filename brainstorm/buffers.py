@@ -49,29 +49,29 @@ class InOutBuffer(dict):
         self.hub_sizes = hub_sizes
         self.size = 0
         self.layouts = layouts
-        self.buffer = None
+        self.memory = None
         self.shape = None
 
-    def get_size(self, shape):
+    def rearrange_buffer(self, shape, memory=None):
+        self.size = self._get_size(shape)
+        relocated = self._resize_internal_memory(memory)
+        self._lay_out(shape, relocated)
+
+    def _get_size(self, shape):
         nr_timesteps, nr_sequences = shape[:2]
         return nr_timesteps * nr_sequences * sum(self.hub_sizes)
 
-    def rearrange_buffer(self, shape, buffer=None):
-        self.size = self.get_size(shape)
-        relocated = self.resize_internal_memory(buffer)
-        self.lay_out(shape, relocated)
-
-    def resize_internal_memory(self, buffer=None):
-        if buffer is not None:
-            assert buffer.size >= self.size
-            self.buffer = buffer
+    def _resize_internal_memory(self, memory=None):
+        if memory is not None:
+            assert memory.size >= self.size
+            self.memory = memory
             return True
-        elif self.buffer is None or self.buffer.size < self.size:
-            self.buffer = np.zeros(self.size)
+        elif self.memory is None or self.memory.size < self.size:
+            self.memory = np.zeros(self.size)
             return True
         return False
 
-    def lay_out(self, shape, relocate=False):
+    def _lay_out(self, shape, relocate=False):
         if self.shape == shape and not relocate:
             return
         self.shape = shape
@@ -79,7 +79,7 @@ class InOutBuffer(dict):
         i = 0
         for hub_feature_size, layout in zip(self.hub_sizes, self.layouts):
             hub_size = hub_feature_size * nr_timesteps * nr_sequences
-            hub_buffer = self.buffer[i:i+hub_size].reshape((nr_timesteps,
+            hub_buffer = self.memory[i:i+hub_size].reshape((nr_timesteps,
                                                             nr_sequences,
                                                             hub_feature_size))
             i += hub_size
