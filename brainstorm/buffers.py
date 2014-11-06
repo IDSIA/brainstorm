@@ -12,19 +12,37 @@ class ParameterBuffer(dict):
     The buffer is allocated at initialization, and the views for all the
     layers are created.
     """
-    def __init__(self, param_layout, view_factories, memory=None):
+    def __init__(self, param_layout, view_factories):
         super(ParameterBuffer, self).__init__()
         self.size, self.layout = param_layout
+        self.view_factories = view_factories
+        self.memory = None
+
+    def rearrange(self, memory=None):
+        relocated = self._relocate_internal_memory(memory)
+        if relocated:
+            self._lay_out()
+
+    def _relocate_internal_memory(self, memory):
+        if memory is None and self.memory is not None:
+            return False
+
+        if memory is not None and memory is self.memory:
+            return False
+
         if memory is None:
             self.memory = np.zeros(self.size)
-        else:
-            assert len(memory) == self.size, \
-                "Given memory is wrong size: {} != {}".format(len(memory),
-                                                              self.size)
-            self.memory = memory
+            return True
 
+        assert len(memory) == self.size, \
+            "Given memory is wrong size: {} != {}".format(len(memory),
+                                                          self.size)
+        self.memory = memory
+        return True
+
+    def _lay_out(self):
         for layer_name in self.layout:
-            view = view_factories[layer_name](self.get_raw(layer_name))
+            view = self.view_factories[layer_name](self.get_raw(layer_name))
             self[layer_name] = view
 
     def get_raw(self, layer_name=None):
@@ -106,7 +124,7 @@ class BufferManager(object):
         if self.shape == shape[:2]:
             return
         self.shape = shape[:2]
-        # do nothing to the parameters
+        self.parameters.rearrange()
         self.inputs.rearrange(self.shape)
         self.outputs.rearrange(self.shape, self.inputs.memory)
 

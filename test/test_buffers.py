@@ -30,80 +30,113 @@ def memory_mock(*shape):
 # ###################### ParameterBuffer ######################################
 
 @pytest.fixture
-def param_layout():
+def param_buf():
     layout = OrderedDict()
     layout['A'] = slice(0, 5)
     layout['B'] = slice(5, 12)
     layout['C'] = slice(12, 23)
-    return ParameterLayout(23, layout)
-
-
-@pytest.fixture
-def view_factories():
-    return {
+    param_layout = ParameterLayout(23, layout)
+    view_factories = {
         'A': lambda x: 10,
         'B': lambda x: 100,
         'C': lambda x: 1000,
     }
+    return ParameterBuffer(param_layout, view_factories)
 
 
-def test_parameter_buffer_allocates_memory(param_layout, view_factories):
-    pb = ParameterBuffer(param_layout, view_factories)
-    assert isinstance(pb.memory, np.ndarray)
-    assert pb.memory.size == param_layout.size
+def test_parameter_buffer_initializes_empty(param_buf):
+    assert param_buf.memory is None
+    assert not param_buf.keys()
+    assert not param_buf.values()
+    assert not param_buf.items()
 
 
-def test_parameter_buffer_wrong_memory_size_raises(param_layout,
-                                                   view_factories):
+def test_parameter_buffer_rearrange_default_allocates(param_buf):
+    param_buf.rearrange()
+    assert isinstance(param_buf.memory, np.ndarray)
+    assert len(param_buf.memory) == 23
+
+
+def test_parameter_buffer_uses_passed_memory(param_buf):
+    mem = memory_mock(23)
+    param_buf.rearrange(mem)
+    assert param_buf.memory is mem
+
+
+def test_parameter_buffer_rearrange_too_small_memory_raises(param_buf):
     with pytest.raises(AssertionError):
-        pb = ParameterBuffer(param_layout, view_factories, np.zeros(19))
+        param_buf.rearrange(np.zeros(19))
 
+
+def test_parameter_buffer_rearrange_too_big_memory_raises(param_buf):
     with pytest.raises(AssertionError):
-        pb = ParameterBuffer(param_layout, view_factories, np.zeros(100))
+        param_buf.rearrange(np.zeros(100))
 
 
-def test_parameter_buffer_uses_passed_memory(param_layout, view_factories):
-    mem = np.zeros(23)
-    pb = ParameterBuffer(param_layout, view_factories, mem)
-    assert pb.memory is mem
+def test_parameter_buffer_repeated_rearrange_is_ignored(param_buf):
+    param_buf.rearrange()
+    mem = param_buf.memory
+    pbA = param_buf['A']
+    pbB = param_buf['B']
+    pbC = param_buf['C']
+    param_buf.rearrange()
+    assert param_buf.memory is mem
+    assert param_buf['A'] is pbA
+    assert param_buf['B'] is pbB
+    assert param_buf['C'] is pbC
 
 
-def test_parameter_buffer_memory_interface(param_layout, view_factories):
-    mem = memory_mock(param_layout.size)
-    ParameterBuffer(param_layout, view_factories, mem)
+def test_parameter_buffer_repeated_rearrange_with_same_memory_is_ignored(
+        param_buf):
+    mem = memory_mock(23)
+    param_buf.rearrange(mem)
+    mem = param_buf.memory
+    pbA = param_buf['A']
+    pbB = param_buf['B']
+    pbC = param_buf['C']
+    param_buf.rearrange(mem)
+    assert param_buf['A'] is pbA
+    assert param_buf['B'] is pbB
+    assert param_buf['C'] is pbC
+
+
+
+def test_parameter_buffer_memory_interface(param_buf):
+    mem = memory_mock(23)
+    param_buf.rearrange(mem)
     calls = [call(slice(0, 5)), call(slice(5, 12)), call(slice(12, 23))]
     mem.__getitem__.assert_has_calls(calls, any_order=True)
 
 
-def test_parameter_buffer_dict_interface(param_layout, view_factories):
-    pb = ParameterBuffer(param_layout, view_factories)
-    assert set(pb.keys()) == {'A', 'B', 'C'}
-    assert set(pb.values()) == {10, 100, 1000}
-    assert set(pb.items()) == {('A', 10), ('B', 100), ('C', 1000)}
-    assert 'A' in pb
-    assert 'F' not in pb
-    assert pb['A'] == 10
-    assert pb['B'] == 100
+def test_parameter_buffer_dict_interface(param_buf):
+    param_buf.rearrange()
+    assert set(param_buf.keys()) == {'A', 'B', 'C'}
+    assert set(param_buf.values()) == {10, 100, 1000}
+    assert set(param_buf.items()) == {('A', 10), ('B', 100), ('C', 1000)}
+    assert 'A' in param_buf
+    assert 'F' not in param_buf
+    assert param_buf['A'] == 10
+    assert param_buf['B'] == 100
 
 
-def test_parameter_buffer_get_raw(param_layout, view_factories):
+def test_parameter_buffer_get_raw(param_buf):
     mem = np.zeros(23)
-    pb = ParameterBuffer(param_layout, view_factories, mem)
-    assert pb.get_raw() is mem
+    param_buf.rearrange(mem)
+    assert param_buf.get_raw() is mem
 
 
-def test_parameter_buffer_get_raw_for_layer(param_layout, view_factories):
+def test_parameter_buffer_get_raw_for_layer(param_buf):
     mem = np.zeros(23)
-    pb = ParameterBuffer(param_layout, view_factories, mem)
-    assert isinstance(pb.get_raw('A'), np.ndarray)
-    assert isinstance(pb.get_raw('B'), np.ndarray)
-    assert isinstance(pb.get_raw('C'), np.ndarray)
-    assert pb.get_raw('A').shape == (5,)
-    assert pb.get_raw('B').shape == (7,)
-    assert pb.get_raw('C').shape == (11,)
-    assert pb.get_raw('A').base is mem
-    assert pb.get_raw('B').base is mem
-    assert pb.get_raw('C').base is mem
+    param_buf.rearrange(mem)
+    assert isinstance(param_buf.get_raw('A'), np.ndarray)
+    assert isinstance(param_buf.get_raw('B'), np.ndarray)
+    assert isinstance(param_buf.get_raw('C'), np.ndarray)
+    assert param_buf.get_raw('A').shape == (5,)
+    assert param_buf.get_raw('B').shape == (7,)
+    assert param_buf.get_raw('C').shape == (11,)
+    assert param_buf.get_raw('A').base is mem
+    assert param_buf.get_raw('B').base is mem
+    assert param_buf.get_raw('C').base is mem
 
 
 # ###################### InOutBuffer #######################################
@@ -248,7 +281,7 @@ def test_buffermanager_construction():
 
 def test_buffermanager_rearranges_in_out_buffers(buff_man):
     buff_man.rearrange((2, 3, 17))
-    assert not buff_man.parameters.method_calls
+    buff_man.parameters.rearrange.assert_called_once_with()
     buff_man.inputs.rearrange.assert_called_once_with((2, 3))
     buff_man.outputs.rearrange.assert_called_once_with((2, 3),
                                                        buff_man.inputs.memory)
@@ -256,10 +289,10 @@ def test_buffermanager_rearranges_in_out_buffers(buff_man):
 
 def test_buffermanager_rearranges_lazily(buff_man):
     buff_man.rearrange((2, 3, 17))
+    buff_man.parameters.rearrange.reset_mock()
     buff_man.inputs.rearrange.reset_mock()
     buff_man.outputs.rearrange.reset_mock()
     buff_man.rearrange((2, 3, 26))
+    assert not buff_man.parameters.rearrange.called
     assert not buff_man.inputs.rearrange.called
     assert not buff_man.outputs.rearrange.called
-
-
