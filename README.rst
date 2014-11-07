@@ -1,6 +1,6 @@
-=============================
-brainstorm
-=============================
+==========
+Brainstorm
+==========
 
 .. image:: https://badge.fury.io/py/brainstorm.png
     :target: http://badge.fury.io/py/brainstorm

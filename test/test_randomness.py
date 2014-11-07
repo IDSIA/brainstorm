@@ -3,38 +3,41 @@
 from __future__ import division, print_function, unicode_literals
 import pytest
 
-from brainstorm.randomness import RandomState, global_rnd
+from brainstorm.randomness import global_rnd, RandomState, Seedable
+from brainstorm.describable import (Describable, get_description,
+                                    create_from_description)
 
+
+# ##################### RandomState ###########################################
 
 @pytest.fixture
 def rnd():
     return RandomState(1)
 
 
-def test_constructor_without_arg():
+def test_randomstate_constructor_without_arg():
     rnd1 = RandomState()
     rnd2 = RandomState()
     assert rnd1.get_seed() != rnd2.get_seed()
 
 
-def test_constructor_with_seed():
+def test_randomstate_constructor_with_seed():
     rnd1 = RandomState(2)
-    rnd2 = RandomState(2)
-    assert rnd1.get_seed() == rnd2.get_seed()
+    assert rnd1.get_seed() == 2
 
 
-def test_set_seed(rnd):
-    rnd.set_seed(1)
-    assert rnd.get_seed() == 1
+def test_randomstate_set_seed(rnd):
+    rnd.set_seed(23)
+    assert rnd.get_seed() == 23
 
 
-def test_randint_randomness(rnd):
+def test_randomstate_randint_randomness(rnd):
     a = rnd.randint(10000)
     b = rnd.randint(10000)
     assert a != b
 
 
-def test_seeded_randint_deterministic(rnd):
+def test_randomstate_seeded_randint_deterministic(rnd):
     rnd.set_seed(1)
     a = rnd.randint(10000)
     rnd.set_seed(1)
@@ -42,73 +45,75 @@ def test_seeded_randint_deterministic(rnd):
     assert a == b
 
 
-def test_reset_randint_deterministic(rnd):
+def test_randomstate_reset_randint_deterministic(rnd):
     a = rnd.randint(10000)
     rnd.reset()
     b = rnd.randint(10000)
     assert a == b
 
 
-def test_get_new_random_state_randomness(rnd):
-    rnd1 = rnd.get_new_random_state()
-    rnd2 = rnd.get_new_random_state()
-
+def test_randomstate_get_new_random_state_randomness(rnd):
+    rnd1 = rnd.create_random_state()
+    rnd2 = rnd.create_random_state()
     assert rnd1.get_seed() != rnd2.get_seed
 
 
-def test_seeded_get_new_random_state_deterministic(rnd):
-    rnd.set_seed(1)
-    rnd1 = rnd.get_new_random_state()
-    rnd.set_seed(1)
-    rnd2 = rnd.get_new_random_state()
+def test_randomstate_seeded_get_new_random_state_deterministic(rnd):
+    rnd1 = rnd.create_random_state()
+    rnd.reset()
+    rnd2 = rnd.create_random_state()
     assert rnd1.get_seed() == rnd2.get_seed()
-
-
-def test_get_item_randomness(rnd):
-    rnd1 = rnd['A']
-    rnd2 = rnd['A']
-    rnd1.randint(1000)  != rnd2.randint(1000)
-
-
-def test_seeded_get_item_deterministic(rnd):
-    rnd.set_seed(1)
-    rnd1 = rnd['A']
-    rnd2 = rnd['A']
-    assert rnd1.get_seed() == rnd2.get_seed()
-
-
-def test_seeded_get_item_deterministic2(rnd):
-    rnd.set_seed(1)
-    rnd1 = rnd['A']
-    rnd2 = rnd['A']
-    assert rnd1 == rnd2
-
-
-def test_get_item_independent_of_previous_usage(rnd):
-    rnd.set_seed(1)
-    rnd1 = rnd['A']
-    rnd.set_seed(1)
-    rnd.randint(1000)
-    rnd2 = rnd['A']
-    assert rnd1 != rnd2
-    assert rnd1.get_seed() == rnd2.get_seed()
-
-
-def test_get_item_different_names(rnd):
-    rnd1 = rnd['A']
-    rnd2 = rnd['B']
-    assert rnd1 != rnd2
 
 
 # ################## global_rnd ###############################################
 
-def test_global_rnd_randomness():
-    assert global_rnd.randint(1000) != global_rnd.randint(1000)
+def test_global_rnd_exists():
+    assert isinstance(global_rnd, RandomState)
 
 
-def test_seeded_global_rnd_deterministic():
-    global_rnd.set_seed(1)
-    a = global_rnd.randint(1000)
-    global_rnd.set_seed(1)
-    b = global_rnd.randint(1000)
-    assert a == b
+# ################## Seedable #################################################
+
+def test_seedable_constructor_without_seed():
+    seedable1 = Seedable()
+    seedable2 = Seedable()
+    assert seedable1.rnd.get_seed() != seedable2.rnd.get_seed()
+
+
+def test_seedable_constructor_with_seed():
+    seedable = Seedable(1)
+    assert seedable.rnd.get_seed() == 1
+
+
+def test_seedable_description_does_not_include_rnd1():
+    class Foo0(Seedable):
+        pass
+
+    assert get_description(Foo0()) == {'@type': 'Foo0'}
+
+
+def test_seedable_description_does_not_include_rnd():
+    class Foo1(Seedable, Describable):
+        pass
+
+    assert get_description(Foo1()) == {'@type': 'Foo1'}
+
+
+def test_seedable_initializes_from_description1():
+    class Foo2(Seedable, Describable):
+        pass
+
+    f = create_from_description({'@type': 'Foo2'})
+    assert hasattr(f, 'rnd')
+    assert isinstance(f.rnd, RandomState)
+    f.rnd.randint(100)  # assert no throw
+
+
+def test_seedable_initializes_from_description2():
+    class Foo3(Seedable, Describable):
+        def __init_from_description__(self, description):
+            super(Foo3, self).__init_from_description__(description)
+
+    f = create_from_description({'@type': 'Foo3'})
+    assert hasattr(f, 'rnd')
+    assert isinstance(f.rnd, RandomState)
+    f.rnd.randint(100)  # assert no throw
