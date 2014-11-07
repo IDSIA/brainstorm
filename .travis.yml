@@ -19,11 +19,11 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy
   - pip install wheel six mock pytest
-  - python setup.py install
+  #- python setup.py install
 
 # Run test
 script:
-  - python setup.py test
+  - py.test test/
 
 branches:
   only:
