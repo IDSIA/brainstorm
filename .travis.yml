@@ -16,7 +16,7 @@ install:
 
 # Run test
 script:
-  - py.test $PYTEST_ARGS test
+  - py.test $PYTEST_ARGS
 
 matrix:
   include:
@@ -27,7 +27,7 @@ matrix:
     - python: "3.4"
       env: PYTEST_ARGS=
     - python: "2.7"
-      env: PYTEST_ARGS= --pep8 -m pep8
+      env: PYTEST_ARGS="--pep8 -m pep8"
 
 branches:
   only:
