@@ -3,23 +3,23 @@
 from __future__ import division, print_function, unicode_literals
 import pytest
 
-from brainstorm.randomness import HierarchicalRandomState, global_rnd
+from brainstorm.randomness import RandomState, global_rnd
 
 
 @pytest.fixture
 def rnd():
-    return HierarchicalRandomState(1)
+    return RandomState(1)
 
 
 def test_constructor_without_arg():
-    rnd1 = HierarchicalRandomState()
-    rnd2 = HierarchicalRandomState()
+    rnd1 = RandomState()
+    rnd2 = RandomState()
     assert rnd1.get_seed() != rnd2.get_seed()
 
 
 def test_constructor_with_seed():
-    rnd1 = HierarchicalRandomState(2)
-    rnd2 = HierarchicalRandomState(2)
+    rnd1 = RandomState(2)
+    rnd2 = RandomState(2)
     assert rnd1.get_seed() == rnd2.get_seed()
 
 
@@ -38,6 +38,13 @@ def test_seeded_randint_deterministic(rnd):
     rnd.set_seed(1)
     a = rnd.randint(10000)
     rnd.set_seed(1)
+    b = rnd.randint(10000)
+    assert a == b
+
+
+def test_reset_randint_deterministic(rnd):
+    a = rnd.randint(10000)
+    rnd.reset()
     b = rnd.randint(10000)
     assert a == b
 
