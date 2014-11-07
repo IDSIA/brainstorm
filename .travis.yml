@@ -4,9 +4,12 @@ language: python
 
 python:
   - 2.7
-  - 3.2
   - 3.3
   - 3.4
+
+env:
+  - PYTEST_ARGS= --pep8 -m pep8
+  - PYTEST_ARGS=
 
 # Setup anaconda
 before_install:
@@ -18,12 +21,22 @@ before_install:
 # Install packages
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy
-  - pip install wheel six mock pytest
-  #- python setup.py install
+  - pip install wheel six mock pytest pytest-pep8
 
 # Run test
 script:
-  - py.test test/
+  - pytest $PYTEST_ARGS test
+
+matrix:
+  include:
+    - python: 2.7
+      env: PYTEST_ARGS=
+    - python: 3.3
+      env: PYTEST_ARGS=
+    - python: 3.4
+      env: PYTEST_ARGS=
+    - python: 2.7
+      env: PYTEST_ARGS= --pep8 -m pep8
 
 branches:
   only:
