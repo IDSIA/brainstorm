@@ -8,7 +8,7 @@ from six import string_types
 
 from brainstorm.utils import (InvalidArchitectureError,
                               is_valid_python_identifier)
-from layers.python_layers import get_layer_class_from_typename
+from brainstorm.layers.python_layers import get_layer_class_from_typename
 
 
 def get_layer_description(layer):

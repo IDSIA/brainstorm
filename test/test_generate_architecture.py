@@ -5,7 +5,7 @@ from brainstorm.structure.construction import ConstructionLayer
 from brainstorm.structure.architecture import (
     generate_architecture, get_layer_description, get_canonical_layer_order,
     instantiate_layers_from_architecture)
-from layers.python_layers import InputLayer, NoOpLayer
+from brainstorm.layers.python_layers import InputLayer, NoOpLayer
 
 
 def test_get_layer_description():

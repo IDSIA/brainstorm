@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 
 import pytest
 
-from layers.python_layers import (
+from brainstorm.layers.python_layers import (
     get_layer_class_from_typename, InputLayer, NoOpLayer, LayerBase)
 
 
