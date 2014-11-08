@@ -7,8 +7,12 @@ import re
 
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 
+NAME_BLACKLIST = {'default', 'fallback'}
 
-def is_valid_python_identifier(identifier):
+
+def is_valid_layer_name(identifier):
+    if identifier in NAME_BLACKLIST:
+        return False
     return PYTHON_IDENTIFIER.match(identifier) is not None
 
 

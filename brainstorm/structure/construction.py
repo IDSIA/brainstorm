@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.uniquely_named import UniquelyNamed
 from brainstorm.utils import (
-    InvalidArchitectureError, is_valid_python_identifier)
+    InvalidArchitectureError, is_valid_layer_name)
 
 
 class ConstructionLayer(UniquelyNamed):
@@ -18,10 +18,10 @@ class ConstructionLayer(UniquelyNamed):
     """
 
     def __init__(self, layer_type, size=None, name=None, **kwargs):
-        if not is_valid_python_identifier(layer_type):
+        if not is_valid_layer_name(layer_type):
             raise InvalidArchitectureError(
                 "Invalid layer_type: '{}'".format(layer_type))
-        if not (name is None or is_valid_python_identifier(name)):
+        if not (name is None or is_valid_layer_name(name)):
             raise InvalidArchitectureError(
                 "Invalid name for layer: '{}'".format(name))
 
@@ -104,10 +104,10 @@ class ConstructionInjector(UniquelyNamed):
     """
 
     def __init__(self, injector_type, target_from=None, name=None, **kwargs):
-        if not is_valid_python_identifier(injector_type):
+        if not is_valid_layer_name(injector_type):
             raise InvalidArchitectureError(
                 "Invalid layer_type: '{}'".format(injector_type))
-        if not (name is None or is_valid_python_identifier(name)):
+        if not (name is None or is_valid_layer_name(name)):
             raise InvalidArchitectureError(
                 "Invalid name for layer: '{}'".format(name))
         super(ConstructionInjector, self).__init__(name or injector_type)

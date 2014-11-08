@@ -7,7 +7,7 @@ from copy import copy
 from six import string_types
 
 from brainstorm.utils import (InvalidArchitectureError,
-                              is_valid_python_identifier)
+                              is_valid_layer_name)
 from brainstorm.layers.python_layers import get_layer_class_from_typename
 
 
@@ -38,13 +38,9 @@ def validate_architecture(architecture):
             assert 'sink_layers' in layer and isinstance(layer['sink_layers'],
                                                          set)
 
-        # no layer is called 'default'
-        assert 'default' not in architecture, \
-            "'default' is an invalid layer name"
-
         # layer naming
         for name in architecture:
-            assert is_valid_python_identifier(name), \
+            assert is_valid_layer_name(name), \
                 "Invalid layer name: '{}'".format(name)
 
         # all sink_layers are present
