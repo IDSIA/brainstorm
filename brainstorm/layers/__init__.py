@@ -5,7 +5,8 @@ from functools import partial
 
 from brainstorm.structure.construction import ConstructionLayer
 
-__all__ = ['InputLayer', 'NoOpLayer', 'FeedForwardLayer']
+# somehow this construction is needed because in __all__ unicode does not work
+__all__ = [str(a) for a in ['InputLayer', 'NoOpLayer', 'FeedForwardLayer']]
 
 InputLayer = partial(ConstructionLayer, "InputLayer")
 NoOpLayer = partial(ConstructionLayer, "NoOpLayer")

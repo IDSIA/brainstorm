@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import pytest
-from structure.view_references import (
+from brainstorm.structure.view_references import (
     get_regex_for_reference, get_key_to_references_mapping,
     resolve_references)
 
@@ -78,7 +78,8 @@ def test_resolve_references2():
     refs = {'*_bias': 2, 'I_bias': 1, 'default': 0}
     keys = {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None}
     full_thing, fb = resolve_references(keys, refs)
-    assert full_thing == {'IX': {0}, 'OX': {0}, 'I_bias': {1, 2}, 'O_bias': {2}}
+    assert full_thing == {'IX': {0}, 'OX': {0}, 'I_bias': {1, 2},
+                          'O_bias': {2}}
     assert fb == {'IX': set(), 'OX': set(), 'I_bias': set(), 'O_bias': set()}
 
 
@@ -118,8 +119,10 @@ def test_resolve_references_complicated():
             'default': 0}
 
     keys = {
-        'LstmLayer_1': {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None},
-        'LstmLayer_2': {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None},
+        'LstmLayer_1': {'IX': None, 'OX': None, 'I_bias': None,
+                        'O_bias': None},
+        'LstmLayer_2': {'IX': None, 'OX': None, 'I_bias': None,
+                        'O_bias': None},
         'ForwardLayer': {'HX': None, 'H_bias': None},
         'FooLayer': {'bar': None, 'bar_bias': None},
     }

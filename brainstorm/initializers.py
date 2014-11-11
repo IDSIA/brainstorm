@@ -5,9 +5,10 @@ import numpy as np
 from brainstorm.randomness import Seedable
 from brainstorm.describable import Describable
 
-
-__all__ = ['Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
-           'SparseInputs', 'SparseOutputs', 'EchoState']
+# somehow this construction is needed because in __all__ unicode does not work
+__all__ = [str(a) for a in [
+    'Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
+    'SparseInputs', 'SparseOutputs', 'EchoState']]
 
 
 # ########################### Support Classes #################################
