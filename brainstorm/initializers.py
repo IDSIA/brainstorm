@@ -6,6 +6,10 @@ from brainstorm.randomness import Seedable
 from brainstorm.describable import Describable
 
 
+__all__ = ['Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
+           'SparseInputs', 'SparseOutputs', 'EchoState']
+
+
 # ########################### Support Classes #################################
 
 class InitializationError(Exception):
@@ -200,8 +204,10 @@ class EchoState(Initializer):
 
 # ########################### helper methods ##################################
 
-def evaluate_initializer(initializer, shape, fallback=None):
+def evaluate_initializer(initializer, shape, fallback=None, seed=None):
     if isinstance(initializer, Initializer):
+        if seed is not None:
+            initializer.rnd.set_seed(seed)
         try:
             return initializer(shape)
         except InitializationError:

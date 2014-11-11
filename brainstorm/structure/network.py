@@ -4,6 +4,9 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.structure.buffers import BufferManager
+from brainstorm.structure.view_references import resolve_references
+from brainstorm.initializers import evaluate_initializer
+from brainstorm.randomness import Seedable
 
 
 def build_network_from_architecture(architecture):
@@ -12,8 +15,9 @@ def build_network_from_architecture(architecture):
     return Network(layers, buffer_manager)
 
 
-class Network(object):
-    def __init__(self, layers, buffer_manager):
+class Network(Seedable):
+    def __init__(self, layers, buffer_manager, seed=None):
+        super(Network, self).__init__(seed)
         self.layers = layers
         self.buffer = buffer_manager
 
@@ -30,3 +34,42 @@ class Network(object):
             layer.forward_pass(parameters, input_buffer, output_buffer)
 
         return self.buffer.outputs[self.layers.keys()[-1]]
+
+    def initialize(self, init_dict=None, seed=None, **kwargs):
+        init_refs = _update_references_with_dict(init_dict, kwargs)
+        self.buffer.parameters.rearrange()
+        initializers, fallback = resolve_references(self.buffer.parameters,
+                                                    init_refs)
+        init_rnd = self.rnd.create_random_state(seed)
+        for layer_name, views in self.buffer.parameters.items():
+            if views is None:
+                continue
+            for view_name, view in views.items():
+                init = initializers[layer_name][view_name]
+                assert len(init) <= 1, "Multiple initializers for {}.{}: {}" \
+                                       "".format(layer_name, view_name, init)
+                assert len(init) > 0, "No initializer for {}.{}".format(
+                    layer_name, view_name)
+                fb = fallback[layer_name][view_name]
+                assert len(fb) <= 1, "Multiple fallbacks for {}.{}: {}".format(
+                    layer_name, view_name, fb)
+                fb = fb.pop() if len(fb) else None
+                view[:] = evaluate_initializer(init.pop(), view.shape, fb,
+                                               seed=init_rnd.generate_seed())
+
+
+def _update_references_with_dict(refs, ref_dict):
+    if refs is None:
+        references = dict()
+    elif isinstance(refs, dict):
+        references = refs
+    else:
+        references = {'default': refs}
+
+    if set(references.keys()) & set(ref_dict.keys()):
+        raise TypeError('Conflicting values for %s!' %
+                        sorted(set(references.keys()) & set(ref_dict.keys())))
+
+    references.update(ref_dict)
+
+    return references
