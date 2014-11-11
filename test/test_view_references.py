@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 from structure.view_references import (
     get_regex_for_reference, get_key_to_references_mapping,
-    resolve_references_recursively)
+    resolve_references)
 
 
 @pytest.mark.parametrize('ref', ['FeedForwardLayer',
@@ -66,21 +66,32 @@ def test_get_key_to_references_mapping_raises_non_matching_ref():
         key_to_refs = get_key_to_references_mapping(keys, references)
 
 
-def test_resolve_references_recursively1():
+def test_resolve_references1():
     refs = {'*_bias': 2, 'IX': 1, 'default': 0}
     struct = {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None}
-    full_thing = resolve_references_recursively(struct, refs)
+    full_thing = resolve_references(struct, refs)
     assert full_thing == {'IX': {1}, 'OX': {0}, 'I_bias': {2}, 'O_bias': {2}}
 
 
-def test_resolve_references_recursively2():
+def test_resolve_references2():
     refs = {'*_bias': 2, 'I_bias': 1, 'default': 0}
     keys = {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None}
-    full_thing = resolve_references_recursively(keys, refs)
+    full_thing = resolve_references(keys, refs)
     assert full_thing == {'IX': {0}, 'OX': {0}, 'I_bias': {1, 2}, 'O_bias': {2}}
 
 
-def test_resolve_references_recursivelye():
+def test_resolve_references_parent_default():
+    refs = {'FooLayer': {'HX': 0}, 'default': 1}
+    keys = {'FooLayer': {'HX': None, 'H_bias': None},
+            'BarLayer': {'HX': None, 'H_bias': None}}
+    full_thing = resolve_references(keys, refs)
+    assert full_thing == {
+        'FooLayer': {'HX': {0}, 'H_bias': {1}},
+        'BarLayer': {'HX': {1}, 'H_bias': {1}}
+    }
+
+
+def test_resolve_referencese():
     refs = {'LstmLayer*': {'IX': 1},
             '*Layer*': {'*_bias': 2},
             '*_1': {'I_bias': [4, 5]},
@@ -94,7 +105,7 @@ def test_resolve_references_recursivelye():
         'ForwardLayer': {'HX': None, 'H_bias': None},
         'FooLayer': {'bar': None, 'bar_bias': None},
     }
-    full_thing = resolve_references_recursively(keys, refs)
+    full_thing = resolve_references(keys, refs)
     assert full_thing == {
         'LstmLayer_1': {'IX':{1}, 'OX': {0}, 'I_bias': {2, 4, 5}, 'O_bias':{2}},
         'LstmLayer_2': {'IX':{1, 7}, 'OX': {7}, 'I_bias': {2, 7}, 'O_bias':{2, 7}},

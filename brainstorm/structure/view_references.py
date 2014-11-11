@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import namedtuple
 import re
 from brainstorm.utils import is_valid_layer_name
 
@@ -55,51 +56,74 @@ def get_key_to_references_mapping(keys, references):
     return key_to_reference
 
 
+Node = namedtuple('Node', ['content', 'defaults'])
+
+
 def empty_dict_from(structure):
+    """
+    Create a nested dict where all the leaves are Nodes from a given
+    nested dict.
+    :param structure: The nested dict structure to mimic
+    :type structure: dict
+    :return: nested dictionary that mimics the structure
+    :rtype: dict
+    """
     if isinstance(structure, dict):
         return {k: empty_dict_from(v) for k, v in structure.items()}
     else:
-        return set()
+        return Node(set(), set())
 
 
-def append_to_all_leaves(structure, value):
+def add_or_update(s, v):
+    if isinstance(v, (list, set, tuple)):
+        s.update(v)
+    else:
+        s.add(v)
+
+
+def append_to_all_leaves(structure, content, default):
+    """
+    Traverse the given structure and append or extend all the leaves (have to
+    be Nodes) with the given value.
+    """
     if isinstance(structure, dict):
         for k, v in structure.items():
-            append_to_all_leaves(v, value)
+            append_to_all_leaves(v, content, default)
     else:
-        assert isinstance(structure, set)
-        if isinstance(value, (list, set)):
-            structure.update(value)
-        else:
-            structure.add(value)
+        assert isinstance(structure, Node)
+        add_or_update(structure.content, content)
+        if default is not None:
+            add_or_update(structure.defaults, default)
 
 
-def update_recursively(structure, values):
-    if isinstance(structure, dict):
-        assert isinstance(values, dict)
-        for k in structure:
-            update_recursively(structure[k], values[k])
-    else:
-        assert isinstance(structure, set) and isinstance(values, set)
-        structure.update(values)
-
-
-def resolve_references_recursively(structure, references):
-    layer_to_references = get_key_to_references_mapping(structure, references)
-
-    resolved = empty_dict_from(structure)
-    for key, refs in layer_to_references.items():
-        if isinstance(structure, dict):
+def apply_references_recursively(resolved, references, parent_default):
+    if isinstance(resolved, dict) and isinstance(references, dict):
+        current_default = references.get('default')
+        if current_default is None:
+            current_default = parent_default
+        layer_to_references = get_key_to_references_mapping(resolved, references)
+        for key, refs in layer_to_references.items():
             for ref in refs:
-                if isinstance(references[ref], dict):
-                    res = resolve_references_recursively(structure[key], references[ref])
-                    update_recursively(resolved[key], res)
-                else:
-                    append_to_all_leaves(resolved[key], references[ref])
+                apply_references_recursively(resolved[key], references[ref], current_default)
+            if not refs:
+                append_to_all_leaves(resolved[key], set(), current_default)
+    else:
+        append_to_all_leaves(resolved, references, parent_default)
+
+
+def evaluate_defaults(structure):
+    if isinstance(structure, dict):
+        return {k: evaluate_defaults(v) for k, v in structure.items()}
+    else:
+        assert isinstance(structure, Node)
+        if not structure.content:
+            assert len(structure.defaults) <= 1
+            return set(structure.defaults)
         else:
-            resolved[key].update([references[ref] for ref in refs])
+            return set(structure.content)
 
 
-
-
-    return resolved
+def resolve_references(structure, references):
+    resolved = empty_dict_from(structure)
+    apply_references_recursively(resolved, references, None)
+    return evaluate_defaults(resolved)
