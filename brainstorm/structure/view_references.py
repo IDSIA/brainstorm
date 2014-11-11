@@ -56,7 +56,7 @@ def get_key_to_references_mapping(keys, references):
     return key_to_reference
 
 
-Node = namedtuple('Node', ['content', 'defaults'])
+Node = namedtuple('Node', ['content', 'defaults', 'fallback'])
 
 
 def empty_dict_from(structure):
@@ -71,7 +71,7 @@ def empty_dict_from(structure):
     if isinstance(structure, dict):
         return {k: empty_dict_from(v) for k, v in structure.items()}
     else:
-        return Node(set(), set())
+        return Node(set(), set(), set())
 
 
 def add_or_update(s, v):
@@ -81,34 +81,40 @@ def add_or_update(s, v):
         s.add(v)
 
 
-def append_to_all_leaves(structure, content, default):
+def append_to_all_leaves(structure, content, default, fallback):
     """
     Traverse the given structure and append or extend all the leaves (have to
     be Nodes) with the given value.
     """
     if isinstance(structure, dict):
         for k, v in structure.items():
-            append_to_all_leaves(v, content, default)
+            append_to_all_leaves(v, content, default, fallback)
     else:
         assert isinstance(structure, Node)
         add_or_update(structure.content, content)
         if default is not None:
             add_or_update(structure.defaults, default)
+        if fallback is not None:
+            add_or_update(structure.fallback, fallback)
 
 
-def apply_references_recursively(resolved, references, parent_default):
+def apply_references_recursively(resolved, references, parent_default,
+                                 parent_fallback):
     if isinstance(resolved, dict) and isinstance(references, dict):
-        current_default = references.get('default')
-        if current_default is None:
-            current_default = parent_default
-        layer_to_references = get_key_to_references_mapping(resolved, references)
+        current_default = references.get('default', parent_default)
+        current_fallback = references.get('fallback', parent_fallback)
+        layer_to_references = get_key_to_references_mapping(resolved,
+                                                            references)
         for key, refs in layer_to_references.items():
             for ref in refs:
-                apply_references_recursively(resolved[key], references[ref], current_default)
+                apply_references_recursively(resolved[key], references[ref],
+                                             current_default, current_fallback)
             if not refs:
-                append_to_all_leaves(resolved[key], set(), current_default)
+                append_to_all_leaves(resolved[key], set(), current_default,
+                                     current_fallback)
     else:
-        append_to_all_leaves(resolved, references, parent_default)
+        append_to_all_leaves(resolved, references, parent_default,
+                             parent_fallback)
 
 
 def evaluate_defaults(structure):
@@ -123,7 +129,15 @@ def evaluate_defaults(structure):
             return set(structure.content)
 
 
+def get_fallbacks(structure):
+    if isinstance(structure, dict):
+        return {k: get_fallbacks(v) for k, v in structure.items()}
+    else:
+        assert isinstance(structure, Node)
+        return structure.fallback
+
+
 def resolve_references(structure, references):
     resolved = empty_dict_from(structure)
-    apply_references_recursively(resolved, references, None)
-    return evaluate_defaults(resolved)
+    apply_references_recursively(resolved, references, None, None)
+    return evaluate_defaults(resolved), get_fallbacks(resolved)

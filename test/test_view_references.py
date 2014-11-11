@@ -69,29 +69,47 @@ def test_get_key_to_references_mapping_raises_non_matching_ref():
 def test_resolve_references1():
     refs = {'*_bias': 2, 'IX': 1, 'default': 0}
     struct = {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None}
-    full_thing = resolve_references(struct, refs)
+    full_thing, fb = resolve_references(struct, refs)
     assert full_thing == {'IX': {1}, 'OX': {0}, 'I_bias': {2}, 'O_bias': {2}}
+    assert fb == {'IX': set(), 'OX': set(), 'I_bias': set(), 'O_bias': set()}
 
 
 def test_resolve_references2():
     refs = {'*_bias': 2, 'I_bias': 1, 'default': 0}
     keys = {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None}
-    full_thing = resolve_references(keys, refs)
+    full_thing, fb = resolve_references(keys, refs)
     assert full_thing == {'IX': {0}, 'OX': {0}, 'I_bias': {1, 2}, 'O_bias': {2}}
+    assert fb == {'IX': set(), 'OX': set(), 'I_bias': set(), 'O_bias': set()}
+
+
+def test_resolve_references_fallback():
+    refs = {'*_bias': 2, 'fallback': 0}
+    keys = {'OX': None, 'O_bias': None}
+    full_thing, fb = resolve_references(keys, refs)
+    assert fb == {'OX': {0}, 'O_bias': {0}}
 
 
 def test_resolve_references_parent_default():
-    refs = {'FooLayer': {'HX': 0}, 'default': 1}
+    refs = {'FooLayer': {'HX': 0, 'default': 2}, 'default': 1}
     keys = {'FooLayer': {'HX': None, 'H_bias': None},
             'BarLayer': {'HX': None, 'H_bias': None}}
-    full_thing = resolve_references(keys, refs)
+    full_thing, fb = resolve_references(keys, refs)
     assert full_thing == {
-        'FooLayer': {'HX': {0}, 'H_bias': {1}},
+        'FooLayer': {'HX': {0}, 'H_bias': {2}},
         'BarLayer': {'HX': {1}, 'H_bias': {1}}
     }
 
 
-def test_resolve_referencese():
+def test_resolve_references_parent_fallback():
+    refs = {'FooLayer': {'HX': 0, 'fallback': 2}, 'fallback': 1}
+    keys = {'FooLayer': {'HX': None, 'H_bias': None},
+            'BarLayer': {'HX': None, 'H_bias': None}}
+    full_thing, fb = resolve_references(keys, refs)
+    assert fb == {'FooLayer': {'HX': {2}, 'H_bias': {2}},
+                  'BarLayer': {'HX': {1}, 'H_bias': {1}}}
+
+
+def test_resolve_references_complicated():
     refs = {'LstmLayer*': {'IX': 1},
             '*Layer*': {'*_bias': 2},
             '*_1': {'I_bias': [4, 5]},
@@ -105,10 +123,20 @@ def test_resolve_referencese():
         'ForwardLayer': {'HX': None, 'H_bias': None},
         'FooLayer': {'bar': None, 'bar_bias': None},
     }
-    full_thing = resolve_references(keys, refs)
+    full_thing, fb = resolve_references(keys, refs)
     assert full_thing == {
-        'LstmLayer_1': {'IX':{1}, 'OX': {0}, 'I_bias': {2, 4, 5}, 'O_bias':{2}},
-        'LstmLayer_2': {'IX':{1, 7}, 'OX': {7}, 'I_bias': {2, 7}, 'O_bias':{2, 7}},
-        'ForwardLayer': {'HX':{6}, 'H_bias':{2, 3}},
-        'FooLayer': {'bar':{0}, 'bar_bias':{2}}
+        'LstmLayer_1': {'IX': {1}, 'OX': {0}, 'I_bias': {2, 4, 5},
+                        'O_bias': {2}},
+        'LstmLayer_2': {'IX': {1, 7}, 'OX': {7}, 'I_bias': {2, 7},
+                        'O_bias': {2, 7}},
+        'ForwardLayer': {'HX': {6}, 'H_bias': {2, 3}},
+        'FooLayer': {'bar': {0}, 'bar_bias': {2}}
+    }
+    assert fb == {
+        'LstmLayer_1': {'IX': set(), 'OX': set(), 'I_bias': set(),
+                        'O_bias': set()},
+        'LstmLayer_2': {'IX': set(), 'OX': set(), 'I_bias': set(),
+                        'O_bias': set()},
+        'ForwardLayer': {'HX': set(), 'H_bias': set()},
+        'FooLayer': {'bar': set(), 'bar_bias': set()},
     }
