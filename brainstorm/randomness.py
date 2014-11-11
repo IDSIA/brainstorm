@@ -15,7 +15,7 @@ class RandomState(np.random.RandomState):
 
     def __init__(self, seed=None):
         if seed is None:
-            seed = np.random.randint(*RandomState.seed_range)
+            seed = global_rnd.generate_seed()
         super(RandomState, self).__init__(seed)
         self._seed = seed
 
@@ -85,4 +85,4 @@ class Seedable(Describable):
         Seedable.__init__(self)
 
 
-global_rnd = RandomState()
+global_rnd = RandomState(np.random.randint(*RandomState.seed_range))
