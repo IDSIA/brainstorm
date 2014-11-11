@@ -114,13 +114,9 @@ def instantiate_layers_from_architecture(architecture):
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
         LayerClass = get_layer_class_from_typename(layer['@type'])
-
         size = layer.get('size')
-
         sources = get_source_layers(layer_name, architecture)
-
         in_size = sum(layers[l_name].out_size for l_name in sources)
-
         layers[layer_name] = LayerClass(size, in_size, layer['sink_layers'],
                                         sources, get_kwargs(layer))
     return layers

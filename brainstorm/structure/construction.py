@@ -27,23 +27,12 @@ class ConstructionLayer(UniquelyNamed):
 
         super(ConstructionLayer, self).__init__(name or layer_type)
         self.layer_type = layer_type
-        self._size = size
+        self.size = size
         self.source_layers = []
         self.sink_layers = []
         self.traversing = False
         self.layer_kwargs = kwargs
         self.injectors = []
-
-    @property
-    def size(self):
-        if self._size is not None:
-            return self._size
-
-        if not self.source_layers:
-            raise InvalidArchitectureError(
-                "Could not determine size of {}".format(self))
-
-        return sum(l.size for l in self.source_layers)
 
     def collect_connected_layers(self):
         """
@@ -60,31 +49,11 @@ class ConstructionLayer(UniquelyNamed):
             new_layers = very_new_layers - connectom
         return connectom
 
-    def traverse_sink_layer_tree(self):
-        """
-        Recursively traverses all the sink layers of this layer.
-        If there is a circle in the graph, it will raise an
-        InvalidArchitectureError.
-        """
-        if self.traversing:
-            raise InvalidArchitectureError(
-                "Circle in Network at layer {}".format(self.name))
-        self.traversing = True
-        yield self
-        for target in self.sink_layers:
-            for t in target.traverse_sink_layer_tree():
-                yield t
-        self.traversing = False
-
-    def assert_no_cycles(self):
-        list(self.traverse_sink_layer_tree())  # raises if cycles are found
-
     def __rshift__(self, other):
         if not isinstance(other, ConstructionLayer):
             return NotImplemented
         self.sink_layers.append(other)
         other.source_layers.append(self)
-        self.assert_no_cycles()
         self.merge_scopes(other)
         return other
 

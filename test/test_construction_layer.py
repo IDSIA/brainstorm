@@ -74,16 +74,6 @@ def test_collect_connected_layers2(layers):
     assert l5.collect_connected_layers() == set(layers)
 
 
-def test_building_circle_raises_error(layers):
-    l1, l2, l3, l4, l5 = layers
-    with pytest.raises(InvalidArchitectureError):
-        _ = l1 >> l1
-    with pytest.raises(InvalidArchitectureError):
-        _ = l1 >> l2 >> l1
-    with pytest.raises(InvalidArchitectureError):
-        _ = l1 >> l2 >> l3 >> l4 >> l5 >> l1
-
-
 def test_name():
     l = ConstructionLayer('Foo', 7, name='bar')
     assert l.name == 'bar'
@@ -119,42 +109,3 @@ def test_name_connected_complex(layers):
     assert l3.name == 'dummy_type_3'
     assert l4.name == 'dummy_type_4'
     assert l5.name == 'dummy_type_5'
-
-
-def test_inherit_size():
-    l7 = ConstructionLayer('foo', 7)
-    l_ = ConstructionLayer('foo')
-
-    l7 >> l_
-    assert l_.size == 7
-
-
-def test_inherit_size_summed():
-    l7 = ConstructionLayer('foo', 7)
-    l4 = ConstructionLayer('foo', 4)
-    l_ = ConstructionLayer('foo')
-
-    l7 >> l_
-    l4 >> l_
-    assert l_.size == 11
-
-
-def test_inherit_size_tricky():
-    l7 = ConstructionLayer('foo', 7)
-    l4 = ConstructionLayer('foo', 4)
-    l_1 = ConstructionLayer('foo')
-    l_2 = ConstructionLayer('foo')
-
-    l_1 >> l_2
-    l7 >> l_1
-    l4 >> l_2
-    assert l_2.size == 11
-
-
-def test_inherit_size_none():
-    l_1 = ConstructionLayer('foo')
-    l_2 = ConstructionLayer('foo')
-
-    l_1 >> l_2
-    with pytest.raises(InvalidArchitectureError):
-        _ = l_2.size
