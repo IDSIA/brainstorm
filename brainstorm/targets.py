@@ -13,11 +13,13 @@ class Targets(object):
         self.binarize_to = binarize_to
         self.mask = None
         self.data = None
+        self.sequence_lengths = None
         if mask is not None:
             assert mask.ndim == 3 and mask.shape[2] == 1, \
                 "Mask has to be 3D with the last dimension of size 1 " \
                 "(not {})".format(mask.shape)
             self.mask = mask
+            self.sequence_lengths = get_sequence_lengths(mask)
 
     @property
     def shape(self):
@@ -25,6 +27,9 @@ class Targets(object):
             return self.data.shape[:2] + (self.binarize_to,)
         else:
             return self.data.shape
+
+    def __getitem__(self, item):
+        pass
 
 
 class FramewiseTargets(Targets):
@@ -46,6 +51,9 @@ class FramewiseTargets(Targets):
             assert self.mask.shape[:2] == self.data.shape[:2], \
                 "First two dimensions of targets and mask have to match (but "\
                 "{} != {})".format(self.mask.shape[:2], self.data.shape[:2])
+        else:
+            self.sequence_lengths = (np.ones(self.data.shape[1]) *
+                                     self.data.shape[0])
 
 
 class LabelingTargets(Targets):
@@ -61,6 +69,8 @@ class LabelingTargets(Targets):
             assert self.mask.shape[1] == len(self.data), \
                 "Number of label sequences must match the number of masks "\
                 "(but {} != {})".format(len(self.data), self.mask.shape[1])
+        else:
+            self.sequence_lengths = np.zeros(len(self.data))
 
     @property
     def shape(self):
@@ -90,3 +100,16 @@ class SequencewiseTargets(Targets):
             assert self.mask.shape[1] == self.data.shape[1], \
                 "The number of targets and the number of masks have to match "\
                 "(but {} != {})".format(self.data.shape[1], self.mask.shape[1])
+        else:
+            self.sequence_lengths = np.zeros(len(self.data))
+
+
+def get_sequence_lengths(mask):
+    """
+    Given a mask it returns a list of the lengths of all sequences. Note: this
+    assumes, that the mask has only values 0 and 1. It returns for each
+    sequence the last index such that the mask is 1 there.
+    :param mask: mask of 0s and 1s with shape=(t, b, 1)
+    :return: array of sequence lengths with shape=(b,)
+    """
+    return mask.shape[0] - mask[::-1, :, 0].argmax(axis=0)
