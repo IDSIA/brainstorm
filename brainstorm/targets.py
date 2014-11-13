@@ -32,6 +32,11 @@ class Targets(object):
     def __getitem__(self, item):
         raise NotImplementedError()
 
+    def trim(self, new_length):
+        assert new_length >= self.sequence_lengths.max()
+        if self.mask is not None:
+            self.mask = self.mask[:new_length]
+
 
 class FramewiseTargets(Targets):
     """
@@ -73,6 +78,10 @@ class FramewiseTargets(Targets):
         seq_lens = np.clip(seq_lens, 0, data.shape[0])
 
         return FramewiseTargets(data, mask, self.binarize_to, seq_lens)
+
+    def trim(self, new_length):
+        super(FramewiseTargets, self).trim(new_length)
+        self.data = self.data[:new_length, :, :]
 
 
 class LabelingTargets(Targets):
