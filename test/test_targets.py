@@ -31,7 +31,7 @@ def test_targets_with_mask_compute_seq_lengths(TargetsClass, targets_data):
                      [1, 1, 0, 0],
                      [1, 0, 0, 0],
                      [1, 1, 1, 1],
-                     [1, 1, 1, 0],
+                     [1, 1, 1, 0]
                      ]).T.reshape(4, 5, 1)
     t = TargetsClass(targets_data, mask=mask)
     assert np.all(t.sequence_lengths == np.array([3, 2, 1, 4, 3]))
@@ -72,6 +72,21 @@ def test_framewisetargets_without_mask_sequence_lenghts():
     assert np.all(t.sequence_lengths == np.array([5, 5, 5]))
 
 
+def test_framewisetargets_get_item():
+    mask = np.array([[1, 1, 1, 0],
+                     [1, 1, 0, 0],
+                     [1, 1, 0, 0],
+                     [1, 1, 1, 1],
+                     [1, 1, 1, 0]
+                     ]).T.reshape(4, 5, 1)
+    t = FramewiseTargets(np.zeros((4, 5, 1)), mask=mask, binarize_to=3)
+    s = t[1:3, 2:]
+    assert s.binarize_to == 3
+    assert np.all(s.mask == mask[1:3, 2:])
+    assert np.all(s.sequence_lengths == np.array([1, 2, 2]))
+    assert np.all(s.data == np.zeros((2, 3, 1)))
+
+
 # ################### Labelling ##############################################
 
 def test_labellingtargets_shape():
@@ -92,6 +107,21 @@ def test_labellingtargets_masked_shape():
 def test_labellingtargets_without_mask_sequence_lenghts():
     t = LabelingTargets([[1]]*3, binarize_to=2)
     assert np.all(t.sequence_lengths == np.array([0, 0, 0]))
+
+
+def test_labellingtargets_get_item():
+    mask = np.array([[1, 1, 1, 0],
+                     [1, 1, 0, 0],
+                     [1, 1, 0, 0],
+                     [1, 1, 1, 1],
+                     [1, 1, 1, 0]
+                     ]).T.reshape(4, 5, 1)
+    t = LabelingTargets([[1]]*5, mask=mask, binarize_to=3)
+    s = t[1:3, 2:]
+    assert s.binarize_to == 3
+    assert np.all(s.mask == mask[1:3, 2:])
+    assert np.all(s.sequence_lengths == np.array([1, 2, 2]))
+    assert s.data == [[1], [1], [1]]
 
 
 # ################### Sequencewise ###########################################
@@ -127,3 +157,18 @@ def test_sequencewisetargets_binarizing_shape():
 def test_sequencewisetargets_without_mask_sequence_lenghts():
     t = SequencewiseTargets(np.zeros((1, 3, 2)))
     assert np.all(t.sequence_lengths == np.array([0, 0, 0]))
+
+
+def test_sequencewisetargets_get_item():
+    mask = np.array([[1, 1, 1, 0],
+                     [1, 1, 0, 0],
+                     [1, 1, 0, 0],
+                     [1, 1, 1, 1],
+                     [1, 1, 1, 0]
+                     ]).T.reshape(4, 5, 1)
+    t = SequencewiseTargets(np.zeros((1, 5, 1)), mask=mask, binarize_to=3)
+    s = t[1:3, 2:]
+    assert s.binarize_to == 3
+    assert np.all(s.mask == mask[1:3, 2:])
+    assert np.all(s.sequence_lengths == np.array([1, 2, 2]))
+    assert np.all(s.data == np.zeros((1, 3, 1)))
