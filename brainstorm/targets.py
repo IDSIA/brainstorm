@@ -19,6 +19,13 @@ class Targets(object):
                 "(not {})".format(mask.shape)
             self.mask = mask
 
+    @property
+    def shape(self):
+        if self.binarize_to:
+            return self.data.shape[:2] + (self.binarize_to,)
+        else:
+            return self.data.shape
+
 
 class FramewiseTargets(Targets):
     """
@@ -54,6 +61,12 @@ class LabelingTargets(Targets):
             assert self.mask.shape[1] == len(self.data), \
                 "Number of label sequences must match the number of masks "\
                 "(but {} != {})".format(len(self.data), self.mask.shape[1])
+
+    @property
+    def shape(self):
+        time_dim = self.mask.shape[0] if self.mask is not None else None
+        feature_dim = self.binarize_to or len(self.data[0][0])
+        return time_dim, len(self.data), feature_dim
 
 
 class SequencewiseTargets(Targets):
