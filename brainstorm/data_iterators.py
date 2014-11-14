@@ -3,36 +3,29 @@
 from __future__ import division, print_function, unicode_literals
 from datetime import datetime
 import math
-import sys
 import numpy as np
 from brainstorm.randomness import Seedable
 from brainstorm.targets import Targets
 
 
-class ProgressBar(object):
-    def __init__(self, stream=sys.stdout):
-        self.start_time = datetime.utcnow()
-        self.progress = 0
-        self.progress_string = \
-            "====1====2====3====4====5====6====7====8====9====0"
-        self.prefix = '['
-        self.suffix = '] Took: {0}\n'
-        self.stream = stream
-        self.stream.write(str(self.prefix))
-        self.stream.flush()
+def progress_bar(maximum, prefix='[',
+                 bar='====1====2====3====4====5====6====7====8====9====0',
+                 suffix='] Took: {0}\n'):
+    i = 0
+    start_time = datetime.utcnow()
+    out = prefix
+    while i < len(bar):
+        progress = yield out
+        j = math.trunc(progress/maximum * len(bar))
+        out = bar[i:j]
+        i = j
+    elapsed_str = str(datetime.utcnow() - start_time)[:-5]
+    yield out + suffix.format(elapsed_str)
 
-    def update_progress(self, fraction):
-        assert 0.0 <= fraction <= 1.0
-        new_progress = math.trunc(fraction * len(self.progress_string))
-        if new_progress > self.progress:
-            self.stream.write(
-                str(self.progress_string[self.progress:new_progress]))
-            self.progress = new_progress
-        if new_progress == len(self.progress_string):
-            elapsed = datetime.utcnow() - self.start_time
-            elapsed_str = str(elapsed)[:-5]
-            self.stream.write(str(self.suffix.format(elapsed_str)))
-        self.stream.flush()
+
+def silence():
+    while True:
+        _ = yield ''
 
 
 class DataIterator(object):
@@ -75,10 +68,13 @@ class Online(DataIterator, Seedable):
         self.verbose = verbose
 
     def __call__(self, verbose=False):
-        if self.verbose is not None:
-            verbose = self.verbose
-        p = ProgressBar() if verbose else None
         nr_sequences = self.input_data.shape[1]
+        if (self.verbose is None and verbose) or self.verbose:
+            p_bar = progress_bar(nr_sequences)
+        else:
+            p_bar = silence()
+
+        print(next(p_bar), end='')
         indices = np.arange(nr_sequences)
         if self.shuffle:
             self.rnd.shuffle(indices)
@@ -94,8 +90,7 @@ class Online(DataIterator, Seedable):
 
             input_data = self.input_data[:max_len, idx:idx+1, :]
             yield input_data, targets
-            if verbose:
-                p.update_progress((i+1)/nr_sequences)
+            print(p_bar.send(i+1), end='')
 
 
 def _assert_correct_input_data(input_data):
