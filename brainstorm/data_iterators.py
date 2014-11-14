@@ -58,7 +58,7 @@ class Online(DataIterator, Seedable):
     """
     Online (one sample at a time) iterator for inputs and targets.
     """
-    def __init__(self, input_data, default, shuffle=True, verbose=None,
+    def __init__(self, input_data, default=None, shuffle=True, verbose=None,
                  seed=None, **named_targets):
         Seedable.__init__(self, seed=seed)
         self.input_data = _assert_correct_input_data(input_data)
