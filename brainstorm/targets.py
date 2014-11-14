@@ -25,9 +25,14 @@ class Targets(object):
     @property
     def shape(self):
         if self.binarize_to:
-            return self.data.shape[:2] + (self.binarize_to,)
+            feature_dim = self.binarize_to
         else:
-            return self.data.shape
+            feature_dim = self.data.shape[2]
+        if self.mask is not None:
+            time_dim, sample_dim = self.mask.shape[:2]
+        else:
+            time_dim, sample_dim = self.data.shape[:2]
+        return time_dim, sample_dim, feature_dim
 
     def __getitem__(self, item):
         raise NotImplementedError()
