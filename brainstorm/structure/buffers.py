@@ -2,9 +2,8 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-
+from copy import copy
 import numpy as np
-
 from brainstorm.structure.layout import (create_param_layout,
                                          create_in_out_layout)
 
@@ -118,23 +117,39 @@ class InOutBuffer(dict):
 class BufferManager(object):
     def __init__(self, param_buffer, in_buffer, out_buffer):
         self.parameters = param_buffer
+        self.gradient = copy(param_buffer)
         self.inputs = in_buffer
         self.outputs = out_buffer
-        self.shape = None
+        self.in_deltas = copy(in_buffer)
+        self.out_deltas = copy(out_buffer)
+        self.fwd_shape = None
+        self.bwd_shape = None
 
-    def rearrange(self, shape):
+    def rearrange_fwd(self, shape):
         """
-        Resize the buffers and prepare them.
+        Resize the buffers needed for a foward pass and prepare them.
         :param shape: Tuple specifying the dimensions. Only the first two are
             used. They should be (nr_timesteps, nr_sequences).
         :type shape: tuple[int]
         """
-        if self.shape == shape[:2]:
+        if self.fwd_shape == shape[:2]:
             return
-        self.shape = shape[:2]
+        self.fwd_shape = shape[:2]
         self.parameters.rearrange()
-        self.inputs.rearrange(self.shape)
-        self.outputs.rearrange(self.shape, self.inputs.memory)
+        self.inputs.rearrange(self.fwd_shape)
+        self.outputs.rearrange(self.fwd_shape, self.inputs.memory)
+
+    def rearrange_bwd(self):
+        """
+        Resize the buffers needed for a backward pass and prepare them.
+        Reuses the same shape as for the forward pass.
+        """
+        if self.bwd_shape == self.fwd_shape:
+            return
+        self.bwd_shape = self.fwd_shape
+        self.gradient.rearrange()
+        self.in_deltas.rearrange(self.bwd_shape)
+        self.out_deltas.rearrange(self.bwd_shape, self.inputs.memory)
 
     @classmethod
     def create_from_layers(cls, layers):

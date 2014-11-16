@@ -34,7 +34,7 @@ def test_connect_injector_to_layer():
     i = ConstructionInjector('bar')
 
     _ = l1 >> l2 << i
-    assert i.output_from == l2
+    assert i.layer == l2
     assert i in l2.injectors
 
 

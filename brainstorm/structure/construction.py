@@ -82,16 +82,16 @@ class ConstructionInjector(UniquelyNamed):
         super(ConstructionInjector, self).__init__(name or injector_type)
         self.injector_type = injector_type
         self.target_from = target_from
-        self.output_from = None
+        self.layer = None
         self.injector_kwargs = kwargs
 
     def __rlshift__(self, other):
         if not isinstance(other, ConstructionLayer):
             return NotImplemented
-        if not (self.output_from is None or self.output_from is other):
+        if not (self.layer is None or self.layer is other):
             raise InvalidArchitectureError(
-                "Is already connected to layer: '%s'" % self.output_from)
-        self.output_from = other
+                "Is already connected to layer: '%s'" % self.layer)
+        self.layer = other
         other.injectors.append(self)
         return self
 

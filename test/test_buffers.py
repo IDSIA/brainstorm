@@ -273,7 +273,7 @@ def test_buffermanager_construction():
 
 
 def test_buffermanager_rearranges_in_out_buffers(buff_man):
-    buff_man.rearrange((2, 3, 17))
+    buff_man.rearrange_fwd((2, 3, 17))
     buff_man.parameters.rearrange.assert_called_once_with()
     buff_man.inputs.rearrange.assert_called_once_with((2, 3))
     buff_man.outputs.rearrange.assert_called_once_with((2, 3),
@@ -281,11 +281,11 @@ def test_buffermanager_rearranges_in_out_buffers(buff_man):
 
 
 def test_buffermanager_rearranges_lazily(buff_man):
-    buff_man.rearrange((2, 3, 17))
+    buff_man.rearrange_fwd((2, 3, 17))
     buff_man.parameters.rearrange.reset_mock()
     buff_man.inputs.rearrange.reset_mock()
     buff_man.outputs.rearrange.reset_mock()
-    buff_man.rearrange((2, 3, 26))
+    buff_man.rearrange_fwd((2, 3, 26))
     assert not buff_man.parameters.rearrange.called
     assert not buff_man.inputs.rearrange.called
     assert not buff_man.outputs.rearrange.called
@@ -293,7 +293,7 @@ def test_buffermanager_rearranges_lazily(buff_man):
 
 def test_create_from_layers(layers):
     bm = BufferManager.create_from_layers(layers)
-    bm.rearrange((1, 1))
+    bm.rearrange_fwd((1, 1))
     assert set(bm.parameters.keys()) == {'InputLayer', 'A', 'B', 'C', 'D'}
     assert set(bm.inputs.keys()) == {'A', 'B', 'C', 'D'}
     assert set(bm.outputs.keys()) == {'InputLayer', 'A', 'B', 'C', 'D'}

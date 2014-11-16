@@ -7,25 +7,36 @@ from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.view_references import resolve_references
 from brainstorm.initializers import evaluate_initializer
 from brainstorm.randomness import Seedable
+from brainstorm.describable import create_from_description
+from brainstorm.structure.architecture import (generate_injectors,
+                                               generate_architecture)
 
 
-def build_network_from_architecture(architecture):
+def build_net(some_layer):
+    arch = generate_architecture(some_layer)
+    injs = generate_injectors(some_layer)
+    return build_network_from_architecture(arch, injs)
+
+
+def build_network_from_architecture(architecture, injections):
     layers = instantiate_layers_from_architecture(architecture)
+    injectors = create_from_description(injections)
     buffer_manager = BufferManager.create_from_layers(layers)
-    return Network(layers, buffer_manager)
+    return Network(layers, buffer_manager, injectors)
 
 
 class Network(Seedable):
-    def __init__(self, layers, buffer_manager, seed=None):
+    def __init__(self, layers, buffer_manager, injectors=None, seed=None):
         super(Network, self).__init__(seed)
         self.layers = layers
         self.buffer = buffer_manager
+        self.injectors = injectors or {}
 
     def forward_pass(self, input_data):
         assert self.layers['InputLayer'].out_size == input_data.shape[2],\
             "Input dimensions mismatch of InputLayer({}) and data ({})".format(
                 self.layers['InputLayer'].out_size, input_data.shape[2])
-        self.buffer.rearrange(input_data.shape)
+        self.buffer.rearrange_fwd(input_data.shape)
         self.buffer.outputs['InputLayer'][:] = input_data
         for layer_name, layer in self.layers.items()[1:]:
             parameters = self.buffer.parameters[layer_name]
@@ -34,6 +45,26 @@ class Network(Seedable):
             layer.forward_pass(parameters, input_buffer, output_buffer)
 
         return self.buffer.outputs[self.layers.keys()[-1]]
+
+    def backward_pass(self, targets):
+        assert self.injectors, "No error injectors!"
+        self.buffer.rearrange_bwd()
+
+        for injector in self.injectors.values():
+            self.buffer.out_deltas[injector.layer] = injector(
+                self.buffer.outputs[injector.layer],
+                targets.get(injector.target_from))
+
+        for layer_name, layer in reversed(self.layers.items()[1:]):
+            parameters = self.buffer.parameters[layer_name]
+            input_buffer = self.buffer.inputs[layer_name]
+            output_buffer = self.buffer.outputs[layer_name]
+            in_delta_buffer = self.buffer.in_deltas[layer_name]
+            out_delta_buffer = self.buffer.out_deltas[layer_name]
+            layer.backward_pass(parameters, input_buffer, output_buffer,
+                                in_delta_buffer, out_delta_buffer)
+
+        return self.buffer.out_deltas['InputLayer']
 
     def initialize(self, init_dict=None, seed=None, **kwargs):
         init_refs = _update_references_with_dict(init_dict, kwargs)
