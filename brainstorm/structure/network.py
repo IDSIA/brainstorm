@@ -67,7 +67,7 @@ class Network(Seedable):
 
     def backward_pass(self, targets):
         self._calculate_deltas_and_error(targets)
-
+        self.buffer.gradient.get_raw()[:] = 0.
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
             parameters = self.buffer.parameters[layer_name]
             input_buffer = self.buffer.inputs[layer_name]
@@ -76,6 +76,10 @@ class Network(Seedable):
             out_delta_buffer = self.buffer.out_deltas[layer_name]
             layer.backward_pass(parameters, input_buffer, output_buffer,
                                 in_delta_buffer, out_delta_buffer)
+            gradient_buffer = self.buffer.gradient[layer_name]
+
+            layer.calculate_gradient(parameters, input_buffer, output_buffer,
+                                     out_delta_buffer, gradient_buffer)
 
         return self.buffer.out_deltas['InputLayer']
 

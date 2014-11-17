@@ -39,6 +39,10 @@ class LayerBase(object):
                       in_delta_buffer, out_delta_buffer):
         pass
 
+    def calculate_gradient(self, parameters, input_buffer, output_buffer,
+                           out_delta_buffer, gradient_buffer):
+        pass
+
 
 class InputLayer(LayerBase):
     """
@@ -88,6 +92,14 @@ class FeedForwardLayer(LayerBase):
         for t in range(input_buffer.shape[0]):
             d_z = self.act_func_deriv(output_buffer[t]) * out_delta_buffer[t]
             in_delta_buffer[t, :] = np.dot(d_z, W.T)
+
+    def calculate_gradient(self, parameters, input_buffer, output_buffer,
+                           out_delta_buffer, gradient_buffer):
+        d_W, d_b = gradient_buffer['W'], gradient_buffer['b']
+        for t in range(input_buffer.shape[0]):
+            d_z = self.act_func_deriv(output_buffer[t]) * out_delta_buffer[t]
+            d_W += np.dot(input_buffer[t].T, d_z)
+            d_b += np.sum(d_z, axis=0)
 
 
 def get_layer_class_from_typename(typename):

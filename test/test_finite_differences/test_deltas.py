@@ -82,3 +82,36 @@ def test_deltas_finite_differences(net, input_data, targets):
     print("Checking Deltas = %0.4f" % mse)
 
     assert mse < 1e-4
+
+
+def test_gradient_finite_differences(net, input_data, targets):
+    # ######## calculate deltas ##########
+    net.forward_pass(input_data)
+    net.backward_pass(targets)
+    gradient_calc = net.buffer.gradient.get_raw()
+
+    # ######## estimate deltas ##########
+    def f(x):
+        net.buffer.parameters.get_raw()[:] = x
+        net.forward_pass(input_data)
+        return net.calculate_errors(targets)['MSE']
+    initial_weigths = net.buffer.parameters.get_raw().copy()
+    gradient_approx = approx_fprime(initial_weigths, f, 1e-7)
+
+    # ######## compare them #############
+    nr_sequences = input_data.shape[1]
+    diff = gradient_approx - gradient_calc
+    mse = np.sum(diff ** 2) / nr_sequences
+    if mse > 1e-4:
+        # Hijack the network gradient buffer for the view
+        net.buffer.gradient.get_raw()[:] = diff
+        for layer_name in net.buffer.gradient:
+            if net.buffer.gradient[layer_name] is None:
+                continue
+            print("============= Layer: {} =============".format(layer_name))
+            for view_name in net.buffer.gradient[layer_name]:
+                print("------------- {} -------------".format(view_name))
+                print(net.buffer.gradient[layer_name][view_name])
+
+    print(">> Checking Gradient = %0.4f" % mse)
+    assert mse < 1e-4
