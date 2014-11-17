@@ -84,7 +84,7 @@ def test_undivided_default():
     iter = Undivided(input_data, targets)()
     x, t = next(iter)
     assert x is input_data
-    assert t == {'default': targets}
+    assert t == {'default_target': targets}
     with pytest.raises(StopIteration):
         next(iter)
 
@@ -99,3 +99,44 @@ def test_undivided_named_targets():
     assert t == {'targets1': targets1, 'targets2': targets2}
     with pytest.raises(StopIteration):
         next(iter)
+
+
+# ########################### Online ##########################################
+
+def test_online_default():
+    input_data = np.zeros((4, 5, 3))
+    mask = np.array([[1, 1, 1, 0],
+                     [1, 1, 0, 0],
+                     [1, 0, 0, 0],
+                     [1, 1, 1, 1],
+                     [1, 1, 1, 0]
+                     ]).T.reshape(4, 5, 1)
+    targets = FramewiseTargets(np.ones((4, 5, 1)), mask=mask)
+    it = Online(input_data, targets, shuffle=False)()
+    x, t = next(it)
+    assert x.shape == (3, 1, 3)
+    assert set(t.keys()) == {'default_target'}
+    assert isinstance(t['default_target'], FramewiseTargets)
+    assert t['default_target'].shape == (3, 1, 1)
+    x, t = next(it)
+    assert x.shape == (2, 1, 3)
+    assert set(t.keys()) == {'default_target'}
+    assert isinstance(t['default_target'], FramewiseTargets)
+    assert t['default_target'].shape == (2, 1, 1)
+    x, t = next(it)
+    assert x.shape == (1, 1, 3)
+    assert set(t.keys()) == {'default_target'}
+    assert isinstance(t['default_target'], FramewiseTargets)
+    assert t['default_target'].shape == (1, 1, 1)
+    x, t = next(it)
+    assert x.shape == (4, 1, 3)
+    assert set(t.keys()) == {'default_target'}
+    assert isinstance(t['default_target'], FramewiseTargets)
+    assert t['default_target'].shape == (4, 1, 1)
+    x, t = next(it)
+    assert x.shape == (3, 1, 3)
+    assert set(t.keys()) == {'default_target'}
+    assert isinstance(t['default_target'], FramewiseTargets)
+    assert t['default_target'].shape == (3, 1, 1)
+    with pytest.raises(StopIteration):
+        next(it)

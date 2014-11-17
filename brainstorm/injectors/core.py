@@ -7,7 +7,7 @@ from brainstorm.targets import (FramewiseTargets, LabelingTargets,
 
 
 class Injector(Describable):
-    __default_values__ = {'target_from': 'target_default'}
+    __default_values__ = {'target_from': 'default_target'}
 
     def __init__(self, layer, target_from='layer_default'):
         self.layer = layer

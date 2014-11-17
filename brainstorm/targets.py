@@ -206,7 +206,7 @@ def _get_simple_slice(item):
     if isinstance(item, slice):
         assert item.step is None or item.step == 1
         return item
-    elif isinstance(item, int):
+    elif isinstance(item, (int, np.int64, np.int32, np.uint32, np.uint64)):
         return slice(item, item + 1)
     else:
         raise ValueError('Unsupported indexing type {}'.format(type(item)))

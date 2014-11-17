@@ -102,10 +102,11 @@ def _assert_correct_input_data(input_data):
     return input_data
 
 
-def _construct_and_validate_targets(input_data, default, named_targets):
+def _construct_and_validate_targets(input_data, default_target,
+                                    named_targets):
     targets = {}
-    if default is not None:
-        targets['default'] = default
+    if default_target is not None:
+        targets['default_target'] = default_target
     targets.update(named_targets)
     for t_name, t in targets.items():
         assert isinstance(t, Targets), '{} is not an targets object!' \

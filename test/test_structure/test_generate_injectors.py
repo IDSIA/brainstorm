@@ -56,7 +56,6 @@ def test_injectors_create_from_description():
         },
         'mse2': {
             '@type': 'MeanSquaredError',
-            'target_from': 'other_mse_targets',
             'layer': 'foo2',
         }}
     injectors = create_from_description(injector_descr)
@@ -68,4 +67,4 @@ def test_injectors_create_from_description():
     assert injectors['mse1'].layer == 'foo1'
     assert injectors['mse2'].layer == 'foo2'
     assert injectors['mse1'].target_from == 'mse_targets'
-    assert injectors['mse2'].target_from == 'other_mse_targets'
+    assert injectors['mse2'].target_from == 'default_target'
