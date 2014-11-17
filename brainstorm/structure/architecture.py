@@ -25,7 +25,7 @@ def get_layer_description(layer):
 def get_injector_description(injector):
     description = {
         '@type': injector.injector_type,
-        'layer': injector.output_from
+        'layer': injector.layer.name
     }
     if injector.target_from is not None:
         description['target_from'] = injector.target_from

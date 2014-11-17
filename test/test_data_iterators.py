@@ -49,7 +49,6 @@ def test_data_terator_with_wrong_targets_type_raises(Iterator):
         Iterator(input_data, my_target='3')
 
 
-
 @pytest.mark.parametrize('Iterator', [Undivided, Online])
 def test_data_terator_with_wrong_input_dim_raises(Iterator):
     targets = FramewiseTargets(np.ones((2, 3, 1)))
@@ -100,4 +99,3 @@ def test_undivided_named_targets():
     assert t == {'targets1': targets1, 'targets2': targets2}
     with pytest.raises(StopIteration):
         next(iter)
-

@@ -74,6 +74,7 @@ def test_targets_get_item_with_unsupported_index_raises(TargetsClass,
     with pytest.raises(ValueError):
         _ = tar[::2]
 
+
 # ################### Framewise ###############################################
 
 def test_framewisetargets_with_wrong_targets_dim_raises():
