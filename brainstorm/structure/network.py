@@ -31,31 +31,44 @@ class Network(Seedable):
         self.layers = layers
         self.buffer = buffer_manager
         self.injectors = injectors or {}
+        self.errors = None
 
     def forward_pass(self, input_data):
         assert self.layers['InputLayer'].out_size == input_data.shape[2],\
             "Input dimensions mismatch of InputLayer({}) and data ({})".format(
                 self.layers['InputLayer'].out_size, input_data.shape[2])
+        self.errors = None
         self.buffer.rearrange_fwd(input_data.shape)
         self.buffer.outputs['InputLayer'][:] = input_data
-        for layer_name, layer in self.layers.items()[1:]:
+        for layer_name, layer in list(self.layers.items())[1:]:
             parameters = self.buffer.parameters[layer_name]
             input_buffer = self.buffer.inputs[layer_name]
             output_buffer = self.buffer.outputs[layer_name]
             layer.forward_pass(parameters, input_buffer, output_buffer)
 
-        return self.buffer.outputs[self.layers.keys()[-1]]
+        return self.buffer.outputs[list(self.layers.keys())[-1]]
+
+    def calculate_errors(self, targets):
+        self._calculate_deltas_and_error(targets)
+        return self.errors
+
+    def _calculate_deltas_and_error(self, targets):
+        assert self.injectors, "No error injectors!"
+        if self.errors is None:
+            self.errors = {}
+            self.buffer.rearrange_bwd()
+
+            for inj_name, injector in self.injectors.items():
+                error, deltas = injector(
+                    self.buffer.outputs[injector.layer],
+                    targets.get(injector.target_from))
+                self.buffer.out_deltas[injector.layer][:] = deltas
+                self.errors[inj_name] = error
 
     def backward_pass(self, targets):
-        assert self.injectors, "No error injectors!"
-        self.buffer.rearrange_bwd()
+        self._calculate_deltas_and_error(targets)
 
-        for injector in self.injectors.values():
-            self.buffer.out_deltas[injector.layer] = injector(
-                self.buffer.outputs[injector.layer],
-                targets.get(injector.target_from))
-
-        for layer_name, layer in reversed(self.layers.items()[1:]):
+        for layer_name, layer in reversed(list(self.layers.items())[1:]):
             parameters = self.buffer.parameters[layer_name]
             input_buffer = self.buffer.inputs[layer_name]
             output_buffer = self.buffer.outputs[layer_name]

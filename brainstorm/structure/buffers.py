@@ -149,7 +149,7 @@ class BufferManager(object):
         self.bwd_shape = self.fwd_shape
         self.gradient.rearrange()
         self.in_deltas.rearrange(self.bwd_shape)
-        self.out_deltas.rearrange(self.bwd_shape, self.inputs.memory)
+        self.out_deltas.rearrange(self.bwd_shape, self.in_deltas.memory)
 
     @classmethod
     def create_from_layers(cls, layers):

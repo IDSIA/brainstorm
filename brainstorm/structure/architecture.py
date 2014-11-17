@@ -55,7 +55,7 @@ def validate_architecture(architecture):
             assert '@type' in layer and isinstance(layer['@type'],
                                                    string_types)
             assert 'sink_layers' in layer and isinstance(layer['sink_layers'],
-                                                         set)
+                                                         (set, list))
 
         # layer naming
         for name in architecture:

@@ -32,6 +32,13 @@ class LayerBase(object):
         assert self.get_parameter_size() == buffer.size
         return None
 
+    def forward_pass(self, parameters, input_buffer, output_buffer):
+        pass
+
+    def backward_pass(self, parameters, input_buffer, output_buffer,
+                      in_delta_buffer, out_delta_buffer):
+        pass
+
 
 class InputLayer(LayerBase):
     """
@@ -58,6 +65,7 @@ class FeedForwardLayer(LayerBase):
         super(FeedForwardLayer, self).__init__(size, in_size, sink_layers,
                                                source_layers, kwargs)
         self.act_func = lambda x: 1. / (1. + np.exp(-x))
+        self.act_func_deriv = lambda y: y * (1 - y)
 
     def get_parameter_size(self):
         return self.in_size * self.out_size + self.out_size
@@ -73,6 +81,13 @@ class FeedForwardLayer(LayerBase):
         W, b = parameters['W'], parameters['b']
         for t in range(input_buffer.shape[0]):
             output_buffer[t, :] = self.act_func(np.dot(input_buffer[t], W) + b)
+
+    def backward_pass(self, parameters, input_buffer, output_buffer,
+                      in_delta_buffer, out_delta_buffer):
+        W = parameters['W']
+        for t in range(input_buffer.shape[0]):
+            d_z = self.act_func_deriv(output_buffer[t]) * out_delta_buffer[t]
+            in_delta_buffer[t, :] = np.dot(d_z, W.T)
 
 
 def get_layer_class_from_typename(typename):
