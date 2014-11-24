@@ -33,7 +33,7 @@ class Network(Seedable):
         self.injectors = injectors or {}
         self.errors = None
 
-    def forward_pass(self, input_data):
+    def forward_pass(self, input_data, training_pass=False):
         assert self.layers['InputLayer'].out_size == input_data.shape[2],\
             "Input dimensions mismatch of InputLayer({}) and data ({})".format(
                 self.layers['InputLayer'].out_size, input_data.shape[2])
