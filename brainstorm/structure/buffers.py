@@ -46,7 +46,12 @@ class ParameterBuffer(dict):
         for layer_name in self.layout:
             view = self.view_factories[layer_name](self.get_raw(layer_name))
             self[layer_name] = view
-        self[slice(None)] = self.memory
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            return self.memory[item]
+        else:
+            return dict.__getitem__(self, item)
 
     def get_raw(self, layer_name=None):
         """
