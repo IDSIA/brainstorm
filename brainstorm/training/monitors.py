@@ -2,9 +2,12 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
+import six
+
 from collections import OrderedDict
 from brainstorm.describable import Describable
-#from pylstm.error_functions import ClassificationError, LabelingError
+from brainstorm.injectors.core import Injector
+from brainstorm.injectors.error_functions import ClassificationError
 
 
 class Monitor(Describable):
@@ -91,148 +94,93 @@ class SaveBestWeights(Monitor):
             else self.weights
 
 
-class MonitorError(Monitor):
+class MonitorInjector(Monitor):
     """
-    Monitor the given error (aggregated over all sequences).
+    Monitor the given injector (aggregated over all sequences).
     """
     __undescribed__ = {'data_iter'}
 
-    def __init__(self, data_name, error_func=None,
-                 name=None, timescale='epoch', interval=1):
-        if name is None and error_func is not None:
-            name = 'Monitor' + error_func.__name__
-        super(MonitorError, self).__init__(name, timescale, interval)
-        assert isinstance(data_name, basestring)
+    def __init__(self, data_name, injector, name=None,
+                 timescale='epoch', interval=1, verbose=None):
+        if name is None:
+            if isinstance(injector, six.string_types):
+                name = 'Monitor' + injector
+            else:
+                name = 'Monitor' + injector.__class__.__name__
+
+        super(MonitorInjector, self).__init__(name, timescale, interval,
+                                              verbose)
+        assert isinstance(data_name, six.string_types)
         self.data_name = data_name
         self.data_iter = None
-        self.error_func = error_func
+        self.injector = injector
 
     def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorError, self).start(net, stepper, verbose, monitor_kwargs)
+        super(MonitorInjector, self).start(net, stepper, verbose,
+                                           monitor_kwargs)
         self.data_iter = monitor_kwargs[self.data_name]
 
     def __call__(self, epoch, net, stepper, logs):
-        error_func = self.error_func or net.error_func
+        if isinstance(self.injector, six.string_types):
+            injector = net.injectors[self.injector]
+        else:
+            assert isinstance(self.injector, Injector)
+            injector = self.injector
         errors = []
+        # noinspection PyCallingNonCallable
         for x, t in self.data_iter(self.run_verbosity):
-            y = net.forward_pass(x)
-            error, _ = error_func(y, t)
+            net.forward_pass(x)
+            error, _ = injector(net.buffer.outputs[injector.layer],
+                                t.get(injector.target_from))
             errors.append(error)
-        return error_func.aggregate(errors)
+        return injector.aggregate(errors)
 
 
-class MonitorClassificationError(MonitorError):
-    def __init__(self, data_name, name=None, timescale='epoch', interval=1):
+class MonitorClassificationError(MonitorInjector):
+    def __init__(self, data_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         super(MonitorClassificationError, self).__init__(
-            data_name,
-            error_func=ClassificationError,
-            name=name, timescale=timescale, interval=interval)
+            data_name, injector=ClassificationError,
+            name=name, timescale=timescale, interval=interval,
+            verbose=verbose)
 
 
-class MonitorLabelingError(MonitorError):
-    def __init__(self, data_name, name=None, timescale='epoch', interval=1):
-        super(MonitorLabelingError, self).__init__(
-            data_name,
-            error_func=LabelingError,
-            name=name, timescale=timescale, interval=interval)
-
-
-class MonitorMultipleErrors(Monitor):
+class MonitorMultipleInjectors(Monitor):
     """
     Monitor errors (aggregated over all sequences).
     """
     __undescribed__ = {'data_iter'}
 
-    def __init__(self, data_name, error_functions,
-                 name=None, timescale='epoch', interval=1):
-        super(MonitorMultipleErrors, self).__init__(name, timescale, interval)
+    def __init__(self, data_name, injectors,
+                 name=None, timescale='epoch', interval=1, verbose=None):
+        super(MonitorMultipleInjectors, self).__init__(name, timescale,
+                                                       interval, verbose)
         self.iter_name = data_name
         self.data_iter = None
-        self.error_functions = error_functions
+        self.injectors = injectors
 
     def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorMultipleErrors, self).start(net, stepper, verbose,
-                                                 monitor_kwargs)
+        super(MonitorMultipleInjectors, self).start(net, stepper, verbose,
+                                                    monitor_kwargs)
         self.data_iter = monitor_kwargs[self.iter_name]
 
     def __call__(self, epoch, net, stepper, logs):
-        errors = {e: [] for e in self.error_functions}
+        errors = {e: [] for e in self.injectors}
+        # noinspection PyCallingNonCallable
         for x, t in self.data_iter(self.run_verbosity):
-            y = net.forward_pass(x)
-            for error_func in self.error_functions:
-                error, _ = error_func(y, t)
-                errors[error_func].append(error)
+            net.forward_pass(x)
+            for inj in self.injectors:
+                if isinstance(inj, six.string_types):
+                    injector = net.injectors[inj]
+                else:
+                    assert isinstance(inj, Injector)
+                    injector = inj
+                error, _ = injector(net.buffer.outputs[injector.layer],
+                                    t.get(injector.target_from))
+                errors[injector].append(error)
 
         return {err.__name__: err.aggregate(errors[err])
-                for err in self.error_functions}
-
-
-class PlotMonitors(Monitor):
-    """
-    Open a window and plot the training and validation errors while training.
-    """
-    __undescribed__ = {'plt', 'fig', 'ax', 'lines', 'mins'}
-
-    def __init__(self, name=None, show_min=True, timescale='epoch', interval=1):
-        super(PlotMonitors, self).__init__(name, timescale, interval)
-        self.show_min = show_min
-        self.plt = None
-        self.fig = None
-        self.ax = None
-        self.lines = None
-        self.mins = None
-
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(PlotMonitors, self).start(net, stepper, verbose, monitor_kwargs)
-        import matplotlib.pyplot as plt
-        self.plt = plt
-        self.plt.ion()
-        self.fig, self.ax = self.plt.subplots()
-        self.ax.set_title('Training Progress')
-        self.ax.set_xlabel('Epochs')
-        self.ax.set_ylabel('Error')
-        self.lines = dict()
-        self.mins = dict()
-        self.plt.show()
-
-    def _plot(self, name, data):
-        data = data[1:]  # ignore pre-training entry
-        x = range(1, len(data)+1)
-        if name not in self.lines:
-            line, = self.ax.plot(x, data, '-', label=name)
-            self.lines[name] = line
-        else:
-            self.lines[name].set_ydata(data)
-            self.lines[name].set_xdata(x)
-
-        if not self.show_min or len(data) < 2:
-            return
-
-        min_idx = np.argmin(data) + 1
-        if name not in self.mins:
-            color = self.lines[name].get_color()
-            self.mins[name] = self.ax.axvline(min_idx, color=color)
-        else:
-            self.mins[name].set_xdata(min_idx)
-
-    def __call__(self, epoch, net, stepper, logs):
-        if epoch < 2:
-            return
-
-        for name, log in logs.items():
-            if not isinstance(log, (list, dict)) or not log:
-                continue
-            if isinstance(log, dict):
-                for k, v in log.items():
-                    self._plot(name + '.' + k, v)
-            else:
-                self._plot(name, log)
-
-        self.ax.legend()
-        self.ax.relim()
-        self.ax.autoscale_view()
-        self.fig.canvas.draw()
-        self.fig.canvas.draw()  # no idea why I need that twice, but I do
+                for err in self.injectors}
 
 
 class MonitorLayerProperties(Monitor):
@@ -240,18 +188,18 @@ class MonitorLayerProperties(Monitor):
     Monitor some properties of a layer.
     """
     def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None):
+                 interval=1, name=None, verbose=None):
         if name is None:
             name = "Monitor{}Properties".format(layer_name)
-        super(MonitorLayerProperties, self).__init__(name, timescale, interval)
+        super(MonitorLayerProperties, self).__init__(name, timescale,
+                                                     interval, verbose)
         self.layer_name = layer_name
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
-        for key, value in net.get_param_view_for(self.layer_name).items():
+        for key, value in net.buffer.parameters[self.layer_name].items():
             log['min_' + key] = value.min()
             log['max_' + key] = value.max()
-            #if key.split('_')[-1] != 'bias':
             if value.shape[1] > 1:
                 log['min_sq_norm_' + key] = np.sum(value ** 2, axis=1).min()
                 log['max_sq_norm_' + key] = np.sum(value ** 2, axis=1).max()

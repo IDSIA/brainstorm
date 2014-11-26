@@ -49,3 +49,7 @@ class Injector(Describable):
         }
         binarizing = target.binarize_to is not None
         return implementations[(target.__class__, binarizing)](output, target)
+
+    @staticmethod
+    def aggregate(errors):
+        return errors.mean()
