@@ -54,12 +54,6 @@ def test_parameter_buffer_initializes_empty(param_buf):
     assert not param_buf.items()
 
 
-def test_parameter_buffer_rearrange_default_allocates(param_buf):
-    param_buf.rearrange()
-    assert isinstance(param_buf.memory, np.ndarray)
-    assert len(param_buf.memory) == 23
-
-
 def test_parameter_buffer_uses_passed_memory(param_buf):
     mem = memory_mock(23)
     param_buf.rearrange(mem)
@@ -77,11 +71,10 @@ def test_parameter_buffer_rearrange_too_big_memory_raises(param_buf):
 
 
 def test_parameter_buffer_repeated_rearrange_is_ignored(param_buf):
-    param_buf.rearrange()
-    mem = param_buf.memory
+    mem = memory_mock(23)
+    param_buf.rearrange(mem)
     layouts = dict(param_buf)
-    param_buf.rearrange()
-    assert param_buf.memory is mem
+    param_buf.rearrange(mem)
     assert dict(param_buf) == layouts
 
 
@@ -103,7 +96,8 @@ def test_parameter_buffer_memory_interface(param_buf):
 
 
 def test_parameter_buffer_dict_interface(param_buf):
-    param_buf.rearrange()
+    mem = memory_mock(23)
+    param_buf.rearrange(mem)
     assert set(param_buf.keys()) == {'A', 'B', 'C'}
     assert set(param_buf.values()) == {10, 100, 1000}
     assert set(param_buf.items()) == {('A', 10), ('B', 100), ('C', 1000)}
@@ -164,12 +158,9 @@ def test_inoutbuffer_initializes_empty(inoutbuffer):
     assert not inoutbuffer.items()
 
 
-def test_inoutbuffer_rearrange_default(inoutbuffer):
-    inoutbuffer.rearrange((1, 1))
-    assert inoutbuffer.size == 26
-    assert isinstance(inoutbuffer.memory, np.ndarray)
-    assert inoutbuffer.memory.size == inoutbuffer.size
-    assert inoutbuffer.shape == (1, 1)
+def test_inoutbuffer_without_memory_raises(inoutbuffer):
+    with pytest.raises(AssertionError):
+        inoutbuffer.rearrange((1, 1))
 
 
 def test_inoutbuffer_rearrage_uses_passed_memory(inoutbuffer):
@@ -198,15 +189,17 @@ def test_inoutbuffer_rearrage_memory_interface(inoutbuffer):
 
 
 def test_inoutbuffer_rearrange_ignore_high_shape_dims(inoutbuffer):
-    inoutbuffer.rearrange((2, 3, 5))
+    mem = memory_mock(156)
+    inoutbuffer.rearrange((2, 3, 5), mem)
 
     assert inoutbuffer.size == 3*2*3 + 12*2*3 + 11*2*3
-    assert isinstance(inoutbuffer.memory, np.ndarray)
+    assert inoutbuffer.memory is mem
     assert inoutbuffer.shape == (2, 3)
 
 
 def test_inoutbuffer_layout(inoutbuffer):
-    inoutbuffer.rearrange((2, 3))
+    mem = np.zeros(156)
+    inoutbuffer.rearrange((2, 3), mem)
 
     assert set(inoutbuffer.keys()) == {'A', 'B', 'C', 'D'}
     assert inoutbuffer['A'].shape == (2, 3, 3)
@@ -216,12 +209,12 @@ def test_inoutbuffer_layout(inoutbuffer):
 
 
 def test_inoutbuffer_rearrange_is_lazy(inoutbuffer):
-    inoutbuffer.rearrange((2, 3))
+    mem = memory_mock(156)
+    inoutbuffer.rearrange((2, 3), mem)
     layouts = dict(inoutbuffer)
-    m = inoutbuffer.memory
     inoutbuffer.rearrange((2, 3))
     assert dict(inoutbuffer) == layouts
-    assert inoutbuffer.memory is m
+    assert inoutbuffer.memory is mem
 
 
 def test_inoutbuffer_rearrange_with_identical_memory_is_lazy(inoutbuffer):
@@ -245,19 +238,21 @@ def test_inoutbuffer_rearrange_with_different_memory_updates(inoutbuffer):
 
 
 def test_inoutbuffer_rearrange_is_lazy_if_smaller(inoutbuffer):
-    inoutbuffer.rearrange((2, 3))
-    m = inoutbuffer.memory
+    mem = memory_mock(156)
+    inoutbuffer.rearrange((2, 3), mem)
     inoutbuffer.rearrange((1, 2))
-    assert inoutbuffer.memory is m
+    assert inoutbuffer.memory is mem
 
 
 # ###################### BufferManager #######################################
 
 @pytest.fixture
 def buff_man():
-    pb = Mock()
+    pb = Mock(size=10)
     sink_buf = Mock()
     source_buf = Mock()
+    sink_buf.get_size = lambda s: 17
+    source_buf.get_size = lambda s: 17
     return BufferManager(pb, sink_buf, source_buf)
 
 
@@ -274,10 +269,8 @@ def test_buffermanager_construction():
 
 def test_buffermanager_rearranges_in_out_buffers(buff_man):
     buff_man.rearrange_fwd((2, 3, 17))
-    buff_man.parameters.rearrange.assert_called_once_with()
-    buff_man.inputs.rearrange.assert_called_once_with((2, 3))
-    buff_man.outputs.rearrange.assert_called_once_with((2, 3),
-                                                       buff_man.inputs.memory)
+    assert buff_man.inputs.rearrange.called
+    assert buff_man.outputs.rearrange.called
 
 
 def test_buffermanager_rearranges_lazily(buff_man):
@@ -293,6 +286,7 @@ def test_buffermanager_rearranges_lazily(buff_man):
 
 def test_create_from_layers(layers):
     bm = BufferManager.create_from_layers(layers)
+    bm.rearrange_parameters()
     bm.rearrange_fwd((1, 1))
     assert set(bm.parameters.keys()) == {'InputLayer', 'A', 'B', 'C', 'D'}
     assert set(bm.inputs.keys()) == {'A', 'B', 'C', 'D'}

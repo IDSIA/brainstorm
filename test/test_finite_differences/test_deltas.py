@@ -69,7 +69,7 @@ def test_deltas_finite_differences(net, input_data, targets):
     def f(x):
         net.forward_pass(x.reshape(input_data.shape))
         return net.calculate_errors(targets)['MSE']
-    delta_approx = approx_fprime(input_data.copy().flatten(), f, 1e-7)
+    delta_approx = approx_fprime(input_data.copy().flatten(), f, 1e-5)
 
     # ######## compare them #############
     nr_sequences = input_data.shape[1]
@@ -88,7 +88,7 @@ def test_gradient_finite_differences(net, input_data, targets):
     # ######## calculate deltas ##########
     net.forward_pass(input_data)
     net.backward_pass(targets)
-    gradient_calc = net.buffer.gradient.get_raw()
+    gradient_calc = net.buffer.gradient.get_raw().copy()
 
     # ######## estimate deltas ##########
     def f(x):
@@ -96,7 +96,7 @@ def test_gradient_finite_differences(net, input_data, targets):
         net.forward_pass(input_data)
         return net.calculate_errors(targets)['MSE']
     initial_weigths = net.buffer.parameters.get_raw().copy()
-    gradient_approx = approx_fprime(initial_weigths, f, 1e-7)
+    gradient_approx = approx_fprime(initial_weigths, f, 1e-5)
 
     # ######## compare them #############
     nr_sequences = input_data.shape[1]

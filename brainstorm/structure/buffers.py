@@ -20,21 +20,16 @@ class ParameterBuffer(dict):
         self.view_factories = view_factories
         self.memory = None
 
-    def rearrange(self, memory=None):
+    def rearrange(self, memory):
         relocated = self._relocate_internal_memory(memory)
         if relocated:
             self._lay_out()
 
     def _relocate_internal_memory(self, memory):
-        if memory is None and self.memory is not None:
-            return False
+        assert memory is not None, "No memory given to ParameterBuffer"
 
-        if memory is not None and memory is self.memory:
+        if memory is self.memory:
             return False
-
-        if memory is None:
-            self.memory = np.zeros(self.size)
-            return True
 
         assert len(memory) == self.size, \
             "Given memory is wrong size: {} != {}".format(len(memory),
@@ -81,31 +76,29 @@ class InOutBuffer(dict):
     def rearrange(self, shape, memory=None):
         shape_changed = self.shape != shape[:2]
         self.shape = shape[:2]
-        self.size = self._get_size(self.shape)
+        self.size = self.get_size(self.shape)
         relocated = self._resize_internal_memory(memory)
         if relocated or shape_changed:
             self._lay_out()
 
-    def _get_size(self, shape):
+    def get_size(self, shape):
         nr_timesteps, nr_sequences = shape[:2]
         return nr_timesteps * nr_sequences * sum(self.hub_sizes)
 
     def _resize_internal_memory(self, memory):
-        if memory is not None and memory is self.memory:
+        if memory is None:
+            assert self.memory is not None, "No memory found"
+            assert len(self.memory) >= self.size, "Insufficient Memory"
             return False
 
-        if memory is not None:
-            assert len(memory) >= self.size, \
-                "Given memory is too small: {} < {}".format(len(memory),
-                                                            self.size)
-            self.memory = memory
-            return True
+        if memory is self.memory:
+            return False
 
-        if self.memory is None or len(self.memory) < self.size:
-            self.memory = np.zeros(self.size)
-            return True
-
-        return False
+        assert len(memory) >= self.size, \
+            "Given memory is too small: {} < {}".format(len(memory),
+                                                        self.size)
+        self.memory = memory
+        return True
 
     def _lay_out(self):
         nr_timesteps, nr_sequences = self.shape
@@ -130,6 +123,18 @@ class BufferManager(object):
         self.out_deltas = copy(out_buffer)
         self.fwd_shape = None
         self.bwd_shape = None
+        self.param_memory = None
+        self.grad_memory = None
+        self.fwd_memory = []
+        self.bwd_memory = []
+
+    def allocate(self, size):
+        return np.zeros(size, dtype=np.float32)
+
+    def rearrange_parameters(self):
+        if self.param_memory is None:
+            self.param_memory = self.allocate(self.parameters.size)
+            self.parameters.rearrange(self.param_memory)
 
     def rearrange_fwd(self, shape):
         """
@@ -141,9 +146,16 @@ class BufferManager(object):
         if self.fwd_shape == shape[:2]:
             return
         self.fwd_shape = shape[:2]
-        self.parameters.rearrange()
-        self.inputs.rearrange(self.fwd_shape)
-        self.outputs.rearrange(self.fwd_shape, self.inputs.memory)
+
+        in_size = self.inputs.get_size(self.fwd_shape)
+
+        if len(self.fwd_memory) < in_size:
+            self.fwd_memory = self.allocate(in_size)
+            self.inputs.rearrange(self.fwd_shape, self.fwd_memory)
+            self.outputs.rearrange(self.fwd_shape, self.fwd_memory)
+        else:
+            self.inputs.rearrange(self.fwd_shape)
+            self.outputs.rearrange(self.fwd_shape)
 
     def rearrange_bwd(self):
         """
@@ -153,9 +165,21 @@ class BufferManager(object):
         if self.bwd_shape == self.fwd_shape:
             return
         self.bwd_shape = self.fwd_shape
-        self.gradient.rearrange()
-        self.in_deltas.rearrange(self.bwd_shape)
-        self.out_deltas.rearrange(self.bwd_shape, self.in_deltas.memory)
+
+        if self.grad_memory is None:
+            self.grad_memory = self.allocate(self.gradient.size)
+            self.gradient.rearrange(self.grad_memory)
+
+        deltas_size = self.in_deltas.get_size(self.bwd_shape)
+
+        if len(self.bwd_memory) < deltas_size:
+            self.bwd_memory = self.allocate(deltas_size)
+
+            self.in_deltas.rearrange(self.bwd_shape, self.bwd_memory)
+            self.out_deltas.rearrange(self.bwd_shape, self.bwd_memory)
+        else:
+            self.in_deltas.rearrange(self.bwd_shape)
+            self.out_deltas.rearrange(self.bwd_shape)
 
     @classmethod
     def create_from_layers(cls, layers):
