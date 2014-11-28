@@ -3,9 +3,9 @@
 
 from __future__ import division, print_function, unicode_literals
 from copy import copy
-import numpy as np
 from brainstorm.structure.layout import (create_param_layout,
                                          create_in_out_layout)
+from brainstorm.structure.memory_handler import default_handler
 
 
 class ParameterBuffer(dict):
@@ -14,11 +14,12 @@ class ParameterBuffer(dict):
     The buffer is allocated at initialization, and the views for all the
     layers are created.
     """
-    def __init__(self, param_layout, view_factories):
+    def __init__(self, param_layout, view_factories, handler=default_handler):
         super(ParameterBuffer, self).__init__()
         self.size, self.layout = param_layout
         self.view_factories = view_factories
         self.memory = None
+        self.handler = handler
 
     def rearrange(self, memory):
         relocated = self._relocate_internal_memory(memory)
@@ -31,9 +32,9 @@ class ParameterBuffer(dict):
         if memory is self.memory:
             return False
 
-        assert len(memory) == self.size, \
-            "Given memory is wrong size: {} != {}".format(len(memory),
-                                                          self.size)
+        mem_size = self.handler.size(memory)
+        assert mem_size == self.size, \
+            "Given memory is wrong size: {} != {}".format(mem_size, self.size)
         self.memory = memory
         return True
 
@@ -44,7 +45,7 @@ class ParameterBuffer(dict):
 
     def __getitem__(self, item):
         if isinstance(item, slice):
-            return self.memory[item]
+            return self.handler.slice(self.memory, item)
         else:
             return dict.__getitem__(self, item)
 
@@ -56,7 +57,7 @@ class ParameterBuffer(dict):
         if layer_name is None:
             return self.memory
         else:
-            return self.memory.__getitem__(self.layout[layer_name])
+            return self.handler.slice(self.memory, self.layout[layer_name])
 
 
 class InOutBuffer(dict):
@@ -65,13 +66,14 @@ class InOutBuffer(dict):
     There should always be one of this object for the inputs and one for the
     outputs with corresponding layouts that share the same memory region.
     """
-    def __init__(self, hub_sizes, layouts):
+    def __init__(self, hub_sizes, layouts, handler=default_handler):
         super(InOutBuffer, self).__init__()
         self.hub_sizes = hub_sizes
         self.size = 0
         self.layouts = layouts
         self.memory = None
         self.shape = None
+        self.handler = handler
 
     def rearrange(self, shape, memory=None):
         shape_changed = self.shape != shape[:2]
@@ -88,15 +90,15 @@ class InOutBuffer(dict):
     def _resize_internal_memory(self, memory):
         if memory is None:
             assert self.memory is not None, "No memory found"
-            assert len(self.memory) >= self.size, "Insufficient Memory"
+            assert self.handler.size(self.memory) >= self.size, "Insufficient Memory"
             return False
 
         if memory is self.memory:
             return False
 
-        assert len(memory) >= self.size, \
-            "Given memory is too small: {} < {}".format(len(memory),
-                                                        self.size)
+        mem_size = self.handler.size(memory)
+        assert mem_size >= self.size, \
+            "Given memory is too small: {} < {}".format(mem_size, self.size)
         self.memory = memory
         return True
 
@@ -106,15 +108,18 @@ class InOutBuffer(dict):
         for hub_feature_size, layout in zip(self.hub_sizes, self.layouts):
             hub_shape = (nr_timesteps, nr_sequences, hub_feature_size)
             hub_size = nr_timesteps * nr_sequences * hub_feature_size
-            hub_buffer = self.memory[i:i+hub_size]
-            hub_buffer = hub_buffer.reshape(hub_shape)
+            hub_buffer = self.handler.slice(self.memory, slice(i, i+hub_size))
+            hub_buffer = self.handler.reshape(hub_buffer, hub_shape)
             i += hub_size
             for layer_name, feature_slice in layout.items():
-                self[layer_name] = hub_buffer[:, :, feature_slice]
+                self[layer_name] = self.handler.slice(
+                    hub_buffer, (slice(None), slice(None), feature_slice))
 
 
 class BufferManager(object):
-    def __init__(self, param_buffer, in_buffer, out_buffer):
+    # TODO needs refactor, because it essentially does everything twice
+    def __init__(self, param_buffer, in_buffer, out_buffer,
+                 handler=default_handler):
         self.parameters = param_buffer
         self.gradient = copy(param_buffer)
         self.inputs = in_buffer
@@ -125,15 +130,21 @@ class BufferManager(object):
         self.bwd_shape = None
         self.param_memory = None
         self.grad_memory = None
-        self.fwd_memory = []
-        self.bwd_memory = []
+        self.handler = handler
+        self.fwd_memory = self.handler.empty
+        self.bwd_memory = self.handler.empty
 
-    def allocate(self, size):
-        return np.zeros(size, dtype=np.float32)
+    def reset(self):
+        self.fwd_shape = None
+        self.bwd_shape = None
+        self.param_memory = None
+        self.grad_memory = None
+        self.fwd_memory = self.handler.empty
+        self.bwd_memory = self.handler.empty
 
     def rearrange_parameters(self):
         if self.param_memory is None:
-            self.param_memory = self.allocate(self.parameters.size)
+            self.param_memory = self.handler.allocate(self.parameters.size)
             self.parameters.rearrange(self.param_memory)
 
     def rearrange_fwd(self, shape):
@@ -149,8 +160,8 @@ class BufferManager(object):
 
         in_size = self.inputs.get_size(self.fwd_shape)
 
-        if len(self.fwd_memory) < in_size:
-            self.fwd_memory = self.allocate(in_size)
+        if self.handler.size(self.fwd_memory) < in_size:
+            self.fwd_memory = self.handler.allocate(in_size)
             self.inputs.rearrange(self.fwd_shape, self.fwd_memory)
             self.outputs.rearrange(self.fwd_shape, self.fwd_memory)
         else:
@@ -167,13 +178,13 @@ class BufferManager(object):
         self.bwd_shape = self.fwd_shape
 
         if self.grad_memory is None:
-            self.grad_memory = self.allocate(self.gradient.size)
+            self.grad_memory = self.handler.allocate(self.gradient.size)
             self.gradient.rearrange(self.grad_memory)
 
         deltas_size = self.in_deltas.get_size(self.bwd_shape)
 
-        if len(self.bwd_memory) < deltas_size:
-            self.bwd_memory = self.allocate(deltas_size)
+        if self.handler.size(self.bwd_memory) < deltas_size:
+            self.bwd_memory = self.handler.allocate(deltas_size)
 
             self.in_deltas.rearrange(self.bwd_shape, self.bwd_memory)
             self.out_deltas.rearrange(self.bwd_shape, self.bwd_memory)

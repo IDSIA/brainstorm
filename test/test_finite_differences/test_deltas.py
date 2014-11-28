@@ -63,7 +63,8 @@ def net(request):
 def test_deltas_finite_differences(net, input_data, targets):
     # ######## calculate deltas ##########
     net.forward_pass(input_data)
-    delta_calc = net.backward_pass(targets).flatten()
+    net.backward_pass(targets)
+    delta_calc = net.in_deltas.flatten().copy()
 
     # ######## estimate deltas ##########
     def f(x):
@@ -88,7 +89,7 @@ def test_gradient_finite_differences(net, input_data, targets):
     # ######## calculate deltas ##########
     net.forward_pass(input_data)
     net.backward_pass(targets)
-    gradient_calc = net.buffer.gradient.get_raw().copy()
+    gradient_calc = net.buffer.gradient[:].copy()
 
     # ######## estimate deltas ##########
     def f(x):

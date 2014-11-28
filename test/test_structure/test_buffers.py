@@ -23,7 +23,8 @@ def reshape_mock(*args):
 
 
 def memory_mock(*shape):
-    mem = MagicMock(spec=['__getitem__', '__len__', 'reshape'], shape=shape)
+    mem = MagicMock(spec=['__getitem__', '__len__', 'reshape'], shape=shape,
+                    size=np.product(shape))
     mem.__len__.return_value = shape[0] if shape else 0
     mem.__getitem__ = Mock(wraps=get_item_mock)
     mem.reshape = Mock(wraps=reshape_mock)
