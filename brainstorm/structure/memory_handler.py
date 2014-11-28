@@ -35,7 +35,7 @@ try:
         def __init__(self):
             self.dtype = np.float32
             self.context = cumisc._global_cublas_handle
-            self.empty = gpuarray.zeros(0, dtype=self.dtype)
+            self.empty = gpuarray.zeros((), dtype=self.dtype)
 
         @staticmethod
         def size(mem):
@@ -49,7 +49,7 @@ try:
             mem.fill(val)
 
         def set(self, mem, arr):
-            assert mem.shape == arr.shape
+            assert mem.shape == arr.shape, "{} != {}".format(mem.shape, arr.shape)
             mem.set(arr.astype(self.dtype))
 
         @staticmethod

@@ -11,3 +11,5 @@ __all__ = [str(a) for a in ['InputLayer', 'NoOpLayer', 'FeedForwardLayer']]
 InputLayer = partial(ConstructionLayer, "InputLayer")
 NoOpLayer = partial(ConstructionLayer, "NoOpLayer")
 FeedForwardLayer = partial(ConstructionLayer, "FeedForwardLayer")
+
+PyCudaFFLayer = partial(ConstructionLayer, "PyCudaFFLayer")

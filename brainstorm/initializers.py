@@ -210,10 +210,18 @@ def evaluate_initializer(initializer, shape, fallback=None, seed=None):
         if seed is not None:
             initializer.rnd.set_seed(seed)
         try:
-            return initializer(shape)
+            result = initializer(shape)
         except InitializationError:
             if fallback is not None:
-                return evaluate_initializer(fallback, shape)
+                return evaluate_initializer(fallback, shape, seed=seed)
             raise
     else:
-        return np.array(initializer)
+        result = np.array(initializer)
+
+    # use numpy broadcasting to ensure the correct shape if necessary
+    if result.shape != shape:
+        r = np.empty(shape, dtype=np.float64)
+        r[:] = result
+        result = r
+
+    return result

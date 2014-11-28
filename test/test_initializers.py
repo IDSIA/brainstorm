@@ -84,17 +84,18 @@ def test_sparse_outputs_has_correct_number_of_nonzero_cols():
 # ########################## evaluate_initializer #############################
 
 def test_evaluate_initializer_with_number():
-    assert evaluate_initializer(1.4, (7, 5)) == 1.4
+    assert np.all(evaluate_initializer(1.4, (7, 5)) == 1.4)
 
 
 def test_evaluate_initializer_with_list():
-    result = evaluate_initializer([1, 2, 3], (7, 5))
+    result = evaluate_initializer([1, 2, 3], (1, 3))
     assert isinstance(result, np.ndarray)
     assert np.all(result == np.array([1, 2, 3]))
 
 
 def test_evaluate_initializer_calls_initializer():
     init = mock.create_autospec(Initializer())
+    init.side_effect = lambda x: np.array(1)
     evaluate_initializer(init, (7, 5))
     init.assert_called_once_with((7, 5))
 
@@ -109,8 +110,7 @@ def test_evaluate_initializer_without_fallback_propagates_error():
 def test_evaluate_initializer_with_fallback_calls_fallback():
     init = mock.create_autospec(Initializer())
     fallback = mock.create_autospec(Initializer())
+    fallback.side_effect = lambda x: np.array(1)
     init.side_effect = InitializationError
-
     evaluate_initializer(init, (7, 5), fallback)
-
     fallback.assert_called_once_with((7, 5))
