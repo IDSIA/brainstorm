@@ -34,7 +34,7 @@ class Network(Seedable):
         self.buffer = buffer_manager
         self.injectors = injectors or {}
         self.errors = None
-        self.memory_handler = None
+        self.handler = None
         self.set_memory_handler(handler)
 
     @property
@@ -46,9 +46,8 @@ class Network(Seedable):
         return self.buffer.out_deltas['InputLayer']
 
     def set_memory_handler(self, handler):
-        self.memory_handler = handler
-        self.buffer.allocate = self.memory_handler.allocate
-        self.buffer.reset()
+        self.handler = handler
+        self.buffer.set_memory_handler(handler)
 
     def forward_pass(self, input_data, training_pass=False):
         assert self.layers['InputLayer'].out_size == input_data.shape[2],\
@@ -56,7 +55,7 @@ class Network(Seedable):
                 self.layers['InputLayer'].out_size, input_data.shape[2])
         self.errors = None
         self.buffer.rearrange_fwd(input_data.shape)
-        self.memory_handler.set(self.buffer.outputs['InputLayer'], input_data)
+        self.handler.set(self.buffer.outputs['InputLayer'], input_data)
         for layer_name, layer in list(self.layers.items())[1:]:
             parameters = self.buffer.parameters[layer_name]
             input_buffer = self.buffer.inputs[layer_name]
@@ -77,12 +76,12 @@ class Network(Seedable):
                 error, deltas = injector(
                     self.buffer.outputs[injector.layer],
                     targets.get(injector.target_from))
-                self.memory_handler.set(self.buffer.out_deltas[injector.layer], deltas)
+                self.handler.set(self.buffer.out_deltas[injector.layer], deltas)
                 self.errors[inj_name] = error
 
     def backward_pass(self, targets):
         self._calculate_deltas_and_error(targets)
-        self.memory_handler.fill(self.buffer.gradient[:], 0.)
+        self.handler.fill(self.buffer.gradient[:], 0.)
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
             parameters = self.buffer.parameters[layer_name]
             input_buffer = self.buffer.inputs[layer_name]
@@ -115,7 +114,7 @@ class Network(Seedable):
                 assert len(fb) <= 1, "Multiple fallbacks for {}.{}: {}".format(
                     layer_name, view_name, fb)
                 fb = fb.pop() if len(fb) else None
-                self.memory_handler.set(
+                self.handler.set(
                     view,
                     evaluate_initializer(init.pop(), view.shape, fb,
                                          seed=init_rnd.generate_seed()))

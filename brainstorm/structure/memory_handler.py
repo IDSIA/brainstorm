@@ -11,6 +11,7 @@ class NumpyHandler(object):
         self.shape = lambda x: x.shape
         self.reshape = lambda x, s: x.reshape(s)
         self.slice = lambda x, s: x[s]
+        self.get = lambda x: x
         self.context = 'numpy'
         self.empty = np.zeros(0)
 

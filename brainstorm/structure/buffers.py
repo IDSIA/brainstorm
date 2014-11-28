@@ -142,6 +142,25 @@ class BufferManager(object):
         self.fwd_memory = self.handler.empty
         self.bwd_memory = self.handler.empty
 
+    def set_memory_handler(self, handler):
+        # remember the parameters
+        params = None
+        if self.param_memory is not None:
+            params = self.handler.get(self.param_memory)
+        self.reset()
+        # set all handlers
+        self.handler = handler
+        self.parameters.handler = handler
+        self.gradient.handler = handler
+        self.inputs.handler = handler
+        self.outputs.handler = handler
+        self.in_deltas.handler = handler
+        self.out_deltas.handler = handler
+        # restore the parameters
+        if params is not None:
+            self.handler.set(self.param_memory, params)
+            self.parameters.rearrange(self.param_memory)
+
     def rearrange_parameters(self):
         if self.param_memory is None:
             self.param_memory = self.handler.allocate(self.parameters.size)
