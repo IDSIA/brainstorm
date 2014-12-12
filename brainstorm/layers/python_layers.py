@@ -68,8 +68,14 @@ class FeedForwardLayer(LayerBase):
     def __init__(self, size, in_size, sink_layers, source_layers, kwargs):
         super(FeedForwardLayer, self).__init__(size, in_size, sink_layers,
                                                source_layers, kwargs)
-        self.act_func = lambda x: 1. / (1. + np.exp(-x))
-        self.act_func_deriv = lambda y: y * (1 - y)
+        activation_functions = {
+            'sigmoid': (lambda x: 1. / (1. + np.exp(-x)), lambda y: y * (1 - y)),
+            'tanh': (np.tanh, lambda y: (1 - y*y)),
+            'linear': (lambda x: x, 1)
+        }
+
+        self.act_func, self.act_func_deriv = \
+            activation_functions[kwargs.get('act_func', 'tanh')]
 
     def get_parameter_size(self):
         return self.in_size * self.out_size + self.out_size
