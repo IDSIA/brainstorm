@@ -21,7 +21,7 @@ def create_param_layout(layers):
     """
     bounds = np.cumsum([0] + [l.get_parameter_size() for l in layers.values()])
     total_size = bounds[-1]
-    layout = OrderedDict([(name, slice(bounds[i], bounds[i+1]))
+    layout = OrderedDict([(name, slice(bounds[i], bounds[i + 1]))
                           for i, name in enumerate(layers)])
     return ParameterLayout(total_size, layout)
 
@@ -82,7 +82,8 @@ def get_forward_closure(layer_name, layers):
       - the sink_set contains all the target layers of the source_set
       - the source_set contains all the source layers of the sink_set
 
-    :param layer_name: The name of the layer to start the forward closure from.
+    :param layer_name: The name o ram
+        names.f the layer to start the forward closure from.
     :type layer_name: unicode
     :param layers: dictionary of instantiated layers. They should have
         sink_layers and source_layers fields.
@@ -136,8 +137,8 @@ def permute_rows(connection_table):
     """
     Given a list of sources and a connection table, find a permutation of the
     sources, such that they can be connected to the sinks via a single buffer.
-    @type connection_table: np.ndarray
-    @rtype: list[int]
+    :type connection_table: np.ndarray
+    :rtype: list[int]
     """
     # systematically try all permutations until one satisfies the condition
     final_permutation = None
@@ -159,8 +160,8 @@ def can_be_connected_with_single_buffer(connection_table):
     Check for a connection table if it represents a layout that can be realized
     by a single buffer. This is equivalent to checking if in every column of
     the table all the ones form a connected block.
-    @type connection_table: np.ndarray
-    @rtype: bool
+    :type connection_table: np.ndarray
+    :rtype: bool
     """
     for i in range(connection_table.shape[1]):
         region_started = False
