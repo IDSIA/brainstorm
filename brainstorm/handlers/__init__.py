@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers.numpy_handler import NumpyHandler
+import numpy as np
 
 try:
     from pycuda import gpuarray
@@ -11,4 +12,4 @@ try:
 except ImportError:
     pass
 
-default_handler = NumpyHandler
+default_handler = NumpyHandler(np.float32)
