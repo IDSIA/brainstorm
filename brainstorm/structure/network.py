@@ -88,12 +88,10 @@ class Network(Seedable):
             output_buffer = self.buffer.outputs[layer_name]
             in_delta_buffer = self.buffer.in_deltas[layer_name]
             out_delta_buffer = self.buffer.out_deltas[layer_name]
-            layer.backward_pass(parameters, input_buffer, output_buffer,
-                                in_delta_buffer, out_delta_buffer)
             gradient_buffer = self.buffer.gradient[layer_name]
-
-            layer.calculate_gradient(parameters, input_buffer, output_buffer,
-                                     out_delta_buffer, gradient_buffer)
+            layer.backward_pass(parameters, input_buffer, output_buffer,
+                                in_delta_buffer, out_delta_buffer,
+                                gradient_buffer)
 
     def initialize(self, init_dict=None, seed=None, **kwargs):
         init_refs = _update_references_with_dict(init_dict, kwargs)

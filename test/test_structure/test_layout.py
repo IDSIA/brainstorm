@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 
 from brainstorm.structure.layout import (
-    create_param_layout, create_in_out_layout)
+    create_param_layout, create_in_out_layout, ParameterLayoutEntry)
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.utils import InvalidArchitectureError
@@ -21,6 +21,7 @@ def impossible_layers():
         },
         'A': {
             '@type': 'FeedForwardLayer',
+            'size': 2,
             'sink_layers': {'C', 'D'}
         },
         'B': {
@@ -51,11 +52,16 @@ def test_create_param_layout(layers):
     param_layout = create_param_layout(layers)
     assert param_layout.size == 230
     assert list(param_layout.layout) == ['InputLayer', 'A', 'B', 'C', 'D']
-    assert param_layout.layout['InputLayer'] == slice(0, 0)
-    assert param_layout.layout['A'] == slice(0, 9)
-    assert param_layout.layout['B'] == slice(9, 24)
-    assert param_layout.layout['C'] == slice(24, 87)
-    assert param_layout.layout['D'] == slice(87, 230)
+    structs = {name: layer.get_parameter_structure()
+               for name, layer in layers.items()}
+    assert param_layout.layout['InputLayer'] == ParameterLayoutEntry(0, 0, [])
+    assert param_layout.layout['A'] == ParameterLayoutEntry(0, 9, structs['A'])
+    assert param_layout.layout['B'] == ParameterLayoutEntry(9, 24,
+                                                            structs['B'])
+    assert param_layout.layout['C'] == ParameterLayoutEntry(24, 87,
+                                                            structs['C'])
+    assert param_layout.layout['D'] == ParameterLayoutEntry(87, 230,
+                                                            structs['D'])
 
 
 def test_create_in_out_layout(layers):

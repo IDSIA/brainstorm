@@ -25,22 +25,14 @@ class LayerBase(object):
     def _get_output_size(cls, size, in_size, kwargs):
         return size if size is not None else in_size
 
-    def get_parameter_size(self):
-        return 0
-
-    def create_param_view(self, buffer):
-        assert self.get_parameter_size() == buffer.size
-        return None
+    def get_parameter_structure(self):
+        return []
 
     def forward_pass(self, parameters, input_buffer, output_buffer):
         pass
 
     def backward_pass(self, parameters, input_buffer, output_buffer,
-                      in_delta_buffer, out_delta_buffer):
-        pass
-
-    def calculate_gradient(self, parameters, input_buffer, output_buffer,
-                           out_delta_buffer, gradient_buffer):
+                      in_delta_buffer, out_delta_buffer, gradient_buffer):
         pass
 
 
@@ -70,22 +62,18 @@ class FeedForwardLayer(LayerBase):
                                                source_layers, kwargs)
         activation_functions = {
             'sigmoid': (lambda x: 1. / (1. + np.exp(-x)), lambda y: y * (1 - y)),
-            'tanh': (np.tanh, lambda y: (1 - y*y)),
+            'tanh': (np.tanh, lambda y: (1 - y * y)),
             'linear': (lambda x: x, 1)
         }
 
         self.act_func, self.act_func_deriv = \
             activation_functions[kwargs.get('act_func', 'tanh')]
 
-    def get_parameter_size(self):
-        return self.in_size * self.out_size + self.out_size
-
-    def create_param_view(self, buffer):
-        assert self.get_parameter_size() == buffer.size
-        W_size = self.in_size * self.out_size
-        W = buffer[:W_size].reshape(self.in_size, self.out_size)
-        b = buffer[W_size:]
-        return {'W': W, 'b': b}
+    def get_parameter_structure(self):
+        return [
+            ('W', (self.in_size, self.out_size)),
+            ('b', self.out_size)
+        ]
 
     def forward_pass(self, parameters, input_buffer, output_buffer):
         W, b = parameters['W'], parameters['b']
@@ -93,19 +81,17 @@ class FeedForwardLayer(LayerBase):
             output_buffer[t, :] = self.act_func(np.dot(input_buffer[t], W) + b)
 
     def backward_pass(self, parameters, input_buffer, output_buffer,
-                      in_delta_buffer, out_delta_buffer):
-        W = parameters['W']
+                      in_delta_buffer, out_delta_buffer, gradient_buffer):
+        W = parameters.W
         for t in range(input_buffer.shape[0]):
             d_z = self.act_func_deriv(output_buffer[t]) * out_delta_buffer[t]
             in_delta_buffer[t, :] = np.dot(d_z, W.T)
 
-    def calculate_gradient(self, parameters, input_buffer, output_buffer,
-                           out_delta_buffer, gradient_buffer):
-        d_W, d_b = gradient_buffer['W'], gradient_buffer['b']
+        dW, db = gradient_buffer
         for t in range(input_buffer.shape[0]):
-            d_z = self.act_func_deriv(output_buffer[t]) * out_delta_buffer[t]
-            d_W += np.dot(input_buffer[t].T, d_z)
-            d_b += np.sum(d_z, axis=0)
+            dz = self.act_func_deriv(output_buffer[t]) * out_delta_buffer[t]
+            dW += np.dot(input_buffer[t].T, dz)
+            db += np.sum(dz, axis=0)
 
 
 def get_layer_class_from_typename(typename):
