@@ -10,7 +10,7 @@ from brainstorm.randomness import Seedable
 from brainstorm.describable import create_from_description
 from brainstorm.structure.architecture import (generate_injectors,
                                                generate_architecture)
-from brainstorm.structure.memory_handler import default_handler
+from brainstorm.handlers import default_handler
 
 
 def build_net(some_layer):
@@ -45,9 +45,9 @@ class Network(Seedable):
     def in_deltas(self):
         return self.buffer.out_deltas['InputLayer']
 
-    def set_memory_handler(self, handler):
-        self.handler = handler
-        self.buffer.set_memory_handler(handler)
+    def set_memory_handler(self, new_handler):
+        self.handler = new_handler
+        self.buffer.set_memory_handler(new_handler)
 
     def forward_pass(self, input_data, training_pass=False):
         assert self.layers['InputLayer'].out_size == input_data.shape[2],\

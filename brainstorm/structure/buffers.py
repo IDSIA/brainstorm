@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 from copy import copy
 from brainstorm.structure.layout import (create_param_layout,
                                          create_in_out_layout)
-from brainstorm.structure.memory_handler import default_handler
+from brainstorm.handlers import default_handler
 
 
 class ParameterBuffer(dict):
