@@ -76,7 +76,8 @@ class Network(Seedable):
                 error, deltas = injector(
                     self.buffer.outputs[injector.layer],
                     targets.get(injector.target_from))
-                self.handler.set(self.buffer.out_deltas[injector.layer], deltas)
+                self.handler.set(self.buffer.out_deltas[injector.layer],
+                                 deltas)
                 self.errors[inj_name] = error
 
     def backward_pass(self, targets):

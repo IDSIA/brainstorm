@@ -2,6 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers.numpy_handler import NumpyHandler
+from brainstorm.handlers.debug_handler import DebugHandler
+
 import numpy as np
 
 try:
@@ -13,3 +15,4 @@ except ImportError:
     pass
 
 default_handler = NumpyHandler(np.float32)
+#default_handler = DebugHandler()

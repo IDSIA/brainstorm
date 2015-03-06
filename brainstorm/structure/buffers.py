@@ -73,7 +73,7 @@ class ParameterBuffer(dict):
         if memory is self.memory:
             return False
 
-        mem_size = self.handler.size(memory)
+        mem_size = memory.size
         assert mem_size == self.size, \
             "Given memory is wrong size: {} != {}".format(mem_size, self.size)
         self.memory = memory
@@ -87,7 +87,7 @@ class ParameterBuffer(dict):
 
     def __getitem__(self, item):
         if isinstance(item, slice):
-            return self.handler.slice(self.memory, item)
+            return self.memory[item]
         else:
             return dict.__getitem__(self, item)
 
@@ -133,13 +133,13 @@ class InOutBuffer(dict):
     def _resize_internal_memory(self, memory):
         if memory is None:
             assert self.memory is not None, "No memory found"
-            assert self.handler.size(self.memory) >= self.size, "Insufficient Memory"
+            assert self.memory.size >= self.size, "Insufficient Memory"
             return False
 
         if memory is self.memory:
             return False
 
-        mem_size = self.handler.size(memory)
+        mem_size = memory.size
         assert mem_size >= self.size, \
             "Given memory is too small: {} < {}".format(mem_size, self.size)
         self.memory = memory
@@ -151,12 +151,11 @@ class InOutBuffer(dict):
         for hub_feature_size, layout in zip(self.hub_sizes, self.layouts):
             hub_shape = (nr_timesteps, nr_sequences, hub_feature_size)
             hub_size = nr_timesteps * nr_sequences * hub_feature_size
-            hub_buffer = self.handler.slice(self.memory, slice(i, i+hub_size))
-            hub_buffer = self.handler.reshape(hub_buffer, hub_shape)
+            hub_buffer = self.memory[i:i + hub_size]
+            hub_buffer = hub_buffer.reshape(hub_shape)
             i += hub_size
             for layer_name, feature_slice in layout.items():
-                self[layer_name] = self.handler.slice(
-                    hub_buffer, (slice(None), slice(None), feature_slice))
+                self[layer_name] = hub_buffer[:, :, feature_slice]
 
 
 class BufferManager(object):
@@ -174,16 +173,16 @@ class BufferManager(object):
         self.param_memory = None
         self.grad_memory = None
         self.handler = handler
-        self.fwd_memory = self.handler.empty
-        self.bwd_memory = self.handler.empty
+        self.fwd_memory = self.handler.EMPTY
+        self.bwd_memory = self.handler.EMPTY
 
     def reset(self):
         self.fwd_shape = None
         self.bwd_shape = None
         self.param_memory = None
         self.grad_memory = None
-        self.fwd_memory = self.handler.empty
-        self.bwd_memory = self.handler.empty
+        self.fwd_memory = self.handler.EMPTY
+        self.bwd_memory = self.handler.EMPTY
 
     def set_memory_handler(self, handler):
         # remember the parameters
@@ -222,7 +221,7 @@ class BufferManager(object):
 
         in_size = self.inputs.get_size(self.fwd_shape)
 
-        if self.handler.size(self.fwd_memory) < in_size:
+        if self.fwd_memory.size < in_size:
             self.fwd_memory = self.handler.allocate(in_size)
             self.inputs.rearrange(self.fwd_shape, self.fwd_memory)
             self.outputs.rearrange(self.fwd_shape, self.fwd_memory)

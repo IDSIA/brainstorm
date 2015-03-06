@@ -12,7 +12,7 @@ class PyCudaHandler(object):
     def __init__(self):
         self.dtype = np.float32
         self.context = cumisc._global_cublas_handle
-        self.empty = gpuarray.zeros((), dtype=self.dtype)
+        self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
 
     @staticmethod
     def size(mem):

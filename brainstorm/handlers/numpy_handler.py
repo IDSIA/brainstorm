@@ -13,7 +13,7 @@ class NumpyHandler(object):
         self.slice = lambda x, s: x[s]
         self.get = lambda x: x
         self.context = 'numpy'
-        self.empty = np.zeros(0)
+        self.EMPTY = np.zeros(0)
 
     def allocate(self, size):
         return np.zeros(size, dtype=self.dtype)
