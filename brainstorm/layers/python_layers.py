@@ -19,7 +19,9 @@ class LayerBase(object):
 
     @classmethod
     def validate_kwargs(cls, kwargs):
-        assert not kwargs, "Unexpected kwargs: {}".format(list(kwargs.keys()))
+        # Rupesh: TODO: Move kwarg validation to each layer
+        for key in kwargs.keys():
+            assert key in ['act_func'], "Unexpected kwarg: {}".format(key)
 
     @classmethod
     def _get_output_size(cls, size, in_size, kwargs):
