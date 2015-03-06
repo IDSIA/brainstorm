@@ -8,8 +8,8 @@ import pytest
 from mock import Mock, MagicMock, call
 
 from brainstorm.structure.buffers import (ParameterBuffer, InOutBuffer,
-                                          BufferManager)
-from brainstorm.structure.layout import ParameterLayout
+                                          BufferManager, ParameterView)
+from brainstorm.structure.layout import ParameterLayout, ParameterLayoutEntry
 
 
 # ###################### Memory Mock ######################################
@@ -36,16 +36,11 @@ def memory_mock(*shape):
 @pytest.fixture
 def param_buf():
     layout = OrderedDict()
-    layout['A'] = slice(0, 5)
-    layout['B'] = slice(5, 12)
-    layout['C'] = slice(12, 23)
+    layout['A'] = ParameterLayoutEntry(0, 5, [('a', (5,))])
+    layout['B'] = ParameterLayoutEntry(5, 12, [('b', (7,))])
+    layout['C'] = ParameterLayoutEntry(12, 23, [('c', (11,))])
     param_layout = ParameterLayout(23, layout)
-    view_factories = {
-        'A': lambda x: 10,
-        'B': lambda x: 100,
-        'C': lambda x: 1000,
-    }
-    return ParameterBuffer(param_layout, view_factories)
+    return ParameterBuffer(param_layout)
 
 
 def test_parameter_buffer_initializes_empty(param_buf):
@@ -100,12 +95,12 @@ def test_parameter_buffer_dict_interface(param_buf):
     mem = memory_mock(23)
     param_buf.rearrange(mem)
     assert set(param_buf.keys()) == {'A', 'B', 'C'}
-    assert set(param_buf.values()) == {10, 100, 1000}
-    assert set(param_buf.items()) == {('A', 10), ('B', 100), ('C', 1000)}
+    for pv in param_buf.values():
+        assert isinstance(pv, ParameterView)
     assert 'A' in param_buf
     assert 'F' not in param_buf
-    assert param_buf['A'] == 10
-    assert param_buf['B'] == 100
+    assert param_buf['A']._names == ('a', )
+    assert param_buf['B']._names == ('b', )
 
 
 def test_parameter_buffer_get_raw(param_buf):

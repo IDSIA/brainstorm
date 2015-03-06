@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import namedtuple
 import re
 from brainstorm.utils import is_valid_layer_name
+from brainstorm.structure.buffers import ParameterView
 
 
 def get_regex_for_reference(reference):
@@ -68,7 +69,7 @@ def empty_dict_from(structure):
     :return: nested dictionary that mimics the structure
     :rtype: dict
     """
-    if isinstance(structure, dict):
+    if isinstance(structure, (dict, ParameterView)):
         return {k: empty_dict_from(v) for k, v in structure.items()}
     else:
         return Node(set(), set(), set())

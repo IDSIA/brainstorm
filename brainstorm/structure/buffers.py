@@ -3,9 +3,51 @@
 
 from __future__ import division, print_function, unicode_literals
 from copy import copy
+import numpy as np
 from brainstorm.structure.layout import (create_param_layout,
                                          create_in_out_layout)
 from brainstorm.handlers import default_handler
+
+
+class ParameterView(tuple):
+    def __new__(cls, structure, buffer):
+        if structure:
+            names, shapes = zip(*structure)
+            bounds = list(np.cumsum([np.prod(shape) for shape in shapes]))
+            vs = [buffer[start:stop].reshape(shape)
+                  for start, stop, shape in zip([0] + bounds, bounds, shapes)]
+        else:
+            vs = ()
+        instance = tuple.__new__(cls, vs)
+        return instance
+
+    def __init__(self, structure, buffer):
+        super(ParameterView, self).__init__()
+        if structure:
+            names, shapes = zip(*structure)
+            self._names = names
+        else:
+            self._names = ()
+        self._buffer = buffer
+        for i, (name, shape) in enumerate(structure):
+            self.__dict__[name] = self[i]
+
+    def _asdict(self):
+        return dict(zip(self._names, self))
+
+    def items(self):
+        return self._asdict().items()
+
+    def keys(self):
+        return self._asdict().keys()
+
+    def values(self):
+        return self._asdict().values()
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return super(ParameterView, self).__getitem__(item)
+        return self.__dict__[item]
 
 
 class ParameterBuffer(dict):
@@ -14,10 +56,9 @@ class ParameterBuffer(dict):
     The buffer is allocated at initialization, and the views for all the
     layers are created.
     """
-    def __init__(self, param_layout, view_factories, handler=default_handler):
+    def __init__(self, param_layout, handler=default_handler):
         super(ParameterBuffer, self).__init__()
         self.size, self.layout = param_layout
-        self.view_factories = view_factories
         self.memory = None
         self.handler = handler
 
@@ -39,9 +80,10 @@ class ParameterBuffer(dict):
         return True
 
     def _lay_out(self):
-        for layer_name in self.layout:
-            view = self.view_factories[layer_name](self.get_raw(layer_name))
-            self[layer_name] = view
+        for layer_name, layout_entry in self.layout.items():
+            struct = layout_entry.structure
+            buff = self.get_raw(layer_name)
+            self[layer_name] = ParameterView(struct, buff)
 
     def __getitem__(self, item):
         if isinstance(item, slice):
@@ -57,7 +99,8 @@ class ParameterBuffer(dict):
         if layer_name is None:
             return self.memory
         else:
-            return self.handler.slice(self.memory, self.layout[layer_name])
+            start, stop, _ = self.layout[layer_name]
+            return self.memory[start: stop]
 
 
 class InOutBuffer(dict):
@@ -214,8 +257,7 @@ class BufferManager(object):
     @classmethod
     def create_from_layers(cls, layers):
         param_layout = create_param_layout(layers)
-        view_factories = {n: l.create_param_view for n, l in layers.items()}
-        param_buffer = ParameterBuffer(param_layout, view_factories)
+        param_buffer = ParameterBuffer(param_layout)
 
         buffer_hub_layouts = create_in_out_layout(layers)
         hub_sizes, source_hubs, sink_hubs = zip(*buffer_hub_layouts)

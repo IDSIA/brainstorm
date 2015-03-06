@@ -9,9 +9,14 @@ from brainstorm.utils import InvalidArchitectureError
 
 
 ParameterLayout = namedtuple('ParameterLayout', ['size', 'layout'])
-
+ParameterLayoutEntry = namedtuple('ParamLayoutEntry', ['start', 'stop',
+                                                   'structure'])
 InOutLayout = namedtuple('InOutLayout',
                          ['size', 'source_layout', 'sink_layout'])
+
+
+def get_structure_size(param_struct):
+    return sum([np.prod(shape) for name, shape in param_struct])
 
 
 def create_param_layout(layers):
@@ -19,10 +24,12 @@ def create_param_layout(layers):
     Determine the total size and the layout for the parameter buffer.
     The layout is a dictionary mapping the layer names to slice objects.
     """
-    bounds = np.cumsum([0] + [l.get_parameter_size() for l in layers.values()])
+    structures = [l.get_parameter_structure() for l in layers.values()]
+    bounds = np.cumsum([0] + [get_structure_size(s) for s in structures])
     total_size = bounds[-1]
-    layout = OrderedDict([(name, slice(bounds[i], bounds[i + 1]))
-                          for i, name in enumerate(layers)])
+    layout = OrderedDict(
+        [(name, ParameterLayoutEntry(bounds[i], bounds[i + 1], structure))
+         for i, (name, structure) in enumerate(zip(layers, structures))])
     return ParameterLayout(total_size, layout)
 
 
