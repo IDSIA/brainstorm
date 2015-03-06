@@ -19,7 +19,7 @@ class NumpyHandler(object):
         return np.zeros(size, dtype=self.dtype)
 
     @staticmethod
-    def fill(self, mem, val):
+    def fill(mem, val):
         mem.fill(val)
 
     def set(self, mem, arr):
