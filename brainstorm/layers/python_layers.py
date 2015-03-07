@@ -83,7 +83,8 @@ class FeedForwardLayer(LayerBase):
         activation_functions = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x: x, 1)
+            'linear': (lambda x: x, 1),
+            'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
         self.act_func, self.act_func_deriv = \

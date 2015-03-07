@@ -32,10 +32,13 @@ class NumpyHandler(object):
         self.sum = np.sum
 
         # Activation functions
+        # Note: derivatives are expressed in terms of outputs, not inputs
         self.sigmoid = lambda x: 1. / (1. + np.exp(-x))
         self.sigmoid_deriv = lambda y: y * (1 - y)
         self.tanh = np.tanh
         self.tanh_deriv = lambda y: 1 - y * y
+        self.rel = lambda x: (x > 0) * x
+        self.rel_deriv = lambda y: (y > 0)
 
     def allocate(self, size):
         return np.zeros(size, dtype=self.dtype)

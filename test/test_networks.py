@@ -16,7 +16,7 @@ from brainstorm.data_iterators import Undivided
 def test_network_forward_pass_succeeds():
     i = ConstructionLayer("InputLayer", 2)
     l1 = ConstructionLayer("FeedForwardLayer", 4, act_func='tanh')
-    l2 = ConstructionLayer("FeedForwardLayer", 3, act_func='tanh')
+    l2 = ConstructionLayer("FeedForwardLayer", 3, act_func='rel')
     net = build_net(i >> l1 >> l2)
     net.initialize(Gaussian())
     net.forward_pass(np.random.randn(4, 3, 2))
@@ -25,7 +25,7 @@ def test_network_forward_pass_succeeds():
 def test_network_forward_backward_pass_succeed():
     i = ConstructionLayer("InputLayer", 2)
     l1 = ConstructionLayer("FeedForwardLayer", 4, act_func='tanh')
-    l2 = ConstructionLayer("FeedForwardLayer", 3, act_func='tanh')
+    l2 = ConstructionLayer("FeedForwardLayer", 3, act_func='rel')
     e = ConstructionInjector("MeanSquaredError")
 
     i >> l1 >> l2 << e
