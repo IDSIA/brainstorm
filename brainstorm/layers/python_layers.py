@@ -8,6 +8,7 @@ class LayerBase(object):
     """
     The base-class of all layer types defined in Python.
     """
+
     def __init__(self, size, in_size, sink_layers, source_layers, kwargs):
         self.in_size = in_size
         self.validate_kwargs(kwargs)
@@ -19,8 +20,10 @@ class LayerBase(object):
 
     def set_handler(self, new_handler):
         """
-        A function that is called to set a new handler and then do some follow-up operations.
+        A function that is called to set a new handler and then do some
+        follow-up operations.
         For example, it may be used to reset activation functions.
+        It may also be used to restrict the layer to certain handlers.
         """
         self.handler = new_handler
 
@@ -47,6 +50,7 @@ class InputLayer(LayerBase):
     """
     Special input layer type.
     """
+
     def __init__(self, size, in_size, sink_layers, source_layers, kwargs):
         super(InputLayer, self).__init__(size, in_size, sink_layers,
                                          source_layers, kwargs)
@@ -57,6 +61,7 @@ class NoOpLayer(LayerBase):
     """
     This layer just copies its input into its output.
     """
+
     def __init__(self, size, in_size, sink_layers, source_layers, kwargs):
         super(NoOpLayer, self).__init__(size, in_size, sink_layers,
                                         source_layers, kwargs)
@@ -99,18 +104,21 @@ class FeedForwardLayer(LayerBase):
     def forward_pass(self, parameters, input_buffer, output_buffer):
         W, b = parameters['W'], parameters['b']
         for t in range(input_buffer.shape[0]):
-            output_buffer[t, :] = self.act_func(self.handler.add(self.handler.dot(input_buffer[t], W), b))
+            output_buffer[t, :] = self.act_func(
+                self.handler.add(self.handler.dot(input_buffer[t], W), b))
 
     def backward_pass(self, parameters, input_buffer, output_buffer,
                       in_delta_buffer, out_delta_buffer, gradient_buffer):
         W = parameters.W
         for t in range(input_buffer.shape[0]):
-            d_z = self.handler.elem_mult(self.act_func_deriv(output_buffer[t]), out_delta_buffer[t])
+            d_z = self.handler.elem_mult(self.act_func_deriv(output_buffer[t]),
+                                         out_delta_buffer[t])
             in_delta_buffer[t, :] = self.handler.dot(d_z, W.T)
 
         dW, db = gradient_buffer
         for t in range(input_buffer.shape[0]):
-            dz = self.handler.elem_mult(self.act_func_deriv(output_buffer[t]), out_delta_buffer[t])
+            dz = self.handler.elem_mult(self.act_func_deriv(output_buffer[t]),
+                                        out_delta_buffer[t])
             dW += self.handler.dot(input_buffer[t].T, dz)
             db += self.handler.sum(dz, axis=0)
 

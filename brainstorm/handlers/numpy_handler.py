@@ -21,10 +21,11 @@ class NumpyHandler(object):
         # Add 2 matrices of same shape or a matrix and a scalar
         self.add = lambda x, y: x + y
 
-        # Multiply 2 matrices, or inner product of (row vector, column vector) or (column vector, row vector)
+        # Multiply 2 matrices, or inner product of (row vector, column
+        # vector) or (column vector, row vector)
         self.dot = lambda x, y: np.dot(x, y)
 
-        # Elementwise multiply 2 matrices, or a matrix with a scalar
+        # Element-wise multiply 2 matrices, or a matrix with a scalar
         self.elem_mult = lambda x, y: x * y
 
         # Sum elements along a given axis

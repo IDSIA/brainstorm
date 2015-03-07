@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 from brainstorm.structure import build_net
-from brainstorm.structure.construction import ConstructionLayer, ConstructionInjector
+from brainstorm.structure.construction import ConstructionLayer, \
+    ConstructionInjector
 from brainstorm.initializers import Gaussian
 from brainstorm.targets import FramewiseTargets
 from brainstorm.data_iterators import Undivided
@@ -31,4 +32,5 @@ def test_network_forward_backward_pass_succeed():
     net = build_net(i)
     net.initialize(Gaussian())
     net.forward_pass(np.random.randn(4, 3, 2))
-    net.backward_pass({"default_target": FramewiseTargets(np.random.randn(4, 3, 3))})
+    net.backward_pass(
+        {"default_target": FramewiseTargets(np.random.randn(4, 3, 3))})
