@@ -48,6 +48,8 @@ class Network(Seedable):
     def set_memory_handler(self, new_handler):
         self.handler = new_handler
         self.buffer.set_memory_handler(new_handler)
+        for layer in self.layers.values():
+            layer.set_handler(new_handler)
 
     def forward_pass(self, input_data, training_pass=False):
         assert self.layers['InputLayer'].out_size == input_data.shape[2],\
