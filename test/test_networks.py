@@ -10,7 +10,6 @@ from brainstorm.structure.construction import ConstructionLayer, \
     ConstructionInjector
 from brainstorm.initializers import Gaussian
 from brainstorm.targets import FramewiseTargets
-from brainstorm.data_iterators import Undivided
 
 
 def test_network_forward_pass_succeeds():

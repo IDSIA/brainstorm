@@ -103,25 +103,41 @@ class FeedForwardLayer(LayerBase):
         ]
 
     def forward_pass(self, parameters, input_buffer, output_buffer):
-        W, b = parameters['W'], parameters['b']
-        for t in range(input_buffer.shape[0]):
-            output_buffer[t, :] = self.act_func(
-                self.handler.add(self.handler.dot(input_buffer[t], W), b))
+
+        # prepare
+        H = self.handler
+        WX, W_bias = parameters['W'], parameters['b']
+
+        # reshape
+        t, b, f = input_buffer.shape
+        flat_input = H.reshape(input_buffer, (t * b, f))
+        flat_output = H.reshape(output_buffer, (t * b, self.out_size))
+
+        # calculate outputs
+        H.dot(flat_input, WX, flat_output)
+        H.add_mv(flat_output, W_bias, flat_output)
+        self.act_func(flat_output, flat_output)
 
     def backward_pass(self, parameters, input_buffer, output_buffer,
                       in_delta_buffer, out_delta_buffer, gradient_buffer):
-        W = parameters.W
-        for t in range(input_buffer.shape[0]):
-            d_z = self.handler.elem_mult(self.act_func_deriv(output_buffer[t]),
-                                         out_delta_buffer[t])
-            in_delta_buffer[t, :] = self.handler.dot(d_z, W.T)
 
-        dW, db = gradient_buffer
-        for t in range(input_buffer.shape[0]):
-            dz = self.handler.elem_mult(self.act_func_deriv(output_buffer[t]),
-                                        out_delta_buffer[t])
-            dW += self.handler.dot(input_buffer[t].T, dz)
-            db += self.handler.sum(dz, axis=0)
+        # prepare
+        H = self.handler
+        WX, W_bias = parameters['W'], parameters['b']
+        dWX, dW_bias = gradient_buffer['W'], gradient_buffer['b']
+        dZ = H.zeros(output_buffer.shape)
+
+        # reshape
+        t, b, f = input_buffer.shape
+        flat_input = H.reshape(input_buffer, (t * b, f))
+        flat_dZ = H.reshape(dZ, (t * b, self.out_size))
+        flat_in_delta_buffer = H.reshape(in_delta_buffer, (t * b, f))
+
+        # calculate in deltas and gradients
+        self.act_func_deriv(None, output_buffer, out_delta_buffer, dZ)
+        H.dot_add(flat_dZ, WX.T, flat_in_delta_buffer)
+        H.dot(flat_input.T, flat_dZ, dWX)
+        H.sum(flat_dZ, axis=0, out=dW_bias)
 
 
 def get_layer_class_from_typename(typename):

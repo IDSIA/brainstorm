@@ -15,31 +15,6 @@ class NumpyHandler(object):
         self.context = 'numpy'
         self.EMPTY = np.zeros(0)
 
-        ############# Mathematical Operations ################
-        # TODO: Make a list of allowed mathematical operations
-
-        # Add 2 matrices of same shape or a matrix and a scalar
-        self.add = lambda x, y: x + y
-
-        # Multiply 2 matrices, or inner product of (row vector, column
-        # vector) or (column vector, row vector)
-        self.dot = lambda x, y: np.dot(x, y)
-
-        # Element-wise multiply 2 matrices, or a matrix with a scalar
-        self.elem_mult = lambda x, y: x * y
-
-        # Sum elements along a given axis
-        self.sum = np.sum
-
-        # Activation functions
-        # Note: derivatives are expressed in terms of outputs, not inputs
-        self.sigmoid = lambda x: 1. / (1. + np.exp(-x))
-        self.sigmoid_deriv = lambda y: y * (1 - y)
-        self.tanh = np.tanh
-        self.tanh_deriv = lambda y: 1 - y * y
-        self.rel = lambda x: (x > 0) * x
-        self.rel_deriv = lambda y: (y > 0)
-
     def allocate(self, size):
         return np.zeros(size, dtype=self.dtype)
 
@@ -49,3 +24,61 @@ class NumpyHandler(object):
 
     def set(self, mem, arr):
         mem[:] = arr.astype(self.dtype)
+
+    # ---------------- Mathematical Operations ---------------- #
+
+    def zeros(self, shape):
+        return np.zeros(shape=shape, dtype=self.dtype)
+
+    def sum(self, a, axis, out, keepdims=False):
+        np.sum(a, axis=axis, dtype=self.dtype, out=out, keepdims=keepdims)
+
+    @staticmethod
+    def dot(a, b, out):
+        np.dot(a, b, out)
+
+    @staticmethod
+    def dot_add(a, b, out):
+        out[:] += np.dot(a, b)
+
+    @staticmethod
+    def elem_mult(a, b, out):
+        np.multiply(a, b, out)
+
+    @staticmethod
+    def add_mm(a, b, out):
+        assert a.shape == b.shape == out.shape
+        out[:] = a + b
+
+    @staticmethod
+    def add_mv(a, b, out):
+        assert len(a.shape) == 2
+        assert len(b.shape) == 1
+        out[:] = a + b
+
+    # Activation functions
+
+    @staticmethod
+    def sigmoid(x, y):
+        y[:] = 1. / (1. + np.exp(-x))
+
+    @staticmethod
+    def sigmoid_deriv(self, x, y, dy, dx):
+        dx[:] = dy * y * (1. - y)
+
+    @staticmethod
+    def tanh(x, y):
+        np.tanh(x, y)
+
+    @staticmethod
+    def tanh_deriv(x, y, dy, dx):
+        dx[:] = dy * (1. - y * y)
+
+    @staticmethod
+    def rel(x, y):
+        y[:] = (x > 0) * x
+
+    @staticmethod
+    def rel_deriv(x, y, dy, dx):
+        dx[:] = (y > 0)
+
