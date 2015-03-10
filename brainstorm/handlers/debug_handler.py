@@ -5,16 +5,10 @@ import numpy as np
 
 
 class DebugArray(object):
-    def __init__(self, shape=None, arr=None):
-        if shape is None:
-            assert arr is not None
-            self.shape = arr.shape
-            self._array = arr
-        else:
-            assert shape is not None
-            self.shape = shape
-            self._array = np.zeros(shape, dtype=np.float32)
-
+    def __init__(self, arr):
+        assert arr is not None
+        self.shape = arr.shape
+        self._array = arr
         self.size = self._array.size
 
     def __getitem__(self, item):
@@ -37,14 +31,18 @@ class DebugArray(object):
 
 
 class DebugHandler(object):
-    def __init__(self):
-        self.EMPTY = DebugArray(arr=np.zeros(0, np.float32))
+    def __init__(self, handler):
+        self.handler = handler
+        self.EMPTY = DebugArray(arr=handler.EMPTY)
 
-    @staticmethod
-    def allocate(size):
-        return DebugArray(size)
+    def allocate(self, size):
+        return DebugArray(self.handler.allocate(size))
 
     def set(self, a, b):
         assert isinstance(a, DebugArray)
         assert a.size == b.size
-        a._array[:] = b
+        self.handler.set(a._array, b)
+
+    def dot(self, a, b):
+
+        return DebugArray(self.handler.dot(a._array, b._array))
