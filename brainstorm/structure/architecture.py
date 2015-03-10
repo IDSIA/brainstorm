@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from copy import copy
+import numpy as np
 
 from six import string_types
 
@@ -127,6 +128,27 @@ def get_source_layers(layer_name, architecture):
             if layer_name in l['sink_layers']]
 
 
+def combine_input_sizes(sizes):
+    """
+    Concatenate the given sizes on the outermost feature dimension.
+    Check that the other dimensions match.
+    :param sizes: list of size-tuples or integers
+    :type sizes: list[tuple[int]] or list[int]
+    :return: tuple[int]
+    """
+    if not sizes:
+        return 0,
+    tupled_sizes = [s if isinstance(s, tuple) else (s,) for s in sizes]
+    dimensions = [len(s) for s in tupled_sizes]
+    if min(dimensions) != max(dimensions):
+        raise ValueError('Dimensionality mismatch. {}'.format(tupled_sizes))
+    fixed_feature_sizes = tupled_sizes[0][1:]
+    if not all([s[1:] == fixed_feature_sizes for s in tupled_sizes]):
+        raise ValueError('Feature size mismatch. {}'.format(tupled_sizes))
+    summed_size = sum(s[0] for s in tupled_sizes)
+    return (summed_size,) + fixed_feature_sizes
+
+
 def instantiate_layers_from_architecture(architecture):
     validate_architecture(architecture)
     layers = OrderedDict()
@@ -135,7 +157,8 @@ def instantiate_layers_from_architecture(architecture):
         LayerClass = get_layer_class_from_typename(layer['@type'])
         size = layer.get('size')
         sources = get_source_layers(layer_name, architecture)
-        in_size = sum(layers[l_name].out_size for l_name in sources)
+        in_size = combine_input_sizes([layers[l_name].out_size
+                                       for l_name in sources])
         layers[layer_name] = LayerClass(size, in_size, layer['sink_layers'],
                                         sources, get_kwargs(layer))
     return layers

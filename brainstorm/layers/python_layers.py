@@ -54,7 +54,8 @@ class InputLayer(LayerBase):
     def __init__(self, size, in_size, sink_layers, source_layers, kwargs):
         super(InputLayer, self).__init__(size, in_size, sink_layers,
                                          source_layers, kwargs)
-        assert not in_size, "InputLayer cannot have an in_size"
+        assert not in_size or in_size == (0,), \
+            "InputLayer cannot have an in_size"
 
 
 class NoOpLayer(LayerBase):
