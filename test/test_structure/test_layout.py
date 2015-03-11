@@ -16,12 +16,12 @@ def impossible_layers():
     arch = {
         'InputLayer': {
             '@type': 'InputLayer',
-            'size': 2,
+            'out_shape': 2,
             'sink_layers': {'A', 'B'}
         },
         'A': {
             '@type': 'FeedForwardLayer',
-            'size': 2,
+            'out_shape': 2,
             'sink_layers': {'C', 'D'}
         },
         'B': {

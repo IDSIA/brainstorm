@@ -17,7 +17,7 @@ class ConstructionLayer(UniquelyNamed):
     instantiation of the actual layer object.
     """
 
-    def __init__(self, layer_type, size=None, name=None, **kwargs):
+    def __init__(self, layer_type, out_shape=None, name=None, **kwargs):
         if not is_valid_layer_name(layer_type):
             raise InvalidArchitectureError(
                 "Invalid layer_type: '{}'".format(layer_type))
@@ -27,7 +27,7 @@ class ConstructionLayer(UniquelyNamed):
 
         super(ConstructionLayer, self).__init__(name or layer_type)
         self.layer_type = layer_type
-        self.size = size
+        self.out_shape = out_shape
         self.source_layers = []
         self.sink_layers = []
         self.traversing = False

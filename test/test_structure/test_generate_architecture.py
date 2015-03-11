@@ -17,7 +17,7 @@ def test_get_layer_description():
     descr = get_layer_description(l)
     assert descr == {
         '@type': 'layertype',
-        'size': 10,
+        'out_shape': 10,
         'sink_layers': {'bar', 'baz'}
     }
 
@@ -27,7 +27,7 @@ def test_layer_with_kwargs():
     descr = get_layer_description(l)
     assert descr == {
         '@type': 'layertype',
-        'size': 10,
+        'out_shape': 10,
         'sink_layers': set(),
         'a': 2,
         'b': 3
@@ -50,22 +50,22 @@ def test_generate_architecture():
     assert arch1 == {
         'InputLayer': {
             '@type': 'InputLayer',
-            'size': 10,
+            'out_shape': 10,
             'sink_layers': {'bar', 'baz'}
         },
         'bar': {
             '@type': 'layertype',
-            'size': 20,
+            'out_shape': 20,
             'sink_layers': {'out'}
         },
         'baz': {
             '@type': 'layertype',
-            'size': 30,
+            'out_shape': 30,
             'sink_layers': {'out'}
         },
         'out': {
             '@type': 'layertype',
-            'size': 40,
+            'out_shape': 40,
             'sink_layers': set()
         }
     }
@@ -75,27 +75,27 @@ def test_get_canonical_architecture_order():
     arch = {
         'A': {
             '@type': 'InputLayer',
-            'size': 10,
+            'out_shape': 10,
             'sink_layers': {'B1', 'C'}
         },
         'B1': {
             '@type': 'layertype',
-            'size': 20,
+            'out_shape': 20,
             'sink_layers': {'B2'}
         },
         'B2': {
             '@type': 'layertype',
-            'size': 20,
+            'out_shape': 20,
             'sink_layers': {'D'}
         },
         'C': {
             '@type': 'layertype',
-            'size': 30,
+            'out_shape': 30,
             'sink_layers': {'D'}
         },
         'D': {
             '@type': 'layertype',
-            'size': 40,
+            'out_shape': 40,
             'sink_layers': set()
         }
     }
@@ -106,27 +106,27 @@ def test_instantiate_layers_from_architecture():
     arch = {
         'InputLayer': {
             '@type': 'InputLayer',
-            'size': 10,
+            'out_shape': 10,
             'sink_layers': {'A', 'B', 'C'}
         },
         'A': {
             '@type': 'NoOpLayer',
-            'size': 10,
+            'out_shape': 10,
             'sink_layers': {'B'}
         },
         'B': {
             '@type': 'NoOpLayer',
-            'size': 20,
+            'out_shape': 20,
             'sink_layers': {'D'}
         },
         'C': {
             '@type': 'NoOpLayer',
-            'size': 10,
+            'out_shape': 10,
             'sink_layers': {'D'}
         },
         'D': {
             '@type': 'NoOpLayer',
-            'size': 30,
+            'out_shape': 30,
             'sink_layers': set()
         }
     }
@@ -139,13 +139,13 @@ def test_instantiate_layers_from_architecture():
     assert type(layers['C']) == NoOpLayer
     assert type(layers['D']) == NoOpLayer
 
-    assert layers['InputLayer'].in_size == (0,)
-    assert layers['InputLayer'].out_size == (10,)
-    assert layers['A'].in_size == (10,)
-    assert layers['A'].out_size == (10,)
-    assert layers['B'].in_size == (20,)
-    assert layers['B'].out_size == (20,)
-    assert layers['C'].in_size == (10,)
-    assert layers['C'].out_size == (10,)
-    assert layers['D'].in_size == (30,)
-    assert layers['D'].out_size == (30,)
+    assert layers['InputLayer'].in_shape == (0,)
+    assert layers['InputLayer'].out_shape == (10,)
+    assert layers['A'].in_shape == (10,)
+    assert layers['A'].out_shape == (10,)
+    assert layers['B'].in_shape == (20,)
+    assert layers['B'].out_shape == (20,)
+    assert layers['C'].in_shape == (10,)
+    assert layers['C'].out_shape == (10,)
+    assert layers['D'].in_shape == (30,)
+    assert layers['D'].out_shape == (30,)

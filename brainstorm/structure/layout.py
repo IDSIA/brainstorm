@@ -55,7 +55,7 @@ def lay_out_buffer_hub(source_set, sink_set, layers):
     connection_table = np.atleast_2d(connection_table[perm])
 
     # Source Layout
-    source_bounds = np.cumsum([0] + [layers[n].out_size[0]
+    source_bounds = np.cumsum([0] + [int(np.prod(layers[n].out_shape))
                                      for n in source_list])
     total_size = source_bounds[-1]
     source_layout = OrderedDict([
@@ -78,7 +78,6 @@ def lay_out_buffer_hub(source_set, sink_set, layers):
             stop_idx = source_bounds[-1]
 
         sink_layout[n] = slice(start_idx, stop_idx)
-        # assert stop_idx - start_idx == layers[n].in_size
 
     return InOutLayout(total_size, source_layout, sink_layout)
 

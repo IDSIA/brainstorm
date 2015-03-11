@@ -2,25 +2,25 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import pytest
-from brainstorm.structure.architecture import combine_input_sizes
+from brainstorm.structure.architecture import combine_input_shapes
 
 
 def test_combine_input_sizes_int():
-    assert combine_input_sizes([7]) == (7,)
-    assert combine_input_sizes([1, 2, 3, 4]) == (10,)
+    assert combine_input_shapes([7]) == (7,)
+    assert combine_input_shapes([1, 2, 3, 4]) == (10,)
 
 
 def test_combine_input_sizes_int_and_unituples():
-    assert combine_input_sizes([1, 2, (3,), (4,), 5]) == (15,)
+    assert combine_input_shapes([1, 2, (3,), (4,), 5]) == (15,)
 
 def test_combine_input_sizes_tuples():
-    assert combine_input_sizes([(1, 4)]) == (1, 4)
+    assert combine_input_shapes([(1, 4)]) == (1, 4)
 
-    assert combine_input_sizes([(1, 4),
+    assert combine_input_shapes([(1, 4),
                                 (3, 4),
                                 (6, 4)]) == (10, 4)
 
-    assert combine_input_sizes([(2, 3, 4),
+    assert combine_input_shapes([(2, 3, 4),
                                 (3, 3, 4),
                                 (2, 3, 4)]) == (7, 3, 4)
 
@@ -34,4 +34,4 @@ def test_combine_input_sizes_tuples():
 ])
 def test_combine_input_sizes_mismatch(sizes):
     with pytest.raises(ValueError):
-        combine_input_sizes(sizes)
+        combine_input_shapes(sizes)

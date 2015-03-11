@@ -17,27 +17,27 @@ def layers():
     arch = {
         'InputLayer': {
             '@type': 'InputLayer',
-            'size': 2,
+            'out_shape': 2,
             'sink_layers': {'A', 'B'}
         },
         'A': {
             '@type': 'FeedForwardLayer',
-            'size': 3,
+            'out_shape': 3,
             'sink_layers': {'C'}
         },
         'B': {
             '@type': 'FeedForwardLayer',
-            'size': 5,
+            'out_shape': 5,
             'sink_layers': {'C', 'D'}
         },
         'C': {
             '@type': 'FeedForwardLayer',
-            'size': 7,
+            'out_shape': 7,
             'sink_layers': {'D'}
         },
         'D': {
             '@type': 'FeedForwardLayer',
-            'size': 11,
+            'out_shape': 11,
             'sink_layers': set()
         }
     }

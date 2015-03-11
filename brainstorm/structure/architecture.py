@@ -3,8 +3,6 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from copy import copy
-import numpy as np
-
 from six import string_types
 
 from brainstorm.utils import (InvalidArchitectureError,
@@ -15,7 +13,7 @@ from brainstorm.layers.python_layers import get_layer_class_from_typename
 def get_layer_description(layer):
     description = {
         '@type': layer.layer_type,
-        'size': layer.size,
+        'out_shape': layer.out_shape,
         'sink_layers': {l.name for l in layer.sink_layers}
     }
     if layer.layer_kwargs:
@@ -119,7 +117,8 @@ def get_canonical_layer_order(architecture):
 
 
 def get_kwargs(layer):
-    kwarg_ignore = {'@type', 'size', 'sink_layers', 'source_layers', 'kwargs'}
+    kwarg_ignore = {'@type', 'out_shape', 'sink_layers', 'source_layers',
+                    'kwargs'}
     return {k: copy(v) for k, v in layer.items() if k not in kwarg_ignore}
 
 
@@ -128,25 +127,25 @@ def get_source_layers(layer_name, architecture):
             if layer_name in l['sink_layers']]
 
 
-def combine_input_sizes(sizes):
+def combine_input_shapes(shapes):
     """
     Concatenate the given sizes on the outermost feature dimension.
     Check that the other dimensions match.
-    :param sizes: list of size-tuples or integers
-    :type sizes: list[tuple[int]] or list[int]
+    :param shapes: list of size-tuples or integers
+    :type shapes: list[tuple[int]] or list[int]
     :return: tuple[int]
     """
-    if not sizes:
+    if not shapes:
         return 0,
-    tupled_sizes = [ensure_tuple_or_none(s) for s in sizes]
-    dimensions = [len(s) for s in tupled_sizes]
+    tupled_shapes = [ensure_tuple_or_none(s) for s in shapes]
+    dimensions = [len(s) for s in tupled_shapes]
     if min(dimensions) != max(dimensions):
-        raise ValueError('Dimensionality mismatch. {}'.format(tupled_sizes))
-    fixed_feature_sizes = tupled_sizes[0][1:]
-    if not all([s[1:] == fixed_feature_sizes for s in tupled_sizes]):
-        raise ValueError('Feature size mismatch. {}'.format(tupled_sizes))
-    summed_size = sum(s[0] for s in tupled_sizes)
-    return (summed_size,) + fixed_feature_sizes
+        raise ValueError('Dimensionality mismatch. {}'.format(tupled_shapes))
+    fixed_feature_shape = tupled_shapes[0][1:]
+    if not all([s[1:] == fixed_feature_shape for s in tupled_shapes]):
+        raise ValueError('Feature size mismatch. {}'.format(tupled_shapes))
+    summed_shape = sum(s[0] for s in tupled_shapes)
+    return (summed_shape,) + fixed_feature_shape
 
 
 def ensure_tuple_or_none(a):
@@ -166,10 +165,10 @@ def instantiate_layers_from_architecture(architecture):
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
         LayerClass = get_layer_class_from_typename(layer['@type'])
-        size = ensure_tuple_or_none(layer.get('size'))
+        out_shape = ensure_tuple_or_none(layer.get('out_shape'))
         sources = get_source_layers(layer_name, architecture)
-        in_size = combine_input_sizes([layers[l_name].out_size
-                                       for l_name in sources])
-        layers[layer_name] = LayerClass(size, in_size, layer['sink_layers'],
+        in_shape = combine_input_shapes([layers[l_name].out_shape
+                                         for l_name in sources])
+        layers[layer_name] = LayerClass(out_shape, in_shape, layer['sink_layers'],
                                         sources, get_kwargs(layer))
     return layers
