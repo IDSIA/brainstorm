@@ -30,7 +30,11 @@ class NumpyHandler(object):
     def zeros(self, shape):
         return np.zeros(shape=shape, dtype=self.dtype)
 
-    def sum(self, a, axis, out, keepdims=False):
+    def sum(self, a, axis, out):
+        if len(out.shape) == 2:
+            keepdims = True
+        else:
+            keepdims = False
         np.sum(a, axis=axis, dtype=self.dtype, out=out, keepdims=keepdims)
 
     @staticmethod
@@ -76,9 +80,9 @@ class NumpyHandler(object):
 
     @staticmethod
     def rel(x, y):
-        y[:] = (x > 0) * x
+        y[:] = x * (x > 0)
 
     @staticmethod
     def rel_deriv(x, y, dy, dx):
-        dx[:] = (y > 0)
+        dx[:] = dy * (x > 0)
 
