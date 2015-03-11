@@ -139,13 +139,13 @@ def test_instantiate_layers_from_architecture():
     assert type(layers['C']) == NoOpLayer
     assert type(layers['D']) == NoOpLayer
 
-    assert layers['InputLayer'].in_size == 0
-    assert layers['InputLayer'].out_size == 10
-    assert layers['A'].in_size == 10
-    assert layers['A'].out_size == 10
-    assert layers['B'].in_size == 20
-    assert layers['B'].out_size == 20
-    assert layers['C'].in_size == 10
-    assert layers['C'].out_size == 10
-    assert layers['D'].in_size == 30
-    assert layers['D'].out_size == 30
+    assert layers['InputLayer'].in_size == (0,)
+    assert layers['InputLayer'].out_size == (10,)
+    assert layers['A'].in_size == (10,)
+    assert layers['A'].out_size == (10,)
+    assert layers['B'].in_size == (20,)
+    assert layers['B'].out_size == (20,)
+    assert layers['C'].in_size == (10,)
+    assert layers['C'].out_size == (10,)
+    assert layers['D'].in_size == (30,)
+    assert layers['D'].out_size == (30,)

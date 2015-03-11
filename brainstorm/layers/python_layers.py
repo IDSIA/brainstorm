@@ -66,7 +66,8 @@ class NoOpLayer(LayerBase):
     def __init__(self, size, in_size, sink_layers, source_layers, kwargs):
         super(NoOpLayer, self).__init__(size, in_size, sink_layers,
                                         source_layers, kwargs)
-        assert size == in_size, "For NoOpLayer in and out size must be equal"
+        assert size == in_size, "For NoOpLayer in and out size must be equal,"\
+                                " but {} != {}".format(size, in_size)
 
 
 class FeedForwardLayer(LayerBase):
@@ -99,8 +100,8 @@ class FeedForwardLayer(LayerBase):
 
     def get_parameter_structure(self):
         return [
-            ('W', (self.in_size, self.out_size)),
-            ('b', self.out_size)
+            ('W', (self.in_size[0], self.out_size[0])),
+            ('b', self.out_size[0])
         ]
 
     def forward_pass(self, parameters, input_buffer, output_buffer):
@@ -112,7 +113,7 @@ class FeedForwardLayer(LayerBase):
         # reshape
         t, b, f = input_buffer.shape
         flat_input = H.reshape(input_buffer, (t * b, f))
-        flat_output = H.reshape(output_buffer, (t * b, self.out_size))
+        flat_output = H.reshape(output_buffer, (t * b, self.out_size[0]))
 
         # calculate outputs
         H.dot(flat_input, WX, flat_output)
@@ -131,7 +132,7 @@ class FeedForwardLayer(LayerBase):
         # reshape
         t, b, f = input_buffer.shape
         flat_input = H.reshape(input_buffer, (t * b, f))
-        flat_dZ = H.reshape(dZ, (t * b, self.out_size))
+        flat_dZ = H.reshape(dZ, (t * b, self.out_size[0]))
         flat_in_delta_buffer = H.reshape(in_delta_buffer, (t * b, f))
 
         # calculate in deltas and gradients

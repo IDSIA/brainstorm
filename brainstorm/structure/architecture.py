@@ -138,7 +138,7 @@ def combine_input_sizes(sizes):
     """
     if not sizes:
         return 0,
-    tupled_sizes = [s if isinstance(s, tuple) else (s,) for s in sizes]
+    tupled_sizes = [ensure_tuple_or_none(s) for s in sizes]
     dimensions = [len(s) for s in tupled_sizes]
     if min(dimensions) != max(dimensions):
         raise ValueError('Dimensionality mismatch. {}'.format(tupled_sizes))
@@ -149,13 +149,24 @@ def combine_input_sizes(sizes):
     return (summed_size,) + fixed_feature_sizes
 
 
+def ensure_tuple_or_none(a):
+    if a is None:
+        return a
+    elif isinstance(a, tuple):
+        return a
+    elif isinstance(a, list):
+        return tuple(a)
+    else:
+        return a,
+
+
 def instantiate_layers_from_architecture(architecture):
     validate_architecture(architecture)
     layers = OrderedDict()
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
         LayerClass = get_layer_class_from_typename(layer['@type'])
-        size = layer.get('size')
+        size = ensure_tuple_or_none(layer.get('size'))
         sources = get_source_layers(layer_name, architecture)
         in_size = combine_input_sizes([layers[l_name].out_size
                                        for l_name in sources])
