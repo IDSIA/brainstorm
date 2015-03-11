@@ -3,11 +3,12 @@
 from __future__ import division, print_function, unicode_literals
 import pytest
 from brainstorm.handlers.debug_handler import DebugArray
+import numpy as np
 
 
 @pytest.fixture
 def array():
-    return DebugArray((11, 7, 5, 3, 2))
+    return DebugArray(np.zeros((11, 7, 5, 3, 2)))
 
 
 def test_array_shape(array):
