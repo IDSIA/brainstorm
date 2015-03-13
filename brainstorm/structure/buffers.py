@@ -200,7 +200,7 @@ class BufferManager(object):
         self.out_deltas.handler = handler
         # restore the parameters
         if params is not None:
-            self.handler.set(self.param_memory, params)
+            self.handler.set_from_numpy(self.param_memory, params)
             self.parameters.rearrange(self.param_memory)
 
     def rearrange_parameters(self):

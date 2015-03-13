@@ -57,7 +57,7 @@ class Network(Seedable):
                 self.layers['InputLayer'].out_size, input_data.shape[2])
         self.errors = None
         self.buffer.rearrange_fwd(input_data.shape)
-        self.handler.set(self.buffer.outputs['InputLayer'], input_data)
+        self.handler.set_from_numpy(self.buffer.outputs['InputLayer'], input_data)
         for layer_name, layer in list(self.layers.items())[1:]:
             parameters = self.buffer.parameters[layer_name]
             input_buffer = self.buffer.inputs[layer_name]
@@ -115,7 +115,7 @@ class Network(Seedable):
                 assert len(fb) <= 1, "Multiple fallbacks for {}.{}: {}".format(
                     layer_name, view_name, fb)
                 fb = fb.pop() if len(fb) else None
-                self.handler.set(
+                self.handler.set_from_numpy(
                     view,
                     evaluate_initializer(init.pop(), view.shape, fb,
                                          seed=init_rnd.generate_seed()))

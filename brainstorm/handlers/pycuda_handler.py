@@ -30,7 +30,7 @@ class PyCudaHandler(object):
     def fill(mem, val):
         mem.fill(val)
 
-    def set(self, mem, arr):
+    def set_from_numpy(self, mem, arr):
         assert mem.shape == arr.shape, "{} != {}".format(mem.shape, arr.shape)
         mem.set(arr.astype(self.dtype))
 

@@ -41,7 +41,7 @@ class DebugHandler(object):
     def set(self, a, b):
         assert isinstance(a, DebugArray)
         assert a.size == b.size
-        self.handler.set(a._array, b)
+        self.handler.set_from_numpy(a._array, b)
 
     def dot(self, a, b):
 

@@ -36,5 +36,5 @@ def test_network_forward_backward_pass_succeed():
     net.initialize(Gaussian())
     net.forward_pass(np.random.randn(4, 3, 2))
     targets = net.handler.zeros((4, 3, 3))
-    net.handler.set(targets, np.random.randn(4, 3, 3))
+    net.handler.set_from_numpy(targets, np.random.randn(4, 3, 3))
     net.backward_pass({"default_target": FramewiseTargets(targets)})

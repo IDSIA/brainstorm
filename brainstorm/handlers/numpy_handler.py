@@ -23,7 +23,7 @@ class NumpyHandler(object):
     def fill(mem, val):
         mem.fill(val)
 
-    def set(self, mem, arr):
+    def set_from_numpy(self, mem, arr):
         mem[:] = arr.astype(self.dtype)
 
     @staticmethod

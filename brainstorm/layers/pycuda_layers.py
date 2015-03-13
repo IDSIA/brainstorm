@@ -32,7 +32,7 @@ try:
             for t in range(input_buffer.shape[0]):
                 d_z = linalg.multiply(self.act_func_deriv(output_buffer[t]),
                                       out_delta_buffer[t])
-                in_delta_buffer[t, :].set(linalg.dot(d_z, W, transb='t'))
+                in_delta_buffer[t, :].set_from_numpy(linalg.dot(d_z, W, transb='t'))
 
             dW, db = gradient_buffer
             for t in range(input_buffer.shape[0]):
