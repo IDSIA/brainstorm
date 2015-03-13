@@ -35,7 +35,7 @@ class PyCudaHandler(object):
         mem.set(arr.astype(self.dtype))
 
     @staticmethod
-    def copyto(dest, src):
+    def copy_to(dest, src):
         # Copy data from src to dest (both must be GPUArrays)
         drv.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 

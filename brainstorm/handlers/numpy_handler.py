@@ -27,7 +27,7 @@ class NumpyHandler(object):
         mem[:] = arr.astype(self.dtype)
 
     @staticmethod
-    def copyto(dest, src):
+    def copy_to(dest, src):
         # FIXME: change casting to 'no'
         np.copyto(dest, src, casting='same_kind')
 

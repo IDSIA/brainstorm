@@ -78,7 +78,7 @@ class Network(Seedable):
                 error, deltas = injector(
                     self.buffer.outputs[injector.layer],
                     targets.get(injector.target_from))
-                self.handler.copyto(self.buffer.out_deltas[injector.layer],
+                self.handler.copy_to(self.buffer.out_deltas[injector.layer],
                                     deltas)
                 self.errors[inj_name] = error
 
