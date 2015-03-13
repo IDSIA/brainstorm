@@ -15,7 +15,7 @@ class Targets(object):
         self.data = None
         self.sequence_lengths = sequence_lengths
         if mask is not None:
-            assert mask.ndim == 3 and mask.shape[2] == 1, \
+            assert len(mask.shape) == 3 and mask.shape[2] == 1, \
                 "Mask has to be 3D with the last dimension of size 1 " \
                 "(not {})".format(mask.shape)
             self.mask = mask
@@ -52,7 +52,7 @@ class FramewiseTargets(Targets):
                  sequence_lengths=None):
         super(FramewiseTargets, self).__init__(binarize_to, mask,
                                                sequence_lengths)
-        assert targets.ndim == 3, "Targets have to be 3D " \
+        assert len(targets.shape) == 3, "Targets have to be 3D " \
                                   "(but was {})".format(targets.shape)
         self.data = targets
         if binarize_to:
@@ -144,7 +144,7 @@ class SequencewiseTargets(Targets):
                  sequence_lengths=None):
         super(SequencewiseTargets, self).__init__(binarize_to, mask,
                                                   sequence_lengths)
-        assert targets.ndim == 3, "Targets have to be 3D " \
+        assert len(targets.shape) == 3, "Targets have to be 3D " \
                                   "(but was {})".format(targets.shape)
         assert targets.shape[0] == 1, \
             "First dimension(sequence length) should be 1 for " \
