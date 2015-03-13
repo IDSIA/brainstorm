@@ -6,6 +6,7 @@ import numpy as np
 
 class NumpyHandler(object):
     def __init__(self, dtype):
+        self.array_type = np.ndarray
         self.dtype = dtype
         self.size = lambda x: x.size
         self.shape = lambda x: x.shape
@@ -25,10 +26,19 @@ class NumpyHandler(object):
     def set(self, mem, arr):
         mem[:] = arr.astype(self.dtype)
 
-    # ---------------- Mathematical Operations ---------------- #
+    @staticmethod
+    def copyto(dest, src):
+        # FIXME: change casting to 'no'
+        np.copyto(dest, src, casting='same_kind')
 
     def zeros(self, shape):
         return np.zeros(shape=shape, dtype=self.dtype)
+
+    # ---------------- Mathematical Operations ---------------- #
+
+    def transpose(self, a):
+        # Returned a transposed view of a 2-D array
+        return a.T
 
     def sum(self, a, axis, out):
         if len(out.shape) == 2:
@@ -38,12 +48,16 @@ class NumpyHandler(object):
         np.sum(a, axis=axis, dtype=self.dtype, out=out, keepdims=keepdims)
 
     @staticmethod
-    def dot(a, b, out):
-        np.dot(a, b, out)
+    def dot(a, b, out, transa='N', transb='N'):
+        x = a.T if (transa == 'T') else a
+        y = b.T if (transb == 'T') else b
+        np.dot(x, y, out)
 
     @staticmethod
-    def dot_add(a, b, out):
-        out[:] += np.dot(a, b)
+    def dot_add(a, b, out, transa='N', transb='N'):
+        x = a.T if (transa == 'T') else a
+        y = b.T if (transb == 'T') else b
+        out[:] += np.dot(x, y)
 
     @staticmethod
     def elem_mult(a, b, out):
