@@ -9,11 +9,11 @@ class LayerBase(object):
     The base-class of all layer types defined in Python.
     """
 
-    def __init__(self, out_shape, in_shape, sink_layers, source_layers, kwargs):
+    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
         self.in_shape = in_shape
         self.validate_kwargs(kwargs)
         self.kwargs = kwargs
-        self.out_shape = self._get_output_shape(out_shape, in_shape, kwargs)
+        self.shape = self._get_output_shape(shape, in_shape, kwargs)
         self.sink_layers = sink_layers
         self.source_layers = source_layers
         self.handler = None
@@ -32,8 +32,8 @@ class LayerBase(object):
         assert not kwargs, "Unexpected kwargs: {}".format(list(kwargs.keys()))
 
     @classmethod
-    def _get_output_shape(cls, out_shape, in_shape, kwargs):
-        return out_shape if out_shape is not None else in_shape
+    def _get_output_shape(cls, shape, in_shape, kwargs):
+        return shape if shape is not None else in_shape
 
     def get_parameter_structure(self):
         return []
@@ -51,8 +51,8 @@ class InputLayer(LayerBase):
     Special input layer type.
     """
 
-    def __init__(self, out_shape, in_shape, sink_layers, source_layers, kwargs):
-        super(InputLayer, self).__init__(out_shape, in_shape, sink_layers,
+    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
+        super(InputLayer, self).__init__(shape, in_shape, sink_layers,
                                          source_layers, kwargs)
         assert not in_shape or in_shape == (0,), \
             "InputLayer cannot have an in_size"
@@ -63,16 +63,16 @@ class NoOpLayer(LayerBase):
     This layer just copies its input into its output.
     """
 
-    def __init__(self, out_shape, in_shape, sink_layers, source_layers, kwargs):
-        super(NoOpLayer, self).__init__(out_shape, in_shape, sink_layers,
+    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
+        super(NoOpLayer, self).__init__(shape, in_shape, sink_layers,
                                         source_layers, kwargs)
-        assert out_shape == in_shape, "For NoOpLayer in and out size must be equal,"\
-                                " but {} != {}".format(out_shape, in_shape)
+        assert shape == in_shape, "For NoOpLayer in and out size must be equal,"\
+                                " but {} != {}".format(shape, in_shape)
 
 
 class FeedForwardLayer(LayerBase):
-    def __init__(self, out_shape, in_shape, sink_layers, source_layers, kwargs):
-        super(FeedForwardLayer, self).__init__(out_shape, in_shape, sink_layers,
+    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
+        super(FeedForwardLayer, self).__init__(shape, in_shape, sink_layers,
                                                source_layers, kwargs)
         self.act_func = None
         self.act_func_deriv = None
@@ -100,8 +100,8 @@ class FeedForwardLayer(LayerBase):
 
     def get_parameter_structure(self):
         return [
-            ('W', (self.in_shape[0], self.out_shape[0])),
-            ('b', self.out_shape[0])
+            ('W', (self.in_shape[0], self.shape[0])),
+            ('b', self.shape[0])
         ]
 
     def forward_pass(self, parameters, input_buffer, output_buffer):
@@ -113,7 +113,7 @@ class FeedForwardLayer(LayerBase):
         # reshape
         t, b, f = input_buffer.shape
         flat_input = H.reshape(input_buffer, (t * b, f))
-        flat_output = H.reshape(output_buffer, (t * b, self.out_shape[0]))
+        flat_output = H.reshape(output_buffer, (t * b, self.shape[0]))
 
         # calculate outputs
         H.dot(flat_input, WX, flat_output)
@@ -132,7 +132,7 @@ class FeedForwardLayer(LayerBase):
         # reshape
         t, b, f = input_buffer.shape
         flat_input = H.reshape(input_buffer, (t * b, f))
-        flat_dZ = H.reshape(dZ, (t * b, self.out_shape[0]))
+        flat_dZ = H.reshape(dZ, (t * b, self.shape[0]))
         flat_in_delta_buffer = H.reshape(in_delta_buffer, (t * b, f))
 
         # calculate in deltas and gradients

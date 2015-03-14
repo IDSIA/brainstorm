@@ -36,11 +36,11 @@ def targets():
 architectures = [
     {'InputLayer': {
         '@type': 'InputLayer',
-        'size': 3,
+        'shape': 3,
         'sink_layers': ['OutputLayer']},
      'OutputLayer': {
          '@type': 'FeedForwardLayer',
-         'size': 2,
+         'shape': 2,
          'sink_layers': []}
      }
 ]

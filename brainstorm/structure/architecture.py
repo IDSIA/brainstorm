@@ -13,7 +13,7 @@ from brainstorm.layers.python_layers import get_layer_class_from_typename
 def get_layer_description(layer):
     description = {
         '@type': layer.layer_type,
-        'out_shape': layer.out_shape,
+        'shape': layer.shape,
         'sink_layers': {l.name for l in layer.sink_layers}
     }
     if layer.layer_kwargs:
@@ -117,7 +117,7 @@ def get_canonical_layer_order(architecture):
 
 
 def get_kwargs(layer):
-    kwarg_ignore = {'@type', 'out_shape', 'sink_layers', 'source_layers',
+    kwarg_ignore = {'@type', 'shape', 'sink_layers', 'source_layers',
                     'kwargs'}
     return {k: copy(v) for k, v in layer.items() if k not in kwarg_ignore}
 
@@ -165,10 +165,10 @@ def instantiate_layers_from_architecture(architecture):
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
         LayerClass = get_layer_class_from_typename(layer['@type'])
-        out_shape = ensure_tuple_or_none(layer.get('out_shape'))
+        shape = ensure_tuple_or_none(layer.get('shape'))
         sources = get_source_layers(layer_name, architecture)
-        in_shape = combine_input_shapes([layers[l_name].out_shape
+        in_shape = combine_input_shapes([layers[l_name].shape
                                          for l_name in sources])
-        layers[layer_name] = LayerClass(out_shape, in_shape, layer['sink_layers'],
+        layers[layer_name] = LayerClass(shape, in_shape, layer['sink_layers'],
                                         sources, get_kwargs(layer))
     return layers

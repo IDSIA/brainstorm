@@ -9,16 +9,16 @@ try:
     linalg.init()
 
     class PyCudaFFLayer(LayerBase):
-        def __init__(self, out_shape, in_shape, sink_layers, source_layers, kwargs):
-            super(PyCudaFFLayer, self).__init__(out_shape, in_shape, sink_layers,
+        def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
+            super(PyCudaFFLayer, self).__init__(shape, in_shape, sink_layers,
                                                 source_layers, kwargs)
             self.act_func = pycuda.cumath.tanh
             self.act_func_deriv = lambda y: 1 - linalg.multiply(y, y)
 
         def get_parameter_structure(self):
             return [
-                ('W', (self.in_shape[0], self.out_shape[0])),
-                ('b', self.out_shape[0])
+                ('W', (self.in_shape[0], self.shape[0])),
+                ('b', self.shape[0])
             ]
 
         def forward_pass(self, parameters, input_buffer, output_buffer):

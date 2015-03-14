@@ -52,9 +52,9 @@ class Network(Seedable):
             layer.set_handler(new_handler)
 
     def forward_pass(self, input_data, training_pass=False):
-        assert self.layers['InputLayer'].out_shape == input_data.shape[2:],\
+        assert self.layers['InputLayer'].shape == input_data.shape[2:],\
             "Input dimensions mismatch of InputLayer({}) and data ({})".format(
-                self.layers['InputLayer'].out_shape, input_data.shape[2:])
+                self.layers['InputLayer'].shape, input_data.shape[2:])
         self.errors = None
         self.buffer.rearrange_fwd(input_data.shape)
         self.handler.set_from_numpy(self.buffer.outputs['InputLayer'], input_data)

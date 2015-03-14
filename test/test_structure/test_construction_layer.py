@@ -15,7 +15,7 @@ def layers():
 
 def test_constructor():
     cl = ConstructionLayer('Foo', 7)
-    assert cl.out_shape == 7
+    assert cl.shape == 7
     assert cl.layer_type == 'Foo'
     assert repr(cl) == "<ConstructionLayer: Foo>"
 
