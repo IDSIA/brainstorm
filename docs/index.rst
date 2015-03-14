@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    installation
+   architecture
    usage
    contributing
    authors
