@@ -136,9 +136,12 @@ class FeedForwardLayer(LayerBase):
         flat_in_delta_buffer = H.reshape(in_delta_buffer, (t * b, f))
 
         # calculate in deltas and gradients
-        self.act_func_deriv(None, output_buffer, out_delta_buffer, dZ)
-        H.dot_add(flat_dZ, WX.T, flat_in_delta_buffer)
-        H.dot(flat_input.T, flat_dZ, dWX)
+        # TODO: Replace first argument in following call with the fwd state
+        # since some activation functions might need it
+        self.act_func_deriv(self.handler.EMPTY, output_buffer, out_delta_buffer,
+                            dZ)
+        H.dot_add(flat_dZ, WX, out=flat_in_delta_buffer, transb='T')
+        H.dot(flat_input, flat_dZ, dWX, transa='T')
         H.sum(flat_dZ, axis=0, out=dW_bias)
 
 

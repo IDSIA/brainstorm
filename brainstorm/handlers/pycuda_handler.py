@@ -13,6 +13,7 @@ culinalg.init()
 
 class PyCudaHandler(object):
     def __init__(self):
+        self.array_type = pycuda.gpuarray.GPUArray
         self.dtype = np.float32
         self.size = lambda x: x.size
         self.shape = lambda x: x.shape
@@ -29,53 +30,55 @@ class PyCudaHandler(object):
     def fill(mem, val):
         mem.fill(val)
 
-    def set(self, mem, arr):
+    def set_from_numpy(self, mem, arr):
         assert mem.shape == arr.shape, "{} != {}".format(mem.shape, arr.shape)
         mem.set(arr.astype(self.dtype))
+
+    @staticmethod
+    def copy_to(dest, src):
+        # Copy data from src to dest (both must be GPUArrays)
+        drv.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 
     # ---------------- Mathematical Operations ---------------- #
 
     def zeros(self, shape):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
 
-    @classmethod
-    def sum(cls, a, axis, out):
+    def sum(self, a, axis, out):
         # axis must be 0 or 1
         if axis == 0:
             out_view = out.reshape((1, a.shape[1]))
-            ones = gpuarray.zeros((1, a.shape[0]))  # temp memory
-            cls.dot(ones, a, out_view)
+            ones = gpuarray.zeros((1, a.shape[0]), dtype=self.dtype)  # temp memory
+            self.dot(ones, a, out_view)
 
         elif axis == 1:
             out_view = out.reshape((a.shape[0], 1))
-            ones = gpuarray.zeros((a.shape[1], 1))  # temp memory
-            cls.dot(a, ones, out_view)
+            ones = gpuarray.zeros((a.shape[1], 1), dtype=self.dtype)  # temp memory
+            self.dot(a, ones, out_view)
 
         else:
             raise NotImplementedError
 
     @staticmethod
-    def dot(a, b, out):
-        culinalg.dot(a, b, transa='N', transb='N', out=out)
+    def dot(a, b, out, transa='N', transb='N'):
+        culinalg.dot(a, b, transa=transa, transb=transb, out=out)
 
     @classmethod
-    def dot_add(cls, a, b, out):
-        temp = culinalg.dot(a, b, transa='N', transb='N')  # temp memory
+    def dot_add(cls, a, b, out, transa='N', transb='N'):
+        temp = culinalg.dot(a, b, transa=transa, transb=transb)  # temp memory
         cls.add_mm(temp, out, out)
 
     @staticmethod
     def elem_mult(a, b, out):
-        y = culinalg.multiply(a, b, overwrite=False)  # temp memory
-        drv.memcpy_dtod(out.gpudata, y.gpudata, out.nbytes)
+        elem_mult_kernel(a, b, out)
 
     @staticmethod
     def add_mm(a, b, out):
-        # Use elemwise kernel
-        raise NotImplementedError
+        add_mm_kernel(a, b, out)
 
     @staticmethod
     def add_mv(a, b, out):
-        # VERY hacky transitional implementation using CPU
+        # TODO: Replace this VERY hacky transitional implementation
         a_ = a.get()
         b_ = b.get()
         out_ = a_ + b_
@@ -106,6 +109,19 @@ class PyCudaHandler(object):
     @staticmethod
     def rel_deriv(x, y, dy, dx):
         rel_deriv_kernel(x, y, dy, dx)
+
+
+elem_mult_kernel = ElementwiseKernel(
+    b"float* x, float* y, float *out",
+    b"out[i] = x[i] * y[i]",
+    b"elem_mult_kernel"
+)
+
+add_mm_kernel = ElementwiseKernel(
+    b"float* x, float* y, float *out",
+    b"out[i] = x[i] + y[i]",
+    b"add_mm_kernel"
+)
 
 sigmoid_kernel = ElementwiseKernel(
     b"float* x, float* y",

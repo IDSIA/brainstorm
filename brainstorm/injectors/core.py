@@ -12,6 +12,16 @@ class Injector(Describable):
     def __init__(self, layer, target_from='layer_default'):
         self.layer = layer
         self.target_from = target_from
+        self.handler = None
+
+    def set_handler(self, new_handler):
+        """
+        A function that is called to set a new handler and then do some
+        follow-up operations.
+        For example, it may be used to reset activation functions.
+        It may also be used to restrict the layer to certain handlers.
+        """
+        self.handler = new_handler
 
     @staticmethod
     def _framewise(outputs, targets):
