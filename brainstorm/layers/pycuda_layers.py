@@ -19,8 +19,8 @@ try:
 
         def get_parameter_structure(self):
             return [
-                ('W', (self.in_shape[0], self.shape[0])),
-                ('b', self.shape[0])
+                ('W', (self.in_shape[0], self.out_shapes[0])),
+                ('b', self.out_shapes[0])
             ]
 
         def forward_pass(self, parameters, input_buffer, output_buffer):

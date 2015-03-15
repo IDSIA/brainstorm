@@ -108,13 +108,13 @@ def test_instantiate_layers_from_architecture():
     assert type(layers['C']) == NoOpLayer
     assert type(layers['D']) == NoOpLayer
 
-    assert layers['InputLayer'].in_shape == (0,)
-    assert layers['InputLayer'].shape == (10,)
-    assert layers['A'].in_shape == (10,)
-    assert layers['A'].shape == (10,)
-    assert layers['B'].in_shape == (20,)
-    assert layers['B'].shape == (20,)
-    assert layers['C'].in_shape == (10,)
-    assert layers['C'].shape == (10,)
-    assert layers['D'].in_shape == (30,)
-    assert layers['D'].shape == (30,)
+    assert layers['InputLayer'].in_shapes == {}
+    assert layers['InputLayer'].out_shapes == {'default': (10,)}
+    assert layers['A'].in_shapes == {'default': (10,)}
+    assert layers['A'].out_shapes == {'default': (10,)}
+    assert layers['B'].in_shapes == {'default': (20,)}
+    assert layers['B'].out_shapes == {'default': (20,)}
+    assert layers['C'].in_shapes == {'default': (10,)}
+    assert layers['C'].out_shapes == {'default': (10,)}
+    assert layers['D'].in_shapes == {'default': (30,)}
+    assert layers['D'].out_shapes == {'default': (30,)}
