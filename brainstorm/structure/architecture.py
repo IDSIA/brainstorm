@@ -46,49 +46,66 @@ def generate_injectors(some_layer):
     return injects
 
 
+def collect_all_outgoing_connections(layer):
+    if isinstance(layer['@outgoing_connections'], (list, set, tuple)):
+        outgoing = [sink_name.partition('.')[0]
+                    for sink_name in layer['@outgoing_connections']]
+    else:  # dict
+        outgoing = []
+        for source_name, out_con in layer['@outgoing_connections'].items():
+            outgoing.extend([sink_name.partition('.')[0]
+                             for sink_name in out_con])
+    return set(outgoing)
+
+
 def validate_architecture(architecture):
-    try:
-        # schema
-        for name, layer in architecture.items():
-            assert isinstance(name, string_types)
-            assert '@type' in layer and isinstance(layer['@type'],
-                                                   string_types)
-            assert '@outgoing_connections' in layer and \
-                   isinstance(layer['@outgoing_connections'], (set, list))
+    # schema
+    for name, layer in architecture.items():
+        if not isinstance(name, string_types):
+            raise InvalidArchitectureError('Non-string name {}'.format(name))
+        if '@type' not in layer:
+            raise InvalidArchitectureError(
+                'Missing @type for "{}"'.format(name))
+        if not isinstance(layer['@type'], string_types):
+            raise InvalidArchitectureError('Invalid @type for "{}": {}'.format(
+                name, type(layer['@type'])))
 
-        # layer naming
-        for name in architecture:
-            assert is_valid_layer_name(name), \
-                "Invalid layer name: '{}'".format(name)
+        if '@outgoing_connections' in layer and not isinstance(
+                layer['@outgoing_connections'], (set, list, tuple, dict)):
+            raise InvalidArchitectureError(
+                'Invalid @outgoing_connections for "{}"'.format(name))
 
-        # all outgoing connections are present
-        for layer in architecture.values():
-            for sink_name in layer['@outgoing_connections']:
-                assert sink_name in architecture, \
-                    "Could not find sink layer '{}'".format(sink_name)
+    # layer naming
+    for name in architecture:
+        if not is_valid_layer_name(name):
+            raise InvalidArchitectureError(
+                "Invalid layer name: '{}'".format(name))
 
-        # has InputLayer
-        assert 'InputLayer' in architecture
-        assert architecture['InputLayer']['@type'] == 'InputLayer'
+    # all outgoing connections are present
+    for layer in architecture.values():
+        outgoing = collect_all_outgoing_connections(layer)
+        outgoing.difference_update(architecture)
+        if outgoing:
+            raise InvalidArchitectureError('Could not find sink layer(s) "{}"'
+                                           .format(outgoing))
 
-        # has only one InputLayer
-        inputs_by_type = [l for l in architecture.values()
-                          if l['@type'] == 'InputLayer']
-        assert len(inputs_by_type) == 1
+    # has at least one DataLayer
+    data_layers_by_type = {n for n, l in architecture.items()
+                           if l['@type'] == 'DataLayer'}
+    if len(data_layers_by_type) == 0:
+        raise InvalidArchitectureError('No DataLayers found!')
 
-        # no sources for InputLayer
-        input_sources = [l for l in architecture.values()
-                         if 'InputLayer' in l['@outgoing_connections']]
-        assert len(input_sources) == 0
+    # no sources for DataLayers
+    for name, layer in architecture.items():
+        dcon = data_layers_by_type.intersection(layer['@outgoing_connections'])
+        if len(dcon) > 0:
+            raise InvalidArchitectureError(
+                'DataLayers can not have incoming connections! '
+                'But {} connects to {}'.format(name, dcon.pop()))
 
-        # only 1 output
-        outputs = [l for l in architecture.values()
-                   if not l['@outgoing_connections']]
-        assert len(outputs) == 1
-        # TODO: check if connected
-        # TODO: check for cycles
-    except AssertionError as e:
-        raise InvalidArchitectureError(e)
+    # TODO: check if connected
+    # TODO: check for cycles
+    return True
 
 
 def get_canonical_layer_order(architecture):
@@ -104,7 +121,7 @@ def get_canonical_layer_order(architecture):
                             if l not in already_ordered_layers]
         new_layers = [
             n for n in remaining_layers
-            if set(architecture[n]['@outgoing_connections']) <= already_ordered_layers]
+            if collect_all_outgoing_connections(architecture[n]) <= already_ordered_layers]
 
         if not new_layers:
             break

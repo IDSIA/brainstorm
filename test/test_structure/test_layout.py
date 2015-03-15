@@ -15,7 +15,7 @@ from brainstorm.utils import InvalidArchitectureError
 def impossible_layers():
     arch = {
         'InputLayer': {
-            '@type': 'InputLayer',
+            '@type': 'DataLayer',
             'shape': 2,
             '@outgoing_connections': {'A', 'B'}
         },

@@ -8,7 +8,8 @@ from brainstorm.structure.construction import ConstructionLayer
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in ['InputLayer', 'NoOpLayer', 'FeedForwardLayer']]
 
-InputLayer = partial(ConstructionLayer, "InputLayer")
+DataLayer = partial(ConstructionLayer, "DataLayer")
+InputLayer = partial(ConstructionLayer, "DataLayer", kwargs={'data_name': "input_data"})
 NoOpLayer = partial(ConstructionLayer, "NoOpLayer")
 FeedForwardLayer = partial(ConstructionLayer, "FeedForwardLayer")
 

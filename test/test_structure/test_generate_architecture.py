@@ -5,7 +5,7 @@ from brainstorm.structure.construction import ConstructionLayer
 from brainstorm.structure.architecture import (
     generate_architecture, get_layer_description, get_canonical_layer_order,
     instantiate_layers_from_architecture)
-from brainstorm.layers.python_layers import InputLayer, NoOpLayer
+from brainstorm.layers.python_layers import DataLayer, NoOpLayer
 
 
 def test_get_layer_description():
@@ -35,7 +35,7 @@ def test_layer_with_kwargs():
 
 
 def test_generate_architecture():
-    l1 = ConstructionLayer('InputLayer', 10)
+    l1 = ConstructionLayer('DataLayer', 10)
     l2 = ConstructionLayer('layertype', 20, name='bar')
     l3 = ConstructionLayer('layertype', 30, name='baz')
     l4 = ConstructionLayer('layertype', 40, name='out')
@@ -48,8 +48,8 @@ def test_generate_architecture():
     assert arch1 == arch2
     assert arch1 == arch3
     assert arch1 == {
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'DataLayer': {
+            '@type': 'DataLayer',
             'shape': 10,
             '@outgoing_connections': {'bar', 'baz'}
         },
@@ -71,41 +71,10 @@ def test_generate_architecture():
     }
 
 
-def test_get_canonical_architecture_order():
-    arch = {
-        'A': {
-            '@type': 'InputLayer',
-            'shape': 10,
-            '@outgoing_connections': {'B1', 'C'}
-        },
-        'B1': {
-            '@type': 'layertype',
-            'shape': 20,
-            '@outgoing_connections': {'B2'}
-        },
-        'B2': {
-            '@type': 'layertype',
-            'shape': 20,
-            '@outgoing_connections': {'D'}
-        },
-        'C': {
-            '@type': 'layertype',
-            'shape': 30,
-            '@outgoing_connections': {'D'}
-        },
-        'D': {
-            '@type': 'layertype',
-            'shape': 40,
-            '@outgoing_connections': set()
-        }
-    }
-    assert get_canonical_layer_order(arch) == ['A', 'B1', 'B2', 'C', 'D']
-
-
 def test_instantiate_layers_from_architecture():
     arch = {
         'InputLayer': {
-            '@type': 'InputLayer',
+            '@type': 'DataLayer',
             'shape': 10,
             '@outgoing_connections': {'A', 'B', 'C'}
         },
@@ -133,7 +102,7 @@ def test_instantiate_layers_from_architecture():
     layers = instantiate_layers_from_architecture(arch)
     assert set(arch.keys()) == set(layers.keys())
 
-    assert type(layers['InputLayer']) == InputLayer
+    assert type(layers['InputLayer']) == DataLayer
     assert type(layers['A']) == NoOpLayer
     assert type(layers['B']) == NoOpLayer
     assert type(layers['C']) == NoOpLayer

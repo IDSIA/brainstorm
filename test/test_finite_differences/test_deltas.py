@@ -35,7 +35,7 @@ def targets():
 
 architectures = [
     {'InputLayer': {
-        '@type': 'InputLayer',
+        '@type': 'DataLayer',
         'shape': 3,
         '@outgoing_connections': ['OutputLayer']},
      'OutputLayer': {

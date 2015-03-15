@@ -47,14 +47,14 @@ class LayerBase(object):
         pass
 
 
-class InputLayer(LayerBase):
+class DataLayer(LayerBase):
     """
     Special input layer type.
     """
 
     def __init__(self, shape, in_shape, outgoing_connections,
                  incoming_connections, kwargs):
-        super(InputLayer, self).__init__(shape, in_shape, outgoing_connections,
+        super(DataLayer, self).__init__(shape, in_shape, outgoing_connections,
                                          incoming_connections, kwargs)
         assert not in_shape or in_shape == (0,), \
             "InputLayer cannot have an in_size"

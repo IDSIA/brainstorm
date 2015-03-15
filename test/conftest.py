@@ -16,7 +16,7 @@ from brainstorm.structure.architecture import (
 def layers():
     arch = {
         'InputLayer': {
-            '@type': 'InputLayer',
+            '@type': 'DataLayer',
             'shape': 2,
             '@outgoing_connections': {'A', 'B'}
         },
