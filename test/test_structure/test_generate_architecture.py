@@ -18,7 +18,7 @@ def test_get_layer_description():
     assert descr == {
         '@type': 'layertype',
         'shape': 10,
-        'sink_layers': {'bar', 'baz'}
+        '@outgoing_connections': {'bar', 'baz'}
     }
 
 
@@ -28,7 +28,7 @@ def test_layer_with_kwargs():
     assert descr == {
         '@type': 'layertype',
         'shape': 10,
-        'sink_layers': set(),
+        '@outgoing_connections': set(),
         'a': 2,
         'b': 3
     }
@@ -51,22 +51,22 @@ def test_generate_architecture():
         'InputLayer': {
             '@type': 'InputLayer',
             'shape': 10,
-            'sink_layers': {'bar', 'baz'}
+            '@outgoing_connections': {'bar', 'baz'}
         },
         'bar': {
             '@type': 'layertype',
             'shape': 20,
-            'sink_layers': {'out'}
+            '@outgoing_connections': {'out'}
         },
         'baz': {
             '@type': 'layertype',
             'shape': 30,
-            'sink_layers': {'out'}
+            '@outgoing_connections': {'out'}
         },
         'out': {
             '@type': 'layertype',
             'shape': 40,
-            'sink_layers': set()
+            '@outgoing_connections': set()
         }
     }
 
@@ -76,27 +76,27 @@ def test_get_canonical_architecture_order():
         'A': {
             '@type': 'InputLayer',
             'shape': 10,
-            'sink_layers': {'B1', 'C'}
+            '@outgoing_connections': {'B1', 'C'}
         },
         'B1': {
             '@type': 'layertype',
             'shape': 20,
-            'sink_layers': {'B2'}
+            '@outgoing_connections': {'B2'}
         },
         'B2': {
             '@type': 'layertype',
             'shape': 20,
-            'sink_layers': {'D'}
+            '@outgoing_connections': {'D'}
         },
         'C': {
             '@type': 'layertype',
             'shape': 30,
-            'sink_layers': {'D'}
+            '@outgoing_connections': {'D'}
         },
         'D': {
             '@type': 'layertype',
             'shape': 40,
-            'sink_layers': set()
+            '@outgoing_connections': set()
         }
     }
     assert get_canonical_layer_order(arch) == ['A', 'B1', 'B2', 'C', 'D']
@@ -107,27 +107,27 @@ def test_instantiate_layers_from_architecture():
         'InputLayer': {
             '@type': 'InputLayer',
             'shape': 10,
-            'sink_layers': {'A', 'B', 'C'}
+            '@outgoing_connections': {'A', 'B', 'C'}
         },
         'A': {
             '@type': 'NoOpLayer',
             'shape': 10,
-            'sink_layers': {'B'}
+            '@outgoing_connections': {'B'}
         },
         'B': {
             '@type': 'NoOpLayer',
             'shape': 20,
-            'sink_layers': {'D'}
+            '@outgoing_connections': {'D'}
         },
         'C': {
             '@type': 'NoOpLayer',
             'shape': 10,
-            'sink_layers': {'D'}
+            '@outgoing_connections': {'D'}
         },
         'D': {
             '@type': 'NoOpLayer',
             'shape': 30,
-            'sink_layers': set()
+            '@outgoing_connections': set()
         }
     }
     layers = instantiate_layers_from_architecture(arch)

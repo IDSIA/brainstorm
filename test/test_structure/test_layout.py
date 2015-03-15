@@ -17,32 +17,32 @@ def impossible_layers():
         'InputLayer': {
             '@type': 'InputLayer',
             'shape': 2,
-            'sink_layers': {'A', 'B'}
+            '@outgoing_connections': {'A', 'B'}
         },
         'A': {
             '@type': 'FeedForwardLayer',
             'shape': 2,
-            'sink_layers': {'C', 'D'}
+            '@outgoing_connections': {'C', 'D'}
         },
         'B': {
             '@type': 'FeedForwardLayer',
-            'sink_layers': {'C', 'E'}
+            '@outgoing_connections': {'C', 'E'}
         },
         'C': {
             '@type': 'FeedForwardLayer',
-            'sink_layers': {'D', 'E'}
+            '@outgoing_connections': {'D', 'E'}
         },
         'D': {
             '@type': 'FeedForwardLayer',
-            'sink_layers': {'out'}
+            '@outgoing_connections': {'out'}
         },
         'E': {
             '@type': 'FeedForwardLayer',
-            'sink_layers': {'out'}
+            '@outgoing_connections': {'out'}
         },
         'out': {
             '@type': 'FeedForwardLayer',
-            'sink_layers': set()
+            '@outgoing_connections': set()
         }
     }
     return instantiate_layers_from_architecture(arch)

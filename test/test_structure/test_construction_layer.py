@@ -33,9 +33,9 @@ def test_raises_on_invalid_layer_name():
 def test_connecting_two_layers_sets_sinks_and_sources(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> l2 >> l3
-    assert l1 in l2.source_layers
-    assert l2 in l1.sink_layers
-    assert l3 in l2.sink_layers
+    assert l1 in l2.incoming
+    assert l2 in l1.outgoing
+    assert l3 in l2.outgoing
 
 
 def test_connect_multiple_targets(layers):
@@ -43,9 +43,9 @@ def test_connect_multiple_targets(layers):
     _ = l1 >> l2
     _ = l1 >> l3
     _ = l1 >> l4
-    assert l2 in l1.sink_layers
-    assert l3 in l1.sink_layers
-    assert l4 in l1.sink_layers
+    assert l2 in l1.outgoing
+    assert l3 in l1.outgoing
+    assert l4 in l1.outgoing
 
 
 def test_connect_multiple_sources(layers):
@@ -53,9 +53,9 @@ def test_connect_multiple_sources(layers):
     _ = l2 >> l1
     _ = l3 >> l1
     _ = l4 >> l1
-    assert l2 in l1.source_layers
-    assert l3 in l1.source_layers
-    assert l4 in l1.source_layers
+    assert l2 in l1.incoming
+    assert l3 in l1.incoming
+    assert l4 in l1.incoming
 
 
 def test_collect_connected_layers(layers):

@@ -9,13 +9,14 @@ class LayerBase(object):
     The base-class of all layer types defined in Python.
     """
 
-    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
+    def __init__(self, shape, in_shape, outgoing_connections,
+                 incoming_connections, kwargs):
         self.in_shape = in_shape
         self.validate_kwargs(kwargs)
         self.kwargs = kwargs
         self.shape = self._get_output_shape(shape, in_shape, kwargs)
-        self.sink_layers = sink_layers
-        self.source_layers = source_layers
+        self.outgoing = outgoing_connections
+        self.incoming = incoming_connections
         self.handler = None
 
     def set_handler(self, new_handler):
@@ -51,9 +52,10 @@ class InputLayer(LayerBase):
     Special input layer type.
     """
 
-    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
-        super(InputLayer, self).__init__(shape, in_shape, sink_layers,
-                                         source_layers, kwargs)
+    def __init__(self, shape, in_shape, outgoing_connections,
+                 incoming_connections, kwargs):
+        super(InputLayer, self).__init__(shape, in_shape, outgoing_connections,
+                                         incoming_connections, kwargs)
         assert not in_shape or in_shape == (0,), \
             "InputLayer cannot have an in_size"
 
@@ -63,17 +65,20 @@ class NoOpLayer(LayerBase):
     This layer just copies its input into its output.
     """
 
-    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
-        super(NoOpLayer, self).__init__(shape, in_shape, sink_layers,
-                                        source_layers, kwargs)
+    def __init__(self, shape, in_shape, outgoing_connections,
+                 incoming_connections, kwargs):
+        super(NoOpLayer, self).__init__(shape, in_shape, outgoing_connections,
+                                        incoming_connections, kwargs)
         assert shape == in_shape, "For NoOpLayer in and out size must be equal,"\
-                                " but {} != {}".format(shape, in_shape)
+                                  " but {} != {}".format(shape, in_shape)
 
 
 class FeedForwardLayer(LayerBase):
-    def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
-        super(FeedForwardLayer, self).__init__(shape, in_shape, sink_layers,
-                                               source_layers, kwargs)
+    def __init__(self, shape, in_shape, outgoing_connections,
+                 incoming_connections, kwargs):
+        super(FeedForwardLayer, self).__init__(shape, in_shape,
+                                               outgoing_connections,
+                                               incoming_connections, kwargs)
         self.act_func = None
         self.act_func_deriv = None
         self.kwargs = kwargs

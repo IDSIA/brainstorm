@@ -9,9 +9,11 @@ try:
     linalg.init()
 
     class PyCudaFFLayer(LayerBase):
-        def __init__(self, shape, in_shape, sink_layers, source_layers, kwargs):
-            super(PyCudaFFLayer, self).__init__(shape, in_shape, sink_layers,
-                                                source_layers, kwargs)
+        def __init__(self, shape, in_shape, outgoing_connections,
+                     incoming_connections, kwargs):
+            super(PyCudaFFLayer, self).__init__(shape, in_shape,
+                                                outgoing_connections,
+                                                incoming_connections, kwargs)
             self.act_func = pycuda.cumath.tanh
             self.act_func_deriv = lambda y: 1 - linalg.multiply(y, y)
 

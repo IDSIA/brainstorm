@@ -14,7 +14,7 @@ def get_layer_description(layer):
     description = {
         '@type': layer.layer_type,
         'shape': layer.shape,
-        'sink_layers': {l.name for l in layer.sink_layers}
+        '@outgoing_connections': {l.name for l in layer.outgoing}
     }
     if layer.layer_kwargs:
         description.update(layer.layer_kwargs)
@@ -53,17 +53,17 @@ def validate_architecture(architecture):
             assert isinstance(name, string_types)
             assert '@type' in layer and isinstance(layer['@type'],
                                                    string_types)
-            assert 'sink_layers' in layer and isinstance(layer['sink_layers'],
-                                                         (set, list))
+            assert '@outgoing_connections' in layer and \
+                   isinstance(layer['@outgoing_connections'], (set, list))
 
         # layer naming
         for name in architecture:
             assert is_valid_layer_name(name), \
                 "Invalid layer name: '{}'".format(name)
 
-        # all sink_layers are present
+        # all outgoing connections are present
         for layer in architecture.values():
-            for sink_name in layer['sink_layers']:
+            for sink_name in layer['@outgoing_connections']:
                 assert sink_name in architecture, \
                     "Could not find sink layer '{}'".format(sink_name)
 
@@ -78,11 +78,12 @@ def validate_architecture(architecture):
 
         # no sources for InputLayer
         input_sources = [l for l in architecture.values()
-                         if 'InputLayer' in l['sink_layers']]
+                         if 'InputLayer' in l['@outgoing_connections']]
         assert len(input_sources) == 0
 
         # only 1 output
-        outputs = [l for l in architecture.values() if not l['sink_layers']]
+        outputs = [l for l in architecture.values()
+                   if not l['@outgoing_connections']]
         assert len(outputs) == 1
         # TODO: check if connected
         # TODO: check for cycles
@@ -103,7 +104,7 @@ def get_canonical_layer_order(architecture):
                             if l not in already_ordered_layers]
         new_layers = [
             n for n in remaining_layers
-            if set(architecture[n]['sink_layers']) <= already_ordered_layers]
+            if set(architecture[n]['@outgoing_connections']) <= already_ordered_layers]
 
         if not new_layers:
             break
@@ -117,14 +118,13 @@ def get_canonical_layer_order(architecture):
 
 
 def get_kwargs(layer):
-    kwarg_ignore = {'@type', 'shape', 'sink_layers', 'source_layers',
-                    'kwargs'}
+    kwarg_ignore = {'@type', 'shape', '@outgoing_connections'}
     return {k: copy(v) for k, v in layer.items() if k not in kwarg_ignore}
 
 
 def get_source_layers(layer_name, architecture):
     return [n for n, l in architecture.items()
-            if layer_name in l['sink_layers']]
+            if layer_name in l['@outgoing_connections']]
 
 
 def combine_input_shapes(shapes):
@@ -169,6 +169,6 @@ def instantiate_layers_from_architecture(architecture):
         sources = get_source_layers(layer_name, architecture)
         in_shape = combine_input_shapes([layers[l_name].shape
                                          for l_name in sources])
-        layers[layer_name] = LayerClass(shape, in_shape, layer['sink_layers'],
+        layers[layer_name] = LayerClass(shape, in_shape, layer['@outgoing_connections'],
                                         sources, get_kwargs(layer))
     return layers

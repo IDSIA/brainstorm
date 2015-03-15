@@ -28,8 +28,8 @@ class ConstructionLayer(UniquelyNamed):
         super(ConstructionLayer, self).__init__(name or layer_type)
         self.layer_type = layer_type
         self.shape = shape
-        self.source_layers = []
-        self.sink_layers = []
+        self.incoming = []
+        self.outgoing = []
         self.traversing = False
         self.layer_kwargs = kwargs
         self.injectors = []
@@ -44,7 +44,7 @@ class ConstructionLayer(UniquelyNamed):
         while new_layers:
             very_new_layers = set()
             for l in new_layers:
-                very_new_layers |= set(l.sink_layers) | set(l.source_layers)
+                very_new_layers |= set(l.outgoing) | set(l.incoming)
             connectom |= new_layers
             new_layers = very_new_layers - connectom
         return connectom
@@ -52,8 +52,8 @@ class ConstructionLayer(UniquelyNamed):
     def __rshift__(self, other):
         if not isinstance(other, ConstructionLayer):
             return NotImplemented
-        self.sink_layers.append(other)
-        other.source_layers.append(self)
+        self.outgoing.append(other)
+        other.incoming.append(self)
         self.merge_scopes(other)
         return other
 

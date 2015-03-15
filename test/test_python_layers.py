@@ -23,8 +23,8 @@ def test_layer_constructor():
     l = LayerBase(5, 8, {'A', 'B'}, {'C'}, {})
     assert l.shape == 5
     assert l.in_shape == 8
-    assert l.source_layers == {'C'}
-    assert l.sink_layers == {'A', 'B'}
+    assert l.incoming == {'C'}
+    assert l.outgoing == {'A', 'B'}
     assert l.kwargs == {}
 
 

@@ -18,27 +18,27 @@ def layers():
         'InputLayer': {
             '@type': 'InputLayer',
             'shape': 2,
-            'sink_layers': {'A', 'B'}
+            '@outgoing_connections': {'A', 'B'}
         },
         'A': {
             '@type': 'FeedForwardLayer',
             'shape': 3,
-            'sink_layers': {'C'}
+            '@outgoing_connections': {'C'}
         },
         'B': {
             '@type': 'FeedForwardLayer',
             'shape': 5,
-            'sink_layers': {'C', 'D'}
+            '@outgoing_connections': {'C', 'D'}
         },
         'C': {
             '@type': 'FeedForwardLayer',
             'shape': 7,
-            'sink_layers': {'D'}
+            '@outgoing_connections': {'D'}
         },
         'D': {
             '@type': 'FeedForwardLayer',
             'shape': 11,
-            'sink_layers': set()
+            '@outgoing_connections': set()
         }
     }
     return instantiate_layers_from_architecture(arch)

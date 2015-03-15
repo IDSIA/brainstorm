@@ -37,11 +37,11 @@ architectures = [
     {'InputLayer': {
         '@type': 'InputLayer',
         'shape': 3,
-        'sink_layers': ['OutputLayer']},
+        '@outgoing_connections': ['OutputLayer']},
      'OutputLayer': {
          '@type': 'FeedForwardLayer',
          'shape': 2,
-         'sink_layers': []}
+         '@outgoing_connections': []}
      }
 ]
 

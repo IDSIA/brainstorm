@@ -10,7 +10,7 @@ from brainstorm.utils import InvalidArchitectureError
 
 ParameterLayout = namedtuple('ParameterLayout', ['size', 'layout'])
 ParameterLayoutEntry = namedtuple('ParamLayoutEntry', ['start', 'stop',
-                                                   'structure'])
+                                                       'structure'])
 InOutLayout = namedtuple('InOutLayout',
                          ['size', 'source_layout', 'sink_layout'])
 
@@ -93,7 +93,7 @@ def get_forward_closure(layer_name, layers):
         names.f the layer to start the forward closure from.
     :type layer_name: unicode
     :param layers: dictionary of instantiated layers. They should have
-        sink_layers and source_layers fields.
+        outgoing and incoming fields.
     :type layers: dict
     :return: A tuple (source_set, sink_set) where source_set is set of
         layer names containing the initial layer and all sources of all layers
@@ -102,14 +102,14 @@ def get_forward_closure(layer_name, layers):
     :rtype: (set, set)
     """
     source_set = {layer_name}
-    sink_set = set(layers[layer_name].sink_layers)
+    sink_set = set(layers[layer_name].outgoing)
     growing = True
     while growing:
         growing = False
         new_source_set = {s for l in sink_set
-                          for s in layers[l].source_layers}
+                          for s in layers[l].incoming}
         new_sink_set = {t for l in source_set
-                        for t in layers[l].sink_layers}
+                        for t in layers[l].outgoing}
         if len(new_source_set) > len(source_set) or\
                 len(new_sink_set) > len(sink_set):
             growing = True
@@ -134,7 +134,7 @@ def set_up_connection_table(sources, sinks, layers):
     # set up connection table
     connection_table = np.zeros((len(source_list), len(sink_list)))
     for i, source in enumerate(source_list):
-        for sink in layers[source].sink_layers:
+        for sink in layers[source].outgoing:
             connection_table[i, sink_list.index(sink)] = 1
 
     return source_list, sink_list, connection_table
