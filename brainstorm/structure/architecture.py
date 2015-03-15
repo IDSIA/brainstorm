@@ -10,14 +10,24 @@ from brainstorm.utils import (InvalidArchitectureError,
 from brainstorm.layers.base_layer import get_layer_class_from_typename
 
 
-Connection = namedtuple('Connection', ['source_layer', 'source_name',
-                                       'sink_layer', 'sink_name'])
+ConnectionBase = namedtuple('ConnectionBase',
+                            ['source_layer', 'source_name',
+                             'sink_layer', 'sink_name'])
+
+
+class Connection(ConnectionBase):
+    @property
+    def full_sink_name(self):
+        return "{}.{}".format(self.sink_layer, self.sink_name)
+
+    @property
+    def full_source_name(self):
+        return "{}.{}".format(self.source_layer, self.source_name)
 
 
 def get_layer_description(layer):
     description = {
         '@type': layer.layer_type,
-        'shape': layer.shape,
         '@outgoing_connections': {l.name for l in layer.outgoing}
     }
     if layer.layer_kwargs:

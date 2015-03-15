@@ -27,11 +27,11 @@ class ConstructionLayer(UniquelyNamed):
 
         super(ConstructionLayer, self).__init__(name or layer_type)
         self.layer_type = layer_type
-        self.shape = shape
         self.incoming = []
         self.outgoing = []
         self.traversing = False
         self.layer_kwargs = kwargs
+        self.layer_kwargs['shape'] = shape
         self.injectors = []
 
     def collect_connected_layers(self):
