@@ -35,29 +35,10 @@ def get_layer_description(layer):
     return description
 
 
-def get_injector_description(injector):
-    description = {
-        '@type': injector.injector_type,
-        'layer': injector.layer.name
-    }
-    if injector.target_from is not None:
-        description['target_from'] = injector.target_from
-    if injector.injector_kwargs:
-        description.update(injector.injector_kwargs)
-    return description
-
-
 def generate_architecture(some_layer):
     layers = some_layer.collect_connected_layers()
     arch = {layer.name: get_layer_description(layer) for layer in layers}
     return arch
-
-
-def generate_injectors(some_layer):
-    layers = some_layer.collect_connected_layers()
-    injects = {inj.name: get_injector_description(inj) for layer in layers
-               for inj in layer.injectors}
-    return injects
 
 
 def parse_connection(connection_string):

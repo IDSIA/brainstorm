@@ -2,8 +2,9 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
-from brainstorm.injectors.error_functions import MeanSquaredError
 from brainstorm.targets import FramewiseTargets
+
+#TODO: FIXME
 
 
 def test_mean_squared_error():

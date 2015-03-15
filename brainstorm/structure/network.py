@@ -7,32 +7,27 @@ from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.view_references import resolve_references
 from brainstorm.initializers import evaluate_initializer
 from brainstorm.randomness import Seedable
-from brainstorm.describable import create_from_description
-from brainstorm.structure.architecture import (generate_injectors,
-                                               generate_architecture)
+from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
 
 
 def build_net(some_layer):
     arch = generate_architecture(some_layer)
-    injs = generate_injectors(some_layer)
-    return build_network_from_architecture(arch, injs)
+    return build_network_from_architecture(arch)
 
 
-def build_network_from_architecture(architecture, injections):
+def build_network_from_architecture(architecture):
     layers = instantiate_layers_from_architecture(architecture)
-    injectors = create_from_description(injections)
     buffer_manager = BufferManager.create_from_layers(layers)
-    return Network(layers, buffer_manager, injectors)
+    return Network(layers, buffer_manager)
 
 
 class Network(Seedable):
-    def __init__(self, layers, buffer_manager, injectors=None, seed=None,
+    def __init__(self, layers, buffer_manager, seed=None,
                  handler=default_handler):
         super(Network, self).__init__(seed)
         self.layers = layers
         self.buffer = buffer_manager
-        self.injectors = injectors or {}
         self.errors = None
         self.handler = None
         self.set_memory_handler(handler)
@@ -69,18 +64,8 @@ class Network(Seedable):
         return self.errors
 
     def _calculate_deltas_and_error(self, targets):
-        assert self.injectors, "No error injectors!"
-        if self.errors is None:
-            self.errors = {}
-            self.buffer.rearrange_bwd()
-
-            for inj_name, injector in self.injectors.items():
-                error, deltas = injector(
-                    self.buffer.outputs[injector.layer],
-                    targets.get(injector.target_from))
-                self.handler.copy_to(self.buffer.out_deltas[injector.layer],
-                                    deltas)
-                self.errors[inj_name] = error
+        # TODO: implement
+        pass
 
     def backward_pass(self, targets):
         self._calculate_deltas_and_error(targets)

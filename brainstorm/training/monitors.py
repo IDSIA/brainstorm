@@ -6,8 +6,6 @@ import six
 
 from collections import OrderedDict
 from brainstorm.describable import Describable
-from brainstorm.injectors.core import Injector
-from brainstorm.injectors.error_functions import ClassificationError
 
 
 class Monitor(Describable):
@@ -92,95 +90,6 @@ class SaveBestWeights(Monitor):
     def load_weights(self):
         return np.load(self.filename) if self.filename is not None \
             else self.weights
-
-
-class MonitorInjector(Monitor):
-    """
-    Monitor the given injector (aggregated over all sequences).
-    """
-    __undescribed__ = {'data_iter'}
-
-    def __init__(self, data_name, injector, name=None,
-                 timescale='epoch', interval=1, verbose=None):
-        if name is None:
-            if isinstance(injector, six.string_types):
-                name = 'Monitor' + injector
-            else:
-                name = 'Monitor' + injector.__class__.__name__
-
-        super(MonitorInjector, self).__init__(name, timescale, interval,
-                                              verbose)
-        assert isinstance(data_name, six.string_types)
-        self.data_name = data_name
-        self.data_iter = None
-        self.injector = injector
-
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorInjector, self).start(net, stepper, verbose,
-                                           monitor_kwargs)
-        self.data_iter = monitor_kwargs[self.data_name]
-
-    def __call__(self, epoch, net, stepper, logs):
-        if isinstance(self.injector, six.string_types):
-            injector = net.injectors[self.injector]
-        else:
-            assert isinstance(self.injector, Injector)
-            injector = self.injector
-        errors = []
-        # noinspection PyCallingNonCallable
-        for x, t in self.data_iter(self.run_verbosity):
-            net.forward_pass(x)
-            error, _ = injector(net.buffer.outputs[injector.layer],
-                                t.get(injector.target_from))
-            errors.append(error)
-        return injector.aggregate(errors)
-
-
-class MonitorClassificationError(MonitorInjector):
-    def __init__(self, data_name, name=None, timescale='epoch', interval=1,
-                 verbose=None):
-        super(MonitorClassificationError, self).__init__(
-            data_name, injector=ClassificationError,
-            name=name, timescale=timescale, interval=interval,
-            verbose=verbose)
-
-
-class MonitorMultipleInjectors(Monitor):
-    """
-    Monitor errors (aggregated over all sequences).
-    """
-    __undescribed__ = {'data_iter'}
-
-    def __init__(self, data_name, injectors,
-                 name=None, timescale='epoch', interval=1, verbose=None):
-        super(MonitorMultipleInjectors, self).__init__(name, timescale,
-                                                       interval, verbose)
-        self.iter_name = data_name
-        self.data_iter = None
-        self.injectors = injectors
-
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorMultipleInjectors, self).start(net, stepper, verbose,
-                                                    monitor_kwargs)
-        self.data_iter = monitor_kwargs[self.iter_name]
-
-    def __call__(self, epoch, net, stepper, logs):
-        errors = {e: [] for e in self.injectors}
-        # noinspection PyCallingNonCallable
-        for x, t in self.data_iter(self.run_verbosity):
-            net.forward_pass(x)
-            for inj in self.injectors:
-                if isinstance(inj, six.string_types):
-                    injector = net.injectors[inj]
-                else:
-                    assert isinstance(inj, Injector)
-                    injector = inj
-                error, _ = injector(net.buffer.outputs[injector.layer],
-                                    t.get(injector.target_from))
-                errors[injector].append(error)
-
-        return {err.__name__: err.aggregate(errors[err])
-                for err in self.injectors}
 
 
 class MonitorLayerProperties(Monitor):

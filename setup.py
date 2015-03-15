@@ -50,7 +50,6 @@ setup(
               'brainstorm.structure',
               'brainstorm.layers',
               'brainstorm.training',
-              'brainstorm.injectors',
               'brainstorm.handlers'],
     install_requires=['six', 'numpy'],
     tests_requires=['pytest', 'mock'],

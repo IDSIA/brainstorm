@@ -48,6 +48,7 @@ architectures = [
 
 @pytest.fixture(scope='module', params=architectures)
 def net(request):
+    # TODO: FIX with new error function
     injectors = {
         'MSE': {
             '@type': 'MeanSquaredError',
