@@ -13,6 +13,7 @@ Contents:
 
    installation
    architecture
+   layout
    usage
    contributing
    authors
