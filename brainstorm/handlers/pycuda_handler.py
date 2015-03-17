@@ -45,19 +45,7 @@ class PyCudaHandler(object):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
 
     def sum(self, a, axis, out):
-        # axis must be 0 or 1
-        if axis == 0:
-            out_view = out.reshape((1, a.shape[1]))
-            ones = gpuarray.zeros((1, a.shape[0]), dtype=self.dtype)  # temp memory
-            self.dot(ones, a, out_view)
-
-        elif axis == 1:
-            out_view = out.reshape((a.shape[0], 1))
-            ones = gpuarray.zeros((a.shape[1], 1), dtype=self.dtype)  # temp memory
-            self.dot(a, ones, out_view)
-
-        else:
-            raise NotImplementedError
+        cumisc.sum(a, axis, out)
 
     @staticmethod
     def dot(a, b, out, transa='N', transb='N'):
@@ -65,6 +53,7 @@ class PyCudaHandler(object):
 
     @classmethod
     def dot_add(cls, a, b, out, transa='N', transb='N'):
+        # TODO: this could be done in one GEMM call w/o allocations
         temp = culinalg.dot(a, b, transa=transa, transb=transb)  # temp memory
         cls.add_mm(temp, out, out)
 
@@ -78,11 +67,7 @@ class PyCudaHandler(object):
 
     @staticmethod
     def add_mv(a, b, out):
-        # TODO: Replace this VERY hacky transitional implementation
-        a_ = a.get()
-        b_ = b.get()
-        out_ = a_ + b_
-        drv.memcpy_htod(out.gpudata, out_)
+        cumisc.add_matvec(a, b, out=out)
 
     # Activation functions
 
