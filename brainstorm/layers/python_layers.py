@@ -81,7 +81,7 @@ class FeedForwardLayer(LayerBase):
     def forward_pass(self, parameters, input_buffers, output_buffers):
         # prepare
         H = self.handler
-        WX, W_bias = parameters['W'], parameters['b']
+        WX, W_bias = parameters
 
         # reshape
         t, b, f = input_buffers.default.shape
