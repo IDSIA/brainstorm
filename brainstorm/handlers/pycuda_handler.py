@@ -74,7 +74,7 @@ class PyCudaHandler(object):
         sigmoid_kernel(x, y)
 
     @staticmethod
-    def sigmoid_deriv(self, x, y, dy, dx):
+    def sigmoid_deriv(x, y, dy, dx):
         sigmoid_deriv_kernel(x, y, dy, dx)
 
     @staticmethod
