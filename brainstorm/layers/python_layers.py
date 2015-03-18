@@ -49,7 +49,6 @@ class NoOpLayer(LayerBase):
 
 class FeedForwardLayer(LayerBase):
     expected_kwargs = {'shape', 'activation_function'}
-    input_names = ['A', 'B']
 
     def __init__(self, in_shapes, incoming_connections, outgoing_connections,
                  **kwargs):
@@ -90,20 +89,19 @@ class FeedForwardLayer(LayerBase):
         # prepare
         H = self.handler
         WX, W_bias = forward_buffers.parameters
-        input_buffer = forward_buffers.inputs.default
-        output_buffer = forward_buffers.outputs.default
+        input = forward_buffers.inputs.default
+        output = forward_buffers.outputs.default
         Ha = forward_buffers.internal.Ha
 
         # reshape
-        t, b, f = input_buffer.shape
-        flat_input = H.reshape(input_buffer, (t * b, f))
-        flat_output = H.reshape(output_buffer,
-                                (t * b, self.out_shapes['default'][0]))
+        t, n, f = input.shape
+        flat_input = H.reshape(input, (t * n, f))
+        flat_Ha = H.reshape(Ha, (t * n, self.out_shapes['default'][0]))
 
         # calculate outputs
-        H.dot(flat_input, WX, flat_output)
-        H.add_mv(flat_output, W_bias, flat_output)
-        self.act_func(flat_output, flat_output)
+        H.dot(flat_input, WX, flat_Ha)
+        H.add_mv(flat_Ha, W_bias, flat_Ha)
+        self.act_func(flat_Ha, output)
 
     def backward_pass(self, forward_buffers, backward_buffers):
 
@@ -115,21 +113,19 @@ class FeedForwardLayer(LayerBase):
         output_buffer = forward_buffers.outputs.default
         in_delta_buffer = backward_buffers.inputs.default
         out_delta_buffer = backward_buffers.outputs.default
-        dZ = H.zeros(output_buffer.shape)
         Ha = forward_buffers.internal.Ha
         dHa = backward_buffers.internal.Ha
 
         # reshape
         t, b, f = input_buffer.shape
         flat_input = H.reshape(input_buffer, (t * b, f))
-        flat_dZ = H.reshape(dZ, (t * b, self.out_shapes['default'][0]))
+        flat_dHa = H.reshape(dHa, (t * b, self.out_shapes['default'][0]))
         flat_in_delta_buffer = H.reshape(in_delta_buffer, (t * b, f))
 
         # calculate in deltas and gradients
         # TODO: Replace first argument in following call with the fwd state
         # since some activation functions might need it
-        self.act_func_deriv(self.handler.EMPTY, output_buffer,
-                            out_delta_buffer, dZ)
-        H.dot_add(flat_dZ, WX, out=flat_in_delta_buffer, transb='T')
-        H.dot(flat_input, flat_dZ, dWX, transa='T')
-        H.sum(flat_dZ, axis=0, out=dW_bias)
+        self.act_func_deriv(Ha, output_buffer, out_delta_buffer, dHa)
+        H.dot_add(flat_dHa, WX, out=flat_in_delta_buffer, transb='T')
+        H.dot(flat_input, flat_dHa, dWX, transa='T')
+        H.sum(flat_dHa, axis=0, out=dW_bias)
