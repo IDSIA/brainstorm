@@ -20,8 +20,8 @@ class LayerBase(object):
     Each layer has a set of named sinks (inputs) and sources (outputs).
     """
 
-    sink_names = ['default']
-    source_names = ['default']
+    input_names = ['default']
+    output_names = ['default']
     expected_kwargs = {'shape'}
 
     def __init__(self, in_shapes, incoming_connections, outgoing_connections,
@@ -67,15 +67,16 @@ class LayerBase(object):
 
     def get_parameter_structure(self):
         """
-        :return: list of parameter names and their respective shapes
-        :rtype: list[tuple[str, tuple[int]]
+        :return: list of parameter buffers each with a name and a shape
+        :rtype: list[dict]
         """
         return []
 
     def get_state_structure(self):
         """
-        :return: list of internal state names and their respective *feature* shapes
-        :rtype: list[tuple[str, tuple[int]]
+        :return: list internal state buffers each with a name and respective
+                 *feature* shape
+        :rtype: list[dict]
         """
         return []
 
@@ -93,30 +94,30 @@ class LayerBase(object):
 
     @classmethod
     def _validate_in_shapes(cls, in_shapes):
-        for sink_name in in_shapes:
-            if sink_name not in cls.sink_names:
+        for input_name in in_shapes:
+            if input_name not in cls.input_names:
                 raise ValueError('Invalid in_shapes.'
-                                 'Layer has no sink named "{}". Choices are:'
-                                 ' {}'.format(sink_name, cls.sink_names))
+                                 'Layer has no input named "{}". Choices are:'
+                                 ' {}'.format(input_name, cls.input_names))
 
     @classmethod
     def _validate_out_shapes(cls, out_shapes):
-        for source_name in out_shapes:
-            if source_name not in cls.source_names:
+        for output_name in out_shapes:
+            if output_name not in cls.output_names:
                 raise ValueError('Invalid out_shapes.'
-                                 'Layer has no source named "{}". Choices are:'
-                                 ' {}'.format(source_name, cls.sink_names))
+                                 'Layer has no output named "{}". Choices are:'
+                                 ' {}'.format(output_name, cls.input_names))
 
     @classmethod
     def _validate_connections(cls, incoming_connections, outgoing_connections):
         for in_c in incoming_connections:
-            if in_c.sink_name not in cls.sink_names:
+            if in_c.input_name not in cls.input_names:
                 raise ValueError(
                     'Invalid incoming connection ({}). Layer has no sink '
                     'named "{}"'.format(in_c, in_c.sink_name))
 
         for out_c in outgoing_connections:
-            if out_c.source_name not in cls.source_names:
+            if out_c.output_name not in cls.output_names:
                 raise ValueError(
                     'Invalid incoming connection ({}). Layer has no source '
                     'named "{}"'.format(out_c, out_c.source_name))

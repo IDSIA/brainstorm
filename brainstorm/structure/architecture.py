@@ -11,28 +11,22 @@ from brainstorm.layers.base_layer import get_layer_class_from_typename
 
 
 ConnectionBase = namedtuple('ConnectionBase',
-                            ['source_layer', 'source_name',
-                             'sink_layer', 'sink_name'])
+                            ['start_layer', 'output_name',
+                             'end_layer', 'input_name'])
 
 
 class Connection(ConnectionBase):
-    @property
-    def full_sink_name(self):
-        return "{}.{}".format(self.sink_layer, self.sink_name)
-
-    @property
-    def full_source_name(self):
-        return "{}.{}".format(self.source_layer, self.source_name)
+    pass
 
 
 def get_layer_description(layer_details):
 
     outgoing = {}
-    for outp, inp, layer in layer_details.outgoing:
+    for outp, inp, end_layer in layer_details.outgoing:
         if outp in outgoing:
-            outgoing[outp].add("{}.{}".format(layer.name, inp))
+            outgoing[outp].add("{}.{}".format(end_layer.name, inp))
         else:
-            outgoing[outp] = {"{}.{}".format(layer.name, inp)}
+            outgoing[outp] = {"{}.{}".format(end_layer.name, inp)}
 
     description = {
         '@type': layer_details.layer_type,
@@ -50,27 +44,27 @@ def generate_architecture(some_layer):
 
 
 def parse_connection(connection_string):
-    sink_layer, _, sink_name = connection_string.partition('.')
-    return sink_layer, sink_name
+    end_layer, _, input_name = connection_string.partition('.')
+    return end_layer, input_name
 
 
 def collect_all_outgoing_connections(layer, layer_name):
     outgoing = []
     if isinstance(layer['@outgoing_connections'], (list, set, tuple)):
         for con_str in layer['@outgoing_connections']:
-            sink_layer, sink_name = parse_connection(con_str)
-            if not sink_name:
-                sink_name = 'default'
+            end_layer, input_name = parse_connection(con_str)
+            if not input_name:
+                input_name = 'default'
             outgoing.append(Connection(layer_name, 'default',
-                                       sink_layer, sink_name))
+                                       end_layer, input_name))
     else:  # dict
-        for source_name, out_con in layer['@outgoing_connections'].items():
+        for out_name, out_con in layer['@outgoing_connections'].items():
             for con_str in out_con:
-                sink_layer, sink_name = parse_connection(con_str)
-                if not sink_name:
-                    sink_name = 'default'
-                outgoing.append(Connection(layer_name, source_name,
-                                           sink_layer, sink_name))
+                end_layer, input_name = parse_connection(con_str)
+                if not input_name:
+                    input_name = 'default'
+                outgoing.append(Connection(layer_name, out_name,
+                                           end_layer, input_name))
     return outgoing
 
 
@@ -107,11 +101,11 @@ def validate_architecture(architecture):
 
     # all outgoing connections are present
     connections = collect_all_connections(architecture)
-    sink_layers = {c.sink_layer for c in connections}
-    undefined_sink_layers = sink_layers.difference(architecture)
-    if undefined_sink_layers:
+    end_layers = {c.end_layer for c in connections}
+    undefined_end_layers = end_layers.difference(architecture)
+    if undefined_end_layers:
         raise InvalidArchitectureError(
-            'Could not find sink layer(s) "{}"'.format(undefined_sink_layers))
+            'Could not find end layer(s) "{}"'.format(undefined_end_layers))
 
     # has at least one DataLayer
     data_layers_by_type = {n for n, l in architecture.items()
@@ -119,8 +113,8 @@ def validate_architecture(architecture):
     if len(data_layers_by_type) == 0:
         raise InvalidArchitectureError('No DataLayers found!')
 
-    # no sources for DataLayers
-    data_connections = data_layers_by_type.intersection(sink_layers)
+    # no connections to DataLayers
+    data_connections = data_layers_by_type.intersection(end_layers)
     if len(data_connections) > 0:
         raise InvalidArchitectureError(
             'DataLayers can not have incoming connections! '
@@ -146,8 +140,8 @@ def get_canonical_layer_order(architecture):
                             if l not in already_ordered_layers]
         new_layers = []
         for layer_name in remaining_layers:
-            outgoing_layers = {c.sink_layer for c in connections
-                               if c.source_layer == layer_name}
+            outgoing_layers = {c.end_layer for c in connections
+                               if c.start_layer == layer_name}
             if outgoing_layers <= already_ordered_layers:
                 new_layers.append(layer_name)
 
@@ -165,11 +159,6 @@ def get_canonical_layer_order(architecture):
 def get_kwargs(layer):
     kwarg_ignore = {'@type', '@outgoing_connections'}
     return {k: copy(v) for k, v in layer.items() if k not in kwarg_ignore}
-
-
-def get_source_layers(layer_name, architecture):
-    return [n for n, l in architecture.items()
-            if layer_name in l['@outgoing_connections']]
 
 
 def combine_input_shapes(shapes):
@@ -211,15 +200,15 @@ def instantiate_layers_from_architecture(architecture):
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
         LayerClass = get_layer_class_from_typename(layer['@type'])
-        incoming = {c for c in connections if c.sink_layer == layer_name}
-        outgoing = {c for c in connections if c.source_layer == layer_name}
+        incoming = {c for c in connections if c.end_layer == layer_name}
+        outgoing = {c for c in connections if c.start_layer == layer_name}
 
-        sink_names = {c.sink_name for c in incoming}
+        input_names = {c.input_name for c in incoming}
         in_shapes = {}
-        for sink in sink_names:
-            in_shapes[sink] = combine_input_shapes(
-                [layers[c.source_layer].out_shapes[c.source_name]
-                 for c in incoming if c.sink_name == sink])
+        for input_name in input_names:
+            in_shapes[input_name] = combine_input_shapes(
+                [layers[c.start_layer].out_shapes[c.output_name]
+                 for c in incoming if c.input_name == input_name])
 
         layers[layer_name] = LayerClass(in_shapes, incoming, outgoing,
                                         **get_kwargs(layer))

@@ -12,7 +12,7 @@ class DataLayer(LayerBase):
     through this layer. It defaults to 'input_data'
     """
     expected_kwargs = {'shape', 'data_name'}
-    sink_names = []
+    input_names = []
 
     def __init__(self, in_shapes, incoming_connections, outgoing_connections,
                  **kwargs):
@@ -49,6 +49,7 @@ class NoOpLayer(LayerBase):
 
 class FeedForwardLayer(LayerBase):
     expected_kwargs = {'shape', 'activation_function'}
+    input_names = ['A', 'B']
 
     def __init__(self, in_shapes, incoming_connections, outgoing_connections,
                  **kwargs):
@@ -74,14 +75,14 @@ class FeedForwardLayer(LayerBase):
 
     def get_parameter_structure(self):
         return [
-            ('W', (self.in_shapes['default'][0],
-                   self.out_shapes['default'][0])),
-            ('b', self.out_shapes['default'][0])
+            {'name': 'W', 'shape': (self.in_shapes['default'][0],
+                                    self.out_shapes['default'][0])},
+            {'name': 'b', 'shape': self.out_shapes['default'][0]}
         ]
 
     def get_internal_structure(self):
         return [
-            ('Ha', self.out_shapes['default'])
+            {'name': 'Ha', 'shape': self.out_shapes['default']}
         ]
 
     def forward_pass(self, forward_buffers):
