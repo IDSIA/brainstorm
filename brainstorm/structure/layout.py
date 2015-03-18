@@ -15,6 +15,105 @@ InOutLayout = namedtuple('InOutLayout',
                          ['size', 'source_layout', 'sink_layout'])
 
 
+def create_layout(layers):
+    layout = create_layout_stub(layers)
+    connections = get_connections(layers, layout)
+    forced_orders = [get_parameter_order(l, layout) for l in layers]
+    forced_orders += [get_internal_order(l, layout) for l in layers]
+    forced_orders = filter(None, forced_orders)
+
+
+def create_layout_stub(layers):
+    root = {}
+    for layer_name, layer in layers.items():
+        root[layer_name] = {
+            'layout': get_layout_stub_for_layer(layer)
+        }
+    return root
+
+
+def get_layout_stub_for_layer(layer):
+    layout = {}
+    param_struct = layer.get_parameter_structure()
+    if param_struct:
+        layout['parameters'] = {
+            'layout': {k: add_slice_stub(v) for k, v in param_struct.items()}
+        }
+
+    internal_struct = layer.get_internal_structure()
+    if internal_struct:
+        layout['internal'] = {
+            'layout': {k: add_slice_stub(v, 2)
+                       for k, v in internal_struct.items()}
+        }
+    if layer.in_shapes:
+        layout['inputs'] = {
+            'layout': {k: {'shape': v, 'slice': (2, -1, -1)}
+                       for k, v in layer.in_shapes.items()}
+        }
+    if layer.out_shapes:
+        layout['outputs'] = {
+            'layout': {k: {'shape': v, 'slice': (2, -1, -1)}
+                       for k, v in layer.out_shapes.items()}
+        }
+
+    return layout
+
+
+def add_slice_stub(entry, buffer_idx=0):
+    entry['slice'] = (buffer_idx, -1, -1)
+    return entry
+
+
+def get_connections(layers, layout):
+    connections = []
+    for l in layers:
+        for con in l.outgoing:
+            start = get_by_path(layout, '{}.{}.{}'.format(con.start_layer,
+                                                          'outputs',
+                                                          con.output_name))
+            end = get_by_path(layout, '{}.{}.{}'.format(con.end_layer,
+                                                        'inputs',
+                                                        con.input_name))
+            connections.append((start, end))
+
+    return connections
+
+
+def get_parameter_order(layer, layout):
+    param_struct = layer.get_parameter_structure()
+    if not param_struct:
+        return
+    path_template = '{}.parameters.{}'.format(layer.name, '{}')
+    return [get_by_path(layout, path_template.format(ps['name']))
+            for ps in param_struct]
+
+
+def get_internal_order(layer, layout):
+    internal_struct = layer.get_internal_structure()
+    if not internal_struct:
+        return
+    path_template = '{}.internal.{}'.format(layer.name, '{}')
+    return [get_by_path(layout, path_template.format(ps['name']))
+            for ps in internal_struct]
+
+
+def get_by_path(layout, path):
+    components = path.split('.')
+    current_entry = layout
+    for c in components:
+        candidates = [l for l in current_entry['layout'] if l['name'] == c]
+        if not candidates:
+            raise KeyError('Path {} could not be found. Entry {} was missing'
+                           .format(path, c))
+        assert len(candidates) == 1
+        current_entry = candidates[0]
+    return current_entry
+
+
+# ##################################################
+
+
 def get_structure_size(param_struct):
     return sum([np.prod(shape) for name, shape in param_struct])
 
@@ -89,8 +188,7 @@ def get_forward_closure(layer_name, layers):
       - the sink_set contains all the target layers of the source_set
       - the source_set contains all the source layers of the sink_set
 
-    :param layer_name: The name o ram
-        names.f the layer to start the forward closure from.
+    :param layer_name: The name of the layer to start the forward closure from.
     :type layer_name: unicode
     :param layers: dictionary of instantiated layers. They should have
         outgoing and incoming fields.

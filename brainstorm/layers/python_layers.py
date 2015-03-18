@@ -73,16 +73,20 @@ class FeedForwardLayer(LayerBase):
             self.kwargs.get('activation_function', 'tanh')]
 
     def get_parameter_structure(self):
-        return [
-            {'name': 'W', 'shape': (self.in_shapes['default'][0],
-                                    self.out_shapes['default'][0])},
-            {'name': 'b', 'shape': self.out_shapes['default'][0]}
-        ]
+        return {
+            'W': {
+                'shape': (self.in_shapes['default'][0],
+                          self.out_shapes['default'][0]),
+                'index': 0},
+            'b': {
+                'shape': (self.out_shapes['default'][0],),
+                'index': 1}
+        }
 
     def get_internal_structure(self):
-        return [
-            {'name': 'Ha', 'shape': self.out_shapes['default']}
-        ]
+        return {
+            'Ha': {'shape': self.out_shapes['default']}
+        }
 
     def forward_pass(self, forward_buffers):
         # prepare

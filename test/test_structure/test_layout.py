@@ -5,7 +5,8 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 
 from brainstorm.structure.layout import (
-    create_param_layout, create_in_out_layout, ParameterLayoutEntry)
+    create_param_layout, create_in_out_layout, ParameterLayoutEntry,
+    create_layout_stub)
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.utils import InvalidArchitectureError
@@ -46,6 +47,79 @@ def impossible_layers():
         }
     }
     return instantiate_layers_from_architecture(arch)
+
+
+def test_create_layout_stub(layers):
+    layout = create_layout_stub(layers)
+    import pprint
+    pprint.pprint(layout)
+    assert layout == {
+        'InputLayer': {'layout': {
+            'outputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (2,)},
+            }},
+        }},
+        'A': {'layout': {
+            'parameters': {'layout': {
+                'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (2, 3)},
+                'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (3,)}
+            }},
+            'inputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (2,)}
+            }},
+            'outputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (3,)}
+            }},
+            'internal': {'layout': {
+                'Ha': {'slice': (2, -1, -1), 'shape': (3,)}
+            }},
+        }},
+        'B': {'layout': {
+            'parameters': {'layout': {
+                'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (2, 5)},
+                'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (5,)}
+            }},
+            'inputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (2,)}
+            }},
+            'outputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (5,)}
+            }},
+            'internal': {'layout': {
+                'Ha': {'slice': (2, -1, -1), 'shape': (5,)}
+            }},
+        }},
+        'C': {'layout': {
+            'parameters': {'layout': {
+                'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (8, 7)},
+                'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (7,)}
+            }},
+            'inputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (8,)}
+            }},
+            'outputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (7,)}
+            }},
+            'internal': {'layout': {
+                'Ha': {'slice': (2, -1, -1), 'shape': (7,)}
+            }},
+        }},
+        'D': {'layout': {
+            'parameters': {'layout': {
+                'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (12, 11)},
+                'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (11,)}
+            }},
+            'inputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (12,)}
+            }},
+            'outputs': {'layout': {
+                'default': {'slice': (2, -1, -1), 'shape': (11,)}
+            }},
+            'internal': {'layout': {
+                'Ha': {'slice': (2, -1, -1), 'shape': (11,)}
+            }},
+        }}
+    }
 
 
 def test_create_param_layout(layers):
