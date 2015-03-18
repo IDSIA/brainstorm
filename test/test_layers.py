@@ -8,25 +8,30 @@ import pytest
 
 from brainstorm.initializers import Gaussian
 from brainstorm.layers.python_layers import FeedForwardLayer
+from brainstorm.handlers import default_handler
 
 
 def setup_buffers(time_steps, num, layer):
+    H = layer.handler
     forward_buffer_names = []
     forward_buffer_views = []
     backward_buffer_names = []
     backward_buffer_views = []
 
     # setup parameters
-    param_structure = layer.get_parameter_structure()
-    print()
-    print("Parameter structure: ", param_structure)
     param_names = []
     forward_param_buffers = []
     backward_param_buffers = []
-    for entry in param_structure:
-        param_names.append(entry['name'])
-        forward_param_buffers.append(np.zeros(entry['shape']))
-        backward_param_buffers.append(np.zeros(entry['shape']))
+
+    param_structure = layer.get_parameter_structure()
+    print()
+    print("Parameter structure: ", param_structure)
+    for name, attributes in sorted(param_structure.items(),
+                                   key=lambda x: x[1]['index']):
+        print(name, attributes)
+        param_names.append(name)
+        forward_param_buffers.append(H.zeros(attributes['shape']))
+        backward_param_buffers.append(H.zeros(attributes['shape']))
 
     forward_buffer_names.append('parameters')
     forward_buffer_views.append(BufferView(param_names, forward_param_buffers))
@@ -34,13 +39,17 @@ def setup_buffers(time_steps, num, layer):
     backward_buffer_views.append(BufferView(param_names, backward_param_buffers))
 
     # setup inputs
-    input_names = []
-    assert set(layer.input_names) == (layer.in_shapes.keys())
-    for key, value in layer.in_shapes.items():
-
-    print("Input names: ", input_names)
+    input_names = layer.input_names
     forward_input_buffers = []
     backward_input_buffers = []
+
+    print("Input names: ", input_names)
+    assert set(input_names) == set(layer.in_shapes.keys())
+    for name in input_names:
+        shape = layer.in_shapes[name]
+        forward_input_buffers.append(H.zeros((time_steps, num) + shape))
+        backward_input_buffers.append(H.zeros((time_steps, num) + shape))
+
     forward_buffer_names.append('inputs')
     forward_buffer_views.append(BufferView(input_names, forward_input_buffers))
     backward_buffer_names.append('inputs')
@@ -49,9 +58,16 @@ def setup_buffers(time_steps, num, layer):
 
     # setup outputs
     output_names = layer.output_names
-    print("Output names: ", output_names)
     forward_output_buffers = []
     backward_output_buffers = []
+
+    print("Output names: ", output_names)
+    assert set(output_names) == set(layer.in_shapes.keys())
+    for name in output_names:
+        shape = layer.in_shapes[name]
+        forward_output_buffers.append(H.zeros((time_steps, num) + shape))
+        backward_output_buffers.append(H.zeros((time_steps, num) + shape))
+
     forward_buffer_names.append('outputs')
     forward_buffer_views.append(BufferView(output_names,
                                            forward_output_buffers))
@@ -85,6 +101,7 @@ def test_fully_connected_layer():
     num = 1
     in_shapes = {'default': (10,)}
     layer = FeedForwardLayer(in_shapes, [], [], shape=5)
+    layer.set_handler(default_handler)
     forward_buffers, backward_buffers = setup_buffers(time_steps, num, layer)
     # layer.forward_pass(forward_buffers)
     # layer.backward_pass(forward_buffers, backward_buffers)
