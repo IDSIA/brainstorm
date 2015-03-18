@@ -5,37 +5,37 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 
 from brainstorm.structure.construction import (
-    ConstructionLayer, InvalidArchitectureError)
+    ConstructionWrapper, InvalidArchitectureError)
 
 
 @pytest.fixture
 def layers():
-    return [ConstructionLayer('dummy_type', i) for i in range(1, 6)]
+    return [ConstructionWrapper.create('dummy_type', i) for i in range(1, 6)]
 
 
 def test_constructor():
-    cl = ConstructionLayer('Foo', 7)
-    assert cl.layer_kwargs == {'shape': 7}
-    assert cl.layer_type == 'Foo'
-    assert repr(cl) == "<ConstructionLayer: Foo>"
+    cl = ConstructionWrapper.create('Foo', 7)
+    assert cl.layer.layer_kwargs == {'shape': 7}
+    assert cl.layer.layer_type == 'Foo'
+    assert repr(cl) == "<Layer: 'default' - Foo - 'default'>"
 
 
 def test_raises_on_invalid_layer_type():
     with pytest.raises(InvalidArchitectureError):
-        i = ConstructionLayer('not valid!')
+        i = ConstructionWrapper.create('not valid!')
 
 
 def test_raises_on_invalid_layer_name():
     with pytest.raises(InvalidArchitectureError):
-        i = ConstructionLayer('layertype', name='also invalid.')
+        i = ConstructionWrapper.create('layertype', name='also invalid.')
 
 
 def test_connecting_two_layers_sets_sinks_and_sources(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> l2 >> l3
-    assert (l1, 'default', 'default') in l2.incoming
-    assert ('default', 'default', l2) in l1.outgoing
-    assert ('default', 'default', l3) in l2.outgoing
+    assert (l1.layer, 'default', 'default') in l2.layer.incoming
+    assert ('default', 'default', l2.layer) in l1.layer.outgoing
+    assert ('default', 'default', l3.layer) in l2.layer.outgoing
 
 
 def test_connect_multiple_targets(layers):
@@ -43,9 +43,9 @@ def test_connect_multiple_targets(layers):
     _ = l1 >> l2
     _ = l1 >> l3
     _ = l1 >> l4
-    assert ('default', 'default', l2) in l1.outgoing
-    assert ('default', 'default', l3) in l1.outgoing
-    assert ('default', 'default', l4) in l1.outgoing
+    assert ('default', 'default', l2.layer) in l1.layer.outgoing
+    assert ('default', 'default', l3.layer) in l1.layer.outgoing
+    assert ('default', 'default', l4.layer) in l1.layer.outgoing
 
 
 def test_connect_multiple_sources(layers):
@@ -53,94 +53,96 @@ def test_connect_multiple_sources(layers):
     _ = l2 >> l1
     _ = l3 >> l1
     _ = l4 >> l1
-    assert (l2, 'default', 'default') in l1.incoming
-    assert (l3, 'default', 'default') in l1.incoming
-    assert (l4, 'default', 'default') in l1.incoming
+    assert (l2.layer, 'default', 'default') in l1.layer.incoming
+    assert (l3.layer, 'default', 'default') in l1.layer.incoming
+    assert (l4.layer, 'default', 'default') in l1.layer.incoming
 
 
 def test_connect_named_output(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> l2 - 'out1' >> l3
 
-    assert ('default', 'default', l2) in l1.outgoing
-    assert (l1, 'default', 'default') in l2.incoming
-    assert (l2, 'out1', 'default') in l3.incoming
-    assert ('out1', 'default', l3) in l2.outgoing
+    assert ('default', 'default', l2.layer) in l1.layer.outgoing
+    assert (l1.layer, 'default', 'default') in l2.layer.incoming
+    assert (l2.layer, 'out1', 'default') in l3.layer.incoming
+    assert ('out1', 'default', l3.layer) in l2.layer.outgoing
 
 
 def test_connect_named_input(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> "in1" - l2 >> l3
 
-    assert (l1, 'default', 'in1') in l2.incoming
-    assert ('default', 'in1', l2) in l1.outgoing
-    assert ('default', 'default', l3) in l2.outgoing
-    assert (l2, 'default', 'default') in l3.incoming
+    assert (l1.layer, 'default', 'in1') in l2.layer.incoming
+    assert ('default', 'in1', l2.layer) in l1.layer.outgoing
+    assert ('default', 'default', l3.layer) in l2.layer.outgoing
+    assert (l2.layer, 'default', 'default') in l3.layer.incoming
 
 
 def test_connect_named_output_to_name_input(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> l2 - "out1" >> "in1" - l3 >> l4
 
-    assert ('default', 'default', l2) in l1.outgoing
-    assert (l1, 'default', 'default') in l2.incoming
+    assert ('default', 'default', l2.layer) in l1.layer.outgoing
+    assert (l1.layer, 'default', 'default') in l2.layer.incoming
 
-    assert ('out1', 'in1', l3) in l2.outgoing
-    assert (l2, 'out1', 'in1') in l3.incoming
+    assert ('out1', 'in1', l3.layer) in l2.layer.outgoing
+    assert (l2.layer, 'out1', 'in1') in l3.layer.incoming
 
-    assert ('default', 'default', l4) in l3.outgoing
-    assert (l3, 'default', 'default') in l4.incoming
+    assert ('default', 'default', l4.layer) in l3.layer.outgoing
+    assert (l3.layer, 'default', 'default') in l4.layer.incoming
 
 
 def test_connect_named_output_to_name_input_in_chain(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> "in1" - l2 - "out1" >> l3
 
-    assert ('default', 'in1', l2) in l1.outgoing
-    assert (l1, 'default', 'in1') in l2.incoming
-    assert ('out1', 'default', l3) in l2.outgoing
-    assert (l2, 'out1', 'default') in l3.incoming
+    assert ('default', 'in1', l2.layer) in l1.layer.outgoing
+    assert (l1.layer, 'default', 'in1') in l2.layer.incoming
+    assert ('out1', 'default', l3.layer) in l2.layer.outgoing
+    assert (l2.layer, 'out1', 'default') in l3.layer.incoming
 
 
 def test_collect_connected_layers(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> l2 >> l3 >> l4 >> l5
-    assert l1.collect_connected_layers() == set(layers)
-    assert l5.collect_connected_layers() == set(layers)
+    layer_set = {l.layer for l in layers}
+    assert l1.layer.collect_connected_layers() == layer_set
+    assert l5.layer.collect_connected_layers() == layer_set
 
 
 def test_collect_connected_layers2(layers):
     l1, l2, l3, l4, l5 = layers
     _ = l1 >> l2 >> l3 >> l4
     _ = l1 >> l5 >> l4
-    assert l1.collect_connected_layers() == set(layers)
-    assert l4.collect_connected_layers() == set(layers)
-    assert l5.collect_connected_layers() == set(layers)
+    layer_set = {l.layer for l in layers}
+    assert l1.layer.collect_connected_layers() == layer_set
+    assert l4.layer.collect_connected_layers() == layer_set
+    assert l5.layer.collect_connected_layers() == layer_set
 
 
 def test_name():
-    l = ConstructionLayer('Foo', 7, name='bar')
-    assert l.name == 'bar'
+    l = ConstructionWrapper.create('Foo', 7, name='bar')
+    assert l.layer.name == 'bar'
 
 
 def test_default_name():
-    l = ConstructionLayer('Foo', 7)
-    assert l.name == 'Foo'
+    l = ConstructionWrapper.create('Foo', 7)
+    assert l.layer.name == 'Foo'
 
 
 def test_name_unconnected():
-    l1 = ConstructionLayer('Foo', 7, name='bar')
-    l2 = ConstructionLayer('Foo', 7, name='bar')
-    assert l1.name == 'bar'
-    assert l2.name == 'bar'
+    l1 = ConstructionWrapper.create('Foo', 7, name='bar')
+    l2 = ConstructionWrapper.create('Foo', 7, name='bar')
+    assert l1.layer.name == 'bar'
+    assert l2.layer.name == 'bar'
 
 
 def test_name_connected():
-    l1 = ConstructionLayer('Foo', 7, name='bar')
-    l2 = ConstructionLayer('Foo', 7, name='bar')
+    l1 = ConstructionWrapper.create('Foo', 7, name='bar')
+    l2 = ConstructionWrapper.create('Foo', 7, name='bar')
     _ = l1 >> l2
-    assert l1.name == 'bar_1'
-    assert l2.name == 'bar_2'
+    assert l1.layer.name == 'bar_1'
+    assert l2.layer.name == 'bar_2'
 
 
 def test_name_connected_complex(layers):
@@ -148,8 +150,8 @@ def test_name_connected_complex(layers):
     _ = l3 >> l4
     _ = l2 >> l1
     _ = l5 >> l2 >> l3
-    assert l1.name == 'dummy_type_1'
-    assert l2.name == 'dummy_type_2'
-    assert l3.name == 'dummy_type_3'
-    assert l4.name == 'dummy_type_4'
-    assert l5.name == 'dummy_type_5'
+    assert l1.layer.name == 'dummy_type_1'
+    assert l2.layer.name == 'dummy_type_2'
+    assert l3.layer.name == 'dummy_type_3'
+    assert l4.layer.name == 'dummy_type_4'
+    assert l5.layer.name == 'dummy_type_5'

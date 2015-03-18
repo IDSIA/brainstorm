@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.structure.construction import ConstructionLayer
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.structure.architecture import (
     generate_architecture, get_layer_description, get_canonical_layer_order,
     instantiate_layers_from_architecture)
@@ -9,9 +9,9 @@ from brainstorm.layers.python_layers import DataLayer, NoOpLayer
 
 
 def test_get_layer_description():
-    l = ConstructionLayer('layertype', 10, name='foo')
-    l2 = ConstructionLayer('layertype', 10, name='bar')
-    l3 = ConstructionLayer('layertype', 10, name='baz')
+    l = ConstructionWrapper('layertype', 10, name='foo')
+    l2 = ConstructionWrapper('layertype', 10, name='bar')
+    l3 = ConstructionWrapper('layertype', 10, name='baz')
     l >> l2
     l >> l3
     descr = get_layer_description(l)
@@ -23,7 +23,7 @@ def test_get_layer_description():
 
 
 def test_layer_with_kwargs():
-    l = ConstructionLayer('layertype', 10, name='foo', a=2, b=3)
+    l = ConstructionWrapper('layertype', 10, name='foo', a=2, b=3)
     descr = get_layer_description(l)
     assert descr == {
         '@type': 'layertype',
@@ -35,10 +35,10 @@ def test_layer_with_kwargs():
 
 
 def test_generate_architecture():
-    l1 = ConstructionLayer('DataLayer', 10)
-    l2 = ConstructionLayer('layertype', 20, name='bar')
-    l3 = ConstructionLayer('layertype', 30, name='baz')
-    l4 = ConstructionLayer('layertype', 40, name='out')
+    l1 = ConstructionWrapper('DataLayer', 10)
+    l2 = ConstructionWrapper('layertype', 20, name='bar')
+    l3 = ConstructionWrapper('layertype', 30, name='baz')
+    l4 = ConstructionWrapper('layertype', 40, name='out')
     l1 >> l2 >> l4
     l1 >> l3 >> l4
 

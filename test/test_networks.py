@@ -7,7 +7,7 @@ from brainstorm.handlers import PyCudaHandler
 import pytest
 
 from brainstorm.structure import build_net
-from brainstorm.structure.construction import ConstructionLayer, \
+from brainstorm.structure.construction import ConstructionWrapper, \
     ConstructionInjector
 from brainstorm.initializers import Gaussian
 from brainstorm.targets import FramewiseTargets
@@ -15,9 +15,9 @@ from brainstorm.targets import FramewiseTargets
 
 
 def test_network_forward_pass_succeeds():
-    i = ConstructionLayer("InputLayer", 2)
-    l1 = ConstructionLayer("FeedForwardLayer", 4, act_func='tanh')
-    l2 = ConstructionLayer("FeedForwardLayer", 3, act_func='rel')
+    i = ConstructionWrapper("InputLayer", 2)
+    l1 = ConstructionWrapper("FeedForwardLayer", 4, act_func='tanh')
+    l2 = ConstructionWrapper("FeedForwardLayer", 3, act_func='rel')
     net = build_net(i >> l1 >> l2)
     net.set_memory_handler(PyCudaHandler())
     net.initialize(Gaussian())
@@ -25,9 +25,9 @@ def test_network_forward_pass_succeeds():
 
 
 def test_network_forward_backward_pass_succeed():
-    i = ConstructionLayer("InputLayer", 2)
-    l1 = ConstructionLayer("FeedForwardLayer", 4, act_func='tanh')
-    l2 = ConstructionLayer("FeedForwardLayer", 3, act_func='rel')
+    i = ConstructionWrapper("InputLayer", 2)
+    l1 = ConstructionWrapper("FeedForwardLayer", 4, act_func='tanh')
+    l2 = ConstructionWrapper("FeedForwardLayer", 3, act_func='rel')
     e = ConstructionInjector("MeanSquaredError")
 
     i >> l1 >> l2 << e
