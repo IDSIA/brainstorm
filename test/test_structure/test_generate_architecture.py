@@ -9,64 +9,73 @@ from brainstorm.layers.python_layers import DataLayer, NoOpLayer
 
 
 def test_get_layer_description():
-    l = ConstructionWrapper('layertype', 10, name='foo')
-    l2 = ConstructionWrapper('layertype', 10, name='bar')
-    l3 = ConstructionWrapper('layertype', 10, name='baz')
-    l >> l2
-    l >> l3
-    descr = get_layer_description(l)
+    l = ConstructionWrapper.create('layertype', 10, name='foo')
+    l2 = ConstructionWrapper.create('layertype', 10, name='bar')
+    l3 = ConstructionWrapper.create('layertype', 10, name='baz')
+    _ = l >> l2
+    _ = l >> l3
+    descr = get_layer_description(l.layer)
     assert descr == {
         '@type': 'layertype',
-        'shape': 10,
-        '@outgoing_connections': {'bar', 'baz'}
+        '@outgoing_connections': {
+            'default': {'bar.default', 'baz.default'}
+        },
+        'shape': 10
     }
 
 
 def test_layer_with_kwargs():
-    l = ConstructionWrapper('layertype', 10, name='foo', a=2, b=3)
-    descr = get_layer_description(l)
+    l = ConstructionWrapper.create('layertype', 10, name='foo', a=2, b=3)
+    descr = get_layer_description(l.layer)
     assert descr == {
         '@type': 'layertype',
+        '@outgoing_connections': {},
         'shape': 10,
-        '@outgoing_connections': set(),
         'a': 2,
         'b': 3
     }
 
 
 def test_generate_architecture():
-    l1 = ConstructionWrapper('DataLayer', 10)
-    l2 = ConstructionWrapper('layertype', 20, name='bar')
-    l3 = ConstructionWrapper('layertype', 30, name='baz')
-    l4 = ConstructionWrapper('layertype', 40, name='out')
-    l1 >> l2 >> l4
-    l1 >> l3 >> l4
+    l1 = ConstructionWrapper.create('DataLayer', 10)
+    l2 = ConstructionWrapper.create('layertype', 20, name='bar')
+    l3 = ConstructionWrapper.create('layertype', 30, name='baz')
+    l4 = ConstructionWrapper.create('layertype', 40, name='out')
+    _ = l1 >> l2 >> l4
+    _ = l1 >> l3 >> l4
 
-    arch1 = generate_architecture(l1)
-    arch2 = generate_architecture(l2)
-    arch3 = generate_architecture(l3)
+    arch1 = generate_architecture(l1.layer)
+    arch2 = generate_architecture(l2.layer)
+    arch3 = generate_architecture(l3.layer)
     assert arch1 == arch2
     assert arch1 == arch3
     assert arch1 == {
         'DataLayer': {
             '@type': 'DataLayer',
             'shape': 10,
-            '@outgoing_connections': {'bar', 'baz'}
+            '@outgoing_connections': {
+                'default': {'bar.default', 'baz.default'},
+            }
+
         },
         'bar': {
             '@type': 'layertype',
             'shape': 20,
-            '@outgoing_connections': {'out'}
+            '@outgoing_connections': {
+                'default': {'out.default'},
+            }
         },
         'baz': {
             '@type': 'layertype',
             'shape': 30,
-            '@outgoing_connections': {'out'}
+            '@outgoing_connections': {
+                'default': {'out.default'},
+            }
         },
         'out': {
             '@type': 'layertype',
             'shape': 40,
-            '@outgoing_connections': set()
+            '@outgoing_connections': {}
         }
     }
 

@@ -65,6 +65,26 @@ class LayerBase(object):
         """
         self.handler = new_handler
 
+    def get_parameter_structure(self):
+        """
+        :return: list of parameter names and their respective shapes
+        :rtype: list[tuple[str, tuple[int]]
+        """
+        return []
+
+    def get_state_structure(self):
+        """
+        :return: list of internal state names and their respective *feature* shapes
+        :rtype: list[tuple[str, tuple[int]]
+        """
+        return []
+
+    def forward_pass(self, forward_buffers):
+        pass
+
+    def backward_pass(self, forward_buffers, backward_buffers):
+        pass
+
     @classmethod
     def _validate_kwargs(cls, kwargs):
         unexpected_kwargs = set(kwargs) - cls.expected_kwargs
@@ -114,13 +134,3 @@ class LayerBase(object):
         if s is None:
             return {'default': (0,)}
         return {'default': tuple(s) if isinstance(s, (tuple, list)) else (s,)}
-
-    def get_parameter_structure(self):
-        return []
-
-    def forward_pass(self, parameters, input_buffers, output_buffers):
-        pass
-
-    def backward_pass(self, parameters, input_buffers, output_buffers,
-                      in_delta_buffers, out_delta_buffers, gradient_buffers):
-        pass

@@ -25,13 +25,21 @@ class Connection(ConnectionBase):
         return "{}.{}".format(self.source_layer, self.source_name)
 
 
-def get_layer_description(layer):
+def get_layer_description(layer_details):
+
+    outgoing = {}
+    for outp, inp, layer in layer_details.outgoing:
+        if outp in outgoing:
+            outgoing[outp].add("{}.{}".format(layer.name, inp))
+        else:
+            outgoing[outp] = {"{}.{}".format(layer.name, inp)}
+
     description = {
-        '@type': layer.layer_type,
-        '@outgoing_connections': {l.name for l in layer.outgoing}
+        '@type': layer_details.layer_type,
+        '@outgoing_connections': outgoing
     }
-    if layer.layer_kwargs:
-        description.update(layer.layer_kwargs)
+    if layer_details.layer_kwargs:
+        description.update(layer_details.layer_kwargs)
     return description
 
 

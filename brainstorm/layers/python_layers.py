@@ -36,14 +36,15 @@ class NoOpLayer(LayerBase):
                              "but {} != {}".format(self.in_shapes['default'],
                                                    self.out_shapes['default']))
 
-    def forward_pass(self, parameters, input_buffers, output_buffers):
-        self.handler.copy_to(input_buffers.default, output_buffers.default)
+    def forward_pass(self, forward_buffers):
+        self.handler.copy_to(forward_buffers.inputs.default,
+                             forward_buffers.outputs.default)
 
-    def backward_pass(self, parameters, input_buffers, output_buffers,
-                      in_delta_buffers, out_delta_buffers, gradient_buffers):
+    def backward_pass(self, forward_buffers, backward_buffers):
         # TODO: implement and use an add_into method instead
-        self.handler.add(out_delta_buffers.default, in_delta_buffers.default,
-                         out=in_delta_buffers.default)
+        self.handler.add(backward_buffers.outputs.default,
+                         backward_buffers.inputs.default,
+                         out=backward_buffers.inputs.default)
 
 
 class FeedForwardLayer(LayerBase):
@@ -78,15 +79,23 @@ class FeedForwardLayer(LayerBase):
             ('b', self.out_shapes['default'][0])
         ]
 
-    def forward_pass(self, parameters, input_buffers, output_buffers):
+    def get_internal_structure(self):
+        return [
+            ('Ha', self.out_shapes['default'])
+        ]
+
+    def forward_pass(self, forward_buffers):
         # prepare
         H = self.handler
-        WX, W_bias = parameters
+        WX, W_bias = forward_buffers.parameters
+        input_buffer = forward_buffers.inputs.default
+        output_buffer = forward_buffers.outputs.default
+        Ha = forward_buffers.internal.Ha
 
         # reshape
-        t, b, f = input_buffers.default.shape
-        flat_input = H.reshape(input_buffers.default, (t * b, f))
-        flat_output = H.reshape(output_buffers.default,
+        t, b, f = input_buffer.shape
+        flat_input = H.reshape(input_buffer, (t * b, f))
+        flat_output = H.reshape(output_buffer,
                                 (t * b, self.out_shapes['default'][0]))
 
         # calculate outputs
@@ -94,26 +103,31 @@ class FeedForwardLayer(LayerBase):
         H.add_mv(flat_output, W_bias, flat_output)
         self.act_func(flat_output, flat_output)
 
-    def backward_pass(self, parameters, input_buffers, output_buffers,
-                      in_delta_buffers, out_delta_buffers, gradient_buffers):
+    def backward_pass(self, forward_buffers, backward_buffers):
 
         # prepare
         H = self.handler
-        WX, W_bias = parameters['W'], parameters['b']
-        dWX, dW_bias = gradient_buffers['W'], gradient_buffers['b']
-        dZ = H.zeros(output_buffers.default.shape)
+        WX, W_bias = forward_buffers.parameters
+        dWX, dW_bias = backward_buffers.parameters
+        input_buffer = forward_buffers.inputs.default
+        output_buffer = forward_buffers.outputs.default
+        in_delta_buffer = backward_buffers.inputs.default
+        out_delta_buffer = backward_buffers.outputs.default
+        dZ = H.zeros(output_buffer.shape)
+        Ha = forward_buffers.internal.Ha
+        dHa = backward_buffers.internal.Ha
 
         # reshape
-        t, b, f = input_buffers.default.shape
-        flat_input = H.reshape(input_buffers.default, (t * b, f))
+        t, b, f = input_buffer.shape
+        flat_input = H.reshape(input_buffer, (t * b, f))
         flat_dZ = H.reshape(dZ, (t * b, self.out_shapes['default'][0]))
-        flat_in_delta_buffer = H.reshape(in_delta_buffers.default, (t * b, f))
+        flat_in_delta_buffer = H.reshape(in_delta_buffer, (t * b, f))
 
         # calculate in deltas and gradients
         # TODO: Replace first argument in following call with the fwd state
         # since some activation functions might need it
-        self.act_func_deriv(self.handler.EMPTY, output_buffers.default,
-                            out_delta_buffers.default, dZ)
+        self.act_func_deriv(self.handler.EMPTY, output_buffer,
+                            out_delta_buffer, dZ)
         H.dot_add(flat_dZ, WX, out=flat_in_delta_buffer, transb='T')
         H.dot(flat_input, flat_dZ, dWX, transa='T')
         H.sum(flat_dZ, axis=0, out=dW_bias)
