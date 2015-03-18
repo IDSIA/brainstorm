@@ -53,9 +53,7 @@ class PyCudaHandler(object):
 
     @classmethod
     def dot_add(cls, a, b, out, transa='N', transb='N'):
-        # TODO: this could be done in one GEMM call w/o allocations
-        temp = culinalg.dot(a, b, transa=transa, transb=transb)  # temp memory
-        cls.add_mm(temp, out, out)
+        culinalg.add_dot(a, b, out, transa, transb)
 
     @staticmethod
     def elem_mult(a, b, out):
