@@ -41,7 +41,6 @@ class NoOpLayer(LayerBase):
                              forward_buffers.outputs.default)
 
     def backward_pass(self, forward_buffers, backward_buffers):
-        # TODO: implement and use an add_into method instead
         self.handler.add(backward_buffers.outputs.default,
                          backward_buffers.inputs.default,
                          out=backward_buffers.inputs.default)
@@ -91,7 +90,7 @@ class FeedForwardLayer(LayerBase):
         WX, W_bias = forward_buffers.parameters
         input = forward_buffers.inputs.default
         output = forward_buffers.outputs.default
-        Ha = forward_buffers.internal.Ha
+        Ha = forward_buffers.internals.Ha
 
         # reshape
         t, n, f = input.shape
@@ -113,8 +112,8 @@ class FeedForwardLayer(LayerBase):
         output_buffer = forward_buffers.outputs.default
         in_delta_buffer = backward_buffers.inputs.default
         out_delta_buffer = backward_buffers.outputs.default
-        Ha = forward_buffers.internal.Ha
-        dHa = backward_buffers.internal.Ha
+        Ha = forward_buffers.internals.Ha
+        dHa = backward_buffers.internals.Ha
 
         # reshape
         t, b, f = input_buffer.shape
@@ -122,9 +121,7 @@ class FeedForwardLayer(LayerBase):
         flat_dHa = H.reshape(dHa, (t * b, self.out_shapes['default'][0]))
         flat_in_delta_buffer = H.reshape(in_delta_buffer, (t * b, f))
 
-        # calculate in deltas and gradients
-        # TODO: Replace first argument in following call with the fwd state
-        # since some activation functions might need it
+        # calculate in_deltas and gradients
         self.act_func_deriv(Ha, output_buffer, out_delta_buffer, dHa)
         H.dot_add(flat_dHa, WX, out=flat_in_delta_buffer, transb='T')
         H.dot(flat_input, flat_dHa, dWX, transa='T')
