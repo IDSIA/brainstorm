@@ -72,7 +72,7 @@ class LayerBase(object):
         """
         return []
 
-    def get_state_structure(self):
+    def get_internal_structure(self):
         """
         :return: list internal state buffers each with a name and respective
                  *feature* shape
