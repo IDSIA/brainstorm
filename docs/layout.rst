@@ -99,12 +99,12 @@ We use the following network as an example here:
 .. code-block:: python
 
     joint_layout = {
-        'sizes': (45, 0, 110),
+        'name': 'Network'
         'layout': [
             {'name': 'InputLayer', 'layout': [
                 {'name': 'outputs', 'slice': (2, 0, 14), 'layout': [
-                    ('input_data', {'slice': (2, 0, 4),   'shape': (4,)}),
-                    ('targets',    {'slice': (2, 10, 14), 'shape': (4,)})
+                    {'name': 'input_data', 'slice': (2, 0, 4),   'shape': (4,)},
+                    {'name': 'targets',    'slice': (2, 10, 14), 'shape': (4,)}
                 ]},
             ]},
             {'name': 'RnnLayer', 'layout': [
@@ -114,38 +114,40 @@ We use the following network as an example here:
                     {'name': 'b', 'slice': (0, 45, 50), 'shape': (5,  )}
                 ]},
                 {'name': 'inputs', 'slice': (2, 0, 4), 'layout': [
-                    ('default', {'slice': (2, 0, 4), 'shape': (4,)})
+                    {'name': 'default', 'slice': (2, 0, 4), 'shape': (4,)}
                 ]},
                 {'name': 'outputs', 'slice': (2, 14, 19), 'layout': [
-                    ('default', {'tslice': (2, 14, 19), 'shape': (5,)})
+                    {'name': 'default', 'tslice': (2, 14, 19), 'shape': (5,)}
                 ]},
-                {'name': 'state', 'slice': (2, 30, 35), 'layout': [
-                    ('Ha', {'slice': (2, 30, 35), 'shape': (5,)})
+                {'name': 'internal', 'slice': (2, 30, 35), 'layout': [
+                    {'name': 'Ha', 'slice': (2, 30, 35), 'shape': (5,)}
                 ]},
             ]},
             {'name': 'OutLayer', 'layout': [
                 {'name': 'parameters', 'slice': (0, 50, 110), 'layout': [
-                    ('W', {'slice': (0, 50, 100),  'shape': (5, 10)}),
-                    ('b', {'slice': (0, 100, 110), 'shape': (10,  )})
+                    {'name': 'W', 'slice': (0, 50, 100),  'shape': (5, 10)},
+                    {'name': 'b', 'slice': (0, 100, 110), 'shape': (10,  )}
                 ]},
                 {'name': 'inputs', 'slice': (2, 14, 19), 'layout': [
-                    ('default', {'slice': (2, 14, 19), 'shape': (5,)})
+                    {'name': 'default', 'slice': (2, 14, 19), 'shape': (5,)}
                 ]},
                 {'name': 'outputs', 'slice': (2, 19, 29), 'layout': [
-                    ('default', {'slice': (2, 19, 29), 'shape': (10,)})
+                    {'name': 'default', 'slice': (2, 19, 29), 'shape': (10,)}
                 ]},
-                {'name': 'state', 'slice': (2, 35, 45), 'layout': [
-                    ('Ha', {'slice': (2, 35, 55), 'shape': (10,)})
+                {'name': 'internal', 'slice': (2, 35, 45), 'layout': [
+                    {'name': 'Ha', 'slice': (2, 35, 55), 'shape': (10,)}
                 ]}
             ]},
             {'name': 'MseLayer', 'layout': [
                 {'name': 'inputs', 'layout': [
-                    ('net_out', {'slice': (2, 19, 29), 'shape': (10,)}),
-                    ('targets', {'slice': (2, 10, 14), 'shape': (10,)}),
+                    {'name': 'net_out', 'slice': (2, 19, 29), 'shape': (10,)},
+                    {'name': 'targets', 'slice': (2, 10, 14), 'shape': (10,)}
                 ]},
                 {'name': 'outputs', 'slice': (2, 29, 30), 'layout': [
-                    ('default', {'slice': (2, 29, 30), 'shape': (1,)})
+                    {'name': 'default', 'slice': (2, 29, 30), 'shape': (1,)}
                 ]},
             ]}
         ]
     }
+
+    sizes = (45, 0, 110)
