@@ -44,15 +44,16 @@ class PyCudaHandler(object):
     def zeros(self, shape):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
 
-    def sum(self, a, axis, out):
+    @staticmethod
+    def sum(a, axis, out):
         cumisc.sum(a, axis, out)
 
     @staticmethod
     def dot(a, b, out, transa='N', transb='N'):
         culinalg.dot(a, b, transa=transa, transb=transb, out=out)
 
-    @classmethod
-    def dot_add(cls, a, b, out, transa='N', transb='N'):
+    @staticmethod
+    def dot_add(a, b, out, transa='N', transb='N'):
         culinalg.add_dot(a, b, out, transa, transb)
 
     @staticmethod
