@@ -85,7 +85,9 @@ class FeedForwardLayer(LayerBase):
 
     def get_internal_structure(self):
         return {
-            'Ha': {'shape': self.out_shapes['default']}
+            'Ha': {
+                'shape': self.out_shapes['default'],
+                'index': 0}
         }
 
     def forward_pass(self, forward_buffers):
@@ -104,7 +106,7 @@ class FeedForwardLayer(LayerBase):
         # calculate outputs
         H.dot(flat_input, WX, flat_Ha)
         H.add_mv(flat_Ha, W_bias, flat_Ha)
-        self.act_func(flat_Ha, output)
+        self.act_func(Ha, output)
 
     def backward_pass(self, forward_buffers, backward_buffers):
 
