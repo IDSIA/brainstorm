@@ -57,19 +57,20 @@ def get_layout_stub_for_layer(layer):
     }
     layout['parameters'] = {
         'index': 2,
-        'layout': {k: add_slice_stub(v) for k, v in param_struct.items()}
+        'layout': {k: add_slice_stub(v, buffer_type=0)
+                   for k, v in param_struct.items()}
     }
     layout['internals'] = {
         'index': 3,
-        'layout': {k: add_slice_stub(v, 2)
+        'layout': {k: add_slice_stub(v, buffer_type=2)
                    for k, v in layer.get_internal_structure().items()}
     }
 
     return layout
 
 
-def add_slice_stub(entry, buffer_idx=0):
-    entry['slice'] = (buffer_idx, -1, -1)
+def add_slice_stub(entry, buffer_type=0):
+    entry['slice'] = (buffer_type, -1, -1)
     return entry
 
 
@@ -77,46 +78,31 @@ def get_connections(layers, layout):
     connections = []
     for l in layers:
         for con in l.outgoing:
-            start = get_by_path(layout, '{}.{}.{}'.format(con.start_layer,
-                                                          'outputs',
-                                                          con.output_name))
-            end = get_by_path(layout, '{}.{}.{}'.format(con.end_layer,
-                                                        'inputs',
-                                                        con.input_name))
+            start = layout[con.start_layer]['outputs'][con.output_name]
+            end = layout[con.end_layer]['inputs'][con.input_name]
+            if start['slice'][0] != end['slice'][0]:
+                raise InvalidArchitectureError(
+                    'Buffer types have to match on both ends of a connection!'
+                    'But for {}.{}.{} -> {}.{}.{}, the types were {} != {}'
+                    .format(con.start_layer, 'outputs', con.output_name,
+                            con.end_layer, 'inputs', con.input_name,
+                            start['slice'][0], end['slice'][0])
+                )
             connections.append((start, end))
 
     return connections
 
 
 def get_parameter_order(layer, layout):
-    param_struct = layer.get_parameter_structure()
-    if not param_struct:
-        return
-    path_template = '{}.parameters.{}'.format(layer.name, '{}')
-    return [get_by_path(layout, path_template.format(ps['name']))
-            for ps in param_struct]
+    params = sorted(layer.get_parameter_structure().items(),
+                    key=lambda x: x[1]['index'])
+    return [layout[layer.name]['parameters'][pname] for pname, parm in params]
 
 
 def get_internal_order(layer, layout):
-    internal_struct = layer.get_internal_structure()
-    if not internal_struct:
-        return
-    path_template = '{}.internal.{}'.format(layer.name, '{}')
-    return [get_by_path(layout, path_template.format(ps['name']))
-            for ps in internal_struct]
-
-
-def get_by_path(layout, path):
-    components = path.split('.')
-    current_entry = layout
-    for c in components:
-        candidates = [l for l in current_entry['layout'] if l['name'] == c]
-        if not candidates:
-            raise KeyError('Path {} could not be found. Entry {} was missing'
-                           .format(path, c))
-        assert len(candidates) == 1
-        current_entry = candidates[0]
-    return current_entry
+    intern = sorted(layer.get_internal_structure().items(),
+                    key=lambda x: x[1]['index'])
+    return [layout[layer.name]['internals'][iname] for iname, i in intern]
 
 
 # ##################################################
