@@ -17,10 +17,22 @@ InOutLayout = namedtuple('InOutLayout',
 
 def create_layout(layers):
     layout = create_layout_stub(layers)
-    connections = get_connections(layers, layout)
+    # get forced orders
     forced_orders = [get_parameter_order(l, layout) for l in layers]
     forced_orders += [get_internal_order(l, layout) for l in layers]
     forced_orders = filter(None, forced_orders)
+    # ensure no overlap
+    for fo in forced_orders:
+        for other in forced_orders:
+            intersect = set(fo) & set(other)
+            assert not intersect, "Forced orders may not overlap! but {} " \
+                                  "appear(s) in multiple.".format(intersect)
+
+    # get connections
+    connections = get_connections(layers, layout)
+    m_cons = merge_connections(connections, forced_orders)
+    # group them to hubs
+    hubs = group_nodes_into_hubs(m_cons)
 
 
 def create_layout_stub(layers):
@@ -40,20 +52,20 @@ def get_layout_stub_for_layer(layer):
     layout['inputs'] = {
         'index': 0,
         'layout': {
-            k: {
-                'index': i,
+            k: {'index': i,
                 'shape': layer.in_shapes[k],
                 'slice': (2, -1, -1)
-            } for i, k in enumerate(layer.input_names)}
+                } for i, k in enumerate(layer.input_names)
+        }
     }
     layout['outputs'] = {
         'index': 1,
         'layout': {
-            k: {
-                'index': i,
+            k: {'index': i,
                 'shape': layer.out_shapes[k],
                 'slice': (2, -1, -1)
-            } for i, k in enumerate(layer.output_names)}
+                } for i, k in enumerate(layer.output_names)
+        }
     }
     layout['parameters'] = {
         'index': 2,
@@ -88,21 +100,88 @@ def get_connections(layers, layout):
                             con.end_layer, 'inputs', con.input_name,
                             start['slice'][0], end['slice'][0])
                 )
-            connections.append((start, end))
+            # add a sort key to the connections
+            key = (con.start_layer, 'outputs', con.output_name,
+                   con.end_layer, 'inputs', con.input_name)
+            connections.append((key, start, end))
 
-    return connections
+    return [(start, end)
+            for key, start, end in sorted(connections, key=lambda x: x[0])]
 
 
 def get_parameter_order(layer, layout):
     params = sorted(layer.get_parameter_structure().items(),
                     key=lambda x: x[1]['index'])
-    return [layout[layer.name]['parameters'][pname] for pname, parm in params]
+    return tuple([layout[layer.name]['parameters'][pname]
+                  for pname, parm in params])
 
 
 def get_internal_order(layer, layout):
     intern = sorted(layer.get_internal_structure().items(),
                     key=lambda x: x[1]['index'])
-    return [layout[layer.name]['internals'][iname] for iname, i in intern]
+    return tuple([layout[layer.name]['internals'][iname]
+                  for iname, i in intern])
+
+
+def merge_connections(connections, forced_orders):
+    """
+    Replace connection nodes with forced order lists if they are part of it.
+    """
+    merged_connections = []
+    for start, stop in connections:
+        for fo in forced_orders:
+            if start in fo:
+                start = fo
+            if stop in fo:
+                stop = fo
+        merged_connections.append((start, stop))
+    return merged_connections
+
+
+def group_nodes_into_hubs(connections):
+    remaining_sources = [start for start, end in connections]
+    buffer_hubs = []
+    while remaining_sources:
+        node = remaining_sources[0]
+        source_set, sink_set = get_forward_closure(node, connections)
+        for s in source_set:
+            remaining_sources.remove(s)
+        buffer_hubs.append((source_set, sink_set))
+
+
+def get_forward_closure(node, connections):
+    """
+    For a given node return two sets of nodes such that:
+      - the given node is in the source_set
+      - the sink_set contains all the connection targets for nodes of the
+        source_set
+      - the source_set contains all the connection starts for nodes from the
+        sink_set
+
+    :param node: The node to start the forward closure from.
+    :param connections: list of nodes
+    :type connections: list
+    :return: A tuple (source_set, sink_set) where source_set is set of
+        nodes containing the initial node and all nodes connecting to nodes
+        in the sink_set. And sink_set is a set of nodes containing all
+        nodes receiving connections from any of the nodes from the source_set.
+    :rtype: (set, set)
+    """
+    source_set = {node}
+    sink_set = {end for start, end in connections if start in source_set}
+    growing = True
+    while growing:
+        growing = False
+        new_source_set = {start for start, end in connections
+                          if end in sink_set}
+        new_sink_set = {end for start, end in connections
+                        if start in source_set}
+        if len(new_source_set) > len(source_set) or\
+                len(new_sink_set) > len(sink_set):
+            growing = True
+            source_set = new_source_set
+            sink_set = new_sink_set
+    return source_set, sink_set
 
 
 # ##################################################
@@ -174,40 +253,6 @@ def lay_out_buffer_hub(source_set, sink_set, layers):
 
     return InOutLayout(total_size, source_layout, sink_layout)
 
-
-def get_forward_closure(layer_name, layers):
-    """
-    For a given layer return two sets of layer names such that:
-      - the given layer is in the source_set
-      - the sink_set contains all the target layers of the source_set
-      - the source_set contains all the source layers of the sink_set
-
-    :param layer_name: The name of the layer to start the forward closure from.
-    :type layer_name: unicode
-    :param layers: dictionary of instantiated layers. They should have
-        outgoing and incoming fields.
-    :type layers: dict
-    :return: A tuple (source_set, sink_set) where source_set is set of
-        layer names containing the initial layer and all sources of all layers
-        in the sink_set. And sink_set is a set of layer names containing all
-        the targets for all the layers from the source_set.
-    :rtype: (set, set)
-    """
-    source_set = {layer_name}
-    sink_set = set(layers[layer_name].outgoing)
-    growing = True
-    while growing:
-        growing = False
-        new_source_set = {s for l in sink_set
-                          for s in layers[l].incoming}
-        new_sink_set = {t for l in source_set
-                        for t in layers[l].outgoing}
-        if len(new_source_set) > len(source_set) or\
-                len(new_sink_set) > len(sink_set):
-            growing = True
-            source_set = new_source_set
-            sink_set = new_sink_set
-    return source_set, sink_set
 
 
 def set_up_connection_table(sources, sinks, layers):
