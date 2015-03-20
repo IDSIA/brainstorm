@@ -70,7 +70,7 @@ class LayerBase(object):
         :return: list of parameter buffers each with a name and a shape
         :rtype: list[dict]
         """
-        return []
+        return {}
 
     def get_internal_structure(self):
         """
@@ -78,7 +78,7 @@ class LayerBase(object):
                  *feature* shape
         :rtype: list[dict]
         """
-        return []
+        return {}
 
     def forward_pass(self, forward_buffers):
         pass

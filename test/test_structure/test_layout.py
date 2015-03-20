@@ -54,69 +54,72 @@ def test_create_layout_stub(layers):
     import pprint
     pprint.pprint(layout)
     assert layout == {
-        'InputLayer': {'layout': {
-            'outputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (2,)},
+        'InputLayer': {'index': 0, 'layout': {
+            'inputs': {'index': 0, 'layout': {}},
+            'outputs': {'index': 1, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (2,)},
             }},
+            'parameters': {'index': 2, 'layout': {}},
+            'internals': {'index': 3, 'layout': {}},
         }},
-        'A': {'layout': {
-            'parameters': {'layout': {
+        'A': {'index': 1, 'layout': {
+            'inputs': {'index': 0, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (2,)}
+            }},
+            'outputs': {'index': 1, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (3,)}
+            }},
+            'parameters': {'index': 2, 'layout': {
                 'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (2, 3)},
                 'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (3,)}
             }},
-            'inputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (2,)}
-            }},
-            'outputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (3,)}
-            }},
-            'internal': {'layout': {
-                'Ha': {'slice': (2, -1, -1), 'shape': (3,)}
+            'internals': {'index': 3, 'layout': {
+                'Ha': {'index': 0, 'slice': (2, -1, -1), 'shape': (3,)}
             }},
         }},
-        'B': {'layout': {
-            'parameters': {'layout': {
+        'B': {'index': 2, 'layout': {
+            'inputs': {'index': 0, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (2,)}
+            }},
+            'outputs': {'index': 1, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (5,)}
+            }},
+            'parameters': {'index': 2, 'layout': {
                 'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (2, 5)},
                 'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (5,)}
             }},
-            'inputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (2,)}
-            }},
-            'outputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (5,)}
-            }},
-            'internal': {'layout': {
-                'Ha': {'slice': (2, -1, -1), 'shape': (5,)}
+            'internals': {'index': 3, 'layout': {
+                'Ha': {'index': 0, 'slice': (2, -1, -1), 'shape': (5,)}
             }},
         }},
-        'C': {'layout': {
-            'parameters': {'layout': {
+        'C': {'index': 3, 'layout': {
+            'inputs': {'index': 0, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (8,)}
+            }},
+            'outputs': {'index': 1, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (7,)}
+            }},
+            'parameters': {'index': 2, 'layout': {
                 'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (8, 7)},
                 'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (7,)}
             }},
-            'inputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (8,)}
-            }},
-            'outputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (7,)}
-            }},
-            'internal': {'layout': {
-                'Ha': {'slice': (2, -1, -1), 'shape': (7,)}
+            'internals': {'index': 3, 'layout': {
+                'Ha': {'index': 0, 'slice': (2, -1, -1), 'shape': (7,)}
             }},
         }},
-        'D': {'layout': {
-            'parameters': {'layout': {
+        'D': {'index': 4, 'layout': {
+            'inputs': {'index': 0, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (12,)}
+            }},
+            'outputs': {'index': 1, 'layout': {
+                'default': {'index': 0, 'slice': (2, -1, -1), 'shape': (11,)}
+            }},
+            'parameters': {'index': 2, 'layout': {
                 'W': {'index': 0, 'slice': (0, -1, -1), 'shape': (12, 11)},
                 'b': {'index': 1, 'slice': (0, -1, -1), 'shape': (11,)}
             }},
-            'inputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (12,)}
-            }},
-            'outputs': {'layout': {
-                'default': {'slice': (2, -1, -1), 'shape': (11,)}
-            }},
-            'internal': {'layout': {
-                'Ha': {'slice': (2, -1, -1), 'shape': (11,)}
+            'internals': {'index': 3, 'layout': {
+                'Ha': {'index': 0, 'slice': (2, -1, -1), 'shape': (11,)}
             }},
         }}
     }

@@ -25,8 +25,9 @@ def create_layout(layers):
 
 def create_layout_stub(layers):
     root = {}
-    for layer_name, layer in layers.items():
+    for i, (layer_name, layer) in enumerate(layers.items()):
         root[layer_name] = {
+            'index': i,
             'layout': get_layout_stub_for_layer(layer)
         }
     return root
@@ -35,27 +36,34 @@ def create_layout_stub(layers):
 def get_layout_stub_for_layer(layer):
     layout = {}
     param_struct = layer.get_parameter_structure()
-    if param_struct:
-        layout['parameters'] = {
-            'layout': {k: add_slice_stub(v) for k, v in param_struct.items()}
-        }
 
-    internal_struct = layer.get_internal_structure()
-    if internal_struct:
-        layout['internal'] = {
-            'layout': {k: add_slice_stub(v, 2)
-                       for k, v in internal_struct.items()}
-        }
-    if layer.in_shapes:
-        layout['inputs'] = {
-            'layout': {k: {'shape': v, 'slice': (2, -1, -1)}
-                       for k, v in layer.in_shapes.items()}
-        }
-    if layer.out_shapes:
-        layout['outputs'] = {
-            'layout': {k: {'shape': v, 'slice': (2, -1, -1)}
-                       for k, v in layer.out_shapes.items()}
-        }
+    layout['inputs'] = {
+        'index': 0,
+        'layout': {
+            k: {
+                'index': i,
+                'shape': layer.in_shapes[k],
+                'slice': (2, -1, -1)
+            } for i, k in enumerate(layer.input_names)}
+    }
+    layout['outputs'] = {
+        'index': 1,
+        'layout': {
+            k: {
+                'index': i,
+                'shape': layer.out_shapes[k],
+                'slice': (2, -1, -1)
+            } for i, k in enumerate(layer.output_names)}
+    }
+    layout['parameters'] = {
+        'index': 2,
+        'layout': {k: add_slice_stub(v) for k, v in param_struct.items()}
+    }
+    layout['internals'] = {
+        'index': 3,
+        'layout': {k: add_slice_stub(v, 2)
+                   for k, v in layer.get_internal_structure().items()}
+    }
 
     return layout
 
