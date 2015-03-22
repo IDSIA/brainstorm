@@ -179,3 +179,90 @@ We use the following network as an example here:
     }
 
     sizes = (45, 0, 110)
+
+Alternative
+-----------
+Another alternative to consider, is to remove the layout entries and "inline"
+them. To distinguish child-nodes from other entries we would need to mark them.
+For example with an ``@`` sign like in the architecture description:
+
+.. code-block:: python
+
+    joint_layout = {
+        'InputLayer': {
+            '@index': 0,
+            'inputs': {'@index': 0},
+            'outputs': {
+                '@index': 1,
+                '@slice': (2, 0, 14),
+                'input_data': {'@index': 0, '@slice': (2, 0, 4),   '@shape': (4,)},
+                'targets':    {'@index': 1, '@slice': (2, 10, 14), '@shape': (4,)}
+            }},
+            'parameters': {'@index': 2},
+            'internals': {'@index': 3},
+        },
+        'RnnLayer': {
+            '@index': 1,
+            'inputs': {
+                '@index': 0,
+                '@slice': (2, 0, 4),
+                'default': {'@index': 0, '@slice': (2, 0, 4), '@shape': (4,)}
+            },
+            'outputs': {
+                '@index': 1,
+                '@slice': (2, 14, 19),
+                'default': {'@index': 0, '@slice': (2, 14, 19), '@shape': (5,)}
+            },
+            'parameters': {
+                '@index': 2,
+                '@slice': (0, 0, 50),
+                'W': {'@index': 0, '@slice': (0, 0, 20),  '@shape': (4, 5)},
+                'R': {'@index': 1, '@slice': (0, 20, 45), '@shape': (5, 5)},
+                'b': {'@index': 2, '@slice': (0, 45, 50), '@shape': (5,  )}
+            },
+            'internals': {
+                '@index': 3,
+                '@slice': (2, 30, 35),
+                'Ha': {'@index': 0, '@slice': (2, 30, 35), '@shape': (5,)}
+            },
+        },
+        'OutLayer': {
+            '@index': 2,
+            'inputs': {
+                '@index': 0,
+                '@slice': (2, 14, 19),
+                'default': {'@index': 0, '@slice': (2, 14, 19), '@shape': (5,)}
+            },
+            'outputs': {
+                '@index': 1,
+                '@slice': (2, 19, 29),
+                'default': {'@index': 0, '@slice': (2, 19, 29), '@shape': (10,)}
+            },
+            'parameters': {
+                '@index': 2,
+                '@slice': (0, 50, 110),
+                'W': {'@index': 0, '@slice': (0, 50, 100),  '@shape': (5, 10)},
+                'b': {'@index': 1, '@slice': (0, 100, 110), '@shape': (10,  )}
+            },
+            'internals': {
+                '@index': 3,
+                '@slice': (2, 35, 45),
+                'Ha': {'@index': 0, '@slice': (2, 35, 55), '@shape': (10,)}
+            }
+        },
+        'MseLayer': {
+            '@index': 3,
+            'inputs': {
+                '@index': 0,
+                'net_out': {'@index': 0, '@slice': (2, 19, 29), '@shape': (10,)},
+                'targets': {'@index': 1, '@slice': (2, 10, 14), '@shape': (10,)}
+            },
+            'outputs': {
+                '@index': 1,
+                '@slice': (2, 29, 30),
+                'default': {'@index': 0, '@slice': (2, 29, 30), '@shape': (1,)}
+            },
+            'parameters': {'@index': 2},
+            'internals': {'@index': 3},
+        }}
+    }
