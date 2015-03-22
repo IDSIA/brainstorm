@@ -19,7 +19,6 @@ class PyCudaHandler(object):
         self.shape = lambda x: x.shape
         self.reshape = lambda x, s: x.reshape(s)
         self.slice = lambda x, s: x[s]
-        self.get = lambda x: x.get()
         self.context = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
 
@@ -34,15 +33,19 @@ class PyCudaHandler(object):
         assert mem.shape == arr.shape, "{} != {}".format(mem.shape, arr.shape)
         mem.set(arr.astype(self.dtype))
 
+    def get_numpy_copy(self, mem):
+        assert type(mem) == self.array_type
+        return mem.get()
+
     @staticmethod
     def copy_to(dest, src):
         # Copy data from src to dest (both must be GPUArrays)
         drv.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 
-    # ---------------- Mathematical Operations ---------------- #
-
     def zeros(self, shape):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
+
+    # ---------------- Mathematical Operations ---------------- #
 
     @staticmethod
     def sum(a, axis, out):
