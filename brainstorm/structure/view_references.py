@@ -5,8 +5,6 @@ from collections import namedtuple
 import re
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.utils import is_valid_layer_name
-from brainstorm.structure.buffers import ParameterView
-
 
 
 def get_regex_for_reference(reference):
