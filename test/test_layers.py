@@ -128,19 +128,7 @@ def setup_buffers(time_steps, num, layer):
     return forward_buffers, backward_buffers
 
 
-def test_fully_connected_layer():
-
-    eps = 1e-4
-    time_steps = 3
-    num = 2
-    input_shape = 3
-    layer_shape = 2
-
-    in_shapes = {'default': (input_shape,)}
-    layer = FeedForwardLayer(in_shapes, [], [], shape=layer_shape,
-                             activation_function='sigmoid')
-    layer.set_handler(NumpyHandler(np.float64))
-    print("\n---------- Testing FullyConnectedLayer ----------")
+def run_layer_test(layer, time_steps, num, eps):
     _h = layer.handler
     forward_buffers, backward_buffers = setup_buffers(time_steps, num, layer)
     layer.forward_pass(forward_buffers)
@@ -190,3 +178,18 @@ def test_fully_connected_layer():
         print("Approx grad:", grad_approx)
         assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
 
+
+def test_fully_connected_layer():
+
+    eps = 1e-4
+    time_steps = 3
+    num = 2
+    input_shape = 3
+    layer_shape = 2
+
+    in_shapes = {'default': (input_shape,)}
+    layer = FeedForwardLayer(in_shapes, [], [], shape=layer_shape,
+                             activation_function='sigmoid')
+    layer.set_handler(NumpyHandler(np.float64))
+    print("\n---------- Testing FullyConnectedLayer ----------")
+    run_layer_test(layer, time_steps, num, eps)
