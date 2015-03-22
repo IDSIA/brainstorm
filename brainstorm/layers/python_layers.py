@@ -46,12 +46,12 @@ class NoOpLayer(LayerBase):
                          out=backward_buffers.inputs.default)
 
 
-class FeedForwardLayer(LayerBase):
+class FullyConnectedLayer(LayerBase):
     expected_kwargs = {'shape', 'activation_function'}
 
     def __init__(self, in_shapes, incoming_connections, outgoing_connections,
                  **kwargs):
-        super(FeedForwardLayer, self).__init__(in_shapes, incoming_connections,
+        super(FullyConnectedLayer, self).__init__(in_shapes, incoming_connections,
                                                outgoing_connections, **kwargs)
         self.act_func = None
         self.act_func_deriv = None

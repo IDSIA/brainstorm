@@ -4,7 +4,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 import pytest
-from brainstorm.layers.python_layers import FeedForwardLayer
+from brainstorm.layers.python_layers import FullyConnectedLayer
 from brainstorm.handlers import NumpyHandler
 import numpy as np
 np.random.seed()
@@ -188,7 +188,7 @@ def test_fully_connected_layer():
     layer_shape = 2
 
     in_shapes = {'default': (input_shape,)}
-    layer = FeedForwardLayer(in_shapes, [], [], shape=layer_shape,
+    layer = FullyConnectedLayer(in_shapes, [], [], shape=layer_shape,
                              activation_function='sigmoid')
     layer.set_handler(NumpyHandler(np.float64))
     print("\n---------- Testing FullyConnectedLayer ----------")
