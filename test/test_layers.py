@@ -4,10 +4,29 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 import pytest
-
-from brainstorm.initializers import Gaussian
 from brainstorm.layers.python_layers import FeedForwardLayer
-from brainstorm.handlers import default_handler
+from brainstorm.handlers import NumpyHandler
+import numpy as np
+np.random.seed()
+
+
+def approx_fprime(xk, f, epsilon, *args):
+    f0 = f(*((xk,)+args))
+    grad = np.zeros((len(xk),), float)
+    ei = np.zeros((len(xk),), float)
+    for k in range(len(xk)):
+        ei[k] = epsilon
+        grad[k] = (f(*((xk+ei,)+args)) - f0)/epsilon
+        ei[k] = 0.0
+    return grad
+
+
+def get_output_error(_H, forward_buffers):
+    error = 0.0
+    for key in forward_buffers.outputs.keys():
+        value = _H.get_numpy_copy(forward_buffers.outputs[key])
+        error += 0.5*(value**2).sum()
+    return error
 
 
 def setup_buffers(time_steps, num, layer):
@@ -22,11 +41,14 @@ def setup_buffers(time_steps, num, layer):
     forward_input_buffers = []
     backward_input_buffers = []
 
-    print("Input names: ", input_names)
+    print("Setting up inputs")
     assert set(input_names) == set(layer.in_shapes.keys())
     for name in input_names:
         shape = layer.in_shapes[name]
-        forward_input_buffers.append(H.zeros((time_steps, num) + shape))
+        print(name, " : ", (time_steps, num) + shape)
+        data = H.zeros((time_steps, num) + shape)
+        H.set_from_numpy(data, np.random.randn(*(time_steps, num) + shape))
+        forward_input_buffers.append(data)
         backward_input_buffers.append(H.zeros((time_steps, num) + shape))
 
     forward_buffer_names.append('inputs')
@@ -40,10 +62,11 @@ def setup_buffers(time_steps, num, layer):
     forward_output_buffers = []
     backward_output_buffers = []
 
-    print("Output names: ", output_names)
+    print("Setting up outputs")
     assert set(output_names) == set(layer.in_shapes.keys())
     for name in output_names:
         shape = layer.out_shapes[name]
+        print(name, " : ", (time_steps, num) + shape)
         forward_output_buffers.append(H.zeros((time_steps, num) + shape))
         backward_output_buffers.append(H.zeros((time_steps, num) + shape))
 
@@ -60,13 +83,14 @@ def setup_buffers(time_steps, num, layer):
     backward_param_buffers = []
 
     param_structure = layer.get_parameter_structure()
-    print()
-    print("Parameter structure: ", param_structure)
+    print("Setting up parameters")
     for name, attributes in sorted(param_structure.items(),
                                    key=lambda x: x[1]['index']):
-        print(name, attributes)
         param_names.append(name)
-        forward_param_buffers.append(H.zeros(attributes['shape']))
+        print(name, " : ", attributes['shape'])
+        data = H.zeros(attributes['shape'])
+        H.set_from_numpy(data, np.random.randn(*attributes['shape']))
+        forward_param_buffers.append(data)
         backward_param_buffers.append(H.zeros(attributes['shape']))
 
     forward_buffer_names.append('parameters')
@@ -78,12 +102,14 @@ def setup_buffers(time_steps, num, layer):
     internal_names = []
     forward_internal_buffers = []
     backward_internal_buffers = []
+
     internal_structure = layer.get_internal_structure()
-    print("Internal structure: ", internal_structure)
+    print("Setting up internals")
     for name, attributes in sorted(internal_structure.items(),
                                    key=lambda x: x[1]['index']):
         print(name, attributes)
         internal_names.append(name)
+        print(name, " : ", attributes['shape'])
         forward_internal_buffers.append(H.zeros((time_steps, num) +
                                                 attributes['shape']))
         backward_internal_buffers.append(H.zeros((time_steps, num) +
@@ -104,11 +130,63 @@ def setup_buffers(time_steps, num, layer):
 
 def test_fully_connected_layer():
 
-    time_steps = 2
-    num = 1
-    in_shapes = {'default': (10,)}
-    layer = FeedForwardLayer(in_shapes, [], [], shape=5)
-    layer.set_handler(default_handler)
+    eps = 1e-4
+    time_steps = 3
+    num = 2
+    input_shape = 3
+    layer_shape = 2
+
+    in_shapes = {'default': (input_shape,)}
+    layer = FeedForwardLayer(in_shapes, [], [], shape=layer_shape,
+                             activation_function='sigmoid')
+    layer.set_handler(NumpyHandler(np.float64))
+    print("\n---------- Testing FullyConnectedLayer ----------")
+    _H = layer.handler
     forward_buffers, backward_buffers = setup_buffers(time_steps, num, layer)
     layer.forward_pass(forward_buffers)
+    for key in forward_buffers.outputs.keys():
+        _H.copy_to(backward_buffers.outputs[key], forward_buffers.outputs[key])
     layer.backward_pass(forward_buffers, backward_buffers)
+
+    for key in forward_buffers.parameters.keys():
+        print("\nChecking parameter: ", key)
+        view = forward_buffers.parameters[key]
+        size = _H.size(forward_buffers.parameters[key])
+        x0 = _H.get_numpy_copy(view).reshape((size,))
+        grad_calc = _H.get_numpy_copy(backward_buffers.parameters[
+            key]).reshape((size,))
+        print("x0: ", x0)
+        print("Expected grad: ", grad_calc)
+
+        def f(x):
+            flat_view = _H.reshape(view, (size,))
+            _H.set_from_numpy(flat_view, x)
+            layer.forward_pass(forward_buffers)
+            _H.set_from_numpy(flat_view, x0)
+            return get_output_error(_H, forward_buffers)
+
+        grad_approx = approx_fprime(x0, f, eps)
+        print("Approx grad:", grad_approx)
+        assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+
+    for key in forward_buffers.inputs.keys():
+        print("\nChecking input: ", key)
+        view = forward_buffers.inputs[key]
+        size = _H.size(forward_buffers.inputs[key])
+        x0 = _H.get_numpy_copy(view).reshape((size,))
+        grad_calc = _H.get_numpy_copy(backward_buffers.inputs[
+            key]).reshape((size,))
+        print("x0: ", x0)
+        print("Expected grad: ", grad_calc)
+
+        def f(x):
+            flat_view = _H.reshape(view, (size,))
+            _H.set_from_numpy(flat_view, x)
+            layer.forward_pass(forward_buffers)
+            _H.set_from_numpy(flat_view, x0)
+            return get_output_error(_H, forward_buffers)
+
+        grad_approx = approx_fprime(x0, f, eps)
+        print("Approx grad:", grad_approx)
+        assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+
