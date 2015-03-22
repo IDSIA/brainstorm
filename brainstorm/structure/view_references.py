@@ -4,7 +4,8 @@ from __future__ import division, print_function, unicode_literals
 from collections import namedtuple
 import re
 from brainstorm.utils import is_valid_layer_name
-from brainstorm.structure.buffers import ParameterView
+#from brainstorm.structure.buffers import ParameterView
+# TODO: Change as needed since ParameterView doesn't exist anymore
 
 
 def get_regex_for_reference(reference):
