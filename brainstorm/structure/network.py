@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.structure.buffers import BufferManager
+from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import resolve_references
 from brainstorm.initializers import evaluate_initializer
 from brainstorm.randomness import Seedable
@@ -18,7 +19,8 @@ def build_net(some_layer):
 
 def build_network_from_architecture(architecture):
     layers = instantiate_layers_from_architecture(architecture)
-    buffer_manager = BufferManager.create_from_layers(layers)
+    buffer_sizes, layout = create_layout(layers)
+    buffer_manager = BufferManager(layout, buffer_sizes)
     return Network(layers, buffer_manager)
 
 
@@ -32,54 +34,26 @@ class Network(Seedable):
         self.handler = None
         self.set_memory_handler(handler)
 
-    @property
-    def output(self):
-        return self.buffer.outputs[list(self.layers.keys())[-1]]
-
-    @property
-    def in_deltas(self):
-        return self.buffer.out_deltas['InputLayer']
-
     def set_memory_handler(self, new_handler):
         self.handler = new_handler
         self.buffer.set_memory_handler(new_handler)
         for layer in self.layers.values():
             layer.set_handler(new_handler)
 
-    def forward_pass(self, input_data, training_pass=False):
-        assert self.layers['InputLayer'].shape == input_data.shape[2:],\
-            "Input dimensions mismatch of InputLayer({}) and data ({})".format(
-                self.layers['InputLayer'].shape, input_data.shape[2:])
-        self.errors = None
-        self.buffer.rearrange_fwd(input_data.shape)
-        self.handler.set_from_numpy(self.buffer.outputs['InputLayer'], input_data)
+    def provide_external_data(self, data):
+        time_size, batch_size = data[next(iter(data))].shape[:2]
+        self.buffer.resize(time_size, batch_size)
+        for name, val in data.items():
+            self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name], val)
+
+    def forward_pass(self):
         for layer_name, layer in list(self.layers.items())[1:]:
-            parameters = self.buffer.parameters[layer_name]
-            input_buffer = self.buffer.inputs[layer_name]
-            output_buffer = self.buffer.outputs[layer_name]
-            layer.forward_pass(parameters, input_buffer, output_buffer)
+            layer.forward_pass(self.buffer.forward[layer_name])
 
-    def calculate_errors(self, targets):
-        self._calculate_deltas_and_error(targets)
-        return self.errors
-
-    def _calculate_deltas_and_error(self, targets):
-        # TODO: implement
-        pass
-
-    def backward_pass(self, targets):
-        self._calculate_deltas_and_error(targets)
-        self.handler.fill(self.buffer.gradient[:], 0.)
+    def backward_pass(self):
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
-            parameters = self.buffer.parameters[layer_name]
-            input_buffer = self.buffer.inputs[layer_name]
-            output_buffer = self.buffer.outputs[layer_name]
-            in_delta_buffer = self.buffer.in_deltas[layer_name]
-            out_delta_buffer = self.buffer.out_deltas[layer_name]
-            gradient_buffer = self.buffer.gradient[layer_name]
-            layer.backward_pass(parameters, input_buffer, output_buffer,
-                                in_delta_buffer, out_delta_buffer,
-                                gradient_buffer)
+            layer.backward_pass(self.buffer.forward[layer_name],
+                                self.buffer.backward[layer_name])
 
     def initialize(self, init_dict=None, seed=None, **kwargs):
         init_refs = _update_references_with_dict(init_dict, kwargs)

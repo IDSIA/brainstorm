@@ -47,7 +47,8 @@ class LayerBase(object):
         self._validate_out_shapes(self.out_shapes)
         """ Dictionary of shape tuples for every source (output). """
 
-        self._validate_connections(incoming_connections, outgoing_connections)
+        self._validate_connections(incoming_connections, outgoing_connections,
+                                   kwargs)
         self.incoming = incoming_connections
         """ List of incoming connections """
 
@@ -90,37 +91,42 @@ class LayerBase(object):
     def _validate_kwargs(cls, kwargs):
         unexpected_kwargs = set(kwargs) - cls.expected_kwargs
         if unexpected_kwargs:
-            raise ValueError("Unexpected kwargs: {}".format(unexpected_kwargs))
+            raise ValueError("{}: Unexpected kwargs: {}".format(
+                cls.__name__, unexpected_kwargs))
 
     @classmethod
     def _validate_in_shapes(cls, in_shapes):
         for input_name in in_shapes:
             if input_name not in cls.input_names:
-                raise ValueError('Invalid in_shapes.'
+                raise ValueError('{}: Invalid in_shapes.'
                                  'Layer has no input named "{}". Choices are:'
-                                 ' {}'.format(input_name, cls.input_names))
+                                 ' {}'.format(cls.__name__, input_name,
+                                              cls.input_names))
 
     @classmethod
     def _validate_out_shapes(cls, out_shapes):
         for output_name in out_shapes:
             if output_name not in cls.output_names:
-                raise ValueError('Invalid out_shapes.'
+                raise ValueError('{}: Invalid out_shapes.'
                                  'Layer has no output named "{}". Choices are:'
-                                 ' {}'.format(output_name, cls.input_names))
+                                 ' {}'.format(cls.__name__, output_name,
+                                              cls.input_names))
 
     @classmethod
-    def _validate_connections(cls, incoming_connections, outgoing_connections):
+    def _validate_connections(cls, incoming_connections, outgoing_connections,
+                              kwargs):
         for in_c in incoming_connections:
             if in_c.input_name not in cls.input_names:
                 raise ValueError(
-                    'Invalid incoming connection ({}). Layer has no sink '
-                    'named "{}"'.format(in_c, in_c.sink_name))
+                    '{}: Invalid incoming connection ({}). Layer has no sink '
+                    'named "{}"'.format(cls.__name__, in_c, in_c.sink_name))
 
         for out_c in outgoing_connections:
             if out_c.output_name not in cls.output_names:
                 raise ValueError(
-                    'Invalid incoming connection ({}). Layer has no source '
-                    'named "{}"'.format(out_c, out_c.source_name))
+                    '{}: Invalid incoming connection ({}). Layer has no output '
+                    'named "{}"'.format(cls.__name__, out_c,
+                                        out_c.output_name))
 
     @classmethod
     def _get_output_shapes(cls, in_shapes, kwargs):

@@ -209,8 +209,6 @@ def test_permute_rows():
 
 def test_create_layout_stub(layers):
     layout = create_layout_stub(layers)
-    import pprint
-    pprint.pprint(layout)
     assert layout == {
         'InputLayer': {'index': 0, 'layout': {
             'inputs': {'index': 0, 'layout': {}},
@@ -315,8 +313,6 @@ def test_traverse_layout():
 
 def test_create_layout(layers):
     sizes, layout = create_layout(layers)
-    import pprint
-    pprint.pprint(layout)
     assert layout == {
         'InputLayer': {'index': 0, 'layout': {
             'inputs': {'index': 0, 'layout': {}},

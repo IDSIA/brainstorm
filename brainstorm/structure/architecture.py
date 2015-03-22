@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict, namedtuple
 from copy import copy
 from six import string_types
+from brainstorm.structure.construction import ConstructionWrapper
 
 from brainstorm.utils import (InvalidArchitectureError,
                               is_valid_layer_name)
@@ -38,6 +39,8 @@ def get_layer_description(layer_details):
 
 
 def generate_architecture(some_layer):
+    if isinstance(some_layer, ConstructionWrapper):
+        some_layer = some_layer.layer
     layers = some_layer.collect_connected_layers()
     arch = {layer.name: get_layer_description(layer) for layer in layers}
     return arch
@@ -107,18 +110,16 @@ def validate_architecture(architecture):
         raise InvalidArchitectureError(
             'Could not find end layer(s) "{}"'.format(undefined_end_layers))
 
-    # has at least one DataLayer
-    data_layers_by_type = {n for n, l in architecture.items()
-                           if l['@type'] == 'DataLayer'}
-    if len(data_layers_by_type) == 0:
-        raise InvalidArchitectureError('No DataLayers found!')
-
-    # no connections to DataLayers
-    data_connections = data_layers_by_type.intersection(end_layers)
-    if len(data_connections) > 0:
+    # has exactly one InputLayer and its called InputLayer
+    if "InputLayer" not in architecture or \
+            architecture['InputLayer']['@type'] != 'InputLayer':
         raise InvalidArchitectureError(
-            'DataLayers can not have incoming connections! '
-            'But {} has.'.format(data_connections.pop()))
+            'Needs exactly one InputLayer that is called "InputLayer"')
+
+    # no connections to InputLayer
+    if 'InputLayer' in end_layers:
+        raise InvalidArchitectureError(
+            'DataLayers can not have incoming connections!')
 
     # TODO: check if connected
     # TODO: check for cycles

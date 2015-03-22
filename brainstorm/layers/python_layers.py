@@ -4,21 +4,48 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.layers.base_layer import LayerBase
 
 
-class DataLayer(LayerBase):
+class InputLayer(LayerBase):
     """
     Special input layer type, that provides access to external data.
 
-    The ``data_name`` kwarg specifies which external data can be accessed
-    through this layer. It defaults to 'input_data'
+    The 'out_shapes' kwarg is required and specifies the names and shapes of
+    all external inputs.
     """
-    expected_kwargs = {'shape', 'data_name'}
+    expected_kwargs = {'out_shapes'}
     input_names = []
 
     def __init__(self, in_shapes, incoming_connections, outgoing_connections,
                  **kwargs):
-        super(DataLayer, self).__init__(in_shapes, incoming_connections,
-                                        outgoing_connections, **kwargs)
+        super(InputLayer, self).__init__(in_shapes, incoming_connections,
+                                         outgoing_connections, **kwargs)
         self.data_name = kwargs.get('data_name', 'input_data')
+
+    @classmethod
+    def _get_output_shapes(cls, in_shapes, kwargs):
+        assert 'out_shapes' in kwargs, "InputLayer requires 'out_shapes'"
+        return kwargs['out_shapes']
+
+    @classmethod
+    def _validate_out_shapes(cls, out_shapes):
+        for output_name, shape in out_shapes.items():
+            if not isinstance(shape, tuple):
+                raise ValueError('out_shape entry "{}" was not a shape'
+                                 .format(shape))
+
+    @classmethod
+    def _validate_connections(cls, incoming_connections, outgoing_connections,
+                              kwargs):
+        if incoming_connections:
+            raise ValueError('InputLayer cannot have any incoming connections!'
+                             '(But: {})'.format(incoming_connections))
+
+        for out_c in outgoing_connections:
+            if out_c.output_name not in kwargs['out_shapes']:
+                raise ValueError(
+                    '{}: Invalid incoming connection ({}). Layer has no output'
+                    ' named "{}".\nChoices are {}.'.format(
+                        cls.__name__, out_c, out_c.output_name,
+                        kwargs['out_shapes'].keys()))
 
 
 class NoOpLayer(LayerBase):

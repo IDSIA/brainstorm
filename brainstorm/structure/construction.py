@@ -14,7 +14,7 @@ class LayerDetails(UniquelyNamed):
     This information is later used to generate an architecture, from which the
     actual layers are instantiated and combined into a network.
     """
-    def __init__(self, layer_type, shape, name=None, **kwargs):
+    def __init__(self, layer_type, shape=None, name=None, **kwargs):
         if not is_valid_layer_name(layer_type):
             raise InvalidArchitectureError(
                 "Invalid layer_type: '{}'".format(layer_type))
@@ -47,7 +47,9 @@ class LayerDetails(UniquelyNamed):
         self.layer_kwargs = kwargs
         """Dictionary of additional parameters for this layer"""
 
-        self.layer_kwargs['shape'] = shape
+        if shape is not None:
+            self.layer_kwargs['shape'] = shape
+
         self._traversing = False
 
     def collect_connected_layers(self):

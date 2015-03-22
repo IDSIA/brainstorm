@@ -6,12 +6,12 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 
 from brainstorm.layers.base_layer import get_layer_class_from_typename
-from brainstorm.layers.python_layers import DataLayer, NoOpLayer, LayerBase
+from brainstorm.layers.python_layers import InputLayer, NoOpLayer, LayerBase
 from brainstorm.structure.architecture import Connection
 
 
 def test_get_layer_class_from_typename():
-    assert get_layer_class_from_typename('DataLayer') == DataLayer
+    assert get_layer_class_from_typename('DataLayer') == InputLayer
     assert get_layer_class_from_typename('NoOpLayer') == NoOpLayer
 
 
@@ -40,11 +40,11 @@ def test_NoOp_raises_on_size_mismatch():
 
 def test_DataLayer_raises_on_in_size():
     with pytest.raises(ValueError):
-        l = DataLayer({'default': (5,)}, set(), set())
+        l = InputLayer({'default': (5,)}, set(), set())
 
 
 @pytest.mark.parametrize("LayerClass", [
-    LayerBase, DataLayer, NoOpLayer
+    LayerBase, InputLayer, NoOpLayer
 ])
 def test_raises_on_unexpected_kwargs(LayerClass):
     with pytest.raises(ValueError) as excinfo:

@@ -5,7 +5,7 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.structure.architecture import (
     generate_architecture, get_layer_description, get_canonical_layer_order,
     instantiate_layers_from_architecture)
-from brainstorm.layers.python_layers import DataLayer, NoOpLayer
+from brainstorm.layers.python_layers import InputLayer, NoOpLayer
 
 
 def test_get_layer_description():
@@ -129,7 +129,7 @@ def test_instantiate_layers_from_architecture():
     layers = instantiate_layers_from_architecture(arch)
     assert set(arch.keys()) == set(layers.keys())
 
-    assert type(layers['InputLayer']) == DataLayer
+    assert type(layers['InputLayer']) == InputLayer
     assert type(layers['A']) == NoOpLayer
     assert type(layers['B']) == NoOpLayer
     assert type(layers['C']) == NoOpLayer

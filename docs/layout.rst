@@ -117,8 +117,9 @@ We use the following network as an example here:
 .. code-block:: python
 
     mse = MseLayer(10)
-    DataLayer(4) - 'input_data' >> RnnLayer(5) >> FullyConnectedLayer(10, name='OutLayer') >> 'net_out' - mse
-    DataLayer(10) - 'targets' >> 'targets' - mse
+    inputs = InputLayer(out_shapes={'input_data': (4,), 'targets':(10,)})
+    inputs - 'input_data' >> RnnLayer(5) >> FullyConnectedLayer(10, name='OutLayer') >> 'net_out' - mse
+    inputs - 'targets' >> 'targets' - mse
     net = build_net(mse)
 
 

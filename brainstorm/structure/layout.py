@@ -64,7 +64,7 @@ def create_layout(layers):
             sink_layout['slice'] = (btype, start, stop)
 
         buffer_sizes[btype] = indexes[-1]
-    return buffer_sizes, layout
+    return buffer_sizes, {'layout': layout}
 
 
 def get_source_order_by_btype(hubs, connections):
@@ -123,7 +123,7 @@ def get_layout_stub_for_layer(layer):
             k: {'index': i,
                 'shape': layer.out_shapes[k],
                 'slice': (2, -1, -1)
-                } for i, k in enumerate(layer.output_names)
+                } for i, k in enumerate(layer.out_shapes)
         }
     }
     layout['parameters'] = {
