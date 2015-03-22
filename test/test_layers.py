@@ -10,13 +10,26 @@ import numpy as np
 np.random.seed()
 
 
-def approx_fprime(xk, f, epsilon, *args):
-    f0 = f(*((xk,)+args))
-    grad = np.zeros((len(xk),), float)
-    ei = np.zeros((len(xk),), float)
-    for k in range(len(xk)):
+def approx_fprime(x0, f, epsilon, *args):
+    """
+    Calculates the 2-sided numerical gradient of $f$.
+
+    :param x0: A 1-D array which specifies the point at which gradient is
+    computed.
+    :param f: A function whose gradient will be computed. Must return a
+    scalar value.
+    :param epsilon: Perturbation value for numerical gradient calculation.
+    :param args: Any arguments which need to be passed on to $f$.
+    :return: Numerically computed gradient of same shape as $x0$.
+    """
+    grad = np.zeros((len(x0),), float)
+    ei = np.zeros((len(x0),), float)
+    for k in range(len(x0)):
         ei[k] = epsilon
-        grad[k] = (f(*((xk+ei,)+args)) - f0)/epsilon
+        f_right = f(*((x0+ei,)+args))
+        ei[k] = -epsilon
+        f_left = f(*((x0+ei,)+args))
+        grad[k] = (f_right - f_left)/(2 * epsilon)
         ei[k] = 0.0
     return grad
 
@@ -30,6 +43,16 @@ def get_output_error(_h, forward_buffers):
 
 
 def setup_buffers(time_steps, num, layer):
+    """
+    Sets up the required forward and backward buffers for gradient checking.
+
+    This function will also randomly initialize the parameters and inputs.
+
+    :param time_steps: Number of time-steps in each sequence.
+    :param num: Number of sequences.
+    :param layer: A $Layer$ object.
+    :return: BufferViews for forward and backward buffers
+    """
     _h = layer.handler
     forward_buffer_names = []
     forward_buffer_views = []
@@ -129,13 +152,25 @@ def setup_buffers(time_steps, num, layer):
 
 
 def run_layer_test(layer, time_steps, num, eps):
+    """
+    Checks the gradients w.r.t. parameters and inputs for a given layer.
+
+    :param layer: The $Layer$ object which should be tested.
+    :param time_steps: Number of time-steps in each sequence.
+    :param num: Number of sequences.
+    :param eps: Size of perturbation for analytical gradient computation.
+    :return:
+    """
     _h = layer.handler
     forward_buffers, backward_buffers = setup_buffers(time_steps, num, layer)
+
+    # First do a forward and backward pass to calculate gradients
     layer.forward_pass(forward_buffers)
     for key in forward_buffers.outputs.keys():
         _h.copy_to(backward_buffers.outputs[key], forward_buffers.outputs[key])
     layer.backward_pass(forward_buffers, backward_buffers)
 
+    # Now calculate approximate gradients
     for key in forward_buffers.parameters.keys():
         print("\nChecking parameter: ", key)
         view = forward_buffers.parameters[key]
@@ -148,9 +183,9 @@ def run_layer_test(layer, time_steps, num, eps):
 
         def f(x):
             flat_view = _h.reshape(view, (size,))
-            _h.set_from_numpy(flat_view, x)
+            _h.set_from_numpy(flat_view, x)  # set to new value
             layer.forward_pass(forward_buffers)
-            _h.set_from_numpy(flat_view, x0)
+            _h.set_from_numpy(flat_view, x0)  # reset
             return get_output_error(_h, forward_buffers)
 
         grad_approx = approx_fprime(x0, f, eps)
@@ -169,9 +204,9 @@ def run_layer_test(layer, time_steps, num, eps):
 
         def f(x):
             flat_view = _h.reshape(view, (size,))
-            _h.set_from_numpy(flat_view, x)
+            _h.set_from_numpy(flat_view, x)  # set to new value
             layer.forward_pass(forward_buffers)
-            _h.set_from_numpy(flat_view, x0)
+            _h.set_from_numpy(flat_view, x0)  # reset
             return get_output_error(_h, forward_buffers)
 
         grad_approx = approx_fprime(x0, f, eps)
@@ -189,7 +224,7 @@ def test_fully_connected_layer():
 
     in_shapes = {'default': (input_shape,)}
     layer = FullyConnectedLayer(in_shapes, [], [], shape=layer_shape,
-                             activation_function='sigmoid')
+                                activation_function='sigmoid')
     layer.set_handler(NumpyHandler(np.float64))
     print("\n---------- Testing FullyConnectedLayer ----------")
     run_layer_test(layer, time_steps, num, eps)
