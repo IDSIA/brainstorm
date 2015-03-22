@@ -16,23 +16,82 @@ InOutLayout = namedtuple('InOutLayout',
 
 
 def create_layout(layers):
+    forced_orders = get_forced_orders(layers)
+    connections = get_connections(layers)
+    m_cons = merge_connections(connections, forced_orders)
+
+    # make a layout stub
     layout = create_layout_stub(layers)
-    # get forced orders
-    forced_orders = [get_parameter_order(l, layout) for l in layers]
-    forced_orders += [get_internal_order(l, layout) for l in layers]
-    forced_orders = filter(None, forced_orders)
+    all_sinks = set(list(zip(*connections))[1])
+    all_sources = list()
+    for s in list(gather_array_nodes(layout)):
+        if s in all_sinks:
+            continue
+        for fo in forced_orders:
+            if s in all_sources:
+                break
+            elif s in fo:
+                all_sources.extend(fo)
+                break
+        else:
+            all_sources.append(s)
+    # group them to hubs
+    hubs = group_into_hubs(all_sources, m_cons, layout)
+
+    # determine order for each hub
+    ordered_sources_by_btype = get_source_order_by_btype(hubs, connections)
+
+    all_sinks = sorted(list(zip(*connections))[1])
+    buffer_sizes = [0, 0, 0]
+    for btype, sources in enumerate(ordered_sources_by_btype):
+
+        c_table = set_up_connection_table(sources, all_sinks, connections)
+        sizes = [int(np.prod(get_by_path(s, layout)['shape']))
+                 for s in sources]
+        indexes = np.cumsum([0] + sizes)
+
+        for source_name, start, stop in zip(sources, indexes, indexes[1:]):
+            source_layout = get_by_path(source_name, layout)
+            source_layout['slice'] = (btype, start, stop)
+
+        for i, sink_name in enumerate(all_sinks):
+            if np.sum(c_table[:, i]) == 0:
+                continue  # this sink is not connected
+            start = indexes[np.argmax(c_table[:, i])]
+            stop = indexes[c_table.shape[0] - np.argmax(c_table[::-1, i])]
+
+            sink_layout = get_by_path(sink_name, layout)
+            sink_layout['slice'] = (btype, start, stop)
+
+        buffer_sizes[btype] = indexes[-1]
+    return buffer_sizes, layout
+
+
+def get_source_order_by_btype(hubs, connections):
+    ordered_sources_by_btype = [[], [], []]
+    for sources, sinks, btype in hubs:
+        connection_table = set_up_connection_table(sources, sinks, connections)
+        flat_sources = list(flatten(sources))
+        source_index_structure = convert_to_nested_indices(sources)
+        perm = permute_rows(connection_table, source_index_structure)
+        final_sources = [flat_sources[i] for i in perm]
+        ordered_sources_by_btype[btype].extend(final_sources)
+    return ordered_sources_by_btype
+
+
+def get_forced_orders(layers):
+    forced_orders = [get_parameter_order(n, l) for n, l in layers.items()]
+    forced_orders += [get_internal_order(n, l) for n, l in layers.items()]
+    forced_orders = list(filter(None, forced_orders))
     # ensure no overlap
     for fo in forced_orders:
         for other in forced_orders:
+            if fo is other:
+                continue
             intersect = set(fo) & set(other)
             assert not intersect, "Forced orders may not overlap! but {} " \
                                   "appear(s) in multiple.".format(intersect)
-
-    # get connections
-    connections = get_connections(layers, layout)
-    m_cons = merge_connections(connections, forced_orders)
-    # group them to hubs
-    hubs = group_nodes_into_hubs(m_cons)
+    return forced_orders
 
 
 def create_layout_stub(layers):
@@ -86,41 +145,54 @@ def add_slice_stub(entry, buffer_type=0):
     return entry
 
 
-def get_connections(layers, layout):
+def create_path(layer_name, category, substructure):
+    return "{}.{}.{}".format(layer_name, category, substructure)
+
+
+def get_by_path(path, layout):
+    current_node = layout
+    for p in path.split('.'):
+        try:
+            current_node = current_node[p]
+            if 'layout' in current_node:
+                current_node = current_node['layout']
+        except KeyError:
+            raise KeyError('Path "{}" could not be resolved. Key "{}" missing.'
+                           .format(path, p))
+    return current_node
+
+
+def gather_array_nodes(layout):
+    for k, v in sorted(layout.items(), key=lambda x: x[1]['index']):
+        if isinstance(v, dict) and 'layout' in v:
+            for sub_path in gather_array_nodes(v['layout']):
+                yield k + '.' + sub_path
+        elif isinstance(v, dict) and 'slice' in v:
+            yield k
+
+
+def get_connections(layers):
     connections = []
-    for l in layers:
-        for con in l.outgoing:
-            start = layout[con.start_layer]['outputs'][con.output_name]
-            end = layout[con.end_layer]['inputs'][con.input_name]
-            if start['slice'][0] != end['slice'][0]:
-                raise InvalidArchitectureError(
-                    'Buffer types have to match on both ends of a connection!'
-                    'But for {}.{}.{} -> {}.{}.{}, the types were {} != {}'
-                    .format(con.start_layer, 'outputs', con.output_name,
-                            con.end_layer, 'inputs', con.input_name,
-                            start['slice'][0], end['slice'][0])
-                )
-            # add a sort key to the connections
-            key = (con.start_layer, 'outputs', con.output_name,
-                   con.end_layer, 'inputs', con.input_name)
-            connections.append((key, start, end))
-
-    return [(start, end)
-            for key, start, end in sorted(connections, key=lambda x: x[0])]
+    for layer_name, layer in layers.items():
+        for con in layer.outgoing:
+            start = create_path(con.start_layer, 'outputs', con.output_name)
+            end = create_path(con.end_layer, 'inputs', con.input_name)
+            connections.append((start, end))
+    return sorted(connections)
 
 
-def get_parameter_order(layer, layout):
-    params = sorted(layer.get_parameter_structure().items(),
-                    key=lambda x: x[1]['index'])
-    return tuple([layout[layer.name]['parameters'][pname]
-                  for pname, parm in params])
+def get_order(structure):
+    return tuple(sorted(structure, key=lambda x: structure[x]['index']))
 
 
-def get_internal_order(layer, layout):
-    intern = sorted(layer.get_internal_structure().items(),
-                    key=lambda x: x[1]['index'])
-    return tuple([layout[layer.name]['internals'][iname]
-                  for iname, i in intern])
+def get_parameter_order(layer_name, layer):
+    return tuple([create_path(layer_name, 'parameters', o)
+                  for o in get_order(layer.get_parameter_structure())])
+
+
+def get_internal_order(layer_name, layer):
+    return tuple([create_path(layer_name, 'internals', o)
+                  for o in get_order(layer.get_internal_structure())])
 
 
 def merge_connections(connections, forced_orders):
@@ -138,15 +210,21 @@ def merge_connections(connections, forced_orders):
     return merged_connections
 
 
-def group_nodes_into_hubs(connections):
-    remaining_sources = [start for start, end in connections]
+def group_into_hubs(remaining_sources, connections, layout):
     buffer_hubs = []
     while remaining_sources:
         node = remaining_sources[0]
         source_set, sink_set = get_forward_closure(node, connections)
         for s in source_set:
             remaining_sources.remove(s)
-        buffer_hubs.append((source_set, sink_set))
+        # get buffer type for hub and assert its uniform
+        btypes = [get_by_path(s, layout)['slice'][0]
+                  for s in flatten(source_set)]
+        assert min(btypes) == max(btypes)
+        btype = btypes[0]
+        # get hub size
+        buffer_hubs.append((sorted(source_set), sorted(sink_set), btype))
+    return buffer_hubs
 
 
 def get_forward_closure(node, connections):
@@ -184,38 +262,83 @@ def get_forward_closure(node, connections):
     return source_set, sink_set
 
 
+def set_up_connection_table(sources, sinks, connections):
+    """
+    Construct a source/sink connection table from a list of connections.
+
+    :type sources: list[object]
+    :type sinks: list[object]
+    :type connections: list[tuple[object, object]]
+    :rtype: np.ndarray
+    """
+    # set up connection table
+    connection_table = np.zeros((len(sources), len(sinks)))
+    for start, stop in connections:
+        if start in sources and stop in sinks:
+            start_idx = sources.index(start)
+            stop_idx = sinks.index(stop)
+            connection_table[start_idx, stop_idx] = 1
+
+    return connection_table
+
+
+def permute_rows(connection_table, nested_indices):
+    """
+    Given a list of sources and a connection table, find a permutation of the
+    sources, such that they can be connected to the sinks via a single buffer.
+    :type connection_table: np.ndarray
+    :rtype: list[int]
+    """
+    # systematically try all permutations until one satisfies the condition
+    for perm in itertools.permutations(nested_indices):
+        perm = list(flatten(perm))
+        ct = np.atleast_2d(connection_table[perm])
+        if can_be_connected_with_single_buffer(ct):
+            return perm
+
+    raise InvalidArchitectureError("Failed to lay out buffers. "
+                                   "Please change connectivity.")
+
+
+def can_be_connected_with_single_buffer(connection_table):
+    """
+    Check for a connection table if it represents a layout that can be realized
+    by a single buffer. This is equivalent to checking if in every column of
+    the table all the ones form a connected block.
+    :type connection_table: np.ndarray
+    :rtype: bool
+    """
+    padded = np.pad(connection_table, [(1, 1), (0, 0)], 'constant')
+    return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)
+
+
+def flatten(container):
+    """Iterate nested lists in flat order."""
+    for i in container:
+        if isinstance(i, (list, tuple)):
+            for j in flatten(i):
+                yield j
+        else:
+            yield i
+
+
+def convert_to_nested_indices(container, start_idx=None):
+    """Return nested lists of indices with same structure as container."""
+    if start_idx is None:
+        start_idx = [0]
+    for i in container:
+        if isinstance(i, (list, tuple)):
+            yield list(convert_to_nested_indices(i, start_idx))
+        else:
+            yield start_idx[0]
+            start_idx[0] += 1
+
+
 # ##################################################
 
 
 def get_structure_size(param_struct):
     return sum([np.prod(shape) for name, shape in param_struct])
-
-
-def create_param_layout(layers):
-    """
-    Determine the total size and the layout for the parameter buffer.
-    The layout is a dictionary mapping the layer names to slice objects.
-    """
-    structures = [l.get_parameter_structure() for l in layers.values()]
-    bounds = np.cumsum([0] + [get_structure_size(s) for s in structures])
-    total_size = bounds[-1]
-    layout = OrderedDict(
-        [(name, ParameterLayoutEntry(bounds[i], bounds[i + 1], structure))
-         for i, (name, structure) in enumerate(zip(layers, structures))])
-    return ParameterLayout(total_size, layout)
-
-
-def create_in_out_layout(layers):
-    remaining_sources = list(layers.keys())
-    buffer_hubs = []
-    while remaining_sources:
-        layer = remaining_sources[0]
-        source_set, sink_set = get_forward_closure(layer, layers)
-        for s in source_set:
-            remaining_sources.remove(s)
-        buffer_hubs.append(lay_out_buffer_hub(source_set, sink_set, layers))
-
-    return buffer_hubs
 
 
 def lay_out_buffer_hub(source_set, sink_set, layers):
@@ -252,70 +375,3 @@ def lay_out_buffer_hub(source_set, sink_set, layers):
         sink_layout[n] = slice(start_idx, stop_idx)
 
     return InOutLayout(total_size, source_layout, sink_layout)
-
-
-
-def set_up_connection_table(sources, sinks, layers):
-    """
-    Given a forward closure and the architecture constructs the
-    connection table.
-
-    :type sources: set[unicode]
-    :type sinks: set[unicode]
-    :type layers: dict
-    :rtype: (list, list, np.ndarray)
-    """
-    # turn into sorted lists
-    source_list = sorted([l for l in sources])
-    sink_list = sorted([l for l in sinks])
-    # set up connection table
-    connection_table = np.zeros((len(source_list), len(sink_list)))
-    for i, source in enumerate(source_list):
-        for sink in layers[source].outgoing:
-            connection_table[i, sink_list.index(sink)] = 1
-
-    return source_list, sink_list, connection_table
-
-
-def permute_rows(connection_table):
-    """
-    Given a list of sources and a connection table, find a permutation of the
-    sources, such that they can be connected to the sinks via a single buffer.
-    :type connection_table: np.ndarray
-    :rtype: list[int]
-    """
-    # systematically try all permutations until one satisfies the condition
-    final_permutation = None
-    for perm in itertools.permutations(range(connection_table.shape[0])):
-        perm = list(perm)
-        ct = np.atleast_2d(connection_table[perm])
-        if can_be_connected_with_single_buffer(ct):
-            final_permutation = perm
-            break
-    if final_permutation is None:
-        raise InvalidArchitectureError("Failed to lay out buffers. "
-                                       "Please change connectivity.")
-
-    return final_permutation
-
-
-def can_be_connected_with_single_buffer(connection_table):
-    """
-    Check for a connection table if it represents a layout that can be realized
-    by a single buffer. This is equivalent to checking if in every column of
-    the table all the ones form a connected block.
-    :type connection_table: np.ndarray
-    :rtype: bool
-    """
-    for i in range(connection_table.shape[1]):
-        region_started = False
-        region_stopped = False
-        for j in range(connection_table.shape[0]):
-            if not region_started and connection_table[j, i]:
-                region_started = True
-            elif region_started and not region_stopped and \
-                    not connection_table[j, i]:
-                region_stopped = True
-            elif region_stopped and connection_table[j, i]:
-                return False
-    return True

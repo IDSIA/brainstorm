@@ -4,8 +4,6 @@
 from __future__ import division, print_function, unicode_literals
 from copy import copy
 import numpy as np
-from brainstorm.structure.layout import (create_param_layout,
-                                         create_in_out_layout)
 from brainstorm.handlers import default_handler
 
 
@@ -255,11 +253,12 @@ class BufferManager(object):
 
     @classmethod
     def create_from_layers(cls, layers):
-        param_layout = create_param_layout(layers)
-        param_buffer = ParameterBuffer(param_layout)
+        #param_layout = create_param_layout(layers)
+        #param_buffer = ParameterBuffer(param_layout)
 
-        buffer_hub_layouts = create_in_out_layout(layers)
-        hub_sizes, source_hubs, sink_hubs = zip(*buffer_hub_layouts)
-        out_buffer = InOutBuffer(hub_sizes, source_hubs)
-        in_buffer = InOutBuffer(hub_sizes, sink_hubs)
-        return cls(param_buffer, in_buffer, out_buffer)
+        #buffer_hub_layouts = create_in_out_layout(layers)
+        #hub_sizes, source_hubs, sink_hubs = zip(*buffer_hub_layouts)
+        #out_buffer = InOutBuffer(hub_sizes, source_hubs)
+        #in_buffer = InOutBuffer(hub_sizes, sink_hubs)
+        #return cls(param_buffer, in_buffer, out_buffer)
+        pass
