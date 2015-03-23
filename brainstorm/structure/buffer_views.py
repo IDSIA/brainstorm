@@ -3,13 +3,9 @@
 from __future__ import division, print_function, unicode_literals
 
 
-class BufferView(tuple):
-    def __new__(cls, buffer_names, buffers, full_buffer=None):
-        instance = tuple.__new__(cls, buffers)
-        return instance
-
+class BufferView(list):
     def __init__(self, buffer_names, buffers, full_buffer=None):
-        super(BufferView, self).__init__()
+        super(BufferView, self).__init__(buffers)
         if not len(buffers) == len(buffer_names):
             raise ValueError("Length mismatch between buffers and names ({} !="
                              " {})".format(len(buffers), len(buffer_names)))

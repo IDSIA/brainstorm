@@ -115,3 +115,22 @@ def test_buffer_view_dict_interface(buffer_view):
     assert list(buffer_view.keys()) == list(buffer_view._asdict().keys())
     assert list(buffer_view.values()) == list(buffer_view._asdict().values())
     assert list(buffer_view.items()) == list(buffer_view._asdict().items())
+
+
+def test_deep_copying_of_buffer_view(buffer_view):
+    foo_names = ['a', 'b']
+    foo_buffers = [np.ones(2), np.zeros(3)]
+    foo_view = BufferView(foo_names, foo_buffers)
+
+    names = ['other', 'foo']
+    buffers = [buffer_view, foo_view]
+    my_buffer = BufferView(names, buffers)
+
+    from copy import deepcopy
+
+    my_buffer_copy = deepcopy(my_buffer)
+    assert my_buffer_copy.foo is not foo_view
+    assert my_buffer_copy.other is not buffer_view
+
+    foo_view.a[:] = 7
+    assert np.all(my_buffer_copy.foo.a == np.ones(2))
