@@ -10,6 +10,7 @@ from brainstorm.initializers import evaluate_initializer
 from brainstorm.randomness import Seedable
 from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
+from brainstorm.utils import NetworkValidationError
 
 
 def build_net(some_layer):
@@ -57,22 +58,30 @@ class Network(Seedable):
 
     def initialize(self, init_dict=None, seed=None, **kwargs):
         init_refs = _update_references_with_dict(init_dict, kwargs)
-        self.buffer.rearrange_parameters()
-        initializers, fallback = resolve_references(self.buffer.parameters,
-                                                    init_refs)
+        all_parameters = {k: v.parameters
+                          for k, v in self.buffer.forward.items()}
+        initializers, fallback = resolve_references(all_parameters, init_refs)
+        print(initializers, fallback)
         init_rnd = self.rnd.create_random_state(seed)
-        for layer_name, views in self.buffer.parameters.items():
+        for layer_name, views in all_parameters.items():
             if views is None:
                 continue
             for view_name, view in views.items():
                 init = initializers[layer_name][view_name]
-                assert len(init) <= 1, "Multiple initializers for {}.{}: {}" \
-                                       "".format(layer_name, view_name, init)
-                assert len(init) > 0, "No initializer for {}.{}".format(
-                    layer_name, view_name)
                 fb = fallback[layer_name][view_name]
-                assert len(fb) <= 1, "Multiple fallbacks for {}.{}: {}".format(
-                    layer_name, view_name, fb)
+                if len(init) > 1:
+                    raise NetworkValidationError(
+                        "Multiple initializers for {}.{}: {}".format(
+                            layer_name, view_name, init))
+
+                if len(init) == 0:
+                    raise NetworkValidationError("No initializer for {}.{}".
+                                                 format(layer_name, view_name))
+                if len(fb) > 1:
+                    raise NetworkValidationError(
+                        "Multiple fallbacks for {}.{}: {}".format(
+                            layer_name, view_name, fb))
+
                 fb = fb.pop() if len(fb) else None
                 self.handler.set_from_numpy(
                     view,
