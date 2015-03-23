@@ -16,11 +16,18 @@ def is_valid_layer_name(identifier):
     return PYTHON_IDENTIFIER.match(identifier) is not None
 
 
-class InvalidArchitectureError(Exception):
+class ValidationError(Exception):
+    pass
+
+
+class NetworkValidationError(ValidationError):
     """
     Exception that is thrown if attempting to build an invalid architecture.
     (E.g. circle)
     """
+
+
+class LayerValidationError(ValidationError):
     pass
 
 

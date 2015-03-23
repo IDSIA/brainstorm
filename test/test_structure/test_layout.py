@@ -5,14 +5,12 @@ import numpy as np
 import pytest
 
 from brainstorm.structure.layout import (
-    ParameterLayoutEntry,
     create_layout_stub, get_order, get_parameter_order, get_internal_order,
     get_forced_orders, get_connections, merge_connections, get_forward_closure,
     can_be_connected_with_single_buffer, flatten, convert_to_nested_indices,
     permute_rows, create_layout, gather_array_nodes)
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
-from brainstorm.utils import InvalidArchitectureError
 
 
 @pytest.fixture

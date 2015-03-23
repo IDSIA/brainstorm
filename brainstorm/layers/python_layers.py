@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.layers.base_layer import LayerBase
+from brainstorm.utils import LayerValidationError
 
 
 class InputLayer(LayerBase):
@@ -12,40 +13,31 @@ class InputLayer(LayerBase):
     all external inputs.
     """
     expected_kwargs = {'out_shapes'}
-    input_names = []
+    inputs = []
 
-    def __init__(self, in_shapes, incoming_connections, outgoing_connections,
-                 **kwargs):
-        super(InputLayer, self).__init__(in_shapes, incoming_connections,
-                                         outgoing_connections, **kwargs)
-        self.data_name = kwargs.get('data_name', 'input_data')
+    def _get_output_shapes(self):
+        assert 'out_shapes' in self.kwargs, "InputLayer requires 'out_shapes'"
+        return self.kwargs['out_shapes']
 
-    @classmethod
-    def _get_output_shapes(cls, in_shapes, kwargs):
-        assert 'out_shapes' in kwargs, "InputLayer requires 'out_shapes'"
-        return kwargs['out_shapes']
-
-    @classmethod
-    def _validate_out_shapes(cls, out_shapes):
-        for output_name, shape in out_shapes.items():
+    def _validate_out_shapes(self):
+        for output_name, shape in self.out_shapes.items():
             if not isinstance(shape, tuple):
-                raise ValueError('out_shape entry "{}" was not a shape'
-                                 .format(shape))
+                raise LayerValidationError(
+                    'out_shape entry "{}" was not a shape'.format(shape))
 
-    @classmethod
-    def _validate_connections(cls, incoming_connections, outgoing_connections,
-                              kwargs):
-        if incoming_connections:
-            raise ValueError('InputLayer cannot have any incoming connections!'
-                             '(But: {})'.format(incoming_connections))
+    def _validate_connections(self):
+        if self.incoming:
+            raise LayerValidationError(
+                'InputLayer cannot have any incoming connections!'
+                '(But had these: {})'.format(self.incoming))
 
-        for out_c in outgoing_connections:
-            if out_c.output_name not in kwargs['out_shapes']:
-                raise ValueError(
-                    '{}: Invalid incoming connection ({}). Layer has no output'
+        for out_c in self.outgoing:
+            if out_c.output_name not in self.out_shapes:
+                raise LayerValidationError(
+                    'Invalid outgoing connection ({}). {} has no output'
                     ' named "{}".\nChoices are {}.'.format(
-                        cls.__name__, out_c, out_c.output_name,
-                        kwargs['out_shapes'].keys()))
+                        out_c, self.name, out_c.output_name,
+                        self.out_shapes.keys()))
 
 
 class NoOpLayer(LayerBase):
@@ -53,15 +45,12 @@ class NoOpLayer(LayerBase):
     This layer just copies its input into its output.
     """
 
-    def __init__(self, in_shapes, incoming_connections, outgoing_connections,
-                 **kwargs):
-        super(NoOpLayer, self).__init__(in_shapes, incoming_connections,
-                                        outgoing_connections, **kwargs)
-
+    def _validate_out_shapes(self):
         if self.out_shapes != self.in_shapes:
-            raise ValueError("For NoOpLayer in and out shapes must be equal, "
-                             "but {} != {}".format(self.in_shapes['default'],
-                                                   self.out_shapes['default']))
+            raise LayerValidationError(
+                "For {} (NoOpLayer) in_ and out_shapes must be equal, "
+                "but {} != {}".format(self.in_shapes['default'],
+                                      self.out_shapes['default']))
 
     def forward_pass(self, forward_buffers):
         self.handler.copy_to(forward_buffers.inputs.default,
@@ -76,16 +65,17 @@ class NoOpLayer(LayerBase):
 class FullyConnectedLayer(LayerBase):
     expected_kwargs = {'shape', 'activation_function'}
 
-    def __init__(self, in_shapes, incoming_connections, outgoing_connections,
-                 **kwargs):
-        super(FullyConnectedLayer, self).__init__(in_shapes, incoming_connections,
-                                               outgoing_connections, **kwargs)
+    def __init__(self, name, in_shapes, incoming_connections,
+                 outgoing_connections, **kwargs):
+        super(FullyConnectedLayer, self).__init__(
+            name, in_shapes, incoming_connections, outgoing_connections,
+            **kwargs)
         self.act_func = None
         self.act_func_deriv = None
         self.kwargs = kwargs
 
     def set_handler(self, new_handler):
-        self.handler = new_handler
+        super(FullyConnectedLayer, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
         activation_functions = {
@@ -113,7 +103,7 @@ class FullyConnectedLayer(LayerBase):
     def get_internal_structure(self):
         return {
             'Ha': {
-                'shape': self.out_shapes['default'],
+                'shape': ('T', 'B', self.out_shapes['default']),
                 'index': 0}
         }
 

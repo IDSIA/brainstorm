@@ -6,7 +6,7 @@ from copy import copy
 from six import string_types
 from brainstorm.structure.construction import ConstructionWrapper
 
-from brainstorm.utils import (InvalidArchitectureError,
+from brainstorm.utils import (NetworkValidationError,
                               is_valid_layer_name)
 from brainstorm.layers.base_layer import get_layer_class_from_typename
 
@@ -83,23 +83,23 @@ def validate_architecture(architecture):
     # schema
     for name, layer in architecture.items():
         if not isinstance(name, string_types):
-            raise InvalidArchitectureError('Non-string name {}'.format(name))
+            raise NetworkValidationError('Non-string name {}'.format(name))
         if '@type' not in layer:
-            raise InvalidArchitectureError(
+            raise NetworkValidationError(
                 'Missing @type for "{}"'.format(name))
         if not isinstance(layer['@type'], string_types):
-            raise InvalidArchitectureError('Invalid @type for "{}": {}'.format(
+            raise NetworkValidationError('Invalid @type for "{}": {}'.format(
                 name, type(layer['@type'])))
 
         if '@outgoing_connections' in layer and not isinstance(
                 layer['@outgoing_connections'], (set, list, tuple, dict)):
-            raise InvalidArchitectureError(
+            raise NetworkValidationError(
                 'Invalid @outgoing_connections for "{}"'.format(name))
 
     # layer naming
     for name in architecture:
         if not is_valid_layer_name(name):
-            raise InvalidArchitectureError(
+            raise NetworkValidationError(
                 "Invalid layer name: '{}'".format(name))
 
     # all outgoing connections are present
@@ -107,18 +107,18 @@ def validate_architecture(architecture):
     end_layers = {c.end_layer for c in connections}
     undefined_end_layers = end_layers.difference(architecture)
     if undefined_end_layers:
-        raise InvalidArchitectureError(
+        raise NetworkValidationError(
             'Could not find end layer(s) "{}"'.format(undefined_end_layers))
 
     # has exactly one InputLayer and its called InputLayer
     if "InputLayer" not in architecture or \
             architecture['InputLayer']['@type'] != 'InputLayer':
-        raise InvalidArchitectureError(
+        raise NetworkValidationError(
             'Needs exactly one InputLayer that is called "InputLayer"')
 
     # no connections to InputLayer
     if 'InputLayer' in end_layers:
-        raise InvalidArchitectureError(
+        raise NetworkValidationError(
             'DataLayers can not have incoming connections!')
 
     # TODO: check if connected
@@ -211,7 +211,7 @@ def instantiate_layers_from_architecture(architecture):
                 [layers[c.start_layer].out_shapes[c.output_name]
                  for c in incoming if c.input_name == input_name])
 
-        layers[layer_name] = LayerClass(in_shapes, incoming, outgoing,
-                                        **get_kwargs(layer))
+        layers[layer_name] = LayerClass(layer_name, in_shapes, incoming,
+                                        outgoing, **get_kwargs(layer))
     return layers
 

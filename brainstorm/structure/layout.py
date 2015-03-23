@@ -1,18 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import namedtuple, OrderedDict
 import itertools
 
 import numpy as np
-from brainstorm.utils import InvalidArchitectureError
-
-
-ParameterLayout = namedtuple('ParameterLayout', ['size', 'layout'])
-ParameterLayoutEntry = namedtuple('ParamLayoutEntry', ['start', 'stop',
-                                                       'structure'])
-InOutLayout = namedtuple('InOutLayout',
-                         ['size', 'source_layout', 'sink_layout'])
+from brainstorm.utils import NetworkValidationError
 
 
 def create_layout(layers):
@@ -296,7 +288,7 @@ def permute_rows(connection_table, nested_indices):
         if can_be_connected_with_single_buffer(ct):
             return perm
 
-    raise InvalidArchitectureError("Failed to lay out buffers. "
+    raise NetworkValidationError("Failed to lay out buffers. "
                                    "Please change connectivity.")
 
 
@@ -332,46 +324,3 @@ def convert_to_nested_indices(container, start_idx=None):
         else:
             yield start_idx[0]
             start_idx[0] += 1
-
-
-# ##################################################
-
-
-def get_structure_size(param_struct):
-    return sum([np.prod(shape) for name, shape in param_struct])
-
-
-def lay_out_buffer_hub(source_set, sink_set, layers):
-    # Set up connection table
-    source_list, sink_list, connection_table = set_up_connection_table(
-        source_set, sink_set, layers)
-    perm = permute_rows(connection_table)
-    source_list = [source_list[i] for i in perm]
-    connection_table = np.atleast_2d(connection_table[perm])
-
-    # Source Layout
-    source_bounds = np.cumsum([0] + [int(np.prod(layers[n].shape))
-                                     for n in source_list])
-    total_size = source_bounds[-1]
-    source_layout = OrderedDict([
-        (name, slice(source_bounds[i], source_bounds[i+1]))
-        for i, name in enumerate(source_list)])
-
-    # Sink Layout
-    sink_layout = OrderedDict()
-    for i, n in enumerate(sink_list):
-        connectivity = connection_table[:, i]
-
-        start_idx = -1
-        for j, c in enumerate(connectivity):
-            if start_idx == -1 and c == 1:
-                start_idx = source_bounds[j]
-            if start_idx > -1 and c == 0:
-                stop_idx = source_bounds[j]
-                break
-        else:
-            stop_idx = source_bounds[-1]
-
-        sink_layout[n] = slice(start_idx, stop_idx)
-
-    return InOutLayout(total_size, source_layout, sink_layout)

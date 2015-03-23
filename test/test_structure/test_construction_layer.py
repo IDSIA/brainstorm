@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 
 from brainstorm.structure.construction import (
-    ConstructionWrapper, InvalidArchitectureError)
+    ConstructionWrapper, NetworkValidationError)
 
 
 @pytest.fixture
@@ -21,12 +21,12 @@ def test_constructor():
 
 
 def test_raises_on_invalid_layer_type():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         i = ConstructionWrapper.create('not valid!')
 
 
 def test_raises_on_invalid_layer_name():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         i = ConstructionWrapper.create('layertype', name='also invalid.')
 
 

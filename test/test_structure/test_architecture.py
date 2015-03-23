@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 from brainstorm.structure.architecture import combine_input_shapes, \
     validate_architecture, get_canonical_layer_order
-from brainstorm.utils import InvalidArchitectureError
+from brainstorm.utils import NetworkValidationError
 
 
 def test_combine_input_sizes_int():
@@ -49,7 +49,7 @@ def test_validate_architecture_minimal():
 
 
 def test_validate_architecture_raises_on_missing_type():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         validate_architecture({
             'typeless': {
                 '@outgoing_connections': []
@@ -58,7 +58,7 @@ def test_validate_architecture_raises_on_missing_type():
 
 
 def test_validate_architecture_raises_on_invalid_type():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         validate_architecture({
             'wrong_type': {
                 '@type': pytest,
@@ -68,7 +68,7 @@ def test_validate_architecture_raises_on_invalid_type():
 
 
 def test_validate_architecture_raises_on_invalid_name():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         validate_architecture({
             '$invalid name': {
                 '@type': 'DataLayer',
@@ -78,7 +78,7 @@ def test_validate_architecture_raises_on_invalid_name():
 
 
 def test_validate_architecture_raises_on_nonexisting_outgoing():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         validate_architecture({
             'InputLayer': {
                 '@type': 'DataLayer',
@@ -88,7 +88,7 @@ def test_validate_architecture_raises_on_nonexisting_outgoing():
 
 
 def test_validate_architecture_raises_on_no_data_layer():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         validate_architecture({
             'fwd1': {
                 '@type': 'FullyConnectedLayer',
@@ -97,7 +97,7 @@ def test_validate_architecture_raises_on_no_data_layer():
 
 
 def test_validate_architecture_raises_inputs_to_data_layer():
-    with pytest.raises(InvalidArchitectureError):
+    with pytest.raises(NetworkValidationError):
         validate_architecture({
             'InputLayer': {
                 '@type': 'DataLayer',

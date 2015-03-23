@@ -34,6 +34,24 @@ The BufferManager for a network will allocate one big buffer for each type,
 and resize them in response to input-sizes. That big chunk of memory is also
 split up into a tree of named buffers according to the *layout*.
 
+Shape templates
+---------------
+When implementing a layer there are many places where a shape of a buffer
+needs to be specified. But the size of the time-size and the batch-size are
+both unknown at implementation time. So we use so called *shape-templates* to
+specify which buffer type you are expecting. So for example for feature size of
+three these would be the templatesfor the 3 buffer types:
+
+  * ``(3,)`` => Constant size buffer
+  * ``('B', 3)`` => Batch sized buffer
+  * ``('T', 'B', 3)`` => time sized buffer
+
+Here ``'T'`` is the placeholder for the sequence-length, and ``'B'`` is the
+placeholder for the batchsize.
+
+If the feature size is also unknown (e.g. when specifying the input and output
+shapes of a layer) then ``'F'`` can be used as a placeholder for those.
+
 The Layout Specification
 ========================
 The layout specification is a tree of nested dictionaries, containing two
@@ -196,10 +214,10 @@ For example with an ``@`` sign like in the architecture description:
             'outputs': {
                 '@index': 1,
                 '@slice': (2, 0, 14),
-                'input_data': {'@index': 0, '@slice': (2, 0, 4),   '@shape': (4,)},
+                'input_data': {'@index': 0, '@slice': (0, 4), '@buffer_type': 2,  '@shape': (4,)},
                 'targets':    {'@index': 1, '@slice': (2, 10, 14), '@shape': (4,)}
             }},
-            'parameters': {'@index': 2},
+            'parameters': {'@index': 2, '@type':'view'},
             'internals': {'@index': 3},
         },
         'RnnLayer': {

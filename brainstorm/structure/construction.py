@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import six
 from brainstorm.uniquely_named import UniquelyNamed
 from brainstorm.utils import (
-    InvalidArchitectureError, is_valid_layer_name)
+    NetworkValidationError, is_valid_layer_name)
 
 
 class LayerDetails(UniquelyNamed):
@@ -16,10 +16,10 @@ class LayerDetails(UniquelyNamed):
     """
     def __init__(self, layer_type, shape=None, name=None, **kwargs):
         if not is_valid_layer_name(layer_type):
-            raise InvalidArchitectureError(
+            raise NetworkValidationError(
                 "Invalid layer_type: '{}'".format(layer_type))
         if not (name is None or is_valid_layer_name(name)):
-            raise InvalidArchitectureError(
+            raise NetworkValidationError(
                 "Invalid name for layer: '{}'".format(name))
         super(LayerDetails, self).__init__(name or layer_type)
 
