@@ -111,7 +111,7 @@ class LayerBase(object):
         """Ensure self.kwargs are all sound.
 
         Raise LayerValidationError otherwise."""
-        unexpected_kwargs = set(self.kwargs) - self.expected_kwargs
+        unexpected_kwargs = set(self.kwargs) - set(self.expected_kwargs)
         if unexpected_kwargs:
             raise LayerValidationError("{}: Unexpected kwargs: {}".format(
                 self.name, unexpected_kwargs))
@@ -143,7 +143,7 @@ class LayerBase(object):
                 raise LayerValidationError(
                     'Invalid out_shapes. {} has no output named "{}". '
                     'Choices are: {}'.format(self.name, output_name,
-                                              self.inputs))
+                                             self.outputs))
 
             if not match_shape_template(out_shape, self.outputs[output_name]):
                 raise LayerValidationError(
