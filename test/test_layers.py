@@ -4,7 +4,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 import pytest
-from brainstorm.layers.python_layers import FullyConnectedLayer
+from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
 from brainstorm.handlers import NumpyHandler
 import numpy as np
 np.random.seed()

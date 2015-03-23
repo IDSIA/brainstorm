@@ -6,8 +6,10 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 
 from brainstorm.layers.base_layer import get_layer_class_from_typename
-from brainstorm.layers.python_layers import InputLayer, NoOpLayer, LayerBase, \
-    FullyConnectedLayer
+from brainstorm.layers.input_layer import InputLayer
+from brainstorm.layers.noop_layer import NoOpLayer
+from brainstorm.layers.base_layer import LayerBase
+from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
 from brainstorm.structure.architecture import Connection
 from brainstorm.utils import LayerValidationError
 
