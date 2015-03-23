@@ -92,19 +92,19 @@ class FullyConnectedLayer(LayerBase):
     def get_parameter_structure(self):
         return {
             'W': {
-                'shape': (self.in_shapes['default'][2],
-                          self.out_shapes['default'][2]),
-                'index': 0},
+                '@shape': (self.in_shapes['default'][2],
+                           self.out_shapes['default'][2]),
+                '@index': 0},
             'b': {
-                'shape': (self.out_shapes['default'][2],),
-                'index': 1}
+                '@shape': (self.out_shapes['default'][2],),
+                '@index': 1}
         }
 
     def get_internal_structure(self):
         return {
             'Ha': {
-                'shape': ('T', 'B', self.out_shapes['default'][2]),
-                'index': 0}
+                '@shape': self.out_shapes['default'],
+                '@index': 0}
         }
 
     def forward_pass(self, forward_buffers):
