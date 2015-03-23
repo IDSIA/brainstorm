@@ -4,7 +4,8 @@ from __future__ import division, print_function, unicode_literals
 import itertools
 
 import numpy as np
-from brainstorm.utils import NetworkValidationError
+from brainstorm.utils import (NetworkValidationError, flatten,
+                              convert_to_nested_indices)
 
 
 def create_layout(layers):
@@ -89,53 +90,53 @@ def get_forced_orders(layers):
 def create_layout_stub(layers):
     root = {}
     for i, (layer_name, layer) in enumerate(layers.items()):
-        root[layer_name] = {
-            'index': i,
-            'layout': get_layout_stub_for_layer(layer)
-        }
+        root[layer_name] = get_layout_stub_for_layer(layer)
+        root[layer_name]['@type'] = 'BufferView'
+        root[layer_name]['@index'] = i
     return root
 
 
 def get_layout_stub_for_layer(layer):
     layout = {}
-    param_struct = layer.get_parameter_structure()
 
     layout['inputs'] = {
-        'index': 0,
-        'layout': {
-            k: {'index': i,
-                'shape': layer.in_shapes[k],
-                'slice': (2, -1, -1)
-                } for i, k in enumerate(layer.input_names)
-        }
+        k: {'@type': 'array',
+            '@index': i,
+            '@shape': layer.in_shapes[k],
+            } for i, k in enumerate(layer.inputs)
     }
+    layout['inputs']['@type'] = 'BufferView'
+    layout['inputs']['@index'] = 0
+
     layout['outputs'] = {
-        'index': 1,
-        'layout': {
-            k: {'index': i,
-                'shape': layer.out_shapes[k],
-                'slice': (2, -1, -1)
-                } for i, k in enumerate(layer.out_shapes)
-        }
+        k: {'@type': 'array',
+            '@index': i,
+            '@shape': layer.out_shapes[k],
+            } for i, k in enumerate(layer.out_shapes)
     }
+    layout['outputs']['@type'] = 'BufferView'
+    layout['outputs']['@index'] = 1
+
     layout['parameters'] = {
-        'index': 2,
-        'layout': {k: add_slice_stub(v, buffer_type=0)
-                   for k, v in param_struct.items()}
+        k: add_array_type(v)
+        for k, v in layer.get_parameter_structure().items()
     }
+    layout['parameters']['@type'] = 'BufferView'
+    layout['parameters']['@index'] = 2
+
     layout['internals'] = {
-        'index': 3,
-        'layout': {k: add_slice_stub(v, buffer_type=2)
-                   for k, v in layer.get_internal_structure().items()}
+        k: add_array_type(v)
+        for k, v in layer.get_internal_structure().items()
     }
+    layout['internals']['@type'] = 'BufferView'
+    layout['internals']['@index'] = 3
 
     return layout
 
 
-def add_slice_stub(entry, buffer_type=0):
-    entry['slice'] = (buffer_type, -1, -1)
-    return entry
-
+def add_array_type(d):
+    d['@type'] = 'array'
+    return d
 
 def create_path(layer_name, category, substructure):
     return "{}.{}.{}".format(layer_name, category, substructure)
@@ -155,7 +156,7 @@ def get_by_path(path, layout):
 
 
 def gather_array_nodes(layout):
-    for k, v in sorted(layout.items(), key=lambda x: x[1]['index']):
+    for k, v in sorted(layout.items(), key=lambda x: x[1]['@index']):
         if isinstance(v, dict) and 'layout' in v:
             for sub_path in gather_array_nodes(v['layout']):
                 yield k + '.' + sub_path
@@ -174,7 +175,7 @@ def get_connections(layers):
 
 
 def get_order(structure):
-    return tuple(sorted(structure, key=lambda x: structure[x]['index']))
+    return tuple(sorted(structure, key=lambda x: structure[x]['@index']))
 
 
 def get_parameter_order(layer_name, layer):
@@ -303,24 +304,3 @@ def can_be_connected_with_single_buffer(connection_table):
     padded = np.pad(connection_table, [(1, 1), (0, 0)], 'constant')
     return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)
 
-
-def flatten(container):
-    """Iterate nested lists in flat order."""
-    for i in container:
-        if isinstance(i, (list, tuple)):
-            for j in flatten(i):
-                yield j
-        else:
-            yield i
-
-
-def convert_to_nested_indices(container, start_idx=None):
-    """Return nested lists of indices with same structure as container."""
-    if start_idx is None:
-        start_idx = [0]
-    for i in container:
-        if isinstance(i, (list, tuple)):
-            yield list(convert_to_nested_indices(i, start_idx))
-        else:
-            yield start_idx[0]
-            start_idx[0] += 1
