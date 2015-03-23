@@ -36,7 +36,7 @@ def targets():
 architectures = [
     {'InputLayer': {
         '@type': 'InputLayer',
-        'out_shapes': {'default': (3,), 'targets': (2,)},
+        'out_shapes': {'default': ('T', 'B', 3,), 'targets': ('T', 'B', 2,)},
         '@outgoing_connections': {
             'default': ['OutputLayer'],
             'targets': ['MSE.targets']

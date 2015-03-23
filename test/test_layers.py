@@ -60,7 +60,7 @@ def setup_buffers(time_steps, num, layer):
     backward_buffer_views = []
 
     # setup inputs
-    input_names = layer.input_names
+    input_names = layer.inputs
     forward_input_buffers = []
     backward_input_buffers = []
 
@@ -81,7 +81,7 @@ def setup_buffers(time_steps, num, layer):
                                             backward_input_buffers))
 
     # setup outputs
-    output_names = layer.output_names
+    output_names = layer.outputs
     forward_output_buffers = []
     backward_output_buffers = []
 
@@ -222,8 +222,9 @@ def test_fully_connected_layer():
     input_shape = 3
     layer_shape = 2
 
-    in_shapes = {'default': (input_shape,)}
-    layer = FullyConnectedLayer(in_shapes, [], [], shape=layer_shape,
+    in_shapes = {'default': ('T', 'B', input_shape,)}
+    layer = FullyConnectedLayer('TestLayer1', in_shapes, [], [],
+                                shape=layer_shape,
                                 activation_function='sigmoid')
     layer.set_handler(NumpyHandler(np.float64))
     print("\n---------- Testing FullyConnectedLayer ----------")

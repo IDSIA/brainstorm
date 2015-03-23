@@ -19,6 +19,7 @@ def match_shape_template(shape, template):
     for s, t in zip(shape, template):
         if s != t and t != 'F':
             return False
+    return True
 
 
 class LayerBase(object):

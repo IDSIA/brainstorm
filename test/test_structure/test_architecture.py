@@ -28,6 +28,17 @@ def test_combine_input_sizes_tuples():
                                 (2, 3, 4)]) == (7, 3, 4)
 
 
+def test_combine_input_sizes_tuple_templates():
+    assert combine_input_shapes([('B', 4)]) == ('B', 4)
+    assert combine_input_shapes([('B', 4), ('B', 3)]) == ('B', 7)
+    assert combine_input_shapes([('T', 'B', 4)]) == ('T', 'B', 4)
+    assert combine_input_shapes([('T', 'B', 4), ('T', 'B', 3)]) == \
+           ('T', 'B', 7)
+    assert combine_input_shapes([('T', 'B', 4, 3, 2), ('T', 'B', 3, 3, 2)]) ==\
+           ('T', 'B', 7, 3, 2)
+
+
+
 @pytest.mark.parametrize('sizes', [
     [2, (1, 2)],
     [(2, 3), (2, 2)],

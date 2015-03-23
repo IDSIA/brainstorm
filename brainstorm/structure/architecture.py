@@ -176,11 +176,25 @@ def combine_input_shapes(shapes):
     dimensions = [len(s) for s in tupled_shapes]
     if min(dimensions) != max(dimensions):
         raise ValueError('Dimensionality mismatch. {}'.format(tupled_shapes))
-    fixed_feature_shape = tupled_shapes[0][1:]
-    if not all([s[1:] == fixed_feature_shape for s in tupled_shapes]):
+    some_shape = tupled_shapes[0]
+    if some_shape[0] == 'T':
+        first_feature_index = 2
+    elif some_shape[0] == 'B':
+        first_feature_index = 1
+    else:
+        first_feature_index = 0
+
+    fixed_feature_shape = some_shape[first_feature_index + 1:]
+    if not all([s[:first_feature_index] == some_shape[:first_feature_index]
+                for s in tupled_shapes]):
+        raise ValueError('Buffer type mismatch. {}'.format(tupled_shapes))
+    if not all([s[first_feature_index + 1:] == fixed_feature_shape
+                for s in tupled_shapes]):
         raise ValueError('Feature size mismatch. {}'.format(tupled_shapes))
-    summed_shape = sum(s[0] for s in tupled_shapes)
-    return (summed_shape,) + fixed_feature_shape
+    summed_shape = sum(s[first_feature_index] for s in tupled_shapes)
+    return some_shape[:first_feature_index] + \
+           (summed_shape,) + \
+           fixed_feature_shape
 
 
 def ensure_tuple_or_none(a):

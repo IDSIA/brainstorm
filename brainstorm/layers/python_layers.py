@@ -49,7 +49,7 @@ class NoOpLayer(LayerBase):
         if self.out_shapes != self.in_shapes:
             raise LayerValidationError(
                 "For {} (NoOpLayer) in_ and out_shapes must be equal, "
-                "but {} != {}".format(self.in_shapes['default'],
+                "but {} != {}".format(self.name, self.in_shapes['default'],
                                       self.out_shapes['default']))
 
     def forward_pass(self, forward_buffers):

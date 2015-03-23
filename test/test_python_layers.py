@@ -6,8 +6,10 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 
 from brainstorm.layers.base_layer import get_layer_class_from_typename
-from brainstorm.layers.python_layers import InputLayer, NoOpLayer, LayerBase
+from brainstorm.layers.python_layers import InputLayer, NoOpLayer, LayerBase, \
+    FullyConnectedLayer
 from brainstorm.structure.architecture import Connection
+from brainstorm.utils import LayerValidationError
 
 
 def test_get_layer_class_from_typename():
@@ -25,28 +27,32 @@ def test_layer_constructor():
     b = Connection('l', 'default', 'B', 'default')
     c = Connection('l', 'default', 'C', 'default')
 
-    l = LayerBase({'default': (5,)}, {c}, {a, b}, shape=8)
-    assert l.out_shapes == {'default': (8,)}
-    assert l.in_shapes == {'default': (5,)}
+    l = LayerBase('LayerName', {'default': ('T', 'B', 5)}, {c}, {a, b},
+                  shape=8)
+    assert l.out_shapes == {'default': ('T', 'B', 8)}
+    assert l.in_shapes == {'default': ('T', 'B', 5)}
     assert l.incoming == {c}
     assert l.outgoing == {a, b}
     assert l.kwargs == {'shape': 8}
 
 
-def test_NoOp_raises_on_size_mismatch():
-    with pytest.raises(ValueError):
-        l = NoOpLayer({'default': (5,)}, set(), set(), shape=8)
+def test_nooplayer_raises_on_size_mismatch():
+    with pytest.raises(LayerValidationError):
+        l = NoOpLayer('LayerName', {'default': ('T', 'B', 5,)}, set(), set(),
+                      shape=8)
 
 
-def test_DataLayer_raises_on_in_size():
-    with pytest.raises(ValueError):
-        l = InputLayer({'default': (5,)}, set(), set())
+def test_inputlayer_raises_on_in_size():
+    with pytest.raises(LayerValidationError):
+        l = InputLayer('LayerName', {'default': ('T', 'B', 5,)}, set(), set(),
+                       out_shapes={'default': ('T', 'B', 5,)})
 
 
 @pytest.mark.parametrize("LayerClass", [
-    LayerBase, InputLayer, NoOpLayer
+    LayerBase, NoOpLayer, FullyConnectedLayer
 ])
 def test_raises_on_unexpected_kwargs(LayerClass):
-    with pytest.raises(ValueError) as excinfo:
-        l = LayerClass({'default': (5,)}, set(), set(), some_foo=16)
+    with pytest.raises(LayerValidationError) as excinfo:
+        l = LayerClass('LayerName', {'default': (5,)}, set(), set(),
+                       some_foo=16)
     assert 'some_foo' in excinfo.value.args[0]
