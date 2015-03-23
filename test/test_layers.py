@@ -5,6 +5,7 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 import pytest
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
+from brainstorm.layers.framewise_mse_layer import FramewiseMSELayer
 from brainstorm.handlers import NumpyHandler
 import numpy as np
 np.random.seed()
@@ -101,7 +102,7 @@ def setup_buffers(time_steps, batch_size, layer):
     backward_output_buffers = []
 
     print("Setting up outputs")
-    assert set(output_names) == set(layer.in_shapes.keys())
+    assert set(output_names) == set(layer.out_shapes.keys())
     for name in output_names:
         shape = buffer_shape_from_in_out_shape(time_steps,
                                                batch_size,
@@ -232,7 +233,7 @@ def run_layer_test(layer, time_steps, batch_size, eps):
         assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
 
 
-def test_fully_connected_layer():
+def dtest_fully_connected_layer():
 
     eps = 1e-4
     time_steps = 3
@@ -246,4 +247,20 @@ def test_fully_connected_layer():
                                 activation_function='sigmoid')
     layer.set_handler(NumpyHandler(np.float64))
     print("\n---------- Testing FullyConnectedLayer ----------")
+    run_layer_test(layer, time_steps, batch_size, eps)
+
+
+def test_framewise_mse_layer():
+
+    eps = 1e-4
+    time_steps = 3
+    batch_size = 2
+    in_shapes = {'outputs': ('T', 'B', 3, 3, 2),
+                 'targets': ('T', 'B', 3, 3, 2),
+                 'masks': ('T', 'B', 1)
+                 }
+
+    layer = FramewiseMSELayer('FMSELayer', in_shapes, [], [])
+    layer.set_handler(NumpyHandler(np.float64))
+    print("\n---------- Testing FramewiseMSELayer ----------")
     run_layer_test(layer, time_steps, batch_size, eps)

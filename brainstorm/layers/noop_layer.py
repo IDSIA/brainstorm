@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.layers.base_layer import LayerBase
 from brainstorm.utils import LayerValidationError
 
+
 class NoOpLayer(LayerBase):
     """
     This layer just copies its input into its output.
