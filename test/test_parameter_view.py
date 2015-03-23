@@ -4,49 +4,48 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 import pytest
 
-from brainstorm.structure.buffers import ParameterView
+from brainstorm.structure.buffers import BufferView
 
 
 @pytest.fixture
-def param_view():
-    structure = [
-        ('W', (5, 3)),
-        ('R', (3, 3)),
-        ('b', (3,))
-    ]
-    buffer = np.zeros(27)
-    return ParameterView(structure, buffer)
+def buffer_view():
+    buffer_names = ['W', 'R', 'b']
+    full_buffer = np.zeros(27)
+    buffers = [full_buffer[:15].reshape((5, 3)),
+               full_buffer[15:24].reshape((3, 3)),
+               full_buffer[24:27].reshape((3,))]
+    return BufferView(buffer_names, buffers, full_buffer)
 
 
-def test_param_view_retains_full_buffer(param_view):
-    assert param_view._buffer.size == 27
-    assert isinstance(param_view._buffer, np.ndarray)
+def test_buffer_view_retains_full_buffer(buffer_view):
+    assert buffer_view._full_buffer.size == 27
+    assert isinstance(buffer_view._full_buffer, np.ndarray)
 
 
-def test_param_view_buffer_slicing():
-    structure = [
-        ('W', (3, 2)),
-        ('R', (2, 2)),
-        ('b', (1,))
-    ]
-    buffer = np.arange(11)
-    pv = ParameterView(structure, buffer)
-    assert pv._buffer is buffer
-    assert np.all(pv[0] == np.array([0, 1, 2, 3, 4, 5]).reshape(3, 2))
-    assert np.all(pv[1] == np.array([6, 7, 8, 9]).reshape(2, 2))
-    assert np.all(pv[2] == np.array([10]))
+def test_buffer_view_buffer_slicing():
+    buffer_names = ['W', 'R', 'b']
+    full_buffer = np.arange(11)
+    buffers = [full_buffer[:6].reshape((3, 2)),
+               full_buffer[6:10].reshape((2, 2)),
+               full_buffer[10:].reshape((1,))]
+    bv = BufferView(buffer_names, buffers, full_buffer)
+
+    assert bv._full_buffer is full_buffer
+    assert np.all(bv[0] == np.array([0, 1, 2, 3, 4, 5]).reshape(3, 2))
+    assert np.all(bv[1] == np.array([6, 7, 8, 9]).reshape(2, 2))
+    assert np.all(bv[2] == np.array([10]))
 
 
 def test_empty_list_param_view():
     buff = np.zeros(0)
-    empty = ParameterView([], buff)
-    assert empty._buffer is buff
-    assert empty._names == ()
-    assert set(empty.__dict__.keys()) == {'_buffer', '_names'}
+    empty = BufferView([], [], buff)
+    assert empty._full_buffer is buff
+    assert empty._buffer_names == ()
+    assert set(empty.__dict__.keys()) == {'_full_buffer', '_buffer_names'}
 
 
-def test_param_view_tuple_upacking(param_view):
-    W, R, b = param_view
+def test_buffer_view_tuple_upacking(buffer_view):
+    W, R, b = buffer_view
     assert isinstance(W, np.ndarray)
     assert W.shape == (5, 3)
     assert isinstance(R, np.ndarray)
@@ -55,54 +54,64 @@ def test_param_view_tuple_upacking(param_view):
     assert b.shape == (3,)
 
 
-def test_param_view_len(param_view):
-    assert len(param_view) == 3
+def test_buffer_view_len(buffer_view):
+    assert len(buffer_view) == 3
 
 
-def test_param_view_tuple_getitem(param_view):
-    W, R, b = param_view
-    assert param_view[0] is W
-    assert param_view[1] is R
-    assert param_view[2] is b
+def test_buffer_view_tuple_getitem(buffer_view):
+    W, R, b = buffer_view
+    assert buffer_view[0] is W
+    assert buffer_view[1] is R
+    assert buffer_view[2] is b
 
     with pytest.raises(IndexError):
-        _ = param_view[3]
+        _ = buffer_view[3]
 
 
-def test_param_view_dict_getitem(param_view):
-    W, R, b = param_view
-    assert param_view['W'] is W
-    assert param_view['R'] is R
-    assert param_view['b'] is b
+def test_buffer_view_dict_getitem(buffer_view):
+    W, R, b = buffer_view
+    assert buffer_view['W'] is W
+    assert buffer_view['R'] is R
+    assert buffer_view['b'] is b
 
     with pytest.raises(KeyError):
-        _ = param_view['nonexisting']
+        _ = buffer_view['nonexisting']
 
 
-def test_param_view_getattr(param_view):
-    W, R, b = param_view
-    assert param_view.W is W
-    assert param_view.R is R
-    assert param_view.b is b
+def test_buffer_view_contains(buffer_view):
+
+    assert 'W' in buffer_view
+    assert 'R' in buffer_view
+    assert 'b' in buffer_view
+
+    assert 'foo' not in buffer_view
+    assert 'Q' not in buffer_view
+
+
+def test_buffer_view_getattr(buffer_view):
+    W, R, b = buffer_view
+    assert buffer_view.W is W
+    assert buffer_view.R is R
+    assert buffer_view.b is b
 
     with pytest.raises(AttributeError):
-        _ = param_view.nonexisting
+        _ = buffer_view.nonexisting
 
 
-def test_param_view_dict_for_autocompletion(param_view):
-    assert set(param_view.__dict__.keys()) == {'W', 'R', 'b', '_buffer',
-                                               '_names'}
+def test_buffer_view_dict_for_autocompletion(buffer_view):
+    assert set(buffer_view.__dict__.keys()) == {'W', 'R', 'b', '_buffer_names',
+                                                '_full_buffer'}
 
 
-def test_param_view_as_dict(param_view):
-    assert param_view._asdict() == {
-        'W': param_view.W,
-        'R': param_view.R,
-        'b': param_view.b
+def test_buffer_view_as_dict(buffer_view):
+    assert buffer_view._asdict() == {
+        'W': buffer_view.W,
+        'R': buffer_view.R,
+        'b': buffer_view.b
     }
 
 
-def test_param_view_dict_interface(param_view):
-    assert list(param_view.keys()) == list(param_view._asdict().keys())
-    assert list(param_view.values()) == list(param_view._asdict().values())
-    assert list(param_view.items()) == list(param_view._asdict().items())
+def test_buffer_view_dict_interface(buffer_view):
+    assert list(buffer_view.keys()) == list(buffer_view._asdict().keys())
+    assert list(buffer_view.values()) == list(buffer_view._asdict().values())
+    assert list(buffer_view.items()) == list(buffer_view._asdict().items())

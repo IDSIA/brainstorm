@@ -38,7 +38,6 @@ def test_combine_input_sizes_tuple_templates():
            ('T', 'B', 7, 3, 2)
 
 
-
 @pytest.mark.parametrize('sizes', [
     [2, (1, 2)],
     [(2, 3), (2, 2)],

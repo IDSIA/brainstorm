@@ -34,3 +34,6 @@ class BufferView(tuple):
         if isinstance(item, int):
             return super(BufferView, self).__getitem__(item)
         return self.__dict__[item]
+
+    def __contains__(self, item):
+        return item in self._buffer_names
