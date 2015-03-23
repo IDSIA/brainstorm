@@ -42,14 +42,27 @@ def get_output_error(_h, forward_buffers):
     return error
 
 
-def setup_buffers(time_steps, num, layer):
+def buffer_shape_from_in_out_shape(time_steps, batch_size, shape):
+    """
+    Computes the size of the buffers for inputs and outputs given the shape
+    representation by the layer such as ('T', 'B', 3).
+
+    :param shape: A shape tuple, whose first entry might be 'T' and second
+    entry might be 'B', but rest must be positive integers.
+    :return: A shape tuple of same length as inputs, but consisting of
+    postive integers.
+    """
+    return time_steps, batch_size, shape[2]
+
+
+def setup_buffers(time_steps, batch_size, layer):
     """
     Sets up the required forward and backward buffers for gradient checking.
 
     This function will also randomly initialize the parameters and inputs.
 
     :param time_steps: Number of time-steps in each sequence.
-    :param num: Number of sequences.
+    :param batch_size: Number of sequences.
     :param layer: A $Layer$ object.
     :return: BufferViews for forward and backward buffers
     """
@@ -67,12 +80,14 @@ def setup_buffers(time_steps, num, layer):
     print("Setting up inputs")
     assert set(input_names) == set(layer.in_shapes.keys())
     for name in input_names:
-        shape = layer.in_shapes[name]
-        print(name, " : ", (time_steps, num) + shape)
-        data = _h.zeros((time_steps, num) + shape)
-        _h.set_from_numpy(data, np.random.randn(*(time_steps, num) + shape))
+        shape = buffer_shape_from_in_out_shape(time_steps,
+                                               batch_size,
+                                               layer.in_shapes[name])
+        print(name, " : ", shape)
+        data = _h.zeros(shape)
+        _h.set_from_numpy(data, np.random.randn(*shape))
         forward_input_buffers.append(data)
-        backward_input_buffers.append(_h.zeros((time_steps, num) + shape))
+        backward_input_buffers.append(_h.zeros(shape))
 
     forward_buffer_names.append('inputs')
     forward_buffer_views.append(BufferView(input_names, forward_input_buffers))
@@ -88,10 +103,12 @@ def setup_buffers(time_steps, num, layer):
     print("Setting up outputs")
     assert set(output_names) == set(layer.in_shapes.keys())
     for name in output_names:
-        shape = layer.out_shapes[name]
-        print(name, " : ", (time_steps, num) + shape)
-        forward_output_buffers.append(_h.zeros((time_steps, num) + shape))
-        backward_output_buffers.append(_h.zeros((time_steps, num) + shape))
+        shape = buffer_shape_from_in_out_shape(time_steps,
+                                               batch_size,
+                                               layer.out_shapes[name])
+        print(name, " : ", shape)
+        forward_output_buffers.append(_h.zeros(shape))
+        backward_output_buffers.append(_h.zeros(shape))
 
     forward_buffer_names.append('outputs')
     forward_buffer_views.append(BufferView(output_names,
@@ -132,11 +149,12 @@ def setup_buffers(time_steps, num, layer):
                                    key=lambda x: x[1]['index']):
         print(name, attributes)
         internal_names.append(name)
-        print(name, " : ", attributes['shape'])
-        forward_internal_buffers.append(_h.zeros((time_steps, num) +
-                                                attributes['shape']))
-        backward_internal_buffers.append(_h.zeros((time_steps, num) +
-                                                 attributes['shape']))
+        shape = buffer_shape_from_in_out_shape(time_steps,
+                                               batch_size,
+                                               attributes['shape'])
+        print(name, " : ", shape)
+        forward_internal_buffers.append(_h.zeros(shape))
+        backward_internal_buffers.append(_h.zeros(shape))
 
     forward_buffer_names.append('internals')
     forward_buffer_views.append(BufferView(internal_names,
@@ -151,18 +169,18 @@ def setup_buffers(time_steps, num, layer):
     return forward_buffers, backward_buffers
 
 
-def run_layer_test(layer, time_steps, num, eps):
+def run_layer_test(layer, time_steps, batch_size, eps):
     """
     Checks the gradients w.r.t. parameters and inputs for a given layer.
 
     :param layer: The $Layer$ object which should be tested.
     :param time_steps: Number of time-steps in each sequence.
-    :param num: Number of sequences.
+    :param batch_size: Number of sequences.
     :param eps: Size of perturbation for analytical gradient computation.
     :return:
     """
     _h = layer.handler
-    forward_buffers, backward_buffers = setup_buffers(time_steps, num, layer)
+    forward_buffers, backward_buffers = setup_buffers(time_steps, batch_size, layer)
 
     # First do a forward and backward pass to calculate gradients
     layer.forward_pass(forward_buffers)
@@ -218,7 +236,7 @@ def test_fully_connected_layer():
 
     eps = 1e-4
     time_steps = 3
-    num = 2
+    batch_size = 2
     input_shape = 3
     layer_shape = 2
 
@@ -228,4 +246,4 @@ def test_fully_connected_layer():
                                 activation_function='sigmoid')
     layer.set_handler(NumpyHandler(np.float64))
     print("\n---------- Testing FullyConnectedLayer ----------")
-    run_layer_test(layer, time_steps, num, eps)
+    run_layer_test(layer, time_steps, batch_size, eps)

@@ -92,18 +92,18 @@ class FullyConnectedLayer(LayerBase):
     def get_parameter_structure(self):
         return {
             'W': {
-                'shape': (self.in_shapes['default'][0],
-                          self.out_shapes['default'][0]),
+                'shape': (self.in_shapes['default'][2],
+                          self.out_shapes['default'][2]),
                 'index': 0},
             'b': {
-                'shape': (self.out_shapes['default'][0],),
+                'shape': (self.out_shapes['default'][2],),
                 'index': 1}
         }
 
     def get_internal_structure(self):
         return {
             'Ha': {
-                'shape': ('T', 'B', self.out_shapes['default']),
+                'shape': ('T', 'B', self.out_shapes['default'][2]),
                 'index': 0}
         }
 
@@ -118,7 +118,7 @@ class FullyConnectedLayer(LayerBase):
         # reshape
         t, n, f = input.shape
         flat_input = _h.reshape(input, (t * n, f))
-        flat_Ha = _h.reshape(Ha, (t * n, self.out_shapes['default'][0]))
+        flat_Ha = _h.reshape(Ha, (t * n, self.out_shapes['default'][2]))
 
         # calculate outputs
         _h.dot(flat_input, WX, flat_Ha)
@@ -141,7 +141,7 @@ class FullyConnectedLayer(LayerBase):
         # reshape
         t, b, f = input_buffer.shape
         flat_input = _h.reshape(input_buffer, (t * b, f))
-        flat_dHa = _h.reshape(dHa, (t * b, self.out_shapes['default'][0]))
+        flat_dHa = _h.reshape(dHa, (t * b, self.out_shapes['default'][2]))
         flat_in_delta_buffer = _h.reshape(in_delta_buffer, (t * b, f))
 
         # calculate in_deltas and gradients
