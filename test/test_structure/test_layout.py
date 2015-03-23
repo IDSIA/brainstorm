@@ -275,29 +275,44 @@ def test_create_layout_stub(layers):
 
 def test_traverse_layout():
     layout = {
-        'inp': {'@index': 0, 'layout': {
-            'inputs': {'@index': 0, 'layout': {}},
-            'outputs': {'@index': 1, 'layout': {
-                'default': {'@index': 0, '@slice': (2, -1, -1), '@shape': (2,)},
-            }},
-            'parameters': {'@index': 2, 'layout': {}},
-            'internals': {'@index': 3, 'layout': {}},
-        }},
-        'A': {'@index': 1, 'layout': {
-            'inputs': {'@index': 0, 'layout': {
-                'default': {'@index': 0, '@slice': (2, -1, -1), '@shape': (2,)}
-            }},
-            'outputs': {'@index': 1, 'layout': {
-                'default': {'@index': 0, '@slice': (2, -1, -1), '@shape': (3,)}
-            }},
-            'parameters': {'@index': 2, 'layout': {
-                'W': {'@index': 0, '@slice': (0, -1, -1), '@shape': (2, 3)},
-                'b': {'@index': 1, '@slice': (0, -1, -1), '@shape': (3,)}
-            }},
-            'internals': {'@index': 3, 'layout': {
-                'Ha': {'@index': 0, '@slice': (2, -1, -1), '@shape': (3,)}
-            }},
-        }}}
+        'inp': {
+            '@type': 'BufferView',
+            '@index': 0,
+            'inputs': {'@type': 'BufferView', '@index': 0},
+            'outputs': {
+                '@type': 'BufferView',
+                '@index': 1,
+                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 2)},
+            },
+            'parameters': {'@type': 'BufferView', '@index': 2},
+            'internals': {'@type': 'BufferView', '@index': 3},
+        },
+        'A': {
+            '@type': 'BufferView',
+            '@index': 1,
+            'inputs': {
+                '@type': 'BufferView',
+                '@index': 0,
+                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 2)}
+            },
+            'outputs': {
+                '@type': 'BufferView',
+                '@index': 1,
+                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3)}
+            },
+            'parameters': {
+                '@type': 'BufferView',
+                '@index': 2,
+                'W': {'@type': 'array', '@index': 0, '@shape': (2, 3)},
+                'b': {'@type': 'array', '@index': 1, '@shape': (3,)}
+            },
+            'internals': {
+                '@type': 'BufferView',
+                '@index': 3,
+                'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3)}
+            }
+        }
+    }
     assert set(gather_array_nodes(layout)) == {
         'inp.outputs.default', 'A.inputs.default', 'A.outputs.default',
         'A.parameters.W', 'A.parameters.b', 'A.internals.Ha'}
@@ -305,73 +320,137 @@ def test_traverse_layout():
 
 def test_create_layout(layers):
     sizes, layout = create_layout(layers)
-    assert layout == {'layout': {
-        'InputLayer': {'@index': 0, 'layout': {
-            'inputs': {'@index': 0, 'layout': {}},
-            'outputs': {'@index': 1, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 0, 2), '@shape': (2,)},
-            }},
-            'parameters': {'@index': 2, 'layout': {}},
-            'internals': {'@index': 3, 'layout': {}},
-        }},
-        'A': {'@index': 1, 'layout': {
-            'inputs': {'@index': 0, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 0, 2), '@shape': (2,)}
-            }},
-            'outputs': {'@index': 1, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 2, 5), '@shape': (3,)}
-            }},
-            'parameters': {'@index': 2, 'layout': {
-                'W': {'@index': 0, '@slice': (0, 0, 6), '@shape': (2, 3)},
-                'b': {'@index': 1, '@slice': (0, 6, 9), '@shape': (3,)}
-            }},
-            'internals': {'@index': 3, 'layout': {
-                'Ha': {'@index': 0, '@slice': (2, 17, 20), '@shape': (3,)}
-            }},
-        }},
-        'B': {'@index': 2, 'layout': {
-            'inputs': {'@index': 0, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 0, 2), '@shape': (2,)}
-            }},
-            'outputs': {'@index': 1, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 5, 10), '@shape': (5,)}
-            }},
-            'parameters': {'@index': 2, 'layout': {
-                'W': {'@index': 0, '@slice': (0, 9, 19), '@shape': (2, 5)},
-                'b': {'@index': 1, '@slice': (0, 19, 24), '@shape': (5,)}
-            }},
-            'internals': {'@index': 3, 'layout': {
-                'Ha': {'@index': 0, '@slice': (2, 20, 25), '@shape': (5,)}
-            }},
-        }},
-        'C': {'@index': 3, 'layout': {
-            'inputs': {'@index': 0, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 2, 10), '@shape': (8,)}
-            }},
-            'outputs': {'@index': 1, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 10, 17), '@shape': (7,)}
-            }},
-            'parameters': {'@index': 2, 'layout': {
-                'W': {'@index': 0, '@slice': (0, 24, 80), '@shape': (8, 7)},
-                'b': {'@index': 1, '@slice': (0, 80, 87), '@shape': (7,)}
-            }},
-            'internals': {'@index': 3, 'layout': {
-                'Ha': {'@index': 0, '@slice': (2, 25, 32), '@shape': (7,)}
-            }},
-        }},
-        'D': {'@index': 4, 'layout': {
-            'inputs': {'@index': 0, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 5, 17), '@shape': (12,)}
-            }},
-            'outputs': {'@index': 1, 'layout': {
-                'default': {'@index': 0, '@slice': (2, 32, 43), '@shape': (11,)}
-            }},
-            'parameters': {'@index': 2, 'layout': {
-                'W': {'@index': 0, '@slice': (0, 87, 219), '@shape': (12, 11)},
-                'b': {'@index': 1, '@slice': (0, 219, 230), '@shape': (11,)}
-            }},
-            'internals': {'@index': 3, 'layout': {
-                'Ha': {'@index': 0, '@slice': (2, 43, 54), '@shape': (11,)}
-            }},
+    assert layout == {
+        'InputLayer': {
+            '@type': 'BufferView',
+            '@index': 0,
+            'inputs': {'@type': 'BufferView', '@index': 0},
+            'outputs': {
+                '@type': 'BufferView',
+                '@index': 1,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2), '@slice': (0, 2)},
+            },
+            'parameters': {'@type': 'BufferView', '@index': 2},
+            'internals': {'@type': 'BufferView', '@index': 3},
+        },
+        'A': {
+            '@type': 'BufferView',
+            '@index': 1,
+            'inputs': {
+                '@type': 'BufferView',
+                '@index': 0,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2), '@slice': (0, 2)}
+            },
+            'outputs': {
+                '@type': 'BufferView',
+                '@index': 1,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 3), '@slice': (2, 5)}
+            },
+            'parameters': {
+                '@type': 'BufferView',
+                '@index': 2,
+                'W': {'@type': 'array', '@index': 0, '@shape': (2, 3),
+                      '@slice': (0, 6)},
+                'b': {'@type': 'array', '@index': 1, '@shape': (3,),
+                      '@slice': (6, 9)}
+            },
+            'internals': {
+                '@type': 'BufferView',
+                '@index': 3,
+                'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3),
+                       '@slice': (17, 20)}
+            },
+        },
+        'B': {
+            '@type': 'BufferView',
+            '@index': 2,
+            'inputs': {
+                '@type': 'BufferView',
+                '@index': 0,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2), '@slice': (0, 2)}
+            },
+            'outputs': {
+                '@type': 'BufferView',
+                '@index': 1,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 5), '@slice': (5, 10)}
+            },
+            'parameters': {
+                '@type': 'BufferView',
+                '@index': 2,
+                'W': {'@type': 'array', '@index': 0, '@shape': (2, 5),
+                      '@slice': (9, 19)},
+                'b': {'@type': 'array', '@index': 1, '@shape': (5,),
+                      '@slice': (19, 24)}
+            },
+            'internals': {
+                '@type': 'BufferView',
+                '@index': 3,
+                'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 5),
+                       '@slice': (20, 25)}
+            },
+        },
+        'C': {
+            '@type': 'BufferView',
+            '@index': 3,
+            'inputs': {
+                '@type': 'BufferView',
+                '@index': 0,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 8), '@slice': (2, 10)}
+            },
+            'outputs': {
+                '@type': 'BufferView',
+                '@index': 1,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 7), '@slice': (10, 17)}
+            },
+            'parameters': {
+                '@type': 'BufferView',
+                '@index': 2,
+                'W': {'@type': 'array', '@index': 0, '@shape': (8, 7),
+                      '@slice': (24, 80)},
+                'b': {'@type': 'array', '@index': 1, '@shape': (7,),
+                      '@slice': (80, 87)}
+            },
+            'internals': {
+                '@type': 'BufferView',
+                '@index': 3,
+                'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 7),
+                       '@slice': (25, 32)}
+            },
+        },
+        'D': {
+            '@type': 'BufferView',
+            '@index': 4,
+            'inputs': {
+                '@type': 'BufferView',
+                '@index': 0,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 12), '@slice': (5, 17)}
+            },
+            'outputs': {
+                '@type': 'BufferView',
+                '@index': 1,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 11), '@slice': (32, 43)}
+            },
+            'parameters': {
+                '@type': 'BufferView',
+                '@index': 2,
+                'W': {'@type': 'array', '@index': 0, '@shape': (12, 11),
+                      '@slice': (87, 219)},
+                'b': {'@type': 'array', '@index': 1, '@shape': (11,),
+                      '@slice': (219, 230)}
+            },
+            'internals': {
+                '@type': 'BufferView',
+                '@index': 3,
+                'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 11),
+                       '@slice': (43, 54)}
+            },
         }}
-    }}

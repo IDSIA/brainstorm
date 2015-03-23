@@ -142,146 +142,98 @@ We use the following network as an example here:
 
 
 .. code-block:: python
-
-    joint_layout = {
-        'InputLayer': {'index': 0, 'layout': {
-            'inputs': {'index': 0, 'layout': {}},
-            'outputs': {'index': 1, 'slice': (2, 0, 14), 'layout': {
-                'input_data': {'index': 0, 'slice': (2, 0, 4),   'shape': (4,)},
-                'targets':    {'index': 1, 'slice': (2, 10, 14), 'shape': (4,)}
-            }},
-            'parameters': {'index': 2, 'layout': {}},
-            'internals': {'index': 3, 'layout': {}},
-        }},
-        'RnnLayer': {'index': 1, 'layout': {
-            'inputs': {'index': 0, 'slice': (2, 0, 4), 'layout': {
-                'default': {'index': 0, 'slice': (2, 0, 4), 'shape': (4,)}
-            }},
-            'outputs': {'index': 1, 'slice': (2, 14, 19), 'layout': {
-                'default': {'index': 0, 'slice': (2, 14, 19), 'shape': (5,)}
-            }},
-            'parameters': {'index': 2, 'slice': (0, 0, 50), 'layout': {
-                'W': {'index': 0, 'slice': (0, 0, 20),  'shape': (4, 5)},
-                'R': {'index': 1, 'slice': (0, 20, 45), 'shape': (5, 5)},
-                'b': {'index': 2, 'slice': (0, 45, 50), 'shape': (5,  )}
-            }},
-            'internals': {'index': 3, 'slice': (2, 30, 35), 'layout': {
-                'Ha': {'index': 0, 'slice': (2, 30, 35), 'shape': (5,)}
-            }},
-        }},
-        'OutLayer': {'index': 2, 'layout': {
-            'inputs': {'index': 0, 'slice': (2, 14, 19), 'layout': {
-                'default': {'index': 0, 'slice': (2, 14, 19), 'shape': (5,)}
-            }},
-            'outputs': {'index': 1, 'slice': (2, 19, 29), 'layout': {
-                'default': {'index': 0, 'slice': (2, 19, 29), 'shape': (10,)}
-            }},
-            'parameters': {'index': 2, 'slice': (0, 50, 110), 'layout': {
-                'W': {'index': 0, 'slice': (0, 50, 100),  'shape': (5, 10)},
-                'b': {'index': 1, 'slice': (0, 100, 110), 'shape': (10,  )}
-            }},
-            'internals': {'index': 3, 'slice': (2, 35, 45), 'layout': {
-                'Ha': {'index': 0, 'slice': (2, 35, 55), 'shape': (10,)}
-            }}
-        }},
-        'MseLayer': {'index': 3, 'layout': {
-            'inputs': {'index': 0, 'layout': {
-                'net_out': {'index': 0, 'slice': (2, 19, 29), 'shape': (10,)},
-                'targets': {'index': 1, 'slice': (2, 10, 14), 'shape': (10,)}
-            }},
-            'outputs': {'index': 1, 'slice': (2, 29, 30), 'layout': {
-                'default': {'index': 0, 'slice': (2, 29, 30), 'shape': (1,)}
-            }},
-            'parameters': {'index': 2, 'layout': {}},
-            'internals': {'index': 3, 'layout': {}},
-        }}
-    }
-
-    sizes = (45, 0, 110)
-
-Alternative
------------
-Another alternative to consider, is to remove the layout entries and "inline"
-them. To distinguish child-nodes from other entries we would need to mark them.
-For example with an ``@`` sign like in the architecture description:
-
 .. code-block:: python
 
     joint_layout = {
         'InputLayer': {
+            '@type': 'BufferView',
             '@index': 0,
-            'inputs': {'@index': 0},
+            'inputs': {'@type': 'BufferView', '@index': 0},
             'outputs': {
+                '@type': 'BufferView',
                 '@index': 1,
-                '@slice': (2, 0, 14),
-                'input_data': {'@index': 0, '@slice': (0, 4), '@buffer_type': 2,  '@shape': (4,)},
-                'targets':    {'@index': 1, '@slice': (2, 10, 14), '@shape': (4,)}
+                '@slice': (0, 14),
+                'input_data': {'@type': 'array', '@index': 0, '@slice': (0, 4), '@shape': ('T', 'B', 4)},
+                'targets':    {'@type': 'array','@index': 1, '@slice': (10, 14), '@shape': ('T', 'B', 4)}
             }},
-            'parameters': {'@index': 2, '@type':'view'},
-            'internals': {'@index': 3},
+            'parameters': {'@type': 'BufferView', '@index': 2},
+            'internals': {'@type': 'BufferView', '@index': 3},
         },
         'RnnLayer': {
+            '@type': 'BufferView',
             '@index': 1,
             'inputs': {
+                '@type': 'BufferView',
                 '@index': 0,
-                '@slice': (2, 0, 4),
-                'default': {'@index': 0, '@slice': (2, 0, 4), '@shape': (4,)}
+                '@slice': (0, 4),
+                'default': {'@type': 'array', '@index': 0, '@slice': (0, 4), '@shape': ('T', 'B', 4)}
             },
             'outputs': {
+                '@type': 'BufferView',
                 '@index': 1,
-                '@slice': (2, 14, 19),
-                'default': {'@index': 0, '@slice': (2, 14, 19), '@shape': (5,)}
+                '@slice': (14, 19),
+                'default': {'@type': 'array', '@index': 0, '@slice': (14, 19), '@shape': ('T', 'B', 5)}
             },
             'parameters': {
+                '@type': 'BufferView',
                 '@index': 2,
-                '@slice': (0, 0, 50),
-                'W': {'@index': 0, '@slice': (0, 0, 20),  '@shape': (4, 5)},
-                'R': {'@index': 1, '@slice': (0, 20, 45), '@shape': (5, 5)},
-                'b': {'@index': 2, '@slice': (0, 45, 50), '@shape': (5,  )}
+                '@slice': (0, 50),
+                'W': {'@type': 'array', '@index': 0, '@slice': (0, 20),  '@shape': (4, 5)},
+                'R': {'@type': 'array', '@index': 1, '@slice': (20, 45), '@shape': (5, 5)},
+                'b': {'@type': 'array', '@index': 2, '@slice': (45, 50), '@shape': (5,  )}
             },
             'internals': {
+                '@type': 'BufferView',
                 '@index': 3,
-                '@slice': (2, 30, 35),
-                'Ha': {'@index': 0, '@slice': (2, 30, 35), '@shape': (5,)}
+                '@slice': (30, 35),
+                'Ha': {'@type': 'array', '@index': 0, '@slice': (30, 35), '@shape': ('T', 'B', 5)}
             },
         },
         'OutLayer': {
+            '@type': 'BufferView',
             '@index': 2,
             'inputs': {
+                '@type': 'BufferView',
                 '@index': 0,
-                '@slice': (2, 14, 19),
-                'default': {'@index': 0, '@slice': (2, 14, 19), '@shape': (5,)}
+                '@slice': (14, 19),
+                'default': {'@type': 'array', '@index': 0, '@slice': (14, 19), '@shape': ('T', 'B', 5)}
             },
             'outputs': {
+                '@type': 'BufferView',
                 '@index': 1,
-                '@slice': (2, 19, 29),
-                'default': {'@index': 0, '@slice': (2, 19, 29), '@shape': (10,)}
+                '@slice': (19, 29),
+                'default': {'@type': 'array', '@index': 0, '@slice': (19, 29), '@shape': ('T', 'B', 10)}
             },
             'parameters': {
+                '@type': 'BufferView',
                 '@index': 2,
-                '@slice': (0, 50, 110),
-                'W': {'@index': 0, '@slice': (0, 50, 100),  '@shape': (5, 10)},
-                'b': {'@index': 1, '@slice': (0, 100, 110), '@shape': (10,  )}
+                '@slice': (50, 110),
+                'W': {'@type': 'array', '@index': 0, '@slice': (50, 100),  '@shape': (5, 10)},
+                'b': {'@type': 'array', '@index': 1, '@slice': (100, 110), '@shape': (10,  )}
             },
             'internals': {
+                '@type': 'BufferView',
                 '@index': 3,
-                '@slice': (2, 35, 45),
-                'Ha': {'@index': 0, '@slice': (2, 35, 55), '@shape': (10,)}
+                '@slice': (35, 45),
+                'Ha': {'@type': 'array', '@index': 0, '@slice': (35, 55), '@shape': ('T', 'B', 10)}
             }
         },
         'MseLayer': {
+            '@type': 'BufferView',
             '@index': 3,
             'inputs': {
+                '@type': 'BufferView',
                 '@index': 0,
-                'net_out': {'@index': 0, '@slice': (2, 19, 29), '@shape': (10,)},
-                'targets': {'@index': 1, '@slice': (2, 10, 14), '@shape': (10,)}
+                'net_out': {'@type': 'array', '@index': 0, '@slice': (19, 29), '@shape': ('T', 'B', 10)},
+                'targets': {'@type': 'array', '@index': 1, '@slice': (10, 14), '@shape': ('T', 'B', 10)}
             },
             'outputs': {
+                '@type': 'BufferView',
                 '@index': 1,
-                '@slice': (2, 29, 30),
-                'default': {'@index': 0, '@slice': (2, 29, 30), '@shape': (1,)}
+                '@slice': (29, 30),
+                'default': {'@type': 'array', '@index': 0, '@slice': (29, 30), '@shape': ('T', 'B', 1)}
             },
-            'parameters': {'@index': 2},
-            'internals': {'@index': 3},
+            'parameters': {'@type': 'BufferView', '@index': 2},
+            'internals': {'@type': 'BufferView', '@index': 3},
         }}
     }

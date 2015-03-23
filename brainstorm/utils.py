@@ -66,3 +66,14 @@ def convert_to_nested_indices(container, start_idx=None):
         else:
             yield start_idx[0]
             start_idx[0] += 1
+
+
+def sort_by_index_key(x):
+    """
+    Used as key in sorted() to order items of a dictionary by the @index
+    entries in its child-dicts if present.
+    """
+    if isinstance(x[1], dict) and '@index' in x[1]:
+        return x[1]['@index']
+    else:
+        return -1

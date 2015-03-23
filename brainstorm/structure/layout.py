@@ -5,7 +5,7 @@ import itertools
 
 import numpy as np
 from brainstorm.utils import (NetworkValidationError, flatten,
-                              convert_to_nested_indices)
+                              convert_to_nested_indices, sort_by_index_key)
 
 
 def create_layout(layers):
@@ -39,13 +39,13 @@ def create_layout(layers):
     for btype, sources in enumerate(ordered_sources_by_btype):
 
         c_table = set_up_connection_table(sources, all_sinks, connections)
-        sizes = [int(np.prod(get_by_path(s, layout)['shape']))
+        sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
                  for s in sources]
         indexes = np.cumsum([0] + sizes)
 
         for source_name, start, stop in zip(sources, indexes, indexes[1:]):
             source_layout = get_by_path(source_name, layout)
-            source_layout['slice'] = (btype, start, stop)
+            source_layout['@slice'] = (start, stop)
 
         for i, sink_name in enumerate(all_sinks):
             if np.sum(c_table[:, i]) == 0:
@@ -54,10 +54,10 @@ def create_layout(layers):
             stop = indexes[c_table.shape[0] - np.argmax(c_table[::-1, i])]
 
             sink_layout = get_by_path(sink_name, layout)
-            sink_layout['slice'] = (btype, start, stop)
+            sink_layout['@slice'] = (start, stop)
 
         buffer_sizes[btype] = indexes[-1]
-    return buffer_sizes, {'layout': layout}
+    return buffer_sizes, layout
 
 
 def get_source_order_by_btype(hubs, connections):
@@ -138,6 +138,7 @@ def add_array_type(d):
     d['@type'] = 'array'
     return d
 
+
 def create_path(layer_name, category, substructure):
     return "{}.{}.{}".format(layer_name, category, substructure)
 
@@ -156,11 +157,13 @@ def get_by_path(path, layout):
 
 
 def gather_array_nodes(layout):
-    for k, v in sorted(layout.items(), key=lambda x: x[1]['@index']):
-        if isinstance(v, dict) and 'layout' in v:
-            for sub_path in gather_array_nodes(v['layout']):
+    for k, v in sorted(layout.items(), key=sort_by_index_key):
+        if k.startswith('@'):
+            continue
+        if isinstance(v, dict) and v['@type'] == 'BufferView':
+            for sub_path in gather_array_nodes(v):
                 yield k + '.' + sub_path
-        elif isinstance(v, dict) and 'slice' in v:
+        elif isinstance(v, dict) and v['@type'] == 'array':
             yield k
 
 
@@ -203,6 +206,22 @@ def merge_connections(connections, forced_orders):
     return merged_connections
 
 
+def get_buffer_type(shape):
+    if shape[0] == 'T':
+        assert shape[1] == 'B', "Invalid shape: {}".format(shape)
+        return 2
+    if shape[0] == 'B':
+        return 1
+    else:
+        return 0
+
+
+def get_feature_size(shape):
+    """Get the feature size of a shape-template."""
+    buffer_type = get_buffer_type(shape)
+    return int(np.prod(shape[buffer_type:]))
+
+
 def group_into_hubs(remaining_sources, connections, layout):
     buffer_hubs = []
     while remaining_sources:
@@ -211,7 +230,7 @@ def group_into_hubs(remaining_sources, connections, layout):
         for s in source_set:
             remaining_sources.remove(s)
         # get buffer type for hub and assert its uniform
-        btypes = [get_by_path(s, layout)['slice'][0]
+        btypes = [get_buffer_type(get_by_path(s, layout)['@shape'])
                   for s in flatten(source_set)]
         assert min(btypes) == max(btypes)
         btype = btypes[0]
