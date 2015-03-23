@@ -58,18 +58,18 @@ The layout specification is a tree of nested dictionaries, containing two
 types of nodes: view-nodes and array-nodes
 that describe what entries the buffer views should have, how big the arrays
 at the leaves are, and their position in the big buffer are.
+Each node has to have an ``@type`` field that is either ``BufferView`` or
+``array``.
 
 View-Nodes
 ----------
 View-nodes will be turned into BufferView objects by the BufferManager.
-Each of them is a dictionary and has to contain a ``layout`` and a ``index``
-entry.
-The ``layout`` is another dictionary mapping names to child-nodes.
-The names of the child-nodes have to be valid python identifiers.
-The ``index`` entry specifies the order among siblings.
+Each of them is a dictionary and has to contain a  and a ``@index``
+entry. The entries not starting with an ``@`` are the child-nodes.
+The ``@index`` entry specifies the order among siblings.
 
 
-A node can also contain a ``slice`` entry, if the buffers of all child nodes
+A node can also contain a ``@slice`` entry, if the buffers of all child nodes
 are of the same type and contiguous in memory. The corresponding array will
 then be available as ``_full_buffer`` member in the resulting BufferView object.
 
@@ -79,53 +79,53 @@ Example node:
 .. code-block:: python
 
     {
-        'index': 0,
-        'layout': {
-            'child_A': {...},
-            'child_B': {...}
-    }}
+        '@type': 'BufferView',
+        '@index': 0,
 
-Another example including the optional ``slice``:
+        'child_A': {...},
+        'child_B': {...}
+    }
+
+Another example including the optional ``@slice``:
 
 .. code-block:: python
 
     {
-        'index': 2,
-        'slice': (0, 50, 110),
-        'layout': {
-            'only_child': {...}
-        }
+        '@type': 'BufferView',
+        '@index': 2,
+        '@slice': (0, 50, 110),
+
+        'only_child': {...}
     }
 
 Array-Nodes
 -----------
-Array-Nodes are also dictionaries but instead of a ``layout`` entry they
-*must have* a ``slice`` entry.
-Note that this means array-nodes are always leafs.
+Array-Nodes are also dictionaries but they *must have* a ``@slice`` and a
+``@shape`` entry, and they cannot have any children.
 Array-nodes will be turned into arrays (exact type depends on the handler), by
 the buffer manager.
 
-The ``slice`` should be a tuple of three integers ``(buffer_type, start, stop)``.
-Where ``buffer_type`` in ``[0, 1, 2]`` refers to one of the :ref:`buffer_types`,
-and ``start`` and ``stop`` specify which slice of the big buffer this array points to.
+The ``@slice`` should be a tuple of two integers ``(start, stop)``.
+Where ``start`` and ``stop`` specify which slice of the big buffer this array
+is a view of points to.
 
-Leafs can also contain a ``shape`` entry describing how the feature
-dimension of that buffer should be shaped. It defaults to ``(stop-start, )``.
+The ``@shape`` entry is a shape-template and describes the dimensionality of
+the array.
 
-Like nodes, a leaf needs an ``index`` entry to specify the order among its
+Like view-nodes, an array-node needs an ``@index`` entry to specify the order among its
 siblings.
 
 Example leaf for a 4 times 5 weight matrix:
 
 .. code-block:: python
 
-    {'index': 1, 'slice': (0, 5, 25),  'shape': (4, 5)}
+    {'@index': 1, '@slice': (5, 25),  '@shape': (4, 5)}
 
 Example leaf for the output of a layer with 10 hidden units:
 
 .. code-block:: python
 
-    {'index': 1, 'slice': (2, 19, 29), 'shape': (10,)}
+    {'@index': 1, '@slice': (19, 29), '@shape': ('T', 'B', 10)}
 
 
 Full Layout Example
