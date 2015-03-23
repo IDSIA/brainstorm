@@ -101,8 +101,8 @@ def test_generate_architecture():
 def test_instantiate_layers_from_architecture():
     arch = {
         'InputLayer': {
-            '@type': 'DataLayer',
-            'shape': 10,
+            '@type': 'InputLayer',
+            'out_shapes': {'default': (10,)},
             '@outgoing_connections': {'A', 'B', 'C'}
         },
         'A': {

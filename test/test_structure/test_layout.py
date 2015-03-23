@@ -313,7 +313,7 @@ def test_traverse_layout():
 
 def test_create_layout(layers):
     sizes, layout = create_layout(layers)
-    assert layout == {
+    assert layout == {'layout': {
         'InputLayer': {'index': 0, 'layout': {
             'inputs': {'index': 0, 'layout': {}},
             'outputs': {'index': 1, 'layout': {
@@ -382,4 +382,4 @@ def test_create_layout(layers):
                 'Ha': {'index': 0, 'slice': (2, 43, 54), 'shape': (11,)}
             }},
         }}
-    }
+    }}

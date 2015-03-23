@@ -16,27 +16,27 @@ from brainstorm.structure.architecture import (
 def layers():
     arch = {
         'InputLayer': {
-            '@type': 'DataLayer',
-            'shape': 2,
+            '@type': 'InputLayer',
+            'out_shapes': {'default': (2,)},
             '@outgoing_connections': {'A', 'B'}
         },
         'A': {
-            '@type': 'FeedForwardLayer',
+            '@type': 'FullyConnectedLayer',
             'shape': 3,
             '@outgoing_connections': {'C'}
         },
         'B': {
-            '@type': 'FeedForwardLayer',
+            '@type': 'FullyConnectedLayer',
             'shape': 5,
             '@outgoing_connections': {'C', 'D'}
         },
         'C': {
-            '@type': 'FeedForwardLayer',
+            '@type': 'FullyConnectedLayer',
             'shape': 7,
             '@outgoing_connections': {'D'}
         },
         'D': {
-            '@type': 'FeedForwardLayer',
+            '@type': 'FullyConnectedLayer',
             'shape': 11,
             '@outgoing_connections': set()
         }

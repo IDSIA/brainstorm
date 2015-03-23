@@ -11,7 +11,7 @@ from brainstorm.structure.architecture import Connection
 
 
 def test_get_layer_class_from_typename():
-    assert get_layer_class_from_typename('DataLayer') == InputLayer
+    assert get_layer_class_from_typename('InputLayer') == InputLayer
     assert get_layer_class_from_typename('NoOpLayer') == NoOpLayer
 
 

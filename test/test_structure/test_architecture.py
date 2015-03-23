@@ -43,7 +43,7 @@ def test_combine_input_sizes_mismatch(sizes):
 def test_validate_architecture_minimal():
     assert validate_architecture({
         'InputLayer': {
-            '@type': 'DataLayer',
+            '@type': 'InputLayer',
             '@outgoing_connections': []
         }})
 
@@ -112,8 +112,8 @@ def test_validate_architecture_raises_inputs_to_data_layer():
 def test_validate_architecture_full_network():
     assert validate_architecture({
         'InputLayer': {
-            '@type': 'DataLayer',
-            'shape': 784,
+            '@type': 'InputLayer',
+            'out_shapes': {'default': 784},
             '@outgoing_connections': ['HiddenLayer']
         },
         'HiddenLayer': {
@@ -133,8 +133,8 @@ def test_validate_architecture_full_network():
 def test_validate_architecture_with_named_sinks():
     assert validate_architecture({
         'InputLayer': {
-            '@type': 'DataLayer',
-            'shape': 10,
+            '@type': 'InputLayer',
+            'out_shapes': {'default': 10},
             '@outgoing_connections': ['HiddenLayer', 'OutputLayer.A']
         },
         'HiddenLayer': {
@@ -152,8 +152,8 @@ def test_validate_architecture_with_named_sinks():
 def test_validate_architecture_with_named_sources():
     assert validate_architecture({
         'InputLayer': {
-            '@type': 'DataLayer',
-            'shape': 10,
+            '@type': 'InputLayer',
+            'shape': {'default': 10},
             '@outgoing_connections': ['SplitLayer']
         },
         'SplitLayer': {
