@@ -35,13 +35,22 @@ def targets():
 
 architectures = [
     {'InputLayer': {
-        '@type': 'DataLayer',
-        'shape': 3,
-        '@outgoing_connections': ['OutputLayer']},
+        '@type': 'InputLayer',
+        'out_shapes': {'default': (3,), 'targets': (2,)},
+        '@outgoing_connections': {
+            'default': ['OutputLayer'],
+            'targets': ['MSE.targets']
+        }},
      'OutputLayer': {
-         '@type': 'FeedForwardLayer',
-         'shape': 2,
-         '@outgoing_connections': []}
+        '@type': 'FullyConnectedLayer',
+        'shape': 2,
+        '@outgoing_connections': {
+            'default': ['MSE']
+        }},
+     'MSE': {
+        '@type': 'MeanSquaredErrorLayer',
+        '@outgoing_connections': {}
+        }
      }
 ]
 
@@ -49,14 +58,7 @@ architectures = [
 @pytest.fixture(scope='module', params=architectures)
 def net(request):
     # TODO: FIX with new error function
-    injectors = {
-        'MSE': {
-            '@type': 'MeanSquaredError',
-            'layer': 'OutputLayer',
-            'target_from': 'test_target'
-        }
-    }
-    n = build_network_from_architecture(request.param, injectors)
+    n = build_network_from_architecture(request.param)
     n.initialize(Gaussian(), seed=235)
     return n
 
