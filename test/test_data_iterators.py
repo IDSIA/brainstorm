@@ -4,7 +4,6 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 import pytest
 from brainstorm.data_iterators import progress_bar, Online, Undivided
-from brainstorm.targets import FramewiseTargets
 
 
 # ########################### Progress Bar ####################################
@@ -25,7 +24,7 @@ def test_progress_bar():
 
 @pytest.mark.parametrize('Iterator', [Undivided, Online])
 def test_data_terator_with_wrong_input_type_raises(Iterator):
-    targets = FramewiseTargets(np.ones((2, 3, 1)))
+    targets = np.ones((2, 3, 1))
     with pytest.raises(AssertionError):
         Iterator(None, targets)
 
@@ -51,7 +50,7 @@ def test_data_terator_with_wrong_targets_type_raises(Iterator):
 
 @pytest.mark.parametrize('Iterator', [Undivided, Online])
 def test_data_terator_with_wrong_input_dim_raises(Iterator):
-    targets = FramewiseTargets(np.ones((2, 3, 1)))
+    targets = np.ones((2, 3, 1))
     with pytest.raises(AssertionError):
         Iterator(np.zeros((2, 3)), targets)
 
@@ -61,15 +60,15 @@ def test_data_terator_with_wrong_input_dim_raises(Iterator):
 
 @pytest.mark.parametrize('Iterator', [Undivided, Online])
 def test_data_terator_with_input_target_shape_mismatch_raises(Iterator):
-    targets = FramewiseTargets(np.ones((2, 3, 1)))
+    targets = np.ones((2, 3, 1))
     with pytest.raises(AssertionError):
         Iterator(np.zeros((2, 5, 7)), targets)
 
 
 @pytest.mark.parametrize('Iterator', [Undivided, Online])
 def test_data_terator_with_shape_mismatch_among_targets_raises(Iterator):
-    targets1 = FramewiseTargets(np.ones((2, 3, 1)))
-    targets2 = FramewiseTargets(np.ones((2, 5, 1)))
+    targets1 = np.ones((2, 3, 1))
+    targets2 = np.ones((2, 5, 1))
     with pytest.raises(AssertionError):
         Iterator(np.zeros((2, 3, 7)), targets1=targets1, targets2=targets2)
     with pytest.raises(AssertionError):
@@ -80,7 +79,7 @@ def test_data_terator_with_shape_mismatch_among_targets_raises(Iterator):
 
 def test_undivided_default():
     input_data = np.zeros((2, 3, 5))
-    targets = FramewiseTargets(np.ones((2, 3, 1)))
+    targets = np.ones((2, 3, 1))
     iter = Undivided(input_data, targets)()
     x, t = next(iter)
     assert x is input_data
@@ -91,8 +90,8 @@ def test_undivided_default():
 
 def test_undivided_named_targets():
     input_data = np.zeros((2, 3, 5))
-    targets1 = FramewiseTargets(np.ones((2, 3, 1)))
-    targets2 = FramewiseTargets(np.ones((2, 3, 1)))
+    targets1 = np.ones((2, 3, 1))
+    targets2 = np.ones((2, 3, 1))
     iter = Undivided(input_data, targets1=targets1, targets2=targets2)()
     x, t = next(iter)
     assert x is input_data
@@ -111,32 +110,27 @@ def test_online_default():
                      [1, 1, 1, 1],
                      [1, 1, 1, 0]
                      ]).T.reshape(4, 5, 1)
-    targets = FramewiseTargets(np.ones((4, 5, 1)), mask=mask)
+    targets = np.ones((4, 5, 1))
     it = Online(input_data, targets, shuffle=False)()
     x, t = next(it)
     assert x.shape == (3, 1, 3)
     assert set(t.keys()) == {'default_target'}
-    assert isinstance(t['default_target'], FramewiseTargets)
     assert t['default_target'].shape == (3, 1, 1)
     x, t = next(it)
     assert x.shape == (2, 1, 3)
     assert set(t.keys()) == {'default_target'}
-    assert isinstance(t['default_target'], FramewiseTargets)
     assert t['default_target'].shape == (2, 1, 1)
     x, t = next(it)
     assert x.shape == (1, 1, 3)
     assert set(t.keys()) == {'default_target'}
-    assert isinstance(t['default_target'], FramewiseTargets)
     assert t['default_target'].shape == (1, 1, 1)
     x, t = next(it)
     assert x.shape == (4, 1, 3)
     assert set(t.keys()) == {'default_target'}
-    assert isinstance(t['default_target'], FramewiseTargets)
     assert t['default_target'].shape == (4, 1, 1)
     x, t = next(it)
     assert x.shape == (3, 1, 3)
     assert set(t.keys()) == {'default_target'}
-    assert isinstance(t['default_target'], FramewiseTargets)
     assert t['default_target'].shape == (3, 1, 1)
     with pytest.raises(StopIteration):
         next(it)

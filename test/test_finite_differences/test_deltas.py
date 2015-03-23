@@ -4,7 +4,6 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 import numpy as np
 from brainstorm.randomness import global_rnd
-from brainstorm.targets import FramewiseTargets
 from brainstorm.structure.network import build_network_from_architecture
 from brainstorm.initializers import Gaussian
 
@@ -30,7 +29,7 @@ def input_data():
 def targets():
     global_rnd.set_seed(7331)
     return {
-        'test_target': FramewiseTargets(global_rnd.randn(7, 5, 2))
+        'test_target': global_rnd.randn(7, 5, 2)
     }
 
 architectures = [

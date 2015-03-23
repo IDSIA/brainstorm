@@ -4,7 +4,6 @@ from __future__ import division, print_function, unicode_literals
 
 import numpy as np
 from brainstorm.describable import Describable
-from brainstorm.targets import Targets
 from brainstorm.training.schedules import get_schedule
 
 
@@ -42,7 +41,6 @@ class DiagnosticStep(TrainingStep):
 
     def run(self, input_data, targets):
         print("DiagnosticStep: x.shape=", input_data.shape)
-        assert isinstance(targets, Targets)
         print("DiagnosticStep: t=", targets)
         return 15
 

@@ -3,12 +3,12 @@
 
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
-import pytest
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
 from brainstorm.layers.framewise_mse_layer import FramewiseMSELayer
 from brainstorm.handlers import NumpyHandler
 import numpy as np
-np.random.seed()
+
+np.random.seed(1234)
 
 
 def approx_fprime(x0, f, epsilon, *args):

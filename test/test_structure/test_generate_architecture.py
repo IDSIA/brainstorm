@@ -3,9 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.structure.architecture import (
-    generate_architecture, get_layer_description, get_canonical_layer_order,
+    generate_architecture, get_layer_description,
     instantiate_layers_from_architecture)
-from brainstorm.layers.python_layers import InputLayer, NoOpLayer
+from brainstorm.layers.input_layer import InputLayer
+from brainstorm.layers.noop_layer import NoOpLayer
 
 
 def test_get_layer_description():
@@ -129,7 +130,7 @@ def test_instantiate_layers_from_architecture():
     layers = instantiate_layers_from_architecture(arch)
     assert set(arch.keys()) == set(layers.keys())
 
-    assert type(layers['InputLayer']) == InputLayer
+    assert isinstance(layers['InputLayer'], InputLayer)
     assert type(layers['A']) == NoOpLayer
     assert type(layers['B']) == NoOpLayer
     assert type(layers['C']) == NoOpLayer

@@ -4,13 +4,9 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers import PyCudaHandler
-import pytest
-
 from brainstorm.structure import build_net
-from brainstorm.structure.construction import ConstructionWrapper, \
-    ConstructionInjector
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.initializers import Gaussian
-from brainstorm.targets import FramewiseTargets
 
 
 

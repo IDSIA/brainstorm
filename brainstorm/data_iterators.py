@@ -5,7 +5,6 @@ from datetime import datetime
 import math
 import numpy as np
 from brainstorm.randomness import Seedable
-from brainstorm.targets import Targets
 
 
 def progress_bar(maximum, prefix='[',
@@ -47,11 +46,9 @@ class Undivided(DataIterator):
         :type named_targets: dict[str, brainstorm.targets.Target]
         """
         self.input_data = _assert_correct_input_data(input_data)
-        self.targets = _construct_and_validate_targets(input_data, default,
-                                                       named_targets)
 
     def __call__(self, verbose=False):
-        yield self.input_data, self.targets
+        yield self.input_data
 
 
 class Online(DataIterator, Seedable):
@@ -62,8 +59,6 @@ class Online(DataIterator, Seedable):
                  seed=None, **named_targets):
         Seedable.__init__(self, seed=seed)
         self.input_data = _assert_correct_input_data(input_data)
-        self.targets = _construct_and_validate_targets(input_data, default,
-                                                       named_targets)
         self.shuffle = shuffle
         self.verbose = verbose
 
@@ -79,17 +74,8 @@ class Online(DataIterator, Seedable):
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
-            targets = {}
-            max_len = 0
-            for t_name, tar in self.targets.items():
-                targets[t_name] = tar[:, idx]
-                max_len = max(max_len, targets[t_name].sequence_lengths.max())
-
-            for tar in targets.values():
-                tar.trim(max_len)
-
-            input_data = self.input_data[:max_len, idx:idx+1, :]
-            yield input_data, targets
+            input_data = self.input_data[:, idx:idx+1, :]
+            yield input_data
             print(p_bar.send(i+1), end='')
 
 
@@ -100,19 +86,3 @@ def _assert_correct_input_data(input_data):
     assert input_data.ndim == 3, "input_data has to be 3D " \
                                  "but was {}".format(input_data.shape)
     return input_data
-
-
-def _construct_and_validate_targets(input_data, default_target,
-                                    named_targets):
-    targets = {}
-    if default_target is not None:
-        targets['default_target'] = default_target
-    targets.update(named_targets)
-    for t_name, t in targets.items():
-        assert isinstance(t, Targets), '{} is not an targets object!' \
-                                       ''.format(t_name)
-        assert input_data.shape[1] == t.shape[1], \
-            "number of targets in {} doesn't match number of input " \
-            "sequences ({} != {})".format(t_name, t.shape[1],
-                                          input_data.shape[1])
-    return targets

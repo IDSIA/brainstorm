@@ -48,7 +48,7 @@ def create_layout(layers):
             source_layout['@slice'] = (start, stop)
 
         for i, sink_name in enumerate(all_sinks):
-            if np.sum(c_table[:, i]) == 0:
+            if c_table[:, i].sum() == 0:
                 continue  # this sink is not connected
             start = indexes[np.argmax(c_table[:, i])]
             stop = indexes[c_table.shape[0] - np.argmax(c_table[::-1, i])]
@@ -217,7 +217,7 @@ def get_buffer_type(shape):
 def get_feature_size(shape):
     """Get the feature size of a shape-template."""
     buffer_type = get_buffer_type(shape)
-    return int(np.prod(shape[buffer_type:]))
+    return int(np.array(shape[buffer_type:]).prod())
 
 
 def group_into_hubs(remaining_sources, connections, layout):
@@ -318,6 +318,7 @@ def can_be_connected_with_single_buffer(connection_table):
     :type connection_table: np.ndarray
     :rtype: bool
     """
-    padded = np.pad(connection_table, [(1, 1), (0, 0)], 'constant')
+    padded = np.zeros((connection_table.shape[0]+2, connection_table.shape[1]))
+    padded[1:-1, :] = connection_table
     return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)
 
