@@ -88,7 +88,7 @@ def get_forced_orders(layers):
 
 
 def create_layout_stub(layers):
-    root = {}
+    root = {'@type': 'BufferView'}
     for i, (layer_name, layer) in enumerate(layers.items()):
         root[layer_name] = get_layout_stub_for_layer(layer)
         root[layer_name]['@type'] = 'BufferView'
@@ -148,8 +148,6 @@ def get_by_path(path, layout):
     for p in path.split('.'):
         try:
             current_node = current_node[p]
-            if 'layout' in current_node:
-                current_node = current_node['layout']
         except KeyError:
             raise KeyError('Path "{}" could not be resolved. Key "{}" missing.'
                            .format(path, p))

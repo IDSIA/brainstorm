@@ -5,29 +5,32 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers import default_handler
 from brainstorm.structure.buffer_views import BufferView
+from brainstorm.structure.layout import get_buffer_type
+from brainstorm.utils import sort_by_index_key
 
 
 def create_buffer_views_from_layout(layout, buffers):
-    if 'slice' in layout:
-        buffer_type, start, stop = layout['slice']
-        shape = layout.get('shape', (stop - start,))
+    if '@slice' in layout:
+        start, stop = layout['@slice']
+        shape = layout['@shape']
+        buffer_type = get_buffer_type(shape)
         full_buffer = buffers[buffer_type][..., start:stop]
-        full_buffer = full_buffer.reshape(full_buffer.shape[:-1] + shape)
+        full_buffer = full_buffer.reshape(full_buffer.shape[:-1] + shape[buffer_type:])
     else:
         full_buffer = None
 
-    if 'layout' not in layout:
-        assert full_buffer is not None, layout
-        return full_buffer
-    else:
+    if layout['@type'] == 'BufferView':
         children = [(n, create_buffer_views_from_layout(sub_node, buffers))
-                    for n, sub_node in sorted(layout['layout'].items(),
-                                              key=lambda x: x[1]['index'])]
+                    for n, sub_node in sorted(layout.items(), key=sort_by_index_key)
+                    if not n.startswith('@')]
         if children:
             names, child_buffers = zip(*children)
         else:
             names, child_buffers = [], []
         return BufferView(names, child_buffers, full_buffer)
+    else:  # layout['@type'] == 'array':
+        assert full_buffer is not None, layout
+        return full_buffer
 
 
 class BufferManager(object):

@@ -159,6 +159,7 @@ def test_permute_rows():
 def test_create_layout_stub(layers):
     layout = create_layout_stub(layers)
     assert layout == {
+        '@type': 'BufferView',
         'InputLayer': {
             '@type': 'BufferView',
             '@index': 0,
@@ -275,6 +276,7 @@ def test_create_layout_stub(layers):
 
 def test_traverse_layout():
     layout = {
+        '@type': 'BufferView',
         'inp': {
             '@type': 'BufferView',
             '@index': 0,
@@ -321,6 +323,7 @@ def test_traverse_layout():
 def test_create_layout(layers):
     sizes, layout = create_layout(layers)
     assert layout == {
+        '@type': 'BufferView',
         'InputLayer': {
             '@type': 'BufferView',
             '@index': 0,
