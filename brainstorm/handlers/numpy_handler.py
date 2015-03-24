@@ -83,6 +83,18 @@ class NumpyHandler(object):
         assert len(b.shape) == 1
         out[:] = a + b
 
+    @staticmethod
+    def broadcast_features_t(a, out):
+        assert len(a.shape) == 3
+        assert a.shape[2] == 1
+        assert len(out.shape) > 2
+        num_extra_dims = len(out.shape) - 3
+        shape_to_add = tuple([1] * num_extra_dims)
+        b = np.reshape(a, a.shape + shape_to_add)
+
+        shape_to_tile = (1, 1) + out.shape[2:]
+        out[:] = np.tile(b, shape_to_tile)
+
     # Activation functions
 
     @staticmethod

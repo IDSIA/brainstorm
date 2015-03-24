@@ -7,7 +7,7 @@ from brainstorm.layers.squared_difference_layer import SquaredDifferenceLayer
 from brainstorm.handlers import NumpyHandler
 from helpers import run_layer_test
 import numpy as np
-# np.random.seed(1234)
+np.random.seed(1234)
 
 
 def test_fully_connected_layer():
@@ -30,10 +30,10 @@ def test_fully_connected_layer():
 def test_framewise_mse_layer():
 
     eps = 1e-4
-    time_steps = 1
-    batch_size = 1
-    in_shapes = {'inputs_1': ('T', 'B', 3, 3, 2),
-                 'inputs_2': ('T', 'B', 3, 3, 2)
+    time_steps = 3
+    batch_size = 2
+    in_shapes = {'inputs_1': ('T', 'B', 3, 2),
+                 'inputs_2': ('T', 'B', 3, 2)
                  }
 
     layer = SquaredDifferenceLayer('TestLayer', in_shapes, [], [])

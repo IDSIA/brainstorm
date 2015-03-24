@@ -79,6 +79,10 @@ class PyCudaHandler(object):
     def add_mv(a, b, out):
         cumisc.add_matvec(a, b, out=out)
 
+    @staticmethod
+    def broadcast_features_t(a, out):
+        raise NotImplementedError
+
     # Activation functions
 
     @staticmethod

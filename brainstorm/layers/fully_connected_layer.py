@@ -35,7 +35,7 @@ class FullyConnectedLayer(LayerBase):
         return {
             'W': {
                 '@shape': (self.in_shapes['default'][2],
-                          self.out_shapes['default'][2]),
+                           self.out_shapes['default'][2]),
                 '@index': 0},
             'b': {
                 '@shape': (self.out_shapes['default'][2],),
