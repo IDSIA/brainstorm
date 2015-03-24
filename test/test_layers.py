@@ -4,7 +4,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
-from brainstorm.layers.framewise_mse_layer import SquaredDifferenceLayer
+from brainstorm.layers.squared_difference_layer import SquaredDifferenceLayer
 from brainstorm.handlers import NumpyHandler
 import numpy as np
 np.random.seed(1234)
