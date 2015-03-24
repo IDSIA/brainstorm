@@ -58,9 +58,9 @@ class FullyConnectedLayer(LayerBase):
         Ha = forward_buffers.internals.Ha
 
         # reshape
-        t, n, f = input.shape
-        flat_input = _h.reshape(input, (t * n, f))
-        flat_Ha = _h.reshape(Ha, (t * n, self.out_shapes['default'][2]))
+        t, b, f = input.shape
+        flat_input = _h.reshape(input, (t * b, f))
+        flat_Ha = _h.reshape(Ha, (t * b, self.out_shapes['default'][2]))
 
         # calculate outputs
         _h.dot(flat_input, WX, flat_Ha)

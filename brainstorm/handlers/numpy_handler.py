@@ -40,7 +40,7 @@ class NumpyHandler(object):
     # ---------------- Mathematical Operations ---------------- #
 
     def sum(self, a, axis, out):
-        if len(out.shape) == 2:
+        if len(out.shape) == len(a.shape):
             keepdims = True
         else:
             keepdims = False
@@ -63,9 +63,18 @@ class NumpyHandler(object):
         np.multiply(a, b, out)
 
     @staticmethod
+    def elem_mult_st(a, b, out):
+        np.multiply(a, b, out)
+
+    @staticmethod
     def add_mm(a, b, out):
         assert a.shape == b.shape == out.shape
         out[:] = a + b
+
+    @staticmethod
+    def subtract_mm(a, b, out):
+        assert a.shape == b.shape == out.shape
+        out[:] = a - b
 
     @staticmethod
     def add_mv(a, b, out):

@@ -4,10 +4,9 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
-from brainstorm.layers.framewise_mse_layer import FramewiseMSELayer
+from brainstorm.layers.framewise_mse_layer import SquaredDifferenceLayer
 from brainstorm.handlers import NumpyHandler
 import numpy as np
-
 np.random.seed(1234)
 
 
@@ -39,7 +38,7 @@ def get_output_error(_h, forward_buffers):
     error = 0.0
     for key in forward_buffers.outputs.keys():
         value = _h.get_numpy_copy(forward_buffers.outputs[key])
-        error += 0.5*(value**2).sum()
+        error += value.sum()
     return error
 
 
@@ -51,9 +50,9 @@ def buffer_shape_from_in_out_shape(time_steps, batch_size, shape):
     :param shape: A shape tuple, whose first entry might be 'T' and second
     entry might be 'B', but rest must be positive integers.
     :return: A shape tuple of same length as inputs, but consisting of
-    postive integers.
+    positive integers.
     """
-    return time_steps, batch_size, shape[2]
+    return (time_steps, batch_size) + shape[2:]
 
 
 def setup_buffers(time_steps, batch_size, layer):
@@ -126,13 +125,13 @@ def setup_buffers(time_steps, batch_size, layer):
     param_structure = layer.get_parameter_structure()
     print("Setting up parameters")
     for name, attributes in sorted(param_structure.items(),
-                                   key=lambda x: x[1]['index']):
+                                   key=lambda x: x[1]['@index']):
         param_names.append(name)
-        print(name, " : ", attributes['shape'])
-        data = _h.zeros(attributes['shape'])
-        _h.set_from_numpy(data, np.random.randn(*attributes['shape']))
+        print(name, " : ", attributes['@shape'])
+        data = _h.zeros(attributes['@shape'])
+        _h.set_from_numpy(data, np.random.randn(*attributes['@shape']))
         forward_param_buffers.append(data)
-        backward_param_buffers.append(_h.zeros(attributes['shape']))
+        backward_param_buffers.append(_h.zeros(attributes['@shape']))
 
     forward_buffer_names.append('parameters')
     forward_buffer_views.append(BufferView(param_names, forward_param_buffers))
@@ -147,12 +146,12 @@ def setup_buffers(time_steps, batch_size, layer):
     internal_structure = layer.get_internal_structure()
     print("Setting up internals")
     for name, attributes in sorted(internal_structure.items(),
-                                   key=lambda x: x[1]['index']):
+                                   key=lambda x: x[1]['@index']):
         print(name, attributes)
         internal_names.append(name)
         shape = buffer_shape_from_in_out_shape(time_steps,
                                                batch_size,
-                                               attributes['shape'])
+                                               attributes['@shape'])
         print(name, " : ", shape)
         forward_internal_buffers.append(_h.zeros(shape))
         backward_internal_buffers.append(_h.zeros(shape))
@@ -186,7 +185,7 @@ def run_layer_test(layer, time_steps, batch_size, eps):
     # First do a forward and backward pass to calculate gradients
     layer.forward_pass(forward_buffers)
     for key in forward_buffers.outputs.keys():
-        _h.copy_to(backward_buffers.outputs[key], forward_buffers.outputs[key])
+        _h.fill(backward_buffers.outputs[key], 1.0)
     layer.backward_pass(forward_buffers, backward_buffers)
 
     # Now calculate approximate gradients
@@ -233,7 +232,7 @@ def run_layer_test(layer, time_steps, batch_size, eps):
         assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
 
 
-def dtest_fully_connected_layer():
+def test_fully_connected_layer():
 
     eps = 1e-4
     time_steps = 3
@@ -242,7 +241,7 @@ def dtest_fully_connected_layer():
     layer_shape = 2
 
     in_shapes = {'default': ('T', 'B', input_shape,)}
-    layer = FullyConnectedLayer('TestLayer1', in_shapes, [], [],
+    layer = FullyConnectedLayer('TestLayer', in_shapes, [], [],
                                 shape=layer_shape,
                                 activation_function='sigmoid')
     layer.set_handler(NumpyHandler(np.float64))
@@ -253,14 +252,29 @@ def dtest_fully_connected_layer():
 def test_framewise_mse_layer():
 
     eps = 1e-4
-    time_steps = 3
-    batch_size = 2
-    in_shapes = {'outputs': ('T', 'B', 3, 3, 2),
-                 'targets': ('T', 'B', 3, 3, 2),
-                 'masks': ('T', 'B', 1)
+    time_steps = 1
+    batch_size = 1
+    in_shapes = {'inputs_1': ('T', 'B', 3, 3, 2),
+                 'inputs_2': ('T', 'B', 3, 3, 2)
                  }
 
-    layer = FramewiseMSELayer('FMSELayer', in_shapes, [], [])
+    layer = SquaredDifferenceLayer('TestLayer', in_shapes, [], [])
     layer.set_handler(NumpyHandler(np.float64))
+
     print("\n---------- Testing FramewiseMSELayer ----------")
     run_layer_test(layer, time_steps, batch_size, eps)
+    # _h = layer.handler
+    # forward_buffers, backward_buffers = setup_buffers(time_steps, batch_size,
+    #                                                   layer)
+    # targets = forward_buffers.inputs.targets
+    # masks = forward_buffers.inputs.masks
+    # outputs = forward_buffers.inputs.outputs
+    # errors = forward_buffers.outputs.errors
+    # grad_outputs = backward_buffers.inputs.outputs
+    #
+    # layer.forward_pass(forward_buffers)
+    # expected_error = 0.5*((outputs-targets)**2).reshape((time_steps,
+    #                                                      batch_size, 18))
+    # assert np.allclose(masks*expected_error.sum(axis=2, keepdims=True), errors)
+    # layer.backward_pass(forward_buffers, backward_buffers)
+    # assert np.allclose(masks * (outputs-targets), grad_outputs)

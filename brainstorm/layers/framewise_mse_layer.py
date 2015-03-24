@@ -5,14 +5,13 @@ from brainstorm.layers.base_layer import LayerBase
 from brainstorm.utils import LayerValidationError
 
 
-class FramewiseMSELayer(LayerBase):
-    inputs = {'outputs': ('T', 'B', 'F'),
-              'targets': ('T', 'B', 'F'),
-              'masks': ('T', 'B', 1)
+class SquaredDifferenceLayer(LayerBase):
+    inputs = {'inputs_1': ('T', 'B', 'F'),
+              'inputs_2': ('T', 'B', 'F')
               }
     """Names and shape-templates for all inputs of this layer"""
 
-    outputs = {'errors': ('T', 'B', '1')}
+    outputs = {'default': ('T', 'B', 'F')}
     """Names and shape-templates for all outputs of this layer"""
 
     expected_kwargs = {}
@@ -20,10 +19,9 @@ class FramewiseMSELayer(LayerBase):
 
     def _get_output_shapes(self):
         """
-        Sets the shape of the 'errors' output using in_shapes['outputs']
+        Sets the shape of the 'default' output using in_shapes['inputs_1']
         """
-        return {'errors': (
-            self.in_shapes['outputs'][0], self.in_shapes['outputs'][1], 1)}
+        return {'default': self.in_shapes['inputs_1']}
 
     def _validate_in_shapes(self):
         """Ensure self.in_shapes are all valid.
@@ -45,44 +43,22 @@ class FramewiseMSELayer(LayerBase):
                         self.name, in_shape,
                         input_name, self.inputs[input_name]))
 
-        # 'outputs' and 'targets' must be wired in and match first 2 dimensions
-        if 'outputs' not in self.in_shapes or 'targets' not in self.in_shapes:
-            raise LayerValidationError("{} must have both 'outputs' and "
-                                       "'targets' as inputs".format(self.name))
-        if self.in_shapes['outputs'][0] != self.in_shapes['targets'][0]:
-            raise LayerValidationError("{}: outputs and targets must have "
+        # 'inputs_1' and 'inputs_2' must be wired in and match first 2 dimensions
+        if 'inputs_1' not in self.in_shapes or 'inputs_2' not in self.in_shapes:
+            raise LayerValidationError("{} must have both 'inputs_1' and "
+                                       "'inputs_2' as inputs".format(self.name))
+        if self.in_shapes['inputs_1'][0] != self.in_shapes['inputs_2'][0]:
+            raise LayerValidationError("{}: inputs_1 and inputs_2 must have "
                                        "same first dimensions but got {} and {}"
                                        "".format(self.name,
-                                                 self.in_shapes['outputs'][0],
-                                                 self.in_shapes['targets'][0]))
-        if self.in_shapes['outputs'][1] != self.in_shapes['targets'][1]:
-            raise LayerValidationError("{}: outputs and targets must have "
+                                                 self.in_shapes['inputs_1'][0],
+                                                 self.in_shapes['inputs_2'][0]))
+        if self.in_shapes['inputs_1'][1] != self.in_shapes['inputs_2'][1]:
+            raise LayerValidationError("{}: inputs_1 and inputs_2 must have "
                                        "same second dimensions but got {} and {}"
                                        "".format(self.name,
-                                                 self.in_shapes['outputs'][1],
-                                                 self.in_shapes['outputs'][1]))
-        # 'masks' is optional input, but if present must be 3D and match targets
-        if 'masks' in self.in_shapes:
-            if len(self.in_shapes['masks']) != 3:
-                raise LayerValidationError(
-                    "{}: masks must be 3-dimensional but got {"
-                    "}-dimensional".format(self.name,
-                                           len(self.in_shapes['masks'])))
-            if self.in_shapes['masks'][0] != self.in_shapes['targets'][0]:
-                raise LayerValidationError(
-                    "{}: masks and targets must have same first dimensions "
-                    "but got {} and {}".format(self.name,
-                                               self.in_shapes['masks'][0],
-                                               self.in_shapes['targets'][0])
-                )
-            if self.in_shapes['masks'][1] != self.in_shapes['targets'][1]:
-                raise LayerValidationError(
-                    "{}: masks and targets must have same first dimensions "
-                    "but got {} and {}".format(self.name,
-                                               self.in_shapes['masks'][1],
-                                               self.in_shapes['targets'][1])
-                )
-            self.masks = True
+                                                 self.in_shapes['inputs_1'][1],
+                                                 self.in_shapes['inputs_2'][1]))
 
     def _validate_out_shapes(self):
         """Ensure self.out_shapes are all valid.
@@ -94,3 +70,36 @@ class FramewiseMSELayer(LayerBase):
                     'Invalid out_shapes. {} has no output named "{}". '
                     'Choices are: {}'.format(self.name, output_name,
                                              self.outputs))
+
+        if self.out_shapes['default'] != self.in_shapes['inputs_1']:
+            LayerValidationError(
+                '{}: shape of default output {} must match shape of both '
+                'inputs {}'.format(self.name, self.out_shapes['default'],
+                                   self.in_shapes['inputs_1'])
+            )
+
+    def forward_pass(self, forward_buffers):
+        # prepare
+        _h = self.handler
+        inputs_1 = forward_buffers.inputs.inputs_1
+        inputs_2 = forward_buffers.inputs.inputs_2
+        diff = forward_buffers.outputs.default
+
+        # calculate
+        _h.subtract_mm(inputs_1, inputs_2, out=diff)
+        _h.elem_mult(diff, diff, out=diff)
+        _h.elem_mult_st(0.5, diff, out=diff)
+
+    def backward_pass(self, forward_buffers, backward_buffers):
+        # prepare
+        _h = self.handler
+        grad_diff = backward_buffers.outputs.default
+        grad_inputs_1 = backward_buffers.inputs.inputs_1
+        grad_inputs_2 = backward_buffers.inputs.inputs_2
+        inputs_1 = forward_buffers.inputs.inputs_1
+        inputs_2 = forward_buffers.inputs.inputs_2
+
+        _h.subtract_mm(inputs_1, inputs_2, out=grad_inputs_1)
+        _h.subtract_mm(inputs_2, inputs_1, out=grad_inputs_2)
+        _h.elem_mult(grad_diff, grad_inputs_1, grad_inputs_1)
+        _h.elem_mult(grad_diff, grad_inputs_2, grad_inputs_2)

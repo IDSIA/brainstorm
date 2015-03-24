@@ -64,8 +64,16 @@ class PyCudaHandler(object):
         elem_mult_kernel(a, b, out)
 
     @staticmethod
+    def elem_mult_st(a, b, out):
+        elem_mult_st_kernel(a, b, out)
+
+    @staticmethod
     def add_mm(a, b, out):
         add_mm_kernel(a, b, out)
+
+    @staticmethod
+    def subtract_mm(a, b, out):
+        subtract_mm_kernel(a, b, out)
 
     @staticmethod
     def add_mv(a, b, out):
@@ -104,10 +112,22 @@ elem_mult_kernel = ElementwiseKernel(
     b"elem_mult_kernel"
 )
 
+elem_mult_st_kernel = ElementwiseKernel(
+    b"float x, float* y, float *out",
+    b"out[i] = x * y[i]",
+    b"elem_mult_kernel"
+)
+
 add_mm_kernel = ElementwiseKernel(
     b"float* x, float* y, float *out",
     b"out[i] = x[i] + y[i]",
     b"add_mm_kernel"
+)
+
+subtract_mm_kernel = ElementwiseKernel(
+    b"float* x, float* y, float *out",
+    b"out[i] = x[i] - y[i]",
+    b"subtract_mm_kernel"
 )
 
 sigmoid_kernel = ElementwiseKernel(
