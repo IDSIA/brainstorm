@@ -86,8 +86,8 @@ class SquaredDifferenceLayer(LayerBase):
         diff = forward_buffers.outputs.default
 
         # calculate
-        _h.subtract_mm(inputs_1, inputs_2, out=diff)
-        _h.elem_mult(diff, diff, out=diff)
+        _h.subtract_tt(inputs_1, inputs_2, out=diff)
+        _h.elem_mult_tt(diff, diff, out=diff)
         _h.elem_mult_st(0.5, diff, out=diff)
 
     def backward_pass(self, forward_buffers, backward_buffers):
@@ -99,7 +99,7 @@ class SquaredDifferenceLayer(LayerBase):
         inputs_1 = forward_buffers.inputs.inputs_1
         inputs_2 = forward_buffers.inputs.inputs_2
 
-        _h.subtract_mm(inputs_1, inputs_2, out=grad_inputs_1)
-        _h.subtract_mm(inputs_2, inputs_1, out=grad_inputs_2)
-        _h.elem_mult(grad_diff, grad_inputs_1, grad_inputs_1)
-        _h.elem_mult(grad_diff, grad_inputs_2, grad_inputs_2)
+        _h.subtract_tt(inputs_1, inputs_2, out=grad_inputs_1)
+        _h.subtract_tt(inputs_2, inputs_1, out=grad_inputs_2)
+        _h.elem_mult_tt(grad_diff, grad_inputs_1, grad_inputs_1)
+        _h.elem_mult_tt(grad_diff, grad_inputs_2, grad_inputs_2)

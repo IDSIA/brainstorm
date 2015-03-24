@@ -48,19 +48,19 @@ class PyCudaHandler(object):
     # ---------------- Mathematical Operations ---------------- #
 
     @staticmethod
-    def sum(a, axis, out):
+    def sum_t(a, axis, out):
         cumisc.sum(a, axis, out)
 
     @staticmethod
-    def dot(a, b, out, transa='N', transb='N'):
+    def dot_mm(a, b, out, transa='N', transb='N'):
         culinalg.dot(a, b, transa=transa, transb=transb, out=out)
 
     @staticmethod
-    def dot_add(a, b, out, transa='N', transb='N'):
+    def dot_add_mm(a, b, out, transa='N', transb='N'):
         culinalg.add_dot(a, b, out, transa, transb)
 
     @staticmethod
-    def elem_mult(a, b, out):
+    def elem_mult_tt(a, b, out):
         elem_mult_kernel(a, b, out)
 
     @staticmethod
@@ -68,11 +68,11 @@ class PyCudaHandler(object):
         elem_mult_st_kernel(a, b, out)
 
     @staticmethod
-    def add_mm(a, b, out):
+    def add_tt(a, b, out):
         add_mm_kernel(a, b, out)
 
     @staticmethod
-    def subtract_mm(a, b, out):
+    def subtract_tt(a, b, out):
         subtract_mm_kernel(a, b, out)
 
     @staticmethod

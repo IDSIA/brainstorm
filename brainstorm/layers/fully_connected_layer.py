@@ -63,7 +63,7 @@ class FullyConnectedLayer(LayerBase):
         flat_Ha = _h.reshape(Ha, (t * b, self.out_shapes['default'][2]))
 
         # calculate outputs
-        _h.dot(flat_input, WX, flat_Ha)
+        _h.dot_mm(flat_input, WX, flat_Ha)
         _h.add_mv(flat_Ha, W_bias, flat_Ha)
         self.act_func(Ha, output)
 
@@ -88,6 +88,6 @@ class FullyConnectedLayer(LayerBase):
 
         # calculate in_deltas and gradients
         self.act_func_deriv(Ha, output_buffer, out_delta_buffer, dHa)
-        _h.dot_add(flat_dHa, WX, out=flat_in_delta_buffer, transb='T')
-        _h.dot(flat_input, flat_dHa, dWX, transa='T')
-        _h.sum(flat_dHa, axis=0, out=dW_bias)
+        _h.dot_add_mm(flat_dHa, WX, out=flat_in_delta_buffer, transb='T')
+        _h.dot_mm(flat_input, flat_dHa, dWX, transa='T')
+        _h.sum_t(flat_dHa, axis=0, out=dW_bias)

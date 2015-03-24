@@ -39,7 +39,7 @@ class NumpyHandler(object):
 
     # ---------------- Mathematical Operations ---------------- #
 
-    def sum(self, a, axis, out):
+    def sum_t(self, a, axis, out):
         if len(out.shape) == len(a.shape):
             keepdims = True
         else:
@@ -47,19 +47,19 @@ class NumpyHandler(object):
         np.sum(a, axis=axis, dtype=self.dtype, out=out, keepdims=keepdims)
 
     @staticmethod
-    def dot(a, b, out, transa='N', transb='N'):
+    def dot_mm(a, b, out, transa='N', transb='N'):
         x = a.T if (transa == 'T') else a
         y = b.T if (transb == 'T') else b
         np.dot(x, y, out)
 
     @staticmethod
-    def dot_add(a, b, out, transa='N', transb='N'):
+    def dot_add_mm(a, b, out, transa='N', transb='N'):
         x = a.T if (transa == 'T') else a
         y = b.T if (transb == 'T') else b
         out[:] += np.dot(x, y)
 
     @staticmethod
-    def elem_mult(a, b, out):
+    def elem_mult_tt(a, b, out):
         np.multiply(a, b, out)
 
     @staticmethod
@@ -67,12 +67,12 @@ class NumpyHandler(object):
         np.multiply(a, b, out)
 
     @staticmethod
-    def add_mm(a, b, out):
+    def add_tt(a, b, out):
         assert a.shape == b.shape == out.shape
         out[:] = a + b
 
     @staticmethod
-    def subtract_mm(a, b, out):
+    def subtract_tt(a, b, out):
         assert a.shape == b.shape == out.shape
         out[:] = a - b
 
