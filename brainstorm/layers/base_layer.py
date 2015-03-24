@@ -85,19 +85,22 @@ class LayerBase(object):
         self.handler = new_handler
 
     def get_parameter_structure(self):
-        """Return a dictionary mapping parameter names to shapes.
+        """Return a dictionary mapping parameter names to dictionaries
+        describing their shapes using shape templates or in_shapes and
+        out_shapes.
 
-        :return: list of parameter buffers each with a name and a shape
-        :rtype: dict[str, tuple[int]]
+        :return: dict describing parameter buffers
+        :rtype: dict[str, dict[str, object]]
         """
         return {}
 
     def get_internal_structure(self):
-        """Return a dictionary mapping internal-state names to shape templates.
+        """Return a dictionary mapping internal-state names to to dictionaries
+        describing their shapes using shape templates or in_shapes and
+        out_shapes.
 
-        :return: list internal state buffers each with a name and respective
-                 *feature* shape
-        :rtype: dict[str, tuple]
+        :return: dictionary describing internals
+        :rtype: dict[str, dict[str, object]]
         """
         return {}
 
