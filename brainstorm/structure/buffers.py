@@ -79,14 +79,25 @@ class BufferManager(object):
         total_size, slices, shapes = self.get_total_size_slices_and_shapes()
 
         if total_size > self.size:
-            self.full_buffer = self.handler.allocate(total_size)
+            new_full_buffer = self.handler.allocate(total_size)
             self.size = total_size
+        else:
+            new_full_buffer = self.full_buffer
 
         full_forward_buffers = [
-            self.full_buffer[slices[0]].reshape(shapes[0]),
-            self.full_buffer[slices[1]].reshape(shapes[1]),
-            self.full_buffer[slices[2]].reshape(shapes[2])
+            new_full_buffer[slices[0]].reshape(shapes[0]),
+            new_full_buffer[slices[1]].reshape(shapes[1]),
+            new_full_buffer[slices[2]].reshape(shapes[2])
         ]
+
+        if self.full_buffer is not None:
+            # copy the parameters
+            self.handler.copy_to(
+                full_forward_buffers[0],
+                self.full_buffer[slices[0]].reshape(shapes[0]))
+
+        self.full_buffer = new_full_buffer
+
         self.forward = create_buffer_views_from_layout(
             self.layout, full_forward_buffers, self.max_time_offset)
 
