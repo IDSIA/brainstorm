@@ -22,12 +22,16 @@ class ValidationError(Exception):
 
 class NetworkValidationError(ValidationError):
     """
-    Exception that is thrown if attempting to build an invalid architecture.
-    (E.g. circle)
+    Exception that is thrown e.g. if attempting to build an invalid
+    architecture. (E.g. circle)
     """
 
 
 class LayerValidationError(ValidationError):
+    pass
+
+
+class IteratorValidationError(ValidationError):
     pass
 
 
