@@ -25,7 +25,7 @@ class TrainingStep(Describable):
     def _initialize(self):
         pass
 
-    def run(self, input_data, targets):
+    def run(self, data):
         pass
 
 
@@ -39,9 +39,10 @@ class DiagnosticStep(TrainingStep):
     def _initialize(self):
         print("start DiagnosticStep with net=", self.net)
 
-    def run(self, input_data, targets):
-        print("DiagnosticStep: x.shape=", input_data.shape)
-        print("DiagnosticStep: t=", targets)
+    def run(self, data):
+        print("DiagnosticStep:")
+        for name, d in data.items():
+            print('  {}.shape = {}'.format(name, d.shape))
         return 15
 
 
@@ -58,9 +59,10 @@ class ForwardStep(TrainingStep):
         super(ForwardStep, self).__init__()
         self.use_training_pass = use_training_pass
 
-    def run(self, input_data, targets):
-        self.net.forward_pass(input_data, training_pass=self.use_training_pass)
-        return self.net.calculate_errors(targets)
+    def run(self, data):
+        self.net.provide_external_data(data)
+        self.net.forward_pass(training_pass=self.use_training_pass)
+        return self.net.get_loss_value()
 
 
 class SgdStep(TrainingStep):
@@ -70,15 +72,25 @@ class SgdStep(TrainingStep):
     def __init__(self, learning_rate=0.1):
         super(SgdStep, self).__init__()
         self.learning_rate_schedule = get_schedule(learning_rate)
+        self.update = None
 
-    def run(self, input_data, targets):
+    def start(self, net):
+        super(SgdStep, self).start(net)
+        self.update = net.handler.zeros(net.buffer.parameters.shape)
+
+    def run(self, data):
         learning_rate = self.learning_rate_schedule()
-        self.net.forward_pass(input_data, training_pass=True)
-        errors = self.net.calculate_errors(targets)
-        self.net.backward_pass(targets)
-        self.net.buffer.parameters[:] -= (
-            learning_rate * self.net.buffer.gradient[:])
-        return errors
+        self.net.provide_external_data(data)
+        self.net.forward_pass(training_pass=True)
+        loss = self.net.get_loss_value()
+        self.net.backward_pass()
+        self.net.handler.elem_mult_st(-learning_rate,
+                                      self.net.buffer.gradients,
+                                      out=self.update)
+        self.net.handler.add_tt(self.update,
+                                self.net.buffer.parameters,
+                                out=self.net.buffer.parameters)
+        return loss
 
     def __init_from_description__(self, description):
         self.learning_rate_schedule = get_schedule(self.learning_rate_schedule)
@@ -108,13 +120,15 @@ class MomentumStep(TrainingStep):
     def _initialize(self):
         self.velocity = np.zeros(self.net.get_param_size())
 
-    def run(self, input_data, targets):
+    def run(self, data):
+        # TODO: adjust to using handlers and new network interface
         learning_rate = self.learning_rate()
         momentum = self.momentum()
         self.velocity *= momentum
-        self.net.forward_pass(input_data, training_pass=True)
-        errors = self.net.calculate_errors(targets)
-        self.net.backward_pass(targets)
+        self.net.provide_external_data(data)
+        self.net.forward_pass(training_pass=True)
+        loss = self.net.get_loss_value()
+        self.net.backward_pass()
         if self.scale_learning_rate:
             dv = (1 - momentum) * learning_rate * self.net.buffer.gradient[:]
         else:
@@ -122,7 +136,7 @@ class MomentumStep(TrainingStep):
 
         self.velocity -= dv
         self.net.buffer.parameters[:] += self.velocity
-        return errors
+        return loss
 
     def __init_from_description__(self, description):
         self.learning_rate = get_schedule(self.learning_rate)
@@ -137,14 +151,16 @@ class NesterovStep(MomentumStep):
     If scale_learning_rate is True (default),
     learning_rate is multiplied by (1 - momentum) when used.
     """
-    def run(self, input_data, targets):
+    def run(self, data):
+        # TODO: adjust to using handlers and new network interface
         learning_rate = self.learning_rate()
         momentum = self.momentum()
         self.velocity *= momentum
         self.net.buffer.parameters[:] += self.velocity
-        self.net.forward_pass(input_data, training_pass=True)
-        errors = self.net.calculate_errors(targets)
-        self.net.backward_pass(targets)
+        self.net.provide_external_data(data)
+        self.net.forward_pass(training_pass=True)
+        loss = self.net.get_loss_value()
+        self.net.backward_pass()
         if self.scale_learning_rate:
             dv = (1 - momentum) * learning_rate * \
                 self.net.buffer.gradient[:]
@@ -153,4 +169,4 @@ class NesterovStep(MomentumStep):
 
         self.velocity -= dv
         self.net.buffer.parameters[:] -= dv
-        return errors
+        return loss

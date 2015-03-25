@@ -51,9 +51,9 @@ class Trainer(Describable):
             if self.verbose:
                 print('\n\n', 15 * '- ', "Epoch", self.current_epoch,
                       15 * ' -')
-            for i, (x, t) in enumerate(
+            for i, data in enumerate(
                     training_data_getter(verbose=self.verbose)):
-                train_errors.append(self.stepper.run(x, t))
+                train_errors.append(self.stepper.run(data))
                 if self._emit_monitoring(net, 'update', i + 1):
                     break
 

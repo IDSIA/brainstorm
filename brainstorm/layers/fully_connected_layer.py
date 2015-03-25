@@ -49,7 +49,7 @@ class FullyConnectedLayer(LayerBase):
                 '@index': 0}
         }
 
-    def forward_pass(self, forward_buffers):
+    def forward_pass(self, forward_buffers, train_pass=True):
         # prepare
         _h = self.handler
         WX, W_bias = forward_buffers.parameters

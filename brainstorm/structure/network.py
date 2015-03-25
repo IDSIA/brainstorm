@@ -11,6 +11,7 @@ from brainstorm.randomness import Seedable
 from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
+from brainstorm.layers import LossLayer
 
 
 def build_net(some_layer):
@@ -25,11 +26,16 @@ def build_network_from_architecture(architecture):
     return Network(layers, buffer_manager)
 
 
+def get_loss_layers(layers):
+    return [name for name, l in layers.items() if isinstance(l, LossLayer)]
+
+
 class Network(Seedable):
     def __init__(self, layers, buffer_manager, seed=None,
                  handler=default_handler):
         super(Network, self).__init__(seed)
         self.layers = layers
+        self.loss_layers = get_loss_layers(layers)
         self.buffer = buffer_manager
         self.errors = None
         self.handler = None
@@ -47,14 +53,21 @@ class Network(Seedable):
         for name, val in data.items():
             self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name], val)
 
-    def forward_pass(self):
+    def forward_pass(self, train_pass=False):
         for layer_name, layer in list(self.layers.items())[1:]:
-            layer.forward_pass(self.buffer.forward[layer_name])
+            layer.forward_pass(self.buffer.forward[layer_name], train_pass)
 
     def backward_pass(self):
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
             layer.backward_pass(self.buffer.forward[layer_name],
                                 self.buffer.backward[layer_name])
+
+    def get_loss_value(self):
+        loss = 0.
+        for loss_layer_name in self.loss_layers:
+            loss += float(self.handler.get_numpy_copy(
+                self.buffer.forward[loss_layer_name].outputs.loss))
+        return loss
 
     def initialize(self, init_dict=None, seed=None, **kwargs):
         init_refs = _update_references_with_dict(init_dict, kwargs)

@@ -104,7 +104,7 @@ class LayerBase(object):
         """
         return {}
 
-    def forward_pass(self, forward_buffers):
+    def forward_pass(self, forward_buffers, train_pass=True):
         pass
 
     def backward_pass(self, forward_buffers, backward_buffers):
