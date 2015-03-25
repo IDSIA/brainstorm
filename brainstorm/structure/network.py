@@ -20,8 +20,8 @@ def build_net(some_layer):
 
 def build_network_from_architecture(architecture):
     layers = instantiate_layers_from_architecture(architecture)
-    buffer_sizes, layout = create_layout(layers)
-    buffer_manager = BufferManager(layout, buffer_sizes)
+    buffer_sizes, max_time_offset, layout = create_layout(layers)
+    buffer_manager = BufferManager(layout, buffer_sizes, max_time_offset)
     return Network(layers, buffer_manager)
 
 

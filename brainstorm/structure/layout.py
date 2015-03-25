@@ -17,7 +17,7 @@ def create_layout(layers):
     layout = create_layout_stub(layers)
     all_sinks = set(list(zip(*connections))[1])
     all_sources = list()
-    for s in list(gather_array_nodes(layout)):
+    for s in gather_array_nodes(layout):
         if s in all_sinks:
             continue
         for fo in forced_orders:
@@ -57,7 +57,13 @@ def create_layout(layers):
             sink_layout['@slice'] = (start, stop)
 
         buffer_sizes[btype] = indexes[-1]
-    return buffer_sizes, layout
+
+    max_time_offset = 0
+    for s in gather_array_nodes(layout):
+        max_time_offset = max(max_time_offset,
+                              get_by_path(s, layout).get('@time_offset', 0))
+
+    return buffer_sizes, max_time_offset, layout
 
 
 def get_source_order_by_btype(hubs, connections):

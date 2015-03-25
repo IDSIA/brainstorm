@@ -9,18 +9,29 @@ from brainstorm.structure.layout import get_buffer_type
 from brainstorm.utils import sort_by_index_key
 
 
-def create_buffer_views_from_layout(layout, buffers):
+def create_buffer_views_from_layout(layout, buffers, time_offset):
     if '@slice' in layout:
         start, stop = layout['@slice']
         shape = layout['@shape']
+        t_start = time_offset - layout.get('@time_offset', 0)
         buffer_type = get_buffer_type(shape)
-        full_buffer = buffers[buffer_type][..., start:stop]
-        full_buffer = full_buffer.reshape(full_buffer.shape[:-1] + shape[buffer_type:])
+        if buffer_type == 0:
+            full_buffer = buffers[buffer_type][start:stop]
+            full_buffer = full_buffer.reshape(shape[buffer_type:])
+        elif buffer_type == 1:
+            full_buffer = buffers[buffer_type][:, start:stop]
+            full_buffer = full_buffer.reshape(full_buffer.shape[:1] + shape[buffer_type:])
+        else:  # buffer_type == 2
+            full_buffer = buffers[buffer_type][t_start:, :, start:stop]
+            full_buffer = full_buffer.reshape(
+                (full_buffer.shape[0] - t_start,
+                 full_buffer.shape[1]) +
+                shape[buffer_type:])
     else:
         full_buffer = None
 
     if layout['@type'] == 'BufferView':
-        children = [(n, create_buffer_views_from_layout(sub_node, buffers))
+        children = [(n, create_buffer_views_from_layout(sub_node, buffers, time_offset))
                     for n, sub_node in sorted(layout.items(), key=sort_by_index_key)
                     if not n.startswith('@')]
         if children:
@@ -34,10 +45,12 @@ def create_buffer_views_from_layout(layout, buffers):
 
 
 class BufferManager(object):
-    def __init__(self, layout, sizes, handler=default_handler):
+    def __init__(self, layout, sizes, max_time_offset,
+                 handler=default_handler):
         self.feature_sizes = sizes
         self.handler = handler
         self.layout = layout
+        self.max_time_offset = max_time_offset
         self.time_size = -1
         self.batch_size = -1
         self.size = -1
@@ -50,7 +63,7 @@ class BufferManager(object):
         shapes = [
             (self.feature_sizes[0],),
             (self.batch_size, self.feature_sizes[1]),
-            (self.time_size, self.batch_size, self.feature_sizes[2]),
+            (self.time_size + self.max_time_offset, self.batch_size, self.feature_sizes[2]),
         ]
         totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes]*2)
         size = totals[-1]
@@ -75,7 +88,7 @@ class BufferManager(object):
             self.full_buffer[slices[2]].reshape(shapes[2])
         ]
         self.forward = create_buffer_views_from_layout(
-            self.layout, full_forward_buffers)
+            self.layout, full_forward_buffers, self.max_time_offset)
 
         # TODO optimization: allocate the backward pass only if needed
         full_backward_buffers = [
@@ -84,7 +97,7 @@ class BufferManager(object):
             self.full_buffer[slices[5]].reshape(shapes[2])
         ]
         self.backward = create_buffer_views_from_layout(
-            self.layout, full_backward_buffers)
+            self.layout, full_backward_buffers, self.max_time_offset)
 
     def set_memory_handler(self, new_handler):
         # TODO: Preserve at least the weights

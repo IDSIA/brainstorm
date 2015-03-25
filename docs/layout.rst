@@ -100,10 +100,12 @@ Another example including the optional ``@slice``:
 
 Array-Nodes
 -----------
-Array-Nodes are also dictionaries but they *must have* a ``@slice`` and a
-``@shape`` entry, and they cannot have any children.
 Array-nodes will be turned into arrays (exact type depends on the handler), by
 the buffer manager.
+Array-Nodes are also dictionaries but they *must have* a ``@slice`` and a
+``@shape`` entry, and they cannot have any children.
+Like view-nodes, an array-node needs an ``@index`` entry to specify the order among its
+siblings.
 
 The ``@slice`` should be a tuple of two integers ``(start, stop)``.
 Where ``start`` and ``stop`` specify which slice of the big buffer this array
@@ -112,8 +114,10 @@ is a view of points to.
 The ``@shape`` entry is a shape-template and describes the dimensionality of
 the array.
 
-Like view-nodes, an array-node needs an ``@index`` entry to specify the order among its
-siblings.
+If an array-node has a shape of a type 2 buffer (time-scaled) it can
+(optionally) contain a ``@time_offset`` entry. This determines at what
+time-index time "officially starts" for that buffer. All time steps before are
+considered context and need not be set.
 
 Example leaf for a 4 times 5 weight matrix:
 
@@ -166,13 +170,13 @@ We use the following network as an example here:
                 '@type': 'BufferView',
                 '@index': 0,
                 '@slice': (0, 4),
-                'default': {'@type': 'array', '@index': 0, '@slice': (0, 4), '@shape': ('T', 'B', 4)}
+                'default': {'@type': 'array', '@index': 0, '@slice': (0, 4), '@shape': ('T', 'B', 4), '@time_offset':1}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 '@slice': (14, 19),
-                'default': {'@type': 'array', '@index': 0, '@slice': (14, 19), '@shape': ('T', 'B', 5)}
+                'default': {'@type': 'array', '@index': 0, '@slice': (14, 19), '@shape': ('T', 'B', 5), '@time_offset':1}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -186,7 +190,7 @@ We use the following network as an example here:
                 '@type': 'BufferView',
                 '@index': 3,
                 '@slice': (30, 35),
-                'Ha': {'@type': 'array', '@index': 0, '@slice': (30, 35), '@shape': ('T', 'B', 5)}
+                'Ha': {'@type': 'array', '@index': 0, '@slice': (30, 35), '@shape': ('T', 'B', 5), '@time_offset':1}
             },
         },
         'OutLayer': {
