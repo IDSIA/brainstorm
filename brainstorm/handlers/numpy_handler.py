@@ -50,7 +50,8 @@ class NumpyHandler(object):
     def dot_mm(a, b, out, transa='N', transb='N'):
         x = a.T if (transa == 'T') else a
         y = b.T if (transb == 'T') else b
-        np.dot(x, y, out)
+        # np.dot(x, y, out)  # FIXME: doesn't work with strided out
+        out[:] = np.dot(x, y)
 
     @staticmethod
     def dot_add_mm(a, b, out, transa='N', transb='N'):
