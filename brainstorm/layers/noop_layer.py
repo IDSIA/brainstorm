@@ -17,7 +17,7 @@ class NoOpLayer(LayerBase):
                 "but {} != {}".format(self.name, self.in_shapes['default'],
                                       self.out_shapes['default']))
 
-    def forward_pass(self, forward_buffers, train_pass=True):
+    def forward_pass(self, forward_buffers, training_pass=True):
         self.handler.copy_to(forward_buffers.inputs.default,
                              forward_buffers.outputs.default)
 

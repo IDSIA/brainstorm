@@ -11,7 +11,7 @@ from brainstorm.randomness import Seedable
 from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
-from brainstorm.layers import LossLayer
+from brainstorm.layers.loss_layer import LossLayer
 
 
 def build_net(some_layer):
@@ -53,9 +53,9 @@ class Network(Seedable):
         for name, val in data.items():
             self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name], val)
 
-    def forward_pass(self, train_pass=False):
+    def forward_pass(self, training_pass=False):
         for layer_name, layer in list(self.layers.items())[1:]:
-            layer.forward_pass(self.buffer.forward[layer_name], train_pass)
+            layer.forward_pass(self.buffer.forward[layer_name], training_pass)
 
     def backward_pass(self):
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
@@ -74,7 +74,6 @@ class Network(Seedable):
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.forward.items()}
         initializers, fallback = resolve_references(all_parameters, init_refs)
-        print(initializers, fallback)
         init_rnd = self.rnd.create_random_state(seed)
         for layer_name, views in all_parameters.items():
             if views is None:

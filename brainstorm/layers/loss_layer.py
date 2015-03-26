@@ -5,14 +5,19 @@ from brainstorm.layers.base_layer import LayerBase
 
 
 class LossLayer(LayerBase):
-    # TODO: actually implement
+    # TODO: handle masks and batch/sequence normalization
     expected_kwargs = {}
     inputs = {'default': ('T', 'B', 'F')}
 
     outputs = {'loss': (1,)}
 
-    def forward_pass(self, forward_buffers):
-        pass  # TODO: Sum over all inputs and write to outputs.loss
+    def forward_pass(self, forward_buffer, training_pass=True):
+        self.handler.sum_t(forward_buffer.inputs.default,
+                           None,
+                           forward_buffer.outputs.loss.reshape(tuple()))
 
     def backward_pass(self, forward_buffers, backward_buffers):
         self.handler.fill(backward_buffers.inputs.default, 1.0)
+
+    def _get_output_shapes(self):
+            return {'loss': (1,)}

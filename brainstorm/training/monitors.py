@@ -113,3 +113,13 @@ class MonitorLayerProperties(Monitor):
                 log['min_sq_norm_' + key] = np.sum(value ** 2, axis=1).min()
                 log['max_sq_norm_' + key] = np.sum(value ** 2, axis=1).max()
         return log
+
+
+class MaxEpochsSeen(Monitor):
+    def __init__(self, max_epochs, timescale='epoch', interval=1, name=None, verbose=None):
+        super(MaxEpochsSeen, self).__init__(name, timescale, interval, verbose)
+        self.max_epochs = max_epochs
+
+    def __call__(self, epoch, net, stepper, logs):
+        if epoch >= self.max_epochs:
+            raise StopIteration

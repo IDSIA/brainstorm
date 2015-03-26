@@ -5,5 +5,6 @@ from brainstorm.structure import *
 from brainstorm.layers import *
 from brainstorm.randomness import global_rnd
 from brainstorm.initializers import *
+from brainstorm.training import *
 
 __version__ = '0.1'

@@ -7,11 +7,17 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.input_layer import InputLayer
 from brainstorm.layers.noop_layer import NoOpLayer
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
+from brainstorm.layers.squared_difference_layer import SquaredDifferenceLayer
 from brainstorm.layers.loss_layer import LossLayer
 
 # somehow this construction is needed because in __all__ unicode does not work
-__all__ = [str(a) for a in ['InputLayer', 'NoOpLayer', 'FullyConnectedLayer']]
+__all__ = [str(a) for a in [
+    'InputLayer', 'NoOpLayer', 'FullyConnectedLayer', 'SquaredDifferenceLayer',
+    'LossLayer'
+]]
 
 InputLayer = partial(ConstructionWrapper.create, "InputLayer")
 NoOpLayer = partial(ConstructionWrapper.create, "NoOpLayer")
 FullyConnectedLayer = partial(ConstructionWrapper.create, "FullyConnectedLayer")
+SquaredDifferenceLayer = partial(ConstructionWrapper.create, "SquaredDifferenceLayer")
+LossLayer = partial(ConstructionWrapper.create, "LossLayer")

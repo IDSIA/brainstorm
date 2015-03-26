@@ -68,8 +68,8 @@ class BufferManager(object):
             (self.time_size + self.max_time_offset, self.batch_size, self.feature_sizes[2]),
         ]
         totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes]*2)
-        size = totals[-1]
-        slices = [slice(i, j) for i, j in zip(totals[:-1], totals[1:])]
+        size = int(totals[-1])
+        slices = [slice(int(i), int(j)) for i, j in zip(totals[:-1], totals[1:])]
         return size, slices, shapes
 
     def resize(self, time_size, batch_size):
@@ -118,5 +118,8 @@ class BufferManager(object):
         self.size = -1
         self.time_size = -1
         self.batch_size = -1
+        parameters = self.handler.get_numpy_copy(self.parameters)
+        self.parameters = None
         self.handler = new_handler
         self.resize(0, 0)
+        self.handler.set_from_numpy(self.parameters, parameters)

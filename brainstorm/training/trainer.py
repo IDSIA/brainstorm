@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import sys
+import numpy as np
 from brainstorm.describable import Describable
 
 
@@ -57,8 +58,7 @@ class Trainer(Describable):
                 if self._emit_monitoring(net, 'update', i + 1):
                     break
 
-            self._add_log('training_errors',
-                          net.error_func.aggregate(train_errors))
+            self._add_log('training_errors', np.mean(train_errors))
             if self._emit_monitoring(net, 'epoch'):
                 break
 

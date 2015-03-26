@@ -114,7 +114,7 @@ class SquaredDifferenceLayer(LayerBase):
                                                self.out_shapes['default'][2])
             )
 
-    def forward_pass(self, forward_buffers, train_pass=True):
+    def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
         _h = self.handler
         inputs_1 = forward_buffers.inputs.inputs_1

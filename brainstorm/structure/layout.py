@@ -45,7 +45,8 @@ def create_layout(layers):
 
         for source_name, start, stop in zip(sources, indexes, indexes[1:]):
             source_layout = get_by_path(source_name, layout)
-            source_layout['@slice'] = (start, stop)
+            # int conversion is needed to get rid of np.int64
+            source_layout['@slice'] = (int(start), int(stop))
 
         for i, sink_name in enumerate(all_sinks):
             if c_table[:, i].sum() == 0:
@@ -54,9 +55,10 @@ def create_layout(layers):
             stop = indexes[c_table.shape[0] - np.argmax(c_table[::-1, i])]
 
             sink_layout = get_by_path(sink_name, layout)
-            sink_layout['@slice'] = (start, stop)
+            # int conversion is needed to get rid of np.int64
+            sink_layout['@slice'] = (int(start), int(stop))
 
-        buffer_sizes[btype] = indexes[-1]
+        buffer_sizes[btype] = int(indexes[-1])
 
     max_time_offset = 0
     for s in gather_array_nodes(layout):
