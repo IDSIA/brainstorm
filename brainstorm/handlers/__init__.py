@@ -11,8 +11,8 @@ try:
     import scikits.cuda.linalg as culinalg
     import scikits.cuda.misc as cumisc
     from brainstorm.handlers.pycuda_handler import PyCudaHandler
-except ImportError:
-    pass
+except ImportError as e:
+    print(e)
 
 default_handler = NumpyHandler(np.float32)
 #default_handler = DebugHandler()

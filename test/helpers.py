@@ -23,9 +23,9 @@ def approx_fprime(x0, f, epsilon, *args):
     ei = np.zeros((len(x0),), float)
     for k in range(len(x0)):
         ei[k] = epsilon
-        f_right = f(*((x0+ei,)+args))
+        f_right = f(*((x0 + ei,) + args))
         ei[k] = -epsilon
-        f_left = f(*((x0+ei,)+args))
+        f_left = f(*((x0 + ei,) + args))
         grad[k] = (f_right - f_left)/(2 * epsilon)
         ei[k] = 0.0
     return grad

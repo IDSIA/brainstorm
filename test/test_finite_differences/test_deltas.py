@@ -3,20 +3,12 @@
 from __future__ import division, print_function, unicode_literals
 import pytest
 import numpy as np
+from brainstorm.handlers import NumpyHandler
 from brainstorm.randomness import global_rnd
 from brainstorm.structure.network import build_network_from_architecture
 from brainstorm.initializers import Gaussian
+from ..helpers import approx_fprime
 
-
-def approx_fprime(xk, f, epsilon, *args):
-    f0 = f(*((xk,)+args))
-    grad = np.zeros((len(xk),), float)
-    ei = np.zeros((len(xk),), float)
-    for k in range(len(xk)):
-        ei[k] = epsilon
-        grad[k] = (f(*((xk+ei,)+args)) - f0)/epsilon
-        ei[k] = 0.0
-    return grad
 
 
 @pytest.fixture(scope='module')
@@ -28,50 +20,48 @@ def input_data():
 @pytest.fixture(scope='module')
 def targets():
     global_rnd.set_seed(7331)
-    return {
-        'test_target': global_rnd.randn(7, 5, 2)
-    }
+    return global_rnd.randn(7, 5, 2)
 
-architectures = [
-    {'InputLayer': {
+architectures = [{
+    'InputLayer': {
         '@type': 'InputLayer',
-        'out_shapes': {'default': ('T', 'B', 3,), 'targets': ('T', 'B', 2,)},
+        'out_shapes': {'default': ('T', 'B', 3,)},
         '@outgoing_connections': {
             'default': ['OutputLayer'],
-            'targets': ['MSE.targets']
         }},
-     'OutputLayer': {
+    'OutputLayer': {
         '@type': 'FullyConnectedLayer',
         'shape': 2,
         '@outgoing_connections': {
-            'default': ['MSE']
+            'default': ['LossLayer']
         }},
-     'MSE': {
-        '@type': 'MeanSquaredErrorLayer',
+    'LossLayer': {
+        '@type': 'LossLayer',
         '@outgoing_connections': {}
-        }
-     }
+    }}
 ]
 
 
 @pytest.fixture(scope='module', params=architectures)
 def net(request):
-    # TODO: FIX with new error function
     n = build_network_from_architecture(request.param)
-    n.initialize(Gaussian(), seed=235)
+    n.set_memory_handler(NumpyHandler(dtype=np.float64))
+    n.initialize(Gaussian(1), seed=235)
     return n
 
 
-def test_deltas_finite_differences(net, input_data, targets):
+def test_deltas_finite_differences(net, input_data):
     # ######## calculate deltas ##########
-    net.forward_pass(input_data)
-    net.backward_pass(targets)
-    delta_calc = net.in_deltas.flatten().copy()
+    net.provide_external_data({'default': input_data})
+    net.forward_pass(training_pass=True)
+    net.backward_pass()
+    delta_calc = net.buffer.backward.InputLayer.outputs.default.flatten()
 
     # ######## estimate deltas ##########
     def f(x):
-        net.forward_pass(x.reshape(input_data.shape))
-        return net.calculate_errors(targets)['MSE']
+        net.provide_external_data({'default': x.reshape(input_data.shape)})
+        net.forward_pass()
+        return net.get_loss_value()
     delta_approx = approx_fprime(input_data.copy().flatten(), f, 1e-5)
 
     # ######## compare them #############
@@ -87,19 +77,20 @@ def test_deltas_finite_differences(net, input_data, targets):
     assert mse < 1e-4
 
 
-def test_gradient_finite_differences(net, input_data, targets):
+def test_gradient_finite_differences(net, input_data):
     # ######## calculate deltas ##########
-    net.forward_pass(input_data)
-    net.backward_pass(targets)
-    gradient_calc = net.buffer.gradient[:].copy()
+    net.provide_external_data({'default': input_data})
+    net.forward_pass(training_pass=True)
+    net.backward_pass()
+    gradient_calc = net.buffer.gradients
 
     # ######## estimate deltas ##########
     def f(x):
-        net.buffer.parameters.get_raw()[:] = x
-        net.forward_pass(input_data)
-        return net.calculate_errors(targets)['MSE']
-    initial_weigths = net.buffer.parameters.get_raw().copy()
-    gradient_approx = approx_fprime(initial_weigths, f, 1e-5)
+        net.buffer.parameters[:] = x
+        net.forward_pass()
+        return net.get_loss_value()
+    initial_weigths = net.buffer.parameters.copy()
+    gradient_approx = approx_fprime(initial_weigths, f, 1e-6)
 
     # ######## compare them #############
     nr_sequences = input_data.shape[1]
@@ -107,14 +98,14 @@ def test_gradient_finite_differences(net, input_data, targets):
     mse = np.sum(diff ** 2) / nr_sequences
     if mse > 1e-4:
         # Hijack the network gradient buffer for the view
-        net.buffer.gradient.get_raw()[:] = diff
-        for layer_name in net.buffer.gradient:
-            if net.buffer.gradient[layer_name] is None:
+        net.buffer.gradients[:] = diff
+        for layer_name in net.layers:
+            if not net.buffer.backward[layer_name]:
                 continue
             print("============= Layer: {} =============".format(layer_name))
-            for view_name in net.buffer.gradient[layer_name]:
+            for view_name in net.buffer.backward[layer_name].parameters.keys():
                 print("------------- {} -------------".format(view_name))
-                print(net.buffer.gradient[layer_name][view_name])
+                print(net.buffer.backward[layer_name].parameters[view_name])
 
     print(">> Checking Gradient = %0.4f" % mse)
     assert mse < 1e-4

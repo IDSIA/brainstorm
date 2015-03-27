@@ -29,7 +29,7 @@ class FullyConnectedLayer(LayerBase):
         }
 
         self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
+            self.kwargs.get('activation_function', 'linear')]
 
     def get_parameter_structure(self):
         return {

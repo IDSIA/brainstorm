@@ -5,14 +5,14 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayer
 from brainstorm.layers.squared_difference_layer import SquaredDifferenceLayer
 from brainstorm.handlers import NumpyHandler
-from helpers import run_layer_test
+from .helpers import run_layer_test
 import numpy as np
 np.random.seed(1234)
 
 
 def test_fully_connected_layer():
 
-    eps = 1e-4
+    eps = 1e-6
     time_steps = 3
     batch_size = 2
     input_shape = 3
