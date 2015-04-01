@@ -4,6 +4,8 @@ from __future__ import division, print_function, unicode_literals
 import itertools
 
 import numpy as np
+from brainstorm.structure.shapes import (
+    get_feature_size, validate_shape_template)
 from brainstorm.utils import (NetworkValidationError, flatten,
                               convert_to_nested_indices, sort_by_index_key)
 
@@ -212,22 +214,6 @@ def merge_connections(connections, forced_orders):
     return merged_connections
 
 
-def get_buffer_type(shape):
-    if shape[0] == 'T':
-        assert shape[1] == 'B', "Invalid shape: {}".format(shape)
-        return 2
-    if shape[0] == 'B':
-        return 1
-    else:
-        return 0
-
-
-def get_feature_size(shape):
-    """Get the feature size of a shape-template."""
-    buffer_type = get_buffer_type(shape)
-    return int(np.array(shape[buffer_type:]).prod())
-
-
 def group_into_hubs(remaining_sources, connections, layout):
     buffer_hubs = []
     while remaining_sources:
@@ -236,7 +222,7 @@ def group_into_hubs(remaining_sources, connections, layout):
         for s in source_set:
             remaining_sources.remove(s)
         # get buffer type for hub and assert its uniform
-        btypes = [get_buffer_type(get_by_path(s, layout)['@shape'])
+        btypes = [validate_shape_template(get_by_path(s, layout)['@shape'])
                   for s in flatten(source_set)]
         assert min(btypes) == max(btypes)
         btype = btypes[0]

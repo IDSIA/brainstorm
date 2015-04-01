@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict, namedtuple
 from copy import copy
 from six import string_types
+from brainstorm.structure.shapes import combine_input_shapes
 from brainstorm.structure.construction import ConstructionWrapper
 
 from brainstorm.utils import (NetworkValidationError,
@@ -160,52 +161,6 @@ def get_canonical_layer_order(architecture):
 def get_kwargs(layer):
     kwarg_ignore = {'@type', '@outgoing_connections'}
     return {k: copy(v) for k, v in layer.items() if k not in kwarg_ignore}
-
-
-def combine_input_shapes(shapes):
-    """
-    Concatenate the given sizes on the outermost feature dimension.
-    Check that the other dimensions match.
-    :param shapes: list of size-tuples or integers
-    :type shapes: list[tuple[int]] or list[int]
-    :return: tuple[int]
-    """
-    if not shapes:
-        return 0,
-    tupled_shapes = [ensure_tuple_or_none(s) for s in shapes]
-    dimensions = [len(s) for s in tupled_shapes]
-    if min(dimensions) != max(dimensions):
-        raise ValueError('Dimensionality mismatch. {}'.format(tupled_shapes))
-    some_shape = tupled_shapes[0]
-    if some_shape[0] == 'T':
-        first_feature_index = 2
-    elif some_shape[0] == 'B':
-        first_feature_index = 1
-    else:
-        first_feature_index = 0
-
-    fixed_feature_shape = some_shape[first_feature_index + 1:]
-    if not all([s[:first_feature_index] == some_shape[:first_feature_index]
-                for s in tupled_shapes]):
-        raise ValueError('Buffer type mismatch. {}'.format(tupled_shapes))
-    if not all([s[first_feature_index + 1:] == fixed_feature_shape
-                for s in tupled_shapes]):
-        raise ValueError('Feature size mismatch. {}'.format(tupled_shapes))
-    summed_shape = sum(s[first_feature_index] for s in tupled_shapes)
-    return some_shape[:first_feature_index] + \
-           (summed_shape,) + \
-           fixed_feature_shape
-
-
-def ensure_tuple_or_none(a):
-    if a is None:
-        return a
-    elif isinstance(a, tuple):
-        return a
-    elif isinstance(a, list):
-        return tuple(a)
-    else:
-        return a,
 
 
 def instantiate_layers_from_architecture(architecture):

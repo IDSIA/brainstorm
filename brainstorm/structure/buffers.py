@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers import default_handler
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.structure.layout import get_buffer_type
+from brainstorm.structure.layout import validate_shape_template
 from brainstorm.utils import sort_by_index_key
 
 
@@ -14,7 +14,7 @@ def create_buffer_views_from_layout(layout, buffers, time_offset):
         start, stop = layout['@slice']
         shape = layout['@shape']
         t_start = time_offset - layout.get('@time_offset', 0)
-        buffer_type = get_buffer_type(shape)
+        buffer_type = validate_shape_template(shape)
         if buffer_type == 0:
             full_buffer = buffers[buffer_type][start:stop]
             full_buffer = full_buffer.reshape(shape[buffer_type:])

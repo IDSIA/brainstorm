@@ -36,7 +36,7 @@ And given that file you could use your iterator like this:
 
     ds = h5py.File('demo.hdf5', 'r')
 
-    train_iter = bs.Online(*ds['training'])
+    train_iter = bs.Online(**ds['training'])
 
 
 .. note::
