@@ -45,6 +45,9 @@ class PyCudaHandler(object):
     def zeros(self, shape):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
 
+    def ones(self, shape):
+        return gpuarray.ones(shape=shape, dtype=self.dtype)
+
     # ---------------- Mathematical Operations ---------------- #
 
     @staticmethod
@@ -81,7 +84,19 @@ class PyCudaHandler(object):
 
     @staticmethod
     def broadcast_features_t(a, out):
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    @staticmethod
+    def clip_t(a, a_min, a_max, out):
+        raise NotImplementedError()
+
+    @staticmethod
+    def log_t(a, out):
+        raise NotImplementedError()
+
+    @staticmethod
+    def divide_tt(a, b, out):
+        raise NotImplementedError()
 
     # Activation functions
 

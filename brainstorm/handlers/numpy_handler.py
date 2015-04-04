@@ -37,6 +37,9 @@ class NumpyHandler(object):
     def zeros(self, shape):
         return np.zeros(shape=shape, dtype=self.dtype)
 
+    def ones(self, shape):
+        return np.ones(shape=shape, dtype=self.dtype)
+
     # ---------------- Mathematical Operations ---------------- #
 
     def sum_t(self, a, axis, out):
@@ -95,6 +98,18 @@ class NumpyHandler(object):
 
         shape_to_tile = (1, 1) + out.shape[2:]
         out[:] = np.tile(b, shape_to_tile)
+
+    @staticmethod
+    def clip_t(a, a_min, a_max, out):
+        np.clip(a, a_min, a_max, out)
+
+    @staticmethod
+    def log_t(a, out):
+        np.log(a, out)
+
+    @staticmethod
+    def divide_tt(a, b, out):
+        out[:] = a / b
 
     # Activation functions
 
