@@ -11,7 +11,7 @@ from brainstorm.randomness import Seedable
 from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
-from brainstorm.layers.loss_layer import LossLayer
+from brainstorm.layers.loss_layer import LossLayerImpl
 
 
 def build_net(some_layer):
@@ -27,7 +27,7 @@ def build_network_from_architecture(architecture):
 
 
 def get_loss_layers(layers):
-    return [name for name, l in layers.items() if isinstance(l, LossLayer)]
+    return [name for name, l in layers.items() if isinstance(l, LossLayerImpl)]
 
 
 class Network(Seedable):

@@ -3,11 +3,11 @@
 from __future__ import division, print_function, unicode_literals
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.layers.base_layer import LayerBase
+from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError
 
 
-class BinomialCrossEntropyLayer(LayerBase):
+class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
     """
     Calculate the Binomial Cross Entropy between outputs and **binary** targets
 
@@ -41,7 +41,7 @@ class BinomialCrossEntropyLayer(LayerBase):
         }
 
     def _validate_in_shapes(self):
-        super(BinomialCrossEntropyLayer, self)._validate_in_shapes()
+        super(BinomialCrossEntropyLayerImpl, self)._validate_in_shapes()
 
         # 'default' and 'targets' must be wired in
         # and their shapes must match
@@ -56,7 +56,7 @@ class BinomialCrossEntropyLayer(LayerBase):
                                                self.in_shapes['targets']))
 
     def _validate_out_shapes(self):
-        super(BinomialCrossEntropyLayer, self)._validate_out_shapes()
+        super(BinomialCrossEntropyLayerImpl, self)._validate_out_shapes()
         assert self.out_shapes['default'][:2] == self.in_shapes['default'][:2]
 
         if len(self.out_shapes['default']) != 3:

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.layers.base_layer import LayerBase
+from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError
 
 
-class SquaredDifferenceLayer(LayerBase):
+class SquaredDifferenceLayerImpl(LayerBaseImpl):
     """
     A layer that computes half of the squared differences between two inputs,
     and sums them over feature dimensions.

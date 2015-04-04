@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.layers.base_layer import LayerBase
+from brainstorm.layers.base_layer import LayerBaseImpl
 
 
-class LossLayer(LayerBase):
+class LossLayerImpl(LayerBaseImpl):
     # TODO: handle masks and batch/sequence normalization
     expected_kwargs = {}
     inputs = {'default': ('T', 'B', 'F')}

@@ -5,8 +5,8 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.structure.architecture import (
     generate_architecture, get_layer_description,
     instantiate_layers_from_architecture)
-from brainstorm.layers.input_layer import InputLayer
-from brainstorm.layers.noop_layer import NoOpLayer
+from brainstorm.layers.input_layer import InputLayerImpl
+from brainstorm.layers.noop_layer import NoOpLayerImpl
 
 
 def test_get_layer_description():
@@ -130,11 +130,11 @@ def test_instantiate_layers_from_architecture():
     layers = instantiate_layers_from_architecture(arch)
     assert set(arch.keys()) == set(layers.keys())
 
-    assert isinstance(layers['InputLayer'], InputLayer)
-    assert type(layers['A']) == NoOpLayer
-    assert type(layers['B']) == NoOpLayer
-    assert type(layers['C']) == NoOpLayer
-    assert type(layers['D']) == NoOpLayer
+    assert isinstance(layers['InputLayer'], InputLayerImpl)
+    assert type(layers['A']) == NoOpLayerImpl
+    assert type(layers['B']) == NoOpLayerImpl
+    assert type(layers['C']) == NoOpLayerImpl
+    assert type(layers['D']) == NoOpLayerImpl
 
     assert layers['InputLayer'].in_shapes == {}
     assert layers['InputLayer'].out_shapes == {'default': ('T', 'B', 10)}

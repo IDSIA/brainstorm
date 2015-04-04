@@ -5,7 +5,7 @@ from brainstorm.utils import get_inheritors, LayerValidationError
 
 
 def get_layer_class_from_typename(typename):
-    layer_classes = get_inheritors(LayerBase)
+    layer_classes = get_inheritors(LayerBaseImpl)
     for layer_class in layer_classes:
         if typename == layer_class.__name__:
             return layer_class
@@ -22,7 +22,7 @@ def match_shape_template(shape, template):
     return True
 
 
-class LayerBase(object):
+class LayerBaseImpl(object):
     """
     The base-class of all layer types defined in Python.
 

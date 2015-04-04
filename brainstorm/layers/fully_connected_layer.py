@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.layers.base_layer import LayerBase
+from brainstorm.layers.base_layer import LayerBaseImpl
 
 
-class FullyConnectedLayer(LayerBase):
+class FullyConnectedLayerImpl(LayerBaseImpl):
     expected_kwargs = {'shape', 'activation_function'}
 
     def __init__(self, name, in_shapes, incoming_connections,
                  outgoing_connections, **kwargs):
-        super(FullyConnectedLayer, self).__init__(
+        super(FullyConnectedLayerImpl, self).__init__(
             name, in_shapes, incoming_connections, outgoing_connections,
             **kwargs)
         self.act_func = None
@@ -17,7 +17,7 @@ class FullyConnectedLayer(LayerBase):
         self.kwargs = kwargs
 
     def set_handler(self, new_handler):
-        super(FullyConnectedLayer, self).set_handler(new_handler)
+        super(FullyConnectedLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
         activation_functions = {
