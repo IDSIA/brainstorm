@@ -59,11 +59,20 @@ def test_get_forced_orders(layers):
 def test_get_connections(layers):
     assert get_connections(layers) == [
         ('A.outputs.default', 'C.inputs.default'),
+        ('A.parameters.W', 'parameters'),
+        ('A.parameters.b', 'parameters'),
         ('B.outputs.default', 'C.inputs.default'),
         ('B.outputs.default', 'D.inputs.default'),
+        ('B.parameters.W', 'parameters'),
+        ('B.parameters.b', 'parameters'),
         ('C.outputs.default', 'D.inputs.default'),
+        ('C.parameters.W', 'parameters'),
+        ('C.parameters.b', 'parameters'),
+        ('D.parameters.W', 'parameters'),
+        ('D.parameters.b', 'parameters'),
         ('InputLayer.outputs.default', 'A.inputs.default'),
-        ('InputLayer.outputs.default', 'B.inputs.default')
+        ('InputLayer.outputs.default', 'B.inputs.default'),
+
     ]
 
 
@@ -160,9 +169,13 @@ def test_create_layout_stub(layers):
     layout = create_layout_stub(layers)
     assert layout == {
         '@type': 'BufferView',
+        'parameters': {
+            '@type': 'array',
+            '@index': 0
+        },
         'InputLayer': {
             '@type': 'BufferView',
-            '@index': 0,
+            '@index': 1,
             'inputs': {'@type': 'BufferView', '@index': 0},
             'outputs': {
                 '@type': 'BufferView',
@@ -174,7 +187,7 @@ def test_create_layout_stub(layers):
         },
         'A': {
             '@type': 'BufferView',
-            '@index': 1,
+            '@index': 2,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -199,7 +212,7 @@ def test_create_layout_stub(layers):
         },
         'B': {
             '@type': 'BufferView',
-            '@index': 2,
+            '@index': 3,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -224,7 +237,7 @@ def test_create_layout_stub(layers):
         },
         'C': {
             '@type': 'BufferView',
-            '@index': 3,
+            '@index': 4,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -249,7 +262,7 @@ def test_create_layout_stub(layers):
         },
         'D': {
             '@type': 'BufferView',
-            '@index': 4,
+            '@index': 5,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -324,9 +337,15 @@ def test_create_layout(layers):
     sizes, max_time_offset, layout = create_layout(layers)
     assert layout == {
         '@type': 'BufferView',
+        'parameters': {
+            '@type': 'array',
+            '@index': 0,
+            '@slice': (0, 230),
+            '@shape': (230, ),
+        },
         'InputLayer': {
             '@type': 'BufferView',
-            '@index': 0,
+            '@index': 1,
             'inputs': {'@type': 'BufferView', '@index': 0},
             'outputs': {
                 '@type': 'BufferView',
@@ -339,7 +358,7 @@ def test_create_layout(layers):
         },
         'A': {
             '@type': 'BufferView',
-            '@index': 1,
+            '@index': 2,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -369,7 +388,7 @@ def test_create_layout(layers):
         },
         'B': {
             '@type': 'BufferView',
-            '@index': 2,
+            '@index': 3,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -399,7 +418,7 @@ def test_create_layout(layers):
         },
         'C': {
             '@type': 'BufferView',
-            '@index': 3,
+            '@index': 4,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -429,7 +448,7 @@ def test_create_layout(layers):
         },
         'D': {
             '@type': 'BufferView',
-            '@index': 4,
+            '@index': 5,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,

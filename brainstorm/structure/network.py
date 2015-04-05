@@ -72,7 +72,8 @@ class Network(Seedable):
     def initialize(self, init_dict=None, seed=None, **kwargs):
         init_refs = _update_references_with_dict(init_dict, kwargs)
         all_parameters = {k: v.parameters
-                          for k, v in self.buffer.forward.items()}
+                          for k, v in self.buffer.forward.items()
+                          if 'parameters' in v}
         initializers, fallback = resolve_references(all_parameters, init_refs)
         init_rnd = self.rnd.create_random_state(seed)
         for layer_name, views in all_parameters.items():

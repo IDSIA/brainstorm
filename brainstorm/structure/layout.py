@@ -62,6 +62,11 @@ def create_layout(layers):
 
         buffer_sizes[btype] = int(indexes[-1])
 
+    # add shape to parameters
+    s = layout['parameters']['@slice']
+    layout['parameters']['@shape'] = (s[1] - s[0],)
+
+    # determine max-time offset
     max_time_offset = 0
     for s in gather_array_nodes(layout):
         max_time_offset = max(max_time_offset,
@@ -98,8 +103,12 @@ def get_forced_orders(layers):
 
 
 def create_layout_stub(layers):
-    root = {'@type': 'BufferView'}
-    for i, (layer_name, layer) in enumerate(layers.items()):
+    root = {'@type': 'BufferView',
+            'parameters': {
+                '@type': 'array',
+                '@index': 0
+            }}
+    for i, (layer_name, layer) in enumerate(layers.items(), start=1):
         root[layer_name] = get_layout_stub_for_layer(layer)
         root[layer_name]['@type'] = 'BufferView'
         root[layer_name]['@index'] = i
@@ -182,6 +191,14 @@ def get_connections(layers):
             start = create_path(con.start_layer, 'outputs', con.output_name)
             end = create_path(con.end_layer, 'inputs', con.input_name)
             connections.append((start, end))
+
+    # add connections to implicit 'parameters'-layer
+    for layer_name, layer in layers.items():
+        for param_name in layer.get_parameter_structure():
+            start = create_path(layer_name, 'parameters', param_name)
+            end = 'parameters'
+            connections.append((start, end))
+
     return sorted(connections)
 
 

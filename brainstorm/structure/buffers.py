@@ -56,8 +56,6 @@ class BufferManager(object):
         self.size = -1
         self.full_buffer = None
         self.forward = None
-        self.parameters = None
-        self.gradients = None
         self.backward = None
         self.resize(0, 0)
 
@@ -90,16 +88,16 @@ class BufferManager(object):
             self.full_buffer[slices[2]].reshape(shapes[2])
         ]
 
-        if self.parameters is not None:
+        parameters = None
+        if self.forward is not None:
             # copy the parameters
-            self.handler.copy_to(
-                full_forward_buffers[0],
-                self.parameters)
-
-        self.parameters = full_forward_buffers[0]
+            parameters = self.handler.get_numpy_copy(self.forward.parameters)
 
         self.forward = create_buffer_views_from_layout(
             self.layout, full_forward_buffers, self.max_time_offset)
+
+        if parameters is not None:
+            self.handler.set_from_numpy(self.forward.parameters, parameters)
 
         # TODO optimization: allocate the backward pass only if needed
         full_backward_buffers = [
@@ -107,19 +105,19 @@ class BufferManager(object):
             self.full_buffer[slices[4]].reshape(shapes[1]),
             self.full_buffer[slices[5]].reshape(shapes[2])
         ]
-        self.gradients = full_backward_buffers[0]
 
         self.backward = create_buffer_views_from_layout(
             self.layout, full_backward_buffers, self.max_time_offset)
 
     def set_memory_handler(self, new_handler):
-        # TODO: Preserve at least the weights
         self.full_buffer = None
         self.size = -1
         self.time_size = -1
         self.batch_size = -1
-        parameters = self.handler.get_numpy_copy(self.parameters)
-        self.parameters = None
+        parameters = None
+        if self.forward is not None:
+            parameters = self.handler.get_numpy_copy(self.forward.parameters)
         self.handler = new_handler
         self.resize(0, 0)
-        self.handler.set_from_numpy(self.parameters, parameters)
+        if parameters is not None:
+            self.handler.set_from_numpy(self.forward.parameters, parameters)
