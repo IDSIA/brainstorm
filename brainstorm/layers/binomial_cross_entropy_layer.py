@@ -83,13 +83,16 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
 
         # the binomial cross entropy error is given by
         # - t * ln(y) - (1-t) * ln(1-y)
-        # which for binary t simplifies to
-        # - ln(1 - t + y)
-        _h.fill(cee, 1.0)               # 1
-        _h.subtract_tt(cee, t, cee)     # - t
-        _h.add_tt(cee, y, cee)          # + y
-        _h.clip_t(cee, 1e-6, 1.0, cee)  # clip
-        _h.log_t(cee, cee)              # log
+        tmp = _h.ones(cee.shape)
+        _h.subtract_tt(tmp, y, cee)     # cee = 1-y
+        _h.subtract_tt(tmp, t, tmp)     # tmp  = 1-t
+        _h.log_t(cee, cee)              # cee = ln(1-y)
+        _h.elem_mult_tt(tmp, cee, tmp)  # tmp = (1-t) * ln(1-y)
+
+        _h.log_t(y, cee)                # cee = ln(y)
+        _h.elem_mult_tt(t, cee, cee)    # cee = t * ln(y)
+
+        _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
 
         # reshape for summation
         t, b = cee.shape[:2]
@@ -104,6 +107,7 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         _h = self.handler
         ceed_sum = backward_buffers.outputs.default
         ceed = backward_buffers.internals.cee
+        tmp = _h.allocate(ceed.shape)
 
         y = forward_buffers.inputs.default
         t = forward_buffers.inputs.targets
@@ -112,17 +116,19 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
 
         # the derivative of the binomial cross entropy error is given by
         # (y - t) / (y - y²)
-        # which for binary t simplifies to
-        # 1 / (1 - t - y)
-        tmp = _h.ones(ceed.shape)       # 1
-        _h.subtract_tt(tmp, t, tmp)     # - t
-        _h.subtract_tt(tmp, y, tmp)     # - y
-        _h.clip_t(tmp, 1e-6, 1.0, tmp)  # clip
+
+        _h.elem_mult_tt(y, y, ceed)       # ceed = y²
+        _h.subtract_tt(y, ceed, ceed)     # ceed = y - y²
+        _h.clip_t(ceed, 1e-6, 1.0, ceed)  # clip
+
+        _h.subtract_tt(y, t, tmp)         # tmp = y - t
+
+        _h.divide_tt(tmp, ceed, ceed)     # ceed = (y - t) / (y - y²)
 
         # ceed_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_features_t(ceed_sum, ceed)
-        _h.divide_tt(ceed, tmp, ceed)
+        _h.broadcast_features_t(ceed_sum, tmp)
+        _h.elem_mult_tt(ceed, tmp, ceed)
 
         _h.add_tt(ceed, yd, yd)
 
