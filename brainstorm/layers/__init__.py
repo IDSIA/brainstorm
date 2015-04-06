@@ -16,14 +16,18 @@ from brainstorm.layers.binomial_cross_entropy import BinomialCrossEntropyLayerIm
 from brainstorm.layers.loss_layer import LossLayerImpl
 
 
-construction_layers = {}
-for Layer in get_inheritors(LayerBaseImpl):
+def construction_layer_for(layer_impl):
     layer_name = Layer.__name__
     assert layer_name.endswith('Impl'), \
         "{} should end with 'Impl'".format(layer_name)
     layer_name = layer_name[:-4]
-    construction_layers[layer_name] = partial(ConstructionWrapper.create,
-                                              layer_name)
+    return partial(ConstructionWrapper.create, layer_name)
+
+
+construction_layers = {}
+for Layer in get_inheritors(LayerBaseImpl):
+    layer_name = Layer.__name__[:-4]
+    construction_layers[layer_name] = construction_layer_for(Layer)
 
 
 this_module = sys.modules[__name__]  # this module
