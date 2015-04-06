@@ -2,8 +2,12 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from functools import partial
-
+import sys
+from brainstorm.utils import get_inheritors
 from brainstorm.structure.construction import ConstructionWrapper
+
+# need to import every layer implementation here
+from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
@@ -11,15 +15,21 @@ from brainstorm.layers.squared_difference_layer import SquaredDifferenceLayerImp
 from brainstorm.layers.binomial_cross_entropy import BinomialCrossEntropyLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 
-# somehow this construction is needed because in __all__ unicode does not work
-__all__ = [str(a) for a in [
-    'InputLayer', 'NoOpLayer', 'FullyConnectedLayer', 'SquaredDifferenceLayer',
-    'LossLayer', 'BinomialCrossEntropyLayer'
-]]
 
-InputLayer = partial(ConstructionWrapper.create, "InputLayer")
-NoOpLayer = partial(ConstructionWrapper.create, "NoOpLayer")
-FullyConnectedLayer = partial(ConstructionWrapper.create, "FullyConnectedLayer")
-SquaredDifferenceLayer = partial(ConstructionWrapper.create, "SquaredDifferenceLayer")
-BinomialCrossEntropyLayer = partial(ConstructionWrapper.create, "BinomialCrossEntropyLayer")
-LossLayer = partial(ConstructionWrapper.create, "LossLayer")
+construction_layers = {}
+for Layer in get_inheritors(LayerBaseImpl):
+    layer_name = Layer.__name__
+    assert layer_name.endswith('Impl'), \
+        "{} should end with 'Impl'".format(layer_name)
+    layer_name = layer_name[:-4]
+    construction_layers[layer_name] = partial(ConstructionWrapper.create,
+                                              layer_name)
+
+
+this_module = sys.modules[__name__]  # this module
+for name, cl in construction_layers.items():
+    setattr(this_module, name, cl)
+
+
+# somehow this construction is needed because in __all__ unicode does not work
+__all__ = [str(a) for a in construction_layers]
