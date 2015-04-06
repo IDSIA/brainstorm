@@ -37,5 +37,5 @@ for name, cl in construction_layers.items():
     setattr(this_module, name, cl)
 
 
-# somehow this construction is needed because in __all__ unicode does not work
-__all__ = [str(a) for a in construction_layers]
+# somehow str is needed because in __all__ unicode does not work
+__all__ = ['construction_layer_for'] + [str(a) for a in construction_layers]
