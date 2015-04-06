@@ -227,6 +227,6 @@ class LayerBaseImpl(object):
         if s is None:
             return {'default': ('T', 'B', 0)}
         elif isinstance(s, (tuple, list)):
-            return {'default': ('T', 'B') + tuple(s)}
+            return {'default': tuple(s)}
         else:
             return {'default': ('T', 'B', s)}
