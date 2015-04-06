@@ -166,18 +166,27 @@ def setup_buffers(time_steps, batch_size, layer):
     return forward_buffers, backward_buffers
 
 
-def run_layer_test(layer, time_steps, batch_size, eps):
+def run_layer_test(layer, time_steps, batch_size, eps,
+                   skip_inputs=[], skip_parameters=[], **inputs):
     """
     Checks the gradients w.r.t. parameters and inputs for a given layer.
+    Accepts a named list of initializations for inputs views only.
 
     :param layer: The $Layer$ object which should be tested.
     :param time_steps: Number of time-steps in each sequence.
     :param batch_size: Number of sequences.
     :param eps: Size of perturbation for analytical gradient computation.
+    :param skip_inputs: A list of names of inputs to skip checking.
+    :param skip_parameters: A list of names of parameters to skip checking.
     :return:
     """
     _h = layer.handler
-    forward_buffers, backward_buffers = setup_buffers(time_steps, batch_size, layer)
+    forward_buffers, backward_buffers = setup_buffers(time_steps, batch_size,
+                                                      layer)
+    for key, value in forward_buffers.inputs.items():
+        if key in inputs:
+            print("Found:", key)
+            _h.set_from_numpy(forward_buffers.inputs[key], inputs[key])
 
     # First do a forward and backward pass to calculate gradients
     layer.forward_pass(forward_buffers)
@@ -187,43 +196,51 @@ def run_layer_test(layer, time_steps, batch_size, eps):
 
     # Now calculate approximate gradients
     for key in forward_buffers.parameters.keys():
-        print("\nChecking parameter: ", key)
-        view = forward_buffers.parameters[key]
-        size = _h.size(forward_buffers.parameters[key])
-        x0 = _h.get_numpy_copy(view).reshape((size,))
-        grad_calc = _h.get_numpy_copy(backward_buffers.parameters[
-            key]).reshape((size,))
-        print("x0: ", x0)
-        print("Expected grad: ", grad_calc)
+        if key not in skip_parameters:
+            print("\nChecking parameter: ", key)
+            view = forward_buffers.parameters[key]
+            size = _h.size(forward_buffers.parameters[key])
+            x0 = _h.get_numpy_copy(view).reshape((size,))
+            grad_calc = _h.get_numpy_copy(backward_buffers.parameters[
+                key]).reshape((size,))
+            print("x0: ", x0)
+            print("Expected grad: ", grad_calc)
 
-        def f(x):
-            flat_view = _h.reshape(view, (size,))
-            _h.set_from_numpy(flat_view, x)  # set to new value
-            layer.forward_pass(forward_buffers)
-            _h.set_from_numpy(flat_view, x0)  # reset
-            return get_output_error(_h, forward_buffers)
+            def f(x):
+                flat_view = _h.reshape(view, (size,))
+                _h.set_from_numpy(flat_view, x)  # set to new value
+                layer.forward_pass(forward_buffers)
+                _h.set_from_numpy(flat_view, x0)  # reset
+                return get_output_error(_h, forward_buffers)
 
-        grad_approx = approx_fprime(x0, f, eps)
-        print("Approx grad:", grad_approx)
-        assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+            grad_approx = approx_fprime(x0, f, eps)
+            print("Approx grad:", grad_approx)
+            assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+
+        else:
+            print("\nSkipping parameter: ", key)
 
     for key in forward_buffers.inputs.keys():
-        print("\nChecking input: ", key)
-        view = forward_buffers.inputs[key]
-        size = _h.size(forward_buffers.inputs[key])
-        x0 = _h.get_numpy_copy(view).reshape((size,))
-        grad_calc = _h.get_numpy_copy(backward_buffers.inputs[
-            key]).reshape((size,))
-        print("x0: ", x0)
-        print("Expected grad: ", grad_calc)
+        if key not in skip_inputs:
+            print("\nChecking input: ", key)
+            view = forward_buffers.inputs[key]
+            size = _h.size(forward_buffers.inputs[key])
+            x0 = _h.get_numpy_copy(view).reshape((size,))
+            grad_calc = _h.get_numpy_copy(backward_buffers.inputs[
+                key]).reshape((size,))
+            print("x0: ", x0)
+            print("Expected grad: ", grad_calc)
 
-        def f(x):
-            flat_view = _h.reshape(view, (size,))
-            _h.set_from_numpy(flat_view, x)  # set to new value
-            layer.forward_pass(forward_buffers)
-            _h.set_from_numpy(flat_view, x0)  # reset
-            return get_output_error(_h, forward_buffers)
+            def f(x):
+                flat_view = _h.reshape(view, (size,))
+                _h.set_from_numpy(flat_view, x)  # set to new value
+                layer.forward_pass(forward_buffers)
+                _h.set_from_numpy(flat_view, x0)  # reset
+                return get_output_error(_h, forward_buffers)
 
-        grad_approx = approx_fprime(x0, f, eps)
-        print("Approx grad:", grad_approx)
-        assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+            grad_approx = approx_fprime(x0, f, eps)
+            print("Approx grad:", grad_approx)
+            assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+
+        else:
+            print("\nSkipping input: ", key)
