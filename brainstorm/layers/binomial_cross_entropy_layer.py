@@ -86,10 +86,12 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         tmp = _h.ones(cee.shape)
         _h.subtract_tt(tmp, y, cee)     # cee = 1-y
         _h.subtract_tt(tmp, t, tmp)     # tmp  = 1-t
+        _h.clip_t(cee, 1e-6, 1.0, cee)
         _h.log_t(cee, cee)              # cee = ln(1-y)
         _h.elem_mult_tt(tmp, cee, tmp)  # tmp = (1-t) * ln(1-y)
 
-        _h.log_t(y, cee)                # cee = ln(y)
+        _h.clip_t(y, 1e-6, 1.0, cee)
+        _h.log_t(cee, cee)              # cee = ln(y)
         _h.elem_mult_tt(t, cee, cee)    # cee = t * ln(y)
 
         _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
