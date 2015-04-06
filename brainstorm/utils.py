@@ -81,3 +81,36 @@ def sort_by_index_key(x):
         return x[1]['@index']
     else:
         return -1
+
+
+def get_by_path(d, path):
+    """Access an element of the dict d using the (possibly dotted) path.
+
+    So for example 'foo.bar.baz' would return d['foo']['bar']['baz'].
+
+    :param d: (nested) dictionary
+    :type d: dict
+    :param path: path to access the dictionary
+    :type path: str
+    :return: object
+    """
+    for p in path.split('.'):
+        d = d[p]
+    return d
+
+
+def get_normalized_path(*args):
+    path_parts = []
+    for a in args:
+        assert '@' not in a, a
+        path_parts.extend(a.replace('..', '@').split('.'))
+
+    assert '' not in path_parts, str(path_parts)
+
+    normalized_parts = []
+    for p in path_parts:
+        while p.startswith('@'):
+            normalized_parts.pop()
+            p = p[1:]
+        normalized_parts.append(p)
+    return ".".join(normalized_parts)

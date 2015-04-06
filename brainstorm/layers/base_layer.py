@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.utils import get_inheritors, LayerValidationError
+from brainstorm.utils import get_inheritors, LayerValidationError, get_by_path
 
 
 def get_layer_class_from_typename(typename):
@@ -110,6 +110,23 @@ class LayerBaseImpl(object):
     def backward_pass(self, forward_buffers, backward_buffers):
         pass
 
+    def get_shape(self, path):
+        category, _, subpath = path.partition('.')
+        categories = {'parameters', 'inputs', 'outputs', 'internals'}
+        if category not in categories:
+            raise ValueError("Category '{}' for path '{}' not found. Choices "
+                             "are {}".format(category, path, categories))
+        if category == 'parameters':
+            parameters = self.get_parameter_structure()
+            return get_by_path(parameters, subpath)['@shape']
+        if category == 'internals':
+            internals = self.get_internal_structure()
+            return get_by_path(internals, subpath)['@shape']
+        if category == 'inputs':
+            return get_by_path(self.in_shapes, subpath)
+        if category == 'outputs':
+            return get_by_path(self.out_shapes, subpath)
+
     def _validate_kwargs(self):
         """Ensure self.kwargs are all sound.
 
@@ -164,13 +181,37 @@ class LayerBaseImpl(object):
         for in_c in self.incoming:
             if in_c.input_name not in self.inputs:
                 raise LayerValidationError(
-                    '{}: Invalid incoming connection ({}). Layer has no sink '
+                    '{}: Invalid incoming connection ({}). Layer has no input '
                     'named "{}"'.format(self.name, in_c, in_c.sink_name))
 
         for out_c in self.outgoing:
-            if out_c.output_name not in self.outputs:
+            if out_c.output_name.startswith('..'):
+                category, _, substruct = out_c.output_name[2:].partition('.')
+                if category not in {'parameters', 'internals'}:
+                    raise LayerValidationError(
+                        "{}: Invalid outgoing connection ({}). Category '{}' "
+                        "is not allowed/does not exist. Choices are "
+                        "['parameters', 'internals']".format(self.name, out_c,
+                                                             category))
+                if category == 'parameters':
+                    parameters = self.get_parameter_structure()
+                    if substruct not in parameters:
+                        raise LayerValidationError(
+                            "{}: Invalid outgoing connection ({}). Parameter"
+                            " '{}' does not exist. Choices are {}".format(
+                                self.name, out_c, list(parameters.keys())))
+
+                if category == 'internals':
+                    internals = self.get_internal_structure()
+                    if substruct not in internals:
+                        raise LayerValidationError(
+                            "{}: Invalid outgoing connection ({}). Internal"
+                            " '{}' does not exist. Choices are {}".format(
+                                self.name, out_c, list(internals.keys())))
+
+            elif out_c.output_name not in self.outputs:
                 raise LayerValidationError(
-                    '{}: Invalid incoming connection ({}). Layer has no output'
+                    '{}: Invalid outgoing connection ({}). Layer has no output'
                     ' named "{}"'.format(self.name, out_c,
                                          out_c.output_name))
 

@@ -71,8 +71,7 @@ def test_get_connections(layers):
         ('D.parameters.W', 'parameters'),
         ('D.parameters.b', 'parameters'),
         ('InputLayer.outputs.default', 'A.inputs.default'),
-        ('InputLayer.outputs.default', 'B.inputs.default'),
-
+        ('InputLayer.outputs.default', 'B.inputs.default')
     ]
 
 

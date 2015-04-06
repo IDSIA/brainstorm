@@ -8,7 +8,7 @@ from brainstorm.structure.shapes import combine_input_shapes
 from brainstorm.structure.construction import ConstructionWrapper
 
 from brainstorm.utils import (NetworkValidationError,
-                              is_valid_layer_name)
+                              is_valid_layer_name, get_normalized_path)
 from brainstorm.layers.base_layer import get_layer_class_from_typename
 
 
@@ -176,9 +176,12 @@ def instantiate_layers_from_architecture(architecture):
         input_names = {c.input_name for c in incoming}
         in_shapes = {}
         for input_name in input_names:
-            in_shapes[input_name] = combine_input_shapes(
-                [layers[c.start_layer].out_shapes[c.output_name]
-                 for c in incoming if c.input_name == input_name])
+            incoming_out_shapes = [
+                layers[c.start_layer].get_shape(
+                    get_normalized_path('outputs', c.output_name))
+                for c in incoming if c.input_name == input_name]
+
+            in_shapes[input_name] = combine_input_shapes(incoming_out_shapes)
 
         layers[layer_name] = LayerClass(layer_name, in_shapes, incoming,
                                         outgoing, **get_kwargs(layer))

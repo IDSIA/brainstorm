@@ -7,7 +7,8 @@ import numpy as np
 from brainstorm.structure.shapes import (
     get_feature_size, validate_shape_template)
 from brainstorm.utils import (NetworkValidationError, flatten,
-                              convert_to_nested_indices, sort_by_index_key)
+                              convert_to_nested_indices, sort_by_index_key,
+                              get_normalized_path)
 
 
 def create_layout(layers):
@@ -158,10 +159,6 @@ def add_array_type(d):
     return d
 
 
-def create_path(layer_name, category, substructure):
-    return "{}.{}.{}".format(layer_name, category, substructure)
-
-
 def get_by_path(path, layout):
     current_node = layout
     for p in path.split('.'):
@@ -188,14 +185,15 @@ def get_connections(layers):
     connections = []
     for layer_name, layer in layers.items():
         for con in layer.outgoing:
-            start = create_path(con.start_layer, 'outputs', con.output_name)
-            end = create_path(con.end_layer, 'inputs', con.input_name)
+            start = get_normalized_path(con.start_layer, 'outputs',
+                                        con.output_name)
+            end = get_normalized_path(con.end_layer, 'inputs', con.input_name)
             connections.append((start, end))
 
     # add connections to implicit 'parameters'-layer
     for layer_name, layer in layers.items():
         for param_name in layer.get_parameter_structure():
-            start = create_path(layer_name, 'parameters', param_name)
+            start = get_normalized_path(layer_name, 'parameters', param_name)
             end = 'parameters'
             connections.append((start, end))
 
@@ -207,12 +205,12 @@ def get_order(structure):
 
 
 def get_parameter_order(layer_name, layer):
-    return tuple([create_path(layer_name, 'parameters', o)
+    return tuple([get_normalized_path(layer_name, 'parameters', o)
                   for o in get_order(layer.get_parameter_structure())])
 
 
 def get_internal_order(layer_name, layer):
-    return tuple([create_path(layer_name, 'internals', o)
+    return tuple([get_normalized_path(layer_name, 'internals', o)
                   for o in get_order(layer.get_internal_structure())])
 
 
