@@ -2,7 +2,6 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
-import six
 
 from collections import OrderedDict
 from brainstorm.describable import Describable
@@ -49,7 +48,8 @@ class SaveWeights(Monitor):
         self.filename = filename
 
     def __call__(self, epoch, net, stepper, logs):
-        np.save(self.filename, net.buffer.parameters[:])
+        params = net.handler.get_numpy_copy(net.buffer.forward.parameters)
+        np.save(self.filename, params)
 
     def load_weights(self):
         return np.load(self.filename)
@@ -76,14 +76,15 @@ class SaveBestWeights(Monitor):
             e = e[en]
         min_error_idx = np.argmin(e)
         if min_error_idx == len(e) - 1:
+            params = net.handler.get_numpy_copy(net.buffer.forward.parameters)
             if self.filename is not None:
                 if self.run_verbosity:
                     print(">> Saving weights to {0}...".format(self.filename))
-                np.save(self.filename, net.buffer.parameters[:])
+                np.save(self.filename, params)
             else:
                 if self.run_verbosity:
                     print(">> Caching weights")
-                self.weights = net.buffer.parameters[:].copy()
+                self.weights = params
         elif self.run_verbosity:
             print(">> Last saved weigths after epoch {}".format(min_error_idx))
 
@@ -106,12 +107,14 @@ class MonitorLayerProperties(Monitor):
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
-        for key, value in net.buffer.parameters[self.layer_name].items():
-            log['min_' + key] = value.min()
-            log['max_' + key] = value.max()
-            if value.shape[1] > 1:
-                log['min_sq_norm_' + key] = np.sum(value ** 2, axis=1).min()
-                log['max_sq_norm_' + key] = np.sum(value ** 2, axis=1).max()
+        for key, v in net.buffer.forward[self.layer_name].parameters.items():
+            v = net.handler.get_numpy_copy(v)
+            log[key] = OrderedDict()
+            log[key]['min'] = v.min()
+            log[key]['max'] = v.max()
+            if len(v.shape) > 1 and v.shape[1] > 1:
+                log[key]['min_l2'] = np.sqrt(np.sum(v ** 2, axis=1)).min()
+                log[key]['max_l2'] = np.sqrt(np.sum(v ** 2, axis=1)).max()
         return log
 
 

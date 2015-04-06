@@ -32,7 +32,8 @@ class Trainer(Describable):
         if name in self.monitors:
             raise ValueError("Monitor '{}' already exists.".format(name))
         if self.monitors:
-            priority = self.monitors.values()[-1].priority + 1
+            last = next(reversed(self.monitors))
+            priority = self.monitors[last].priority + 1
         else:
             priority = 0
         self.monitors[name] = monitor
