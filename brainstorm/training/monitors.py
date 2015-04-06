@@ -116,7 +116,8 @@ class MonitorLayerProperties(Monitor):
 
 
 class MaxEpochsSeen(Monitor):
-    def __init__(self, max_epochs, timescale='epoch', interval=1, name=None, verbose=None):
+    def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
+                 verbose=None):
         super(MaxEpochsSeen, self).__init__(name, timescale, interval, verbose)
         self.max_epochs = max_epochs
 

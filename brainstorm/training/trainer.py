@@ -65,7 +65,8 @@ class Trainer(Describable):
     def __init_from_description__(self, description):
         # recover the order of the monitors from their priorities
         # and set their names
-        get_priority = lambda x: getattr(x[1], 'priority', 0)
+        def get_priority(x):
+            return getattr(x[1], 'priority', 0)
         ordered_mon = sorted(self.monitors.items(), key=get_priority)
         self.monitors = OrderedDict()
         for name, mon in ordered_mon:

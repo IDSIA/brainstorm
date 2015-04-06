@@ -133,4 +133,3 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         _h.elem_mult_tt(ceed, tmp, ceed)
 
         _h.add_tt(ceed, yd, yd)
-

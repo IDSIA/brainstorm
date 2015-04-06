@@ -11,8 +11,10 @@ from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
-from brainstorm.layers.squared_difference_layer import SquaredDifferenceLayerImpl
-from brainstorm.layers.binomial_cross_entropy_layer import BinomialCrossEntropyLayerImpl
+from brainstorm.layers.squared_difference_layer import \
+    SquaredDifferenceLayerImpl
+from brainstorm.layers.binomial_cross_entropy_layer import \
+    BinomialCrossEntropyLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 
 

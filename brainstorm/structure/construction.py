@@ -94,8 +94,10 @@ class ConstructionWrapper(object):
     def __rshift__(self, other):
         if not isinstance(other, ConstructionWrapper):
             return NotImplemented
-        self.layer.outgoing.append((self.output_name, other.input_name, other.layer))
-        other.layer.incoming.append((self.layer, self.output_name, other.input_name))
+        self.layer.outgoing.append((self.output_name, other.input_name,
+                                    other.layer))
+        other.layer.incoming.append((self.layer, self.output_name,
+                                     other.input_name))
         self.layer.merge_scopes(other.layer)
         return other
 

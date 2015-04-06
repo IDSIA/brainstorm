@@ -186,4 +186,3 @@ def instantiate_layers_from_architecture(architecture):
         layers[layer_name] = LayerClass(layer_name, in_shapes, incoming,
                                         outgoing, **get_kwargs(layer))
     return layers
-

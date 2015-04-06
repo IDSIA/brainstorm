@@ -54,28 +54,32 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
 
             if len(in_shape) < 3:
                 raise LayerValidationError(
-                    "{}: in_shape ({}) for {} must be at least length 3 to be a"
-                    " valid input for FramewiseMSELayer".format(
+                    "{}: in_shape ({}) for {} must be at least length 3 to be "
+                    "a valid input for FramewiseMSELayer".format(
                         self.name, in_shape,
                         input_name, self.inputs[input_name]))
 
         # 'inputs_1' and 'inputs_2' must be wired in
         # and their first two dimensions must match
-        if 'inputs_1' not in self.in_shapes or 'inputs_2' not in self.in_shapes:
+        if 'inputs_1' not in self.in_shapes or \
+                'inputs_2' not in self.in_shapes:
             raise LayerValidationError("{} must have both 'inputs_1' and "
-                                       "'inputs_2' as inputs".format(self.name))
+                                       "'inputs_2' as inputs"
+                                       .format(self.name))
         if self.in_shapes['inputs_1'][0] != self.in_shapes['inputs_2'][0]:
             raise LayerValidationError("{}: inputs_1 and inputs_2 must have "
-                                       "same first dimensions but got {} and {}"
-                                       "".format(self.name,
-                                                 self.in_shapes['inputs_1'][0],
-                                                 self.in_shapes['inputs_2'][0]))
+                                       "same first dimensions but got {} and"
+                                       " {}"
+                                       .format(self.name,
+                                               self.in_shapes['inputs_1'][0],
+                                               self.in_shapes['inputs_2'][0]))
         if self.in_shapes['inputs_1'][1] != self.in_shapes['inputs_2'][1]:
             raise LayerValidationError("{}: inputs_1 and inputs_2 must have "
-                                       "same second dimensions but got {} and {}"
-                                       "".format(self.name,
-                                                 self.in_shapes['inputs_1'][1],
-                                                 self.in_shapes['inputs_2'][1]))
+                                       "same second dimensions but got {} and "
+                                       "{}"
+                                       .format(self.name,
+                                               self.in_shapes['inputs_1'][1],
+                                               self.in_shapes['inputs_2'][1]))
 
     def _validate_out_shapes(self):
         """Ensure self.out_shapes are all valid.
@@ -91,13 +95,15 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         if self.out_shapes['default'][0] != self.in_shapes['inputs_1'][0]:
             raise LayerValidationError(
                 '{}: default output must have same first dimension as inputs '
-                '{} but got {}'.format(self.name, self.in_shapes['inputs_1'][0],
+                '{} but got {}'.format(self.name,
+                                       self.in_shapes['inputs_1'][0],
                                        self.out_shapes['default'][0])
             )
         if self.out_shapes['default'][1] != self.in_shapes['inputs_1'][1]:
             raise LayerValidationError(
                 '{}: default output must have same second dimension as inputs '
-                '{} but got {}'.format(self.name, self.in_shapes['inputs_1'][1],
+                '{} but got {}'.format(self.name,
+                                       self.in_shapes['inputs_1'][1],
                                        self.out_shapes['default'][1])
             )
         if len(self.out_shapes['default']) != 3:

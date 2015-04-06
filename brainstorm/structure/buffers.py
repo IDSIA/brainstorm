@@ -20,7 +20,8 @@ def create_buffer_views_from_layout(layout, buffers, time_offset):
             full_buffer = full_buffer.reshape(shape[buffer_type:])
         elif buffer_type == 1:
             full_buffer = buffers[buffer_type][:, start:stop]
-            full_buffer = full_buffer.reshape(full_buffer.shape[:1] + shape[buffer_type:])
+            full_buffer = full_buffer.reshape(full_buffer.shape[:1] +
+                                              shape[buffer_type:])
         else:  # buffer_type == 2
             full_buffer = buffers[buffer_type][t_start:, :, start:stop]
             full_buffer = full_buffer.reshape(
@@ -31,8 +32,10 @@ def create_buffer_views_from_layout(layout, buffers, time_offset):
         full_buffer = None
 
     if layout['@type'] == 'BufferView':
-        children = [(n, create_buffer_views_from_layout(sub_node, buffers, time_offset))
-                    for n, sub_node in sorted(layout.items(), key=sort_by_index_key)
+        children = [(n, create_buffer_views_from_layout(sub_node, buffers,
+                                                        time_offset))
+                    for n, sub_node in sorted(layout.items(),
+                                              key=sort_by_index_key)
                     if not n.startswith('@')]
         if children:
             names, child_buffers = zip(*children)
@@ -63,11 +66,13 @@ class BufferManager(object):
         shapes = [
             (self.feature_sizes[0],),
             (self.batch_size, self.feature_sizes[1]),
-            (self.time_size + self.max_time_offset, self.batch_size, self.feature_sizes[2]),
+            (self.time_size + self.max_time_offset, self.batch_size,
+             self.feature_sizes[2]),
         ]
         totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes]*2)
         size = int(totals[-1])
-        slices = [slice(int(i), int(j)) for i, j in zip(totals[:-1], totals[1:])]
+        slices = [slice(int(i), int(j)) for i, j in zip(totals[:-1],
+                                                        totals[1:])]
         return size, slices, shapes
 
     def resize(self, time_size, batch_size):

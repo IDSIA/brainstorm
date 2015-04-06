@@ -71,9 +71,9 @@ def combine_input_shapes(shapes):
                 for s in tupled_shapes]):
         raise ValueError('Feature size mismatch. {}'.format(tupled_shapes))
     summed_shape = sum(s[first_feature_index] for s in tupled_shapes)
-    return some_shape[:first_feature_index] + \
-           (summed_shape,) + \
-           fixed_feature_shape
+    return (some_shape[:first_feature_index] +
+            (summed_shape,) +
+            fixed_feature_shape)
 
 
 def get_feature_size(shape):

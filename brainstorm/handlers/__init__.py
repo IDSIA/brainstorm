@@ -15,4 +15,3 @@ except ImportError as e:
     print(e)
 
 default_handler = NumpyHandler(np.float32)
-#default_handler = DebugHandler()

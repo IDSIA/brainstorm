@@ -38,5 +38,3 @@ class InputLayerImpl(LayerBaseImpl):
                     ' named "{}".\nChoices are {}.'.format(
                         out_c, self.name, out_c.output_name,
                         self.out_shapes.keys()))
-
-

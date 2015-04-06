@@ -343,4 +343,3 @@ def can_be_connected_with_single_buffer(connection_table):
     padded = np.zeros((connection_table.shape[0]+2, connection_table.shape[1]))
     padded[1:-1, :] = connection_table
     return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)
-

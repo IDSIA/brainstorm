@@ -136,4 +136,3 @@ class NumpyHandler(object):
     @staticmethod
     def rel_deriv(x, y, dy, dx):
         dx[:] = dy * (x > 0)
-

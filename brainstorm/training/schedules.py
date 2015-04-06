@@ -82,7 +82,8 @@ class ExponentialSchedule(Describable):
         self.current_value = None
 
     def __call__(self):
-        self.current_value = min(self.maximum, max(self.minimum,
+        self.current_value = min(self.maximum, max(
+            self.minimum,
             self.initial_value * (self.factor **
                                   (self.update_number // self.interval))))
         self.update_number += 1
