@@ -8,4 +8,6 @@ from brainstorm.initializers import *
 from brainstorm.training import *
 from brainstorm.data_iterators import Online
 
+__all__ = ['Online', 'global_rnd']
+
 __version__ = '0.1'

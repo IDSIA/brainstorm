@@ -69,7 +69,7 @@ class BufferManager(object):
             (self.time_size + self.max_time_offset, self.batch_size,
              self.feature_sizes[2]),
         ]
-        totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes]*2)
+        totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes] * 2)
         size = int(totals[-1])
         slices = [slice(int(i), int(j)) for i, j in zip(totals[:-1],
                                                         totals[1:])]

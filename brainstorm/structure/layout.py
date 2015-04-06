@@ -29,8 +29,8 @@ def create_layout(layers):
                                connections, layout)
 
     # add shape to parameters
-    s = layout['parameters']['@slice']
-    layout['parameters']['@shape'] = (s[1] - s[0],)
+    param_slice = layout['parameters']['@slice']
+    layout['parameters']['@shape'] = (param_slice[1] - param_slice[0],)
 
     # determine max-time offset
     time_offsets = [get_by_path(s, layout).get('@time_offset', 0)
@@ -340,6 +340,7 @@ def can_be_connected_with_single_buffer(connection_table):
     :type connection_table: np.ndarray
     :rtype: bool
     """
-    padded = np.zeros((connection_table.shape[0]+2, connection_table.shape[1]))
+    padded = np.zeros((connection_table.shape[0] + 2,
+                       connection_table.shape[1]))
     padded[1:-1, :] = connection_table
     return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)
