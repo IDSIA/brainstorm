@@ -12,34 +12,40 @@ from brainstorm.utils import (NetworkValidationError, flatten,
 
 
 def create_layout(layers):
+    # gather connections and order-constraints
     forced_orders = get_forced_orders(layers)
     connections = get_connections(layers)
     m_cons = merge_connections(connections, forced_orders)
 
-    # make a layout stub
+    # create a stub layout
     layout = create_layout_stub(layers)
-    all_sinks = set(list(zip(*connections))[1])
-    all_sources = list()
-    for s in gather_array_nodes(layout):
-        if s in all_sinks:
-            continue
-        for fo in forced_orders:
-            if s in all_sources:
-                break
-            elif s in fo:
-                all_sources.extend(fo)
-                break
-        else:
-            all_sources.append(s)
-    # group them to hubs
+    all_sinks, all_sources = get_all_sinks_and_sources(forced_orders,
+                                                       connections, layout)
+
+    # group into hubs and lay them out
     hubs = group_into_hubs(all_sources, m_cons, layout)
+    arranged_hubs_by_buffer_type = order_sources_within_hubs(hubs, connections)
+    buffer_sizes = layout_hubs(arranged_hubs_by_buffer_type, all_sinks,
+                               connections, layout)
 
-    # determine order for each hub
-    ordered_sources_by_btype = get_source_order_by_btype(hubs, connections)
+    # add shape to parameters
+    s = layout['parameters']['@slice']
+    layout['parameters']['@shape'] = (s[1] - s[0],)
 
-    all_sinks = sorted(list(zip(*connections))[1])
+    # determine max-time offset
+    time_offsets = [get_by_path(s, layout).get('@time_offset', 0)
+                    for s in gather_array_nodes(layout)]
+
+    return buffer_sizes, max(time_offsets), layout
+
+
+def layout_hubs(arranged_hubs_by_buffer_type, all_sinks, connections, layout):
+    """
+    Determine and fill in the @slice entries into the layout and return total
+    buffer sizes.
+    """
     buffer_sizes = [0, 0, 0]
-    for btype, sources in enumerate(ordered_sources_by_btype):
+    for btype, sources in enumerate(arranged_hubs_by_buffer_type):
 
         c_table = set_up_connection_table(sources, all_sinks, connections)
         sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
@@ -62,21 +68,28 @@ def create_layout(layers):
             sink_layout['@slice'] = (int(start), int(stop))
 
         buffer_sizes[btype] = int(indexes[-1])
+    return buffer_sizes
 
-    # add shape to parameters
-    s = layout['parameters']['@slice']
-    layout['parameters']['@shape'] = (s[1] - s[0],)
 
-    # determine max-time offset
-    max_time_offset = 0
+def get_all_sinks_and_sources(forced_orders, connections, layout):
+    """Gather all sinks and sources while preserving order of the sources."""
+    all_sinks = sorted(list(zip(*connections))[1])
+    all_sources = list()
     for s in gather_array_nodes(layout):
-        max_time_offset = max(max_time_offset,
-                              get_by_path(s, layout).get('@time_offset', 0))
+        if s in all_sinks:
+            continue
+        for fo in forced_orders:
+            if s in all_sources:
+                break
+            elif s in fo:
+                all_sources.extend(fo)
+                break
+        else:
+            all_sources.append(s)
+    return all_sinks, all_sources
 
-    return buffer_sizes, max_time_offset, layout
 
-
-def get_source_order_by_btype(hubs, connections):
+def order_sources_within_hubs(hubs, connections):
     ordered_sources_by_btype = [[], [], []]
     for sources, sinks, btype in hubs:
         connection_table = set_up_connection_table(sources, sinks, connections)
@@ -316,7 +329,7 @@ def permute_rows(connection_table, nested_indices):
             return perm
 
     raise NetworkValidationError("Failed to lay out buffers. "
-                                   "Please change connectivity.")
+                                 "Please change connectivity.")
 
 
 def can_be_connected_with_single_buffer(connection_table):
