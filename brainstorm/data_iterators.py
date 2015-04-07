@@ -29,7 +29,7 @@ def silence():
 
 
 class DataIterator(object):
-    def __call__(self, verbose=False):
+    def __call__(self, handler, verbose=False):
         pass
 
 
@@ -40,12 +40,24 @@ class Undivided(DataIterator):
     def __init__(self, **named_data):
         """
         :param named_data: named arrays with 3+ dimensions ('T', 'B', ...)
-        :type named_data: dict[str, array]
+        :type named_data: dict[str, ndarray]
         """
         _ = _assert_correct_data_format(named_data)
         self.data = named_data
+        self.total_size = sum(d.size for d in self.data.values())
 
-    def __call__(self, verbose=False):
+    def __call__(self, handler, verbose=False):
+        if isinstance(self.data, handler.array_type):
+            yield self.data
+        else:
+            arr = handler.allocate(self.total_size)
+            device_data = {}
+            i = 0
+            for key, value in self.data.items():
+                device_data[key] = arr[i:i+value.size].reshape(value.shape)
+                handler.set_from_numpy(device_data[key], value)
+                i += value.size
+
         yield self.data
 
 
@@ -59,20 +71,37 @@ class Online(DataIterator, Seedable):
         self.data = named_data
         self.shuffle = shuffle
         self.verbose = verbose
+        self.sample_size = sum(d.shape[0] * np.prod(d.shape[2:])
+                               for d in self.data.values())
 
-    def __call__(self, verbose=False):
+    def __call__(self, handler, verbose=False):
         if (self.verbose is None and verbose) or self.verbose:
             p_bar = progress_bar(self.nr_sequences)
         else:
             p_bar = silence()
+
+        need_copy = not all([isinstance(v, handler.array_type)
+                            for v in self.data.values()])
+        if need_copy:
+            arr = handler.allocate(self.sample_size)
 
         print(next(p_bar), end='')
         indices = np.arange(self.nr_sequences)
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
-            data_slice = {k: v[:, idx:idx + 1] for k, v in self.data.items()}
-            yield data_slice
+            if need_copy:
+                device_data = {}
+                i = 0
+                for key, value in self.data.items():
+                    val_s = value[:, idx:idx + 1]
+                    device_data[key] = arr[i:i+val_s.size].reshape(val_s.shape)
+                    handler.set_from_numpy(device_data[key], val_s)
+                    i += val_s.size
+            else:
+                device_data = {k: v[:, idx:idx + 1]
+                               for k, v in self.data.items()}
+            yield device_data
             print(p_bar.send(i + 1), end='')
 
 

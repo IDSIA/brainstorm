@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from brainstorm.data_iterators import progress_bar, Online, Undivided
 from brainstorm.utils import IteratorValidationError
+from brainstorm.handlers import default_handler
 
 
 # ########################### Progress Bar ####################################
@@ -83,7 +84,7 @@ def test_data_terator_with_shape_mismatch_among_targets_raises(Iterator):
 def test_undivided_default():
     input_data = np.zeros((2, 3, 5))
     targets = np.ones((2, 3, 1))
-    iter = Undivided(my_data=input_data, my_targets=targets)()
+    iter = Undivided(my_data=input_data, my_targets=targets)(default_handler)
     x = next(iter)
     assert x == {'my_data': input_data, 'my_targets': targets}
     with pytest.raises(StopIteration):
@@ -96,7 +97,7 @@ def test_undivided_named_targets():
     targets2 = np.ones((2, 3, 1))
     iter = Undivided(my_data=input_data,
                      targets1=targets1,
-                     targets2=targets2)()
+                     targets2=targets2)(default_handler)
     x = next(iter)
     assert x == {'my_data': input_data,
                  'targets1': targets1,
@@ -111,7 +112,9 @@ def test_undivided_named_targets():
 def test_online_default():
     input_data = np.zeros((4, 5, 3))
     targets = np.ones((4, 5, 1))
-    it = Online(my_data=input_data, my_targets=targets, shuffle=False)()
+    it = Online(my_data=input_data,
+                my_targets=targets,
+                shuffle=False)(default_handler)
     x = next(it)
     assert set(x.keys()) == {'my_data', 'my_targets'}
     assert x['my_data'].shape == (4, 1, 3)

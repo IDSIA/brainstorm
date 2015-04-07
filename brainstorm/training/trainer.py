@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import sys
+import threading
 import numpy as np
 from brainstorm.describable import Describable
 
@@ -53,9 +54,10 @@ class Trainer(Describable):
             if self.verbose:
                 print('\n\n', 15 * '- ', "Epoch", self.current_epoch,
                       15 * ' -')
-            for i, data in enumerate(
-                    training_data_getter(verbose=self.verbose)):
-                train_errors.append(self.stepper.run(data))
+            iterator = training_data_getter(verbose=self.verbose,
+                                            handler=net.handler)
+            for i in run_network(net, iterator):
+                train_errors.append(self.stepper.run())
                 if self._emit_monitoring(net, 'update', i + 1):
                     break
 
@@ -135,3 +137,22 @@ class Trainer(Describable):
             if hasattr(err, 'args') and err.args:
                 err.args = (str(err.args[0]) + " in " + str(monitor),)
             raise
+
+
+def run_network(net, iterator):
+    def run_it(it):
+        try:
+            run_it.data = next(it)
+        except StopIteration:
+            run_it.data = StopIteration
+    run_it.data = None
+
+    run_it(iterator)
+    i = 0
+    while run_it.data != StopIteration:
+        net.provide_external_data(run_it.data)
+        t = threading.Thread(target=run_it, args=(iterator,))
+        t.start()
+        yield i
+        t.join()
+        i += 1

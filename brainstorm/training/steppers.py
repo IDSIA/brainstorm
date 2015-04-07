@@ -25,26 +25,11 @@ class TrainingStep(Describable):
     def _initialize(self):
         pass
 
-    def run(self, data):
+    def run(self):
         pass
 
 
 # ########################## Training Steps ###################################
-
-class DiagnosticStep(TrainingStep):
-    """
-    Only prints debugging information. Does not train at all.
-    Use for diagnostics only.
-    """
-    def _initialize(self):
-        print("start DiagnosticStep with net=", self.net)
-
-    def run(self, data):
-        print("DiagnosticStep:")
-        for name, d in data.items():
-            print('  {}.shape = {}'.format(name, d.shape))
-        return 15
-
 
 class ForwardStep(TrainingStep):
     """
@@ -59,8 +44,7 @@ class ForwardStep(TrainingStep):
         super(ForwardStep, self).__init__()
         self.use_training_pass = use_training_pass
 
-    def run(self, data):
-        self.net.provide_external_data(data)
+    def run(self):
         self.net.forward_pass(training_pass=self.use_training_pass)
         return self.net.get_loss_value()
 
@@ -78,9 +62,8 @@ class SgdStep(TrainingStep):
         super(SgdStep, self).start(net)
         self.update = net.handler.zeros(net.buffer.forward.parameters.shape)
 
-    def run(self, data):
+    def run(self):
         learning_rate = self.learning_rate_schedule()
-        self.net.provide_external_data(data)
         self.net.forward_pass(training_pass=True)
         loss = self.net.get_loss_value()
         self.net.backward_pass()
@@ -120,12 +103,11 @@ class MomentumStep(TrainingStep):
     def _initialize(self):
         self.velocity = np.zeros(self.net.get_param_size())
 
-    def run(self, data):
+    def run(self):
         # TODO: adjust to using handlers and new network interface
         learning_rate = self.learning_rate()
         momentum = self.momentum()
         self.velocity *= momentum
-        self.net.provide_external_data(data)
         self.net.forward_pass(training_pass=True)
         loss = self.net.get_loss_value()
         self.net.backward_pass()
@@ -151,13 +133,12 @@ class NesterovStep(MomentumStep):
     If scale_learning_rate is True (default),
     learning_rate is multiplied by (1 - momentum) when used.
     """
-    def run(self, data):
+    def run(self):
         # TODO: adjust to using handlers and new network interface
         learning_rate = self.learning_rate()
         momentum = self.momentum()
         self.velocity *= momentum
         self.net.buffer.parameters[:] += self.velocity
-        self.net.provide_external_data(data)
         self.net.forward_pass(training_pass=True)
         loss = self.net.get_loss_value()
         self.net.backward_pass()
