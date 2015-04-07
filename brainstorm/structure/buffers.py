@@ -61,6 +61,8 @@ class BufferManager(object):
         self.forward = None
         self.backward = None
         self.resize(0, 0)
+        self.forward_buffers = []
+        self.backward_buffers = []
 
     def get_total_size_slices_and_shapes(self):
         shapes = [
@@ -87,7 +89,7 @@ class BufferManager(object):
             self.full_buffer = self.handler.allocate(total_size)
             self.size = total_size
 
-        full_forward_buffers = [
+        self.forward_buffers = [
             self.full_buffer[slices[0]].reshape(shapes[0]),
             self.full_buffer[slices[1]].reshape(shapes[1]),
             self.full_buffer[slices[2]].reshape(shapes[2])
@@ -99,20 +101,20 @@ class BufferManager(object):
             parameters = self.handler.get_numpy_copy(self.forward.parameters)
 
         self.forward = create_buffer_views_from_layout(
-            self.layout, full_forward_buffers, self.max_time_offset)
+            self.layout, self.forward_buffers, self.max_time_offset)
 
         if parameters is not None:
             self.handler.set_from_numpy(self.forward.parameters, parameters)
 
         # TODO optimization: allocate the backward pass only if needed
-        full_backward_buffers = [
+        self.backward_buffers = [
             self.full_buffer[slices[3]].reshape(shapes[0]),
             self.full_buffer[slices[4]].reshape(shapes[1]),
             self.full_buffer[slices[5]].reshape(shapes[2])
         ]
 
         self.backward = create_buffer_views_from_layout(
-            self.layout, full_backward_buffers, self.max_time_offset)
+            self.layout, self.backward_buffers, self.max_time_offset)
 
     def set_memory_handler(self, new_handler):
         self.full_buffer = None
@@ -126,3 +128,26 @@ class BufferManager(object):
         self.resize(0, 0)
         if parameters is not None:
             self.handler.set_from_numpy(self.forward.parameters, parameters)
+
+    def get_context(self):
+        if self.forward_buffers is None:
+            return None
+        timed_buffer = self.forward_buffers[2]
+        t, b, f = timed_buffer.shape
+        context = self.handler.zeros((self.max_time_offset, b, f))
+        self.handler.copy_to(context, timed_buffer[t - self.max_time_offset:t])
+        return context
+
+    def apply_context(self, context):
+        timed_buffer = self.forward_buffers[2]
+        context_slice = timed_buffer[:self.max_time_offset]
+        self.handler.copy_to(context_slice, context)
+
+    def clear_context(self):
+        timed_buffer = self.forward_buffers[2]
+        context_slice = timed_buffer[:self.max_time_offset]
+        self.handler.fill(context_slice, 0.)
+
+    def clear_backward_buffers(self):
+        for b in self.backward_buffers:
+            self.handler.fill(b, 0.)

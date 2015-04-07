@@ -19,7 +19,7 @@ def test_learn_xor_function():
     net.initialize(Gaussian(0.1))
 
     # set up the trainer
-    tr = Trainer(SgdStep(learning_rate=0.01))
+    tr = Trainer(SgdStep(learning_rate=0.001))
     tr.add_monitor(MaxEpochsSeen(100))
 
     # generate the data

@@ -54,11 +54,19 @@ class Network(Seedable):
             self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name],
                                  val)
 
-    def forward_pass(self, training_pass=False):
+    def get_context(self):
+        return self.buffer.get_context()
+
+    def forward_pass(self, training_pass=False, context=None):
+        if context is None:
+            self.buffer.clear_context()
+        else:
+            self.buffer.apply_context(context)
         for layer_name, layer in list(self.layers.items())[1:]:
             layer.forward_pass(self.buffer.forward[layer_name], training_pass)
 
     def backward_pass(self):
+        self.buffer.clear_backward_buffers()
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
             layer.backward_pass(self.buffer.forward[layer_name],
                                 self.buffer.backward[layer_name])
