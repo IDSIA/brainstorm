@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import namedtuple
+from copy import deepcopy
 import re
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.utils import is_valid_layer_name
@@ -145,32 +146,40 @@ def resolve_references(structure, references):
 
 
 def prune_view_references(view_refs):
+    """Removes all empty entries and branches from view_reference tree"""
     pruned_refs = {}
     for layer_name, views in view_refs.items():
         layer_refs = {}
         if views is None:
             continue
-        for view_name, setofsomethings in views.items():
-            if setofsomethings:
-                layer_refs[view_name] = setofsomethings
+        for view_name, setofthings in views.items():
+            if setofthings:
+                layer_refs[view_name] = setofthings
 
         if layer_refs:
             pruned_refs[layer_name] = layer_refs
     return pruned_refs
 
 
-def turn_referenced_into_lists(view_refs):
+def copy_modifier_for(modifier, layer_name, view_name):
+    copied_mod = deepcopy(modifier)
+    copied_mod.layer_name = layer_name
+    copied_mod.view_name = view_name
+    return copied_mod
+
+
+def order_and_copy_modifiers(view_refs):
     list_view_refs = {}
     for layer_name, views in view_refs.items():
         layer_refs = {}
-        for view_name, setofsomethings in views.items():
+        for view_name, setofmodifiers in views.items():
             l = []
-            # TODO take priorities into account
-            for t in setofsomethings:
-                if isinstance(t, (list, tuple)):
-                    l.extend(t)
+            for mod in setofmodifiers:
+                if isinstance(mod, (list, tuple)):
+                    l.extend([copy_modifier_for(m, layer_name, view_name)
+                              for m in mod])
                 else:
-                    l.append(t)
+                    l.append(copy_modifier_for(mod, layer_name, view_name))
             layer_refs[view_name] = l
         list_view_refs[layer_name] = layer_refs
     return list_view_refs

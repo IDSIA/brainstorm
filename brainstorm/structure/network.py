@@ -7,7 +7,7 @@ from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import (resolve_references,
                                                   prune_view_references,
-                                                  turn_referenced_into_lists)
+                                                  order_and_copy_modifiers)
 from brainstorm.initializers import evaluate_initializer
 from brainstorm.randomness import Seedable
 from brainstorm.structure.architecture import generate_architecture
@@ -180,6 +180,26 @@ class Network(Seedable):
                                          seed=init_rnd.generate_seed()))
 
     def set_weight_modifiers(self, default_or_mod_dict=None, **kwargs):
+        """Install WeightModifiers in the network that can change the weights.
+
+        They can be run manually using net.apply_weight_modifiers(), but they
+        will also be called by the trainer after each weight update.
+
+        WeightModifiers can be set for specific weights in the same way as
+        initializers can, but there is no 'fallback'.
+        (so look there for details on the layer and weight-patterns)
+
+        A modifier can be a WeightModifier object or a list of them.
+        So for example:
+        >> net.set_weight_modifiers(
+            default=bs.ClipWeights(-1, 1)
+            FullyConnectedLayer={'W': [bs.RescaleIncomingWeights(),
+                                       bs.MaskWeights(my_mask)]}
+            )
+
+        Note: The order in which WeightModifiers appear in the list matters,
+        because it is the same order in which they will be executed.
+        """
         weight_mod_refs = _update_references_with_dict(default_or_mod_dict,
                                                        kwargs)
         all_parameters = {k: v.parameters
@@ -191,7 +211,7 @@ class Network(Seedable):
         assert not prune_view_references(fallback), \
             'fallback is not supported for weight_modifiers'
         weight_mods = prune_view_references(weight_mods)
-        self.weight_mods = turn_referenced_into_lists(weight_mods)
+        self.weight_mods = order_and_copy_modifiers(weight_mods)
 
     def apply_weight_modifiers(self):
         for layer_name, views in self.weight_mods.items():

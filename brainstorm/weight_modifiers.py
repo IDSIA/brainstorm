@@ -8,11 +8,20 @@ from brainstorm.utils import WeightModificationError
 
 
 class WeightModifier(Seedable, Describable):
+
+    __undescribed__ = {'layer_name', 'view_name'}
+
     def __init__(self):
         super(WeightModifier, self).__init__()
+        self.layer_name = ''
+        self.view_name = ''
 
     def __call__(self, handler, view):
         raise NotImplementedError()
+
+    def __repr__(self):
+        return "<{}.{}.{}}>".format(self.layer_name, self.view_name,
+                                    self.__class__.__name__)
 
 
 class RescaleIncomingWeights(WeightModifier):
@@ -29,6 +38,8 @@ class RescaleIncomingWeights(WeightModifier):
     which weights to affect.
     """
 
+    __default_values__ = {'target_sum': 1.0}
+
     def __init__(self, target_sum=1.0):
         super(RescaleIncomingWeights, self).__init__()
         self.target_sum = target_sum
@@ -39,13 +50,14 @@ class RescaleIncomingWeights(WeightModifier):
                 '{} only works for two dimensional parameters'
                 .format(self.__class__.__name__))
 
-        column_sum = handler.allocate((view.shape[0], 1) + view.shape[2:])
+        column_sum = handler.allocate((1, view.shape[1]))
         handler.sum_t(view, axis=0, out=column_sum)
         handler.elem_mult_st(self.target_sum, column_sum, column_sum)
         handler.divide_mv(view, column_sum, view)
 
     def __repr__(self):
-        return "<RescaleIncomingWeights to %0.4f>" % self.target_sum
+        return "<{}.{}.RescaleIncomingWeights to {:0.4f}>"\
+            .format(self.layer_name, self.view_name, self.target_sum)
 
 
 class ClipWeights(WeightModifier):
@@ -71,7 +83,8 @@ class ClipWeights(WeightModifier):
         handler.clip_t(view, self.low, self.high, view)
 
     def __repr__(self):
-        return "<ClipWeights [%0.4f; %0.4f]>" % (self.low, self.high)
+        return "<{}.{}.ClipWeights [{:0.4f}; {:0.4f}]>"\
+            .format(self.layer_name, self.view_name, self.low, self.high)
 
 
 class MaskWeights(WeightModifier):
@@ -103,9 +116,6 @@ class MaskWeights(WeightModifier):
             self.device_mask = handler.allocate(self.mask.shape)
             handler.set_from_numpy(self.device_mask, self.mask)
         handler.elem_mult_tt(view, self.device_mask, view)
-
-    def __repr__(self):
-        return "<MaskWeights>"
 
 
 class FreezeWeights(WeightModifier):
@@ -139,6 +149,3 @@ class FreezeWeights(WeightModifier):
             handler.set_from_numpy(self.device_weights, self.weights)
 
         handler.copy_to(view, self.device_weights)
-
-    def __repr__(self):
-        return "<FreezeWeights>"
