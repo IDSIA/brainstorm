@@ -83,17 +83,17 @@ class Network(Seedable):
 
         Initialization can be specified in two equivalent ways:
           1) just a default initializer:
-          >> net.initialize(Gaussian())
+          >> net.initialize(bs.Gaussian())
           Note that this is equivalent to:
-          >> net.initialize(default=Gaussian())
+          >> net.initialize(default=bs.Gaussian())
 
           2) by passing a dictionary:
-          >> net.initialize({'RegularLayer': Uniform(),
-                                'LstmLayer': Gaussian()})
+          >> net.initialize({'RegularLayer': bs.Uniform(),
+                                'LstmLayer': bs.Gaussian()})
 
           3) by using keyword arguments:
-          >> net.initialize(RegularLayer=Uniform(),
-                            LstmLayer=Uniform())
+          >> net.initialize(RegularLayer=bs.Uniform(),
+                            LstmLayer=bs.Uniform())
 
         All following explanations will be with regards to the dictionary style
         of initialization, because it is the most general one.
@@ -132,18 +132,18 @@ class Network(Seedable):
 
 
         An initializer can either be a scalar, something that converts to a
-        numpy array of the correct shape or a callable that takes
-        (layer_name, view_name,  shape, seed). So for example:
+        numpy array of the correct shape or an Initializer object.
+        So for example:
         >> net.initialize(
             default=0,
             RnnLayer={'b': [1, 2, 3, 4, 5]},
-            ForwardLayer=lambda ln, vn, s, seed: np.ones(s))
+            ForwardLayer=bs.Gaussian())
 
         Note: Each view must match exactly one initialization and up to one
         fallback to be unambiguous. Otherwise the initialization will fail.
 
         You can specify a seed to make the initialization reproducible:
-        >> net.initialize({'default': Gaussian()}, seed=1234)
+        >> net.initialize({'default': bs.Gaussian()}, seed=1234)
         """
         init_refs = _update_references_with_dict(default_or_init_dict, kwargs)
         all_parameters = {k: v.parameters
