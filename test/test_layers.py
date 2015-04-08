@@ -48,9 +48,9 @@ def test_squared_difference_layer():
 
 def test_binomial_crossentropy_layer():
 
-    eps = 1e-4
-    time_steps = 1
-    batch_size = 1
+    eps = 1e-5
+    time_steps = 3
+    batch_size = 2
     feature_shape = (5,)
     shape = (time_steps, batch_size) + feature_shape
     default = np.random.rand(*shape)

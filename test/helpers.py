@@ -216,7 +216,7 @@ def run_layer_test(layer, time_steps, batch_size, eps,
 
             grad_approx = approx_fprime(x0, f, eps)
             print("Approx grad:", grad_approx)
-            assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+            assert np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
 
         else:
             print("\nSkipping parameter: ", key)
@@ -241,7 +241,7 @@ def run_layer_test(layer, time_steps, batch_size, eps,
 
             grad_approx = approx_fprime(x0, f, eps)
             print("Approx grad:", grad_approx)
-            assert np.allclose(grad_approx, grad_calc, rtol=0.0, atol=1e-4)
+            assert np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
 
         else:
             print("\nSkipping input: ", key)

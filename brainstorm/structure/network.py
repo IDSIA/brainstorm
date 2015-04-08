@@ -151,10 +151,10 @@ class Network(Seedable):
                           if 'parameters' in v}
         initializers, fallback = resolve_references(all_parameters, init_refs)
         init_rnd = self.rnd.create_random_state(seed)
-        for layer_name, views in all_parameters.items():
+        for layer_name, views in sorted(all_parameters.items()):
             if views is None:
                 continue
-            for view_name, view in views.items():
+            for view_name, view in sorted(views.items()):
                 init = initializers[layer_name][view_name]
                 fb = fallback[layer_name][view_name]
                 if len(init) > 1:

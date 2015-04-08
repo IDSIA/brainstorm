@@ -8,6 +8,16 @@ from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 
 
+def pytest_addoption(parser):
+    parser.addoption("--skipslow", action="store_true",
+                     help="skip slow tests")
+
+
+def pytest_runtest_setup(item):
+    if 'slow' in item.keywords and item.config.getoption("--skipslow"):
+        pytest.skip("skipped because of --skipslow option")
+
+
 #             /--- A -- C--
 # InputLayer -        /    \
 #             \--- B ------- D

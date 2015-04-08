@@ -6,7 +6,7 @@ from brainstorm.layers import *
 from brainstorm.randomness import global_rnd
 from brainstorm.initializers import *
 from brainstorm.training import *
-from brainstorm.data_iterators import Online
+from brainstorm.data_iterators import Online, Undivided
 
 
 __version__ = '0.1'
