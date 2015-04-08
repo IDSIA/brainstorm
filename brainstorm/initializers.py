@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.randomness import Seedable
 from brainstorm.describable import Describable
+from brainstorm.utils import InitializationError
 
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in [
@@ -12,10 +13,6 @@ __all__ = [str(a) for a in [
 
 
 # ########################### Support Classes #################################
-
-class InitializationError(Exception):
-    pass
-
 
 class Initializer(Seedable, Describable):
     """

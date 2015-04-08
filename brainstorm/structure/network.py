@@ -5,7 +5,9 @@ from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
-from brainstorm.structure.view_references import resolve_references
+from brainstorm.structure.view_references import (resolve_references,
+                                                  prune_view_references,
+                                                  turn_referenced_into_lists)
 from brainstorm.initializers import evaluate_initializer
 from brainstorm.randomness import Seedable
 from brainstorm.structure.architecture import generate_architecture
@@ -40,6 +42,7 @@ class Network(Seedable):
         self.errors = None
         self.handler = None
         self.set_memory_handler(handler)
+        self.weight_mods = {}
 
     def set_memory_handler(self, new_handler):
         self.handler = new_handler
@@ -175,6 +178,28 @@ class Network(Seedable):
                     view,
                     evaluate_initializer(init.pop(), view.shape, fb,
                                          seed=init_rnd.generate_seed()))
+
+    def set_weight_modifiers(self, default_or_mod_dict=None, **kwargs):
+        weight_mod_refs = _update_references_with_dict(default_or_mod_dict,
+                                                       kwargs)
+        all_parameters = {k: v.parameters
+                          for k, v in self.buffer.forward.items()
+                          if 'parameters' in v}
+        weight_mods, fallback = resolve_references(all_parameters,
+                                                   weight_mod_refs)
+
+        assert not prune_view_references(fallback), \
+            'fallback is not supported for weight_modifiers'
+        weight_mods = prune_view_references(weight_mods)
+        self.weight_mods = turn_referenced_into_lists(weight_mods)
+
+    def apply_weight_modifiers(self):
+        for layer_name, views in self.weight_mods.items():
+            for view_name, weight_mods in views.items():
+                for wm in weight_mods:
+                    wm.rnd.set_seed(self.rnd.generate_seed())
+                    wm(self.handler,
+                       self.buffer.forward[layer_name].parameters[view_name])
 
 
 def _update_references_with_dict(refs, ref_dict):

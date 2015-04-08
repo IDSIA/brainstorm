@@ -111,6 +111,13 @@ class NumpyHandler(object):
     def divide_tt(a, b, out):
         out[:] = a / b
 
+    @staticmethod
+    def divide_mv(m, v, out):
+        """
+        Divide (M, N) matrix elementwise by a (1, N) vector using broadcasting.
+        """
+        out[:] = m / v
+
     # Activation functions
 
     @staticmethod

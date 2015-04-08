@@ -35,6 +35,14 @@ class IteratorValidationError(ValidationError):
     pass
 
 
+class InitializationError(Exception):
+    pass
+
+
+class WeightModificationError(Exception):
+    pass
+
+
 def get_inheritors(cls):
     """
     Get a set of all classes that inherit from the given class.

@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import pytest
 from brainstorm.structure.view_references import (
     get_regex_for_reference, get_key_to_references_mapping,
-    resolve_references)
+    resolve_references, prune_view_references)
 
 
 @pytest.mark.parametrize('ref', ['FeedForwardLayer',
@@ -142,4 +142,16 @@ def test_resolve_references_complicated():
                         'O_bias': set()},
         'ForwardLayer': {'HX': set(), 'H_bias': set()},
         'FooLayer': {'bar': set(), 'bar_bias': set()},
+    }
+
+
+def test_prune_view_references():
+    vrefs = {
+        'LstmLayer_1': {'IX': {}, 'OX': {}, 'I_bias': {},
+                        'O_bias': {}},
+        'LstmLayer_2': {'IX': {1, 7}, 'OX': {}, 'I_bias': {2},
+                        'O_bias': {}}
+    }
+    assert prune_view_references(vrefs) == {
+        'LstmLayer_2': {'IX': {1, 7}, 'I_bias': {2}}
     }

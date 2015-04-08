@@ -98,6 +98,13 @@ class PyCudaHandler(object):
     def divide_tt(a, b, out):
         raise NotImplementedError()
 
+    @staticmethod
+    def divide_mv(m, v, out):
+        """
+        Divide (M, N) matrix elementwise by a (1, N) vector using broadcasting.
+        """
+        raise NotImplementedError()
+
     # Activation functions
 
     @staticmethod

@@ -142,3 +142,35 @@ def resolve_references(structure, references):
     resolved = empty_dict_from(structure)
     apply_references_recursively(resolved, references, None, None)
     return evaluate_defaults(resolved), get_fallbacks(resolved)
+
+
+def prune_view_references(view_refs):
+    pruned_refs = {}
+    for layer_name, views in view_refs.items():
+        layer_refs = {}
+        if views is None:
+            continue
+        for view_name, setofsomethings in views.items():
+            if setofsomethings:
+                layer_refs[view_name] = setofsomethings
+
+        if layer_refs:
+            pruned_refs[layer_name] = layer_refs
+    return pruned_refs
+
+
+def turn_referenced_into_lists(view_refs):
+    list_view_refs = {}
+    for layer_name, views in view_refs.items():
+        layer_refs = {}
+        for view_name, setofsomethings in views.items():
+            l = []
+            # TODO take priorities into account
+            for t in setofsomethings:
+                if isinstance(t, (list, tuple)):
+                    l.extend(t)
+                else:
+                    l.append(t)
+            layer_refs[view_name] = l
+        list_view_refs[layer_name] = layer_refs
+    return list_view_refs
