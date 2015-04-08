@@ -66,6 +66,16 @@ class RandomState(np.random.RandomState):
             seed = self.generate_seed()
         return RandomState(seed)
 
+    def __reduce__(self):
+        # Note: We need to override __reduce__ and __setstate__
+        # because numpys RandomState implements them such that if pickled and
+        # unpickled it would yield a numpy RandomState instead of a
+        # brainstorm RandomState.
+        return self.__class__, (self._seed,), self.get_state()
+
+    def __setstate__(self, state):
+        self.set_state(state)
+
 
 class Seedable(Describable):
     """

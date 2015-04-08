@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from copy import copy
+import pickle
 import pytest
 
 from brainstorm.randomness import global_rnd, RandomState, Seedable
@@ -117,3 +119,20 @@ def test_seedable_initializes_from_description2():
     assert hasattr(f, 'rnd')
     assert isinstance(f.rnd, RandomState)
     f.rnd.randint(100)  # assert no throw
+
+
+def test_random_state_copyable():
+    r = RandomState(127)
+    _ = r.randint(10)
+    r2 = copy(r)
+    assert r.get_seed() == r2.get_seed()
+    assert r.generate_seed() == r2.generate_seed()
+
+
+def test_random_state_pickleable():
+    r = RandomState(127)
+    _ = r.randint(10)
+    s = pickle.dumps(r)
+    r2 = pickle.loads(s)
+    assert r.get_seed() == r2.get_seed()
+    assert r.generate_seed() == r2.generate_seed()
