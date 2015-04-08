@@ -78,8 +78,74 @@ class Network(Seedable):
                 self.buffer.forward[loss_layer_name].outputs.loss))
         return loss
 
-    def initialize(self, init_dict=None, seed=None, **kwargs):
-        init_refs = _update_references_with_dict(init_dict, kwargs)
+    def initialize(self, default_or_init_dict=None, seed=None, **kwargs):
+        """Initialize the weights of the network.
+
+        Initialization can be specified in two equivalent ways:
+          1) just a default initializer:
+          >> net.initialize(Gaussian())
+          Note that this is equivalent to:
+          >> net.initialize(default=Gaussian())
+
+          2) by passing a dictionary:
+          >> net.initialize({'RegularLayer': Uniform(),
+                                'LstmLayer': Gaussian()})
+
+          3) by using keyword arguments:
+          >> net.initialize(RegularLayer=Uniform(),
+                            LstmLayer=Uniform())
+
+        All following explanations will be with regards to the dictionary style
+        of initialization, because it is the most general one.
+
+        Note: It is not recommended to combine 2) and 3) but if they are, then
+        keyword arguments take precedence.
+
+        Each initialization consists of a layer-pattern and that maps to an
+        initializer or a weight-pattern dictionary.
+
+        Layer patterns can take the following forms:
+          1) {'layer_name': INIT_OR_SUBDICT}
+             Matches all the weights of the layer named layer_name
+          2) {'layer_*': INIT_OR_SUBDICT}
+             Matches all layers with a name that starts with 'layer_'
+             The wild-card '*' can appear at arbitrary positions and even
+             multiple times in one path.
+
+        There are two special layer patterns:
+          3) {'default': INIT}
+             Matches all weights that are not matched by any other path-pattern
+          4) {'fallback': INIT}
+             Set a fallback initializer for every weight. It will only be
+             evaluated for the weights for which the regular initializer failed
+             with an InitializationError.
+             (This is useful for initializers that require a certain shape of
+              weights and will not work otherwise. The fallback will then be
+              used for all cases when that initializer failed.)
+
+        The weight-pattern sub-dictionary follows the same form as the layer-
+        pattern:
+          1) {'layer_pattern': {'a': INIT_A, 'b': INIT_B}}
+          2) {'layer_pattern': {'a*': INIT}
+          3) {'layer_pattern': {'default': INIT}
+          4) {'layer_pattern': {'fallback': INIT}
+
+
+        An initializer can either be a scalar, something that converts to a
+        numpy array of the correct shape or a callable that takes
+        (layer_name, view_name,  shape, seed). So for example:
+        >> net.initialize(
+            default=0,
+            RnnLayer={'b': [1, 2, 3, 4, 5]},
+            ForwardLayer=lambda ln, vn, s, seed: np.ones(s))
+
+        Note: Each view must match exactly one initialization and up to one
+        fallback to be unambiguous. Otherwise the initialization will fail.
+
+        You can specify a seed to make the initialization reproducible:
+        >> net.initialize({'default': Gaussian()}, seed=1234)
+        """
+        init_refs = _update_references_with_dict(default_or_init_dict, kwargs)
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.forward.items()
                           if 'parameters' in v}
