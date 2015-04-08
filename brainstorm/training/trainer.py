@@ -58,6 +58,7 @@ class Trainer(Describable):
                                             handler=net.handler)
             for i in run_network(net, iterator):
                 train_errors.append(self.stepper.run())
+                net.apply_weight_modifiers()
                 if self._emit_monitoring(net, 'update', i + 1):
                     break
 

@@ -42,7 +42,8 @@ class Network(Seedable):
         self.errors = None
         self.handler = None
         self.set_memory_handler(handler)
-        self.weight_mods = {}
+        self.weight_modifiers = {}
+        self.gradient_modifiers = {}
 
     def set_memory_handler(self, new_handler):
         self.handler = new_handler
@@ -73,6 +74,7 @@ class Network(Seedable):
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
             layer.backward_pass(self.buffer.forward[layer_name],
                                 self.buffer.backward[layer_name])
+        self.apply_gradient_modifiers()
 
     def get_loss_value(self):
         loss = 0.
@@ -187,7 +189,7 @@ class Network(Seedable):
 
         WeightModifiers can be set for specific weights in the same way as
         initializers can, but there is no 'fallback'.
-        (so look there for details on the layer and weight-patterns)
+        (so look there for details)
 
         A modifier can be a WeightModifier object or a list of them.
         So for example:
@@ -209,17 +211,60 @@ class Network(Seedable):
                                                    weight_mod_refs)
 
         assert not prune_view_references(fallback), \
-            'fallback is not supported for weight_modifiers'
+            'fallback is not supported for weight modifiers'
         weight_mods = prune_view_references(weight_mods)
-        self.weight_mods = order_and_copy_modifiers(weight_mods)
+        self.weight_modifiers = order_and_copy_modifiers(weight_mods)
 
     def apply_weight_modifiers(self):
-        for layer_name, views in self.weight_mods.items():
+        for layer_name, views in self.weight_modifiers.items():
             for view_name, weight_mods in views.items():
                 for wm in weight_mods:
                     wm.rnd.set_seed(self.rnd.generate_seed())
                     wm(self.handler,
                        self.buffer.forward[layer_name].parameters[view_name])
+
+    def set_gradient_modifiers(self, default_or_mod_dict=None, **kwargs):
+        """
+        Install WeightModifiers in the network that can change the gradient.
+
+        They can be run manually using net.apply_gradient_modifiers(), but they
+        will also be called by the network after each backward pass.
+
+        Gradient modifiers can be set for specific weights in the same way as
+        initializers can, but there is no 'fallback'.
+        (so look there for details)
+
+        A modifier can be a WeightModifier object or a list of them.
+        So for example:
+        >> net.set_gradient_modifiers(
+            default=bs.ClipWeights(-1, 1)
+            FullyConnectedLayer={'W': [bs.ClipWeights(),
+                                       bs.MaskWeights(my_mask)]}
+            )
+
+        Note: The order in which WeightModifiers appear in the list matters,
+        because it is the same order in which they will be executed.
+        """
+        gradient_mod_refs = _update_references_with_dict(default_or_mod_dict,
+                                                         kwargs)
+        all_parameters = {k: v.parameters
+                          for k, v in self.buffer.forward.items()
+                          if 'parameters' in v}
+        gradient_mods, fallback = resolve_references(all_parameters,
+                                                     gradient_mod_refs)
+
+        assert not prune_view_references(fallback), \
+            'fallback is not supported for gradient modifiers'
+        gradient_mods = prune_view_references(gradient_mods)
+        self.gradient_modifiers = order_and_copy_modifiers(gradient_mods)
+
+    def apply_gradient_modifiers(self):
+        for layer_name, views in self.gradient_modifiers.items():
+            for view_name, gradient_mods in views.items():
+                for gm in gradient_mods:
+                    gm.rnd.set_seed(self.rnd.generate_seed())
+                    gm(self.handler,
+                       self.buffer.backward[layer_name].parameters[view_name])
 
 
 def _update_references_with_dict(refs, ref_dict):
