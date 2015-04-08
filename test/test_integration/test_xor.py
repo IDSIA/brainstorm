@@ -14,7 +14,12 @@ def test_learn_xor_function():
                                  'targets': ('T', 'B', 1)})
     error_func = BinomialCrossEntropyLayer()
 
-    inp >> FullyConnectedLayer(4, activation_function='tanh') >> FullyConnectedLayer(1, activation_function='sigmoid') >> error_func >> LossLayer()
+    (inp >>
+     FullyConnectedLayer(4, activation_function='tanh') >>
+     FullyConnectedLayer(1, activation_function='sigmoid') >>
+     error_func >>
+     LossLayer())
+
     net = build_net(inp - 'targets' >> 'targets' - error_func)
     net.initialize(Gaussian(0.1))
 

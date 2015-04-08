@@ -10,7 +10,6 @@ from brainstorm.initializers import Gaussian
 from ..helpers import approx_fprime
 
 
-
 @pytest.fixture(scope='module')
 def input_data():
     global_rnd.set_seed(1337)

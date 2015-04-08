@@ -59,9 +59,3 @@ def test_simple_quint_indexing(array):
 
     with pytest.raises(IndexError):
         _ = array[1, 2, 4, 2, 2]
-
-
-
-
-
-

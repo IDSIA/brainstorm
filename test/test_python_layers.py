@@ -30,7 +30,7 @@ def test_layer_constructor():
     c = Connection('l', 'default', 'C', 'default')
 
     l = LayerBaseImpl('LayerName', {'default': ('T', 'B', 5)}, {c}, {a, b},
-                  shape=8)
+                      shape=8)
     assert l.out_shapes == {'default': ('T', 'B', 8)}
     assert l.in_shapes == {'default': ('T', 'B', 5)}
     assert l.incoming == {c}
@@ -40,14 +40,14 @@ def test_layer_constructor():
 
 def test_nooplayer_raises_on_size_mismatch():
     with pytest.raises(LayerValidationError):
-        l = NoOpLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(), set(),
-                      shape=8)
+        l = NoOpLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(),
+                          set(), shape=8)
 
 
 def test_inputlayer_raises_on_in_size():
     with pytest.raises(LayerValidationError):
-        l = InputLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(), set(),
-                       out_shapes={'default': ('T', 'B', 5,)})
+        l = InputLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(),
+                           set(), out_shapes={'default': ('T', 'B', 5,)})
 
 
 @pytest.mark.parametrize("LayerClass", [

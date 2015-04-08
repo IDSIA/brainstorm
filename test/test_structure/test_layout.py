@@ -102,8 +102,8 @@ def test_get_forward_closure():
         ('D', 'E'),  # #       \-> D -/--> F
         ('D', 'F')
     ]
-    assert get_forward_closure('A', connections) == ({'A'},      {'B'})
-    assert get_forward_closure('B', connections) == ({'B'},      {'C', 'D'})
+    assert get_forward_closure('A', connections) == ({'A'}, {'B'})
+    assert get_forward_closure('B', connections) == ({'B'}, {'C', 'D'})
     assert get_forward_closure('C', connections) == ({'C', 'D'}, {'E', 'F'})
     assert get_forward_closure('D', connections) == ({'C', 'D'}, {'E', 'F'})
 
@@ -122,7 +122,8 @@ def test_get_forward_closure():
     ([1, 1, 0, 1, 1], False),
 ])
 def test_col_can_be_connected_with_single_buffer(col, expected):
-    assert can_be_connected_with_single_buffer(np.array(col).reshape(-1, 1)) == expected
+    assert can_be_connected_with_single_buffer(np.array(col).reshape(-1, 1))\
+           == expected
 
 
 def test_can_be_connected_with_single_buffer():
@@ -179,7 +180,8 @@ def test_create_layout_stub(layers):
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 2)},
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)},
             },
             'parameters': {'@type': 'BufferView', '@index': 2},
             'internals': {'@type': 'BufferView', '@index': 3},
@@ -190,12 +192,14 @@ def test_create_layout_stub(layers):
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 2)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 3)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -215,12 +219,14 @@ def test_create_layout_stub(layers):
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 2)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 5)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 5)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -240,12 +246,14 @@ def test_create_layout_stub(layers):
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 8)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 8)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 7)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 7)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -265,12 +273,14 @@ def test_create_layout_stub(layers):
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 12)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 12)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 11)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 11)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -296,7 +306,8 @@ def test_traverse_layout():
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 2)},
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)},
             },
             'parameters': {'@type': 'BufferView', '@index': 2},
             'internals': {'@type': 'BufferView', '@index': 3},
@@ -307,12 +318,14 @@ def test_traverse_layout():
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 2)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
-                'default': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3)}
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 3)}
             },
             'parameters': {
                 '@type': 'BufferView',

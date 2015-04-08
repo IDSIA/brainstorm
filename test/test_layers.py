@@ -3,8 +3,10 @@
 
 from __future__ import division, print_function, unicode_literals
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
-from brainstorm.layers.squared_difference_layer import SquaredDifferenceLayerImpl
-from brainstorm.layers.binomial_cross_entropy_layer import BinomialCrossEntropyLayerImpl
+from brainstorm.layers.squared_difference_layer import \
+    SquaredDifferenceLayerImpl
+from brainstorm.layers.binomial_cross_entropy_layer import \
+    BinomialCrossEntropyLayerImpl
 from brainstorm.handlers import NumpyHandler
 from .helpers import run_layer_test
 import numpy as np

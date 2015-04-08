@@ -25,5 +25,3 @@ def test_fully_connected_layer_overwrites_internal():
     out2 = forward_buffers.outputs.default.copy()
 
     np.testing.assert_allclose(out1, out2)
-
-

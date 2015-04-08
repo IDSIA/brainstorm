@@ -133,7 +133,8 @@ def setup_buffers(time_steps, batch_size, layer):
     forward_buffer_names.append('parameters')
     forward_buffer_views.append(BufferView(param_names, forward_param_buffers))
     backward_buffer_names.append('parameters')
-    backward_buffer_views.append(BufferView(param_names, backward_param_buffers))
+    backward_buffer_views.append(BufferView(param_names,
+                                            backward_param_buffers))
 
     # setup internals
     internal_names = []
@@ -167,7 +168,7 @@ def setup_buffers(time_steps, batch_size, layer):
 
 
 def run_layer_test(layer, time_steps, batch_size, eps,
-                   skip_inputs=[], skip_parameters=[], **inputs):
+                   skip_inputs=(), skip_parameters=(), **inputs):
     """
     Checks the gradients w.r.t. parameters and inputs for a given layer.
     Accepts a named list of initializations for inputs views only.
