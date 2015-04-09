@@ -101,7 +101,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         # - sum over i: p_i * ln(y_i)
         # now our targets are indices so all p_i = 0 except for i=t
         _h.fill(loss, 0.)
-        _h.index_m_by_v(flat_Ha, flat_targets, flat_loss)
+        _h.index_m_by_v(flat_output, flat_targets, flat_loss)
         _h.log_t(loss, loss)
         _h.elem_mult_st(-1, loss, loss)
 
