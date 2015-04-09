@@ -15,6 +15,7 @@ from brainstorm.layers.squared_difference_layer import \
     SquaredDifferenceLayerImpl
 from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
+from brainstorm.layers.classification_layer import ClassificationLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 
 
@@ -43,6 +44,12 @@ def LossLayer(name=None):
 
 def BinomialCrossEntropyLayer(name=None):
     return ConstructionWrapper.create('BinomialCrossEntropyLayer',
+                                      name=name)
+
+
+def ClassificationLayer(name=None):
+    return ConstructionWrapper.create('ClassificationLayer',
+                                      shape=shape,
                                       name=name)
 
 
