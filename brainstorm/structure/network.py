@@ -218,14 +218,6 @@ class Network(Seedable):
         weight_mods = prune_view_references(weight_mods)
         self.weight_modifiers = order_and_copy_modifiers(weight_mods)
 
-    def apply_weight_modifiers(self):
-        for layer_name, views in self.weight_modifiers.items():
-            for view_name, weight_mods in views.items():
-                for wm in weight_mods:
-                    wm.rnd.set_seed(self.rnd.generate_seed())
-                    wm(self.handler,
-                       self.buffer.forward[layer_name].parameters[view_name])
-
     def set_gradient_modifiers(self, default_or_mod_dict=None, **kwargs):
         """
         Install WeightModifiers in the network that can change the gradient.
@@ -260,6 +252,14 @@ class Network(Seedable):
             'fallback is not supported for gradient modifiers'
         gradient_mods = prune_view_references(gradient_mods)
         self.gradient_modifiers = order_and_copy_modifiers(gradient_mods)
+
+    def apply_weight_modifiers(self):
+        for layer_name, views in self.weight_modifiers.items():
+            for view_name, weight_mods in views.items():
+                for wm in weight_mods:
+                    wm.rnd.set_seed(self.rnd.generate_seed())
+                    wm(self.handler,
+                       self.buffer.forward[layer_name].parameters[view_name])
 
     def apply_gradient_modifiers(self):
         for layer_name, views in self.gradient_modifiers.items():

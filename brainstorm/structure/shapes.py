@@ -125,8 +125,28 @@ class ShapeTemplate(object):
             descr['@context_size'] = self.context_size
         return descr
 
+    def matches(self, shape):
+        if not self.shape_type.endswith('*') and len(shape) != self.nr_dims:
+            return False
+        if self.shape_type.endswith('*') and len(shape) < len(self._shape):
+            return False
+
+        for s, t in zip(shape, self._shape):
+            if t in ['T', 'B', 'F'] and isinstance(s, int):
+                continue
+            if t == '...':
+                continue
+
+            if t != s:
+                return False
+        return True
+
     def __repr__(self):
-        return "<ShapeTemplate {}>".format(self._shape)
+        return "<{}>".format(self._shape)
+
+
+
+
 
 
 def ensure_tuple_or_none(a):

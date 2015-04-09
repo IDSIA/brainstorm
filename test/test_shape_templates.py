@@ -184,3 +184,71 @@ illegal_shapes = [
 def test_illegal_shape_template_raise(shape):
     with pytest.raises(ShapeValidationError):
         st = ShapeTemplate(*shape)
+
+
+@pytest.mark.parametrize('shape, expected', [
+    [('T', 'B', 1, 3), True],
+    [('T', 7, 1, 3), True],
+    [('T', 4, 1, 3), True],
+    [(1, 'B', 1, 3), True],
+    [(2, 4, 1, 3), True],
+    [('T', 'B', 1), False],
+    [('T', 'B', 'F', 3), False],
+    [('B', 1, 3, 4), False],
+    [('B', 'F', 1, 2), False],
+    [(), False],
+])
+def test_shape_template_matches1(shape, expected):
+    st = ShapeTemplate('T', 'B', 1, 3)
+    assert st.matches(shape) == expected
+
+
+@pytest.mark.parametrize('shape, expected', [
+    [('T', 'B', 'F', 'F'), True],
+    [('T', 'B', 1, 3), True],
+    [('T', 7, 2, 2), True],
+    [('T', 4, 1, 3), True],
+    [(1, 'B', 1, 3), True],
+    [(2, 4, 1, 3), True],
+    [('T', 'B', 1), False],
+    [('T', 'B', 'F', 3), True],
+    [('B', 1, 3, 4), False],
+    [('B', 'F', 1, 2), False],
+    [(), False],
+])
+def test_shape_template_matches2(shape, expected):
+    st = ShapeTemplate('T', 'B', 'F', 'F')
+    assert st.matches(shape) == expected
+
+
+@pytest.mark.parametrize('shape, expected', [
+    [('T', 'B', 'F', 'F'), True],
+    [('T', 'B', 11), True],
+    [('T', 7, 2, 2), True],
+    [('T', 4, 1, 3, 2, 1, 2, 8), True],
+    [(1, 'B', 1, 3), True],
+    [(2, 4, 1, 3), True],
+    [('T', 'B'), False],
+    [('T', 'B', 'F', 3), True],
+    [('B', 1, 3, 4), False],
+    [('B', 'F', 1, 2), False],
+    [(), False],
+])
+def test_shape_template_matches3(shape, expected):
+    st = ShapeTemplate('T', 'B', '...')
+    assert st.matches(shape) == expected
+
+
+@pytest.mark.parametrize('shape, expected', [
+    [(1, 2, 7), True],
+    [('T', 'B', 11), False],
+    [('T', 4, 1, 3, 2, 1, 2, 8), False],
+    [(2, 4, 1), False],
+    [('T', 'B'), False],
+    [('T', 'B', 'F'), False],
+    [('F', 'F', 'F'), False],
+    [(), False],
+])
+def test_shape_template_matches3(shape, expected):
+    st = ShapeTemplate(1, 2, 7)
+    assert st.matches(shape) == expected

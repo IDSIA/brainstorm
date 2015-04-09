@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.utils import get_inheritors, LayerValidationError, get_by_path
+from brainstorm.structure.shapes import ShapeTemplate
 
 
 def get_layer_class_from_typename(typename):
@@ -13,15 +14,6 @@ def get_layer_class_from_typename(typename):
         raise TypeError("Layer-type '{}' unknown!".format(typename))
 
 
-def match_shape_template(shape, template):
-    if len(shape) != len(template):
-        return False
-    for s, t in zip(shape, template):
-        if s != t and t != 'F':
-            return False
-    return True
-
-
 class LayerBaseImpl(object):
     """
     The base-class of all layer types defined in Python.
@@ -29,13 +21,13 @@ class LayerBaseImpl(object):
     Each layer has a set of named sinks (inputs) and sources (outputs).
     """
 
-    inputs = {'default': ('T', 'B', 'F')}
+    inputs = {'default': ShapeTemplate('T', 'B', 'F')}
     """Names and shape-templates for all inputs of this layer"""
 
-    outputs = {'default': ('T', 'B', 'F')}
+    outputs = {'default': ShapeTemplate('T', 'B', 'F')}
     """Names and shape-templates for all outputs of this layer"""
 
-    expected_kwargs = {'shape'}
+    expected_kwargs = {}
     """Set of all kwargs that this layer accepts"""
 
     def __init__(self, name, in_shapes, incoming_connections,
@@ -85,22 +77,18 @@ class LayerBaseImpl(object):
         self.handler = new_handler
 
     def get_parameter_structure(self):
-        """Return a dictionary mapping parameter names to dictionaries
-        describing their shapes using shape templates or in_shapes and
-        out_shapes.
+        """Return a OrderedDict mapping parameter names to ShapeTemplates.
 
-        :return: dict describing parameter buffers
-        :rtype: dict[str, dict[str, object]]
+        :return: OrderedDict describing parameter buffers
+        :rtype: OrderedDict[str, ShapeTemplate]
         """
         return {}
 
     def get_internal_structure(self):
-        """Return a dictionary mapping internal-state names to to dictionaries
-        describing their shapes using shape templates or in_shapes and
-        out_shapes.
+        """Return a OrderedDict internal-state names to to ShapeTemplate.
 
-        :return: dictionary describing internals
-        :rtype: dict[str, dict[str, object]]
+        :return: OrderedDict describing internals
+        :rtype: OrderedDict[str, ShapeTemplate]
         """
         return {}
 
@@ -140,37 +128,46 @@ class LayerBaseImpl(object):
         """Ensure self.in_shapes are all valid.
 
          Raise LayerValidationError otherwise."""
-        for input_name, in_shape in self.in_shapes.items():
-            if input_name not in self.inputs:
-                raise LayerValidationError(
-                    'Invalid in_shapes. {} has no input named "{}". '
-                    'Choices are: {}'.format(self.name, input_name,
-                                             self.inputs))
+        in_shape_names = set(self.in_shapes.keys())
+        input_names = set(self.inputs.keys())
 
-            if not match_shape_template(in_shape, self.inputs[input_name]):
+        if not in_shape_names.issubset(input_names):
+            raise LayerValidationError(
+                'Invalid in_shapes. {} has no input(s) named "{}". Choices '
+                'are: {}'.format(self.name, in_shape_names - input_names,
+                                 input_names))
+
+        if not input_names.issubset(in_shape_names):
+            raise LayerValidationError(
+                '{}: All inputs need to be connected. Missing {}.'
+                .format(self.name, input_names - in_shape_names))
+
+        for input_name, in_shape in self.in_shapes.items():
+            if self.inputs[input_name].matches(in_shape):
                 raise LayerValidationError(
                     "{}: in_shape ({}) for {} doesn't match shape-template {}"
                     .format(self.name, in_shape, input_name,
-                            self.inputs[input_name])
-                )
+                            self.inputs[input_name]))
 
     def _validate_out_shapes(self):
         """Ensure self.out_shapes are all valid.
 
         Raise LayerValidationError otherwise."""
-        for output_name, out_shape in self.out_shapes.items():
-            if output_name not in self.outputs:
-                raise LayerValidationError(
-                    'Invalid out_shapes. {} has no output named "{}". '
-                    'Choices are: {}'.format(self.name, output_name,
-                                             self.outputs))
+        out_shape_names = set(self.out_shapes.keys())
+        output_names = set(self.outputs.keys())
 
-            if not match_shape_template(out_shape, self.outputs[output_name]):
+        if not out_shape_names.issubset(output_names):
+            raise LayerValidationError(
+                'Invalid out_shapes. {} has no output(s) named "{}". Choices '
+                'are: {}'.format(self.name, out_shape_names - output_names,
+                                 output_names))
+
+        for output_name, out_shape in self.out_shapes.items():
+            if not self.outputs[output_name].matches(out_shape):
                 raise LayerValidationError(
                     "{}: out_shape ({}) for {} doesn't match shape-template {}"
                     .format(self.name, out_shape, output_name,
-                            self.outputs[output_name])
-                )
+                            self.outputs[output_name]))
 
     def _validate_connections(self):
         """
@@ -223,10 +220,5 @@ class LayerBaseImpl(object):
 
         Should be overridden by derived classes to customize this behaviour
         """
-        s = self.kwargs.get('shape', self.in_shapes.get('default'))
-        if s is None:
-            return {'default': ('T', 'B', 0)}
-        elif isinstance(s, (tuple, list)):
-            return {'default': tuple(s)}
-        else:
-            return {'default': ('T', 'B', s)}
+        raise NotImplementedError('LayerImplementations need to implement '
+                                  'the _get_output_shapes method.')
