@@ -35,6 +35,10 @@ class IteratorValidationError(ValidationError):
     pass
 
 
+class ShapeValidationError(ValidationError):
+    pass
+
+
 class InitializationError(Exception):
     pass
 

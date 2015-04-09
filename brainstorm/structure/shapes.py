@@ -2,7 +2,131 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
-from brainstorm.utils import ValidationError
+from brainstorm.utils import ValidationError, ShapeValidationError
+
+
+class ShapeTemplate(object):
+    TYPES = ['TB', 'B', '',
+             'TBF+', 'BF+', 'F+',
+             'TBF*', 'BF*', 'F*', ]
+
+    def __init__(self, *args, context_size=0):
+        self._shape = args
+        self.context_size = context_size
+        self.shape_type = self.get_shape_type()
+        self.first_feature_dim = self.get_first_feature_dim()
+        self.validate()
+
+    @property
+    def nr_dims(self):
+        if self.shape_type.endswith('*'):
+            raise TypeError('nr dimensions not fixed')
+        return len(self._shape)
+
+    @property
+    def nr_feature_dims(self):
+        if self.shape_type.endswith('*'):
+            raise TypeError('nr dimensions not fixed')
+        return len(self._shape[self.first_feature_dim:])
+
+    @property
+    def feature_dims(self):
+        return self._shape[self.first_feature_dim:]
+
+    @property
+    def feature_size(self):
+        if self.shape_type.endswith('*') or self.shape_type.endswith('+'):
+            raise TypeError('feature size not fixed')
+        return int(np.prod(self.feature_dims))
+
+    @property
+    def scales_with_time(self):
+        return 'T' in self.shape_type
+
+    @property
+    def scales_with_batch_size(self):
+        return 'B' in self.shape_type
+
+    def get_shape_type(self):
+        shape_type = ''
+        if 'T' in self._shape:
+            shape_type += 'T'
+        if 'B' in self._shape:
+            shape_type += 'B'
+        if '...' in self._shape:
+            shape_type += 'F*'
+        elif 'F' in self._shape:
+            shape_type += 'F+'
+        return shape_type
+
+    def get_first_feature_dim(self):
+        if 'T' in self.shape_type:
+            return 2
+        elif 'B' in self.shape_type:
+            return 1
+        else:
+            return 0
+
+    def validate(self):
+        if len(self._shape) == 0:
+            raise ShapeValidationError("shape must be non-empty (nr dims > 0)")
+
+        if self.scales_with_time and self._shape[:2] != ('T', 'B'):
+            raise ShapeValidationError(
+                "Shapes that scale with time need to start with ('T', 'B')"
+                "(but started with {})".format(self._shape[:2]))
+
+        if not self.scales_with_time and self.scales_with_batch_size and \
+                self._shape[:1] != ('B',):
+            raise ShapeValidationError(
+                "Shapes that scale with batch-size need to start with 'B'"
+                "(but started with {})".format(self._shape[:1]))
+
+        # validate feature dimensions
+        if len(self._shape) <= self.first_feature_dim:
+            raise ShapeValidationError(
+                "need at least one feature dimension"
+                "(but shape was {})".format(self._shape))
+
+        if self.shape_type.endswith('*'):
+            if len(self._shape) > self.first_feature_dim + 1 or\
+                    self.feature_dims != ('...',):
+                raise ShapeValidationError(
+                    'Wildcard-shapes can ONLY have a single feature dimension'
+                    ' entry "...". (But had {})'.format(self.feature_dims))
+
+        elif self.shape_type.endswith('+'):
+            if not all([f == 'F' for f in self.feature_dims]):
+                raise ShapeValidationError(
+                    'The feature dimensions of shapes with feature templates '
+                    '("F") have to consist only of "F"s. (But was {})'
+                    .format(self.feature_dims))
+        else:
+            if not all([isinstance(f, int) for f in self.feature_dims]):
+                raise ShapeValidationError(
+                    'The feature dimensions have to be all-integer. But was {}'
+                    .format(self.feature_dims))
+
+        # validate context_size
+        if not isinstance(self.context_size, int) or self.context_size < 0:
+            raise ShapeValidationError(
+                "context_size has to be a non-negative integer, but was {}"
+                .format(self.context_size))
+
+        if self.context_size and not self.scales_with_time:
+            raise ShapeValidationError("context_size is only available for "
+                                       "shapes that scale with time.")
+
+    def to_json(self):
+        descr = {
+            '@shape': self._shape
+        }
+        if self.context_size:
+            descr['@context_size'] = self.context_size
+        return descr
+
+    def __repr__(self):
+        return "<ShapeTemplate {}>".format(self._shape)
 
 
 def ensure_tuple_or_none(a):
