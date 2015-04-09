@@ -100,3 +100,17 @@ def test_no_sneaky_name_collision():
     assert n2.name == 'A_1'
     assert n3.name == 'A_2'
     assert n4.name == 'A_3'
+
+
+def test_separate_scopes():
+    n0 = UniquelyNamed('A')
+    n1 = UniquelyNamed('A')
+    n2 = UniquelyNamed('A')
+    n3 = UniquelyNamed('A')
+
+    n1.merge_scopes(n0)
+    n2.merge_scopes(n3)
+    assert n0.name == 'A_1'
+    assert n1.name == 'A_2'
+    assert n2.name == 'A_1'
+    assert n3.name == 'A_2'

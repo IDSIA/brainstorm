@@ -5,8 +5,7 @@ import numpy as np
 import pytest
 from brainstorm import (
     InputLayer, FullyConnectedLayer, LossLayer, BinomialCrossEntropyLayer,
-    build_net, Gaussian, Trainer, SgdStep, MaxEpochsSeen, Undivided,
-    SquaredDifferenceLayer)
+    build_net, Gaussian, Trainer, SgdStep, MaxEpochsSeen, Undivided)
 
 
 @pytest.mark.slow

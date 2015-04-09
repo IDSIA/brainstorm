@@ -81,7 +81,7 @@ def test_validate_architecture_raises_on_invalid_name():
     with pytest.raises(NetworkValidationError):
         validate_architecture({
             '$invalid name': {
-                '@type': 'DataLayer',
+                '@type': 'InputLayer',
                 '@outgoing_connections': []
             }
         })
@@ -91,7 +91,7 @@ def test_validate_architecture_raises_on_nonexisting_outgoing():
     with pytest.raises(NetworkValidationError):
         validate_architecture({
             'InputLayer': {
-                '@type': 'DataLayer',
+                '@type': 'InputLayer',
                 '@outgoing_connections': ['missing_layer']
             }
         })
@@ -110,7 +110,7 @@ def test_validate_architecture_raises_inputs_to_data_layer():
     with pytest.raises(NetworkValidationError):
         validate_architecture({
             'InputLayer': {
-                '@type': 'DataLayer',
+                '@type': 'InputLayer',
                 '@outgoing_connections': []
             },
             'fwd1': {
@@ -184,7 +184,7 @@ def test_validate_architecture_with_named_sources():
 def test_get_canonical_architecture_order():
     arch = {
         'A': {
-            '@type': 'DataLayer',
+            '@type': 'InputLayer',
             '@outgoing_connections': {'B1', 'C'}
         },
         'B1': {
@@ -210,7 +210,7 @@ def test_get_canonical_architecture_order():
 def test_get_canonical_architecture_order_with_named_sinks():
     arch = {
         'A': {
-            '@type': 'DataLayer',
+            '@type': 'InputLayer',
             '@outgoing_connections': {'B1', 'C'}
         },
         'B1': {
@@ -236,7 +236,7 @@ def test_get_canonical_architecture_order_with_named_sinks():
 def test_get_canonical_architecture_order_with_named_sources():
     arch = {
         'A': {
-            '@type': 'DataLayer',
+            '@type': 'InputLayer',
             '@outgoing_connections': {'out1': ['B1'],
                                       'out2': ['C']}
         },

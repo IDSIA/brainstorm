@@ -33,6 +33,22 @@ class Initializer(Seedable, Describable):
 
 # ########################### Initializers ####################################
 
+class ArrayInitializer(Initializer):
+    def __init__(self, array):
+        super(ArrayInitializer, self).__init__()
+        self.array = np.array(array)
+
+    def __call__(self, shape):
+        if not self.array.shape == shape:
+            raise InitializationError('Shape mismatch {} != {}'
+                                      .format(self.array.shape, shape))
+
+        return self.array
+
+    def __describe__(self):
+        return self.array.tolist()
+
+
 class Gaussian(Initializer):
     """
     Initializes the weights randomly according to a normal distribution of
@@ -56,15 +72,15 @@ class Uniform(Initializer):
     """
     __default_values__ = {'low': None}
 
-    def __init__(self, high=0.1, low=None):
+    def __init__(self, low=0.1, high=None):
         super(Uniform, self).__init__()
         self.low = low
         self.high = high
         self.__init_from_description__(None)
 
     def __init_from_description__(self, description):
-        if self.low is None:
-            self.low = -self.high
+        if self.high is None:
+            self.low, self.high = sorted([-self.low, self.low])
         assert self.low < self.high, \
             "low has to be smaller than high but {} >= {}".format(self.low,
                                                                   self.high)
@@ -213,12 +229,10 @@ def evaluate_initializer(initializer, shape, fallback=None, seed=None):
                 return evaluate_initializer(fallback, shape, seed=seed)
             raise
     else:
-        result = np.array(initializer)
-
-    # use numpy broadcasting to ensure the correct shape if necessary
-    if result.shape != shape:
-        r = np.empty(shape, dtype=np.float64)
-        r[:] = result
-        result = r
+        if not isinstance(initializer, (int, float)):
+            raise TypeError('type {} not supported as initializer'
+                            .format(type(initializer)))
+        result = np.empty(shape, dtype=np.float64)
+        result[:] = initializer
 
     return result

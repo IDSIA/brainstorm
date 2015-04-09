@@ -5,6 +5,7 @@ import pytest
 from brainstorm.structure.view_references import (
     get_regex_for_reference, get_key_to_references_mapping,
     resolve_references, prune_view_references)
+from brainstorm.utils import NetworkValidationError
 
 
 @pytest.mark.parametrize('ref', ['FeedForwardLayer',
@@ -59,10 +60,19 @@ def test_get_key_to_references_mapping_default():
     }
 
 
+def test_resolve_references_list():
+    refs = {'I_bias': [1, 2, 3], 'default': 0}
+    keys = {'IX': None, 'OX': None, 'I_bias': None, 'O_bias': None}
+    full_thing, fb = resolve_references(keys, refs)
+    assert full_thing == {'IX': {0}, 'OX': {0}, 'I_bias': {(1, 2, 3)},
+                          'O_bias': {0}}
+    assert fb == {'IX': set(), 'OX': set(), 'I_bias': set(), 'O_bias': set()}
+
+
 def test_get_key_to_references_mapping_raises_non_matching_ref():
     keys = ['InputLayer', 'ForwardLayer_1', 'ForwardLayer_2']
     references = ['*Layer_2', 'Lstm*']
-    with pytest.raises(AssertionError):
+    with pytest.raises(NetworkValidationError):
         key_to_refs = get_key_to_references_mapping(keys, references)
 
 
@@ -128,7 +138,7 @@ def test_resolve_references_complicated():
     }
     full_thing, fb = resolve_references(keys, refs)
     assert full_thing == {
-        'LstmLayer_1': {'IX': {1}, 'OX': {0}, 'I_bias': {2, 4, 5},
+        'LstmLayer_1': {'IX': {1}, 'OX': {0}, 'I_bias': {2, (4, 5)},
                         'O_bias': {2}},
         'LstmLayer_2': {'IX': {1, 7}, 'OX': {7}, 'I_bias': {2, 7},
                         'O_bias': {2, 7}},

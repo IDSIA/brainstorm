@@ -87,12 +87,6 @@ def test_evaluate_initializer_with_number():
     assert np.all(evaluate_initializer(1.4, (7, 5)) == 1.4)
 
 
-def test_evaluate_initializer_with_list():
-    result = evaluate_initializer([1, 2, 3], (1, 3))
-    assert isinstance(result, np.ndarray)
-    assert np.all(result == np.array([1, 2, 3]))
-
-
 def test_evaluate_initializer_calls_initializer():
     init = mock.create_autospec(Initializer())
     init.side_effect = lambda x: np.array(1)

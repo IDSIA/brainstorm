@@ -5,7 +5,7 @@ from collections import namedtuple
 from copy import deepcopy
 import re
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.utils import is_valid_layer_name
+from brainstorm.utils import is_valid_layer_name, NetworkValidationError
 
 
 def get_regex_for_reference(reference):
@@ -43,9 +43,10 @@ def get_key_to_references_mapping(keys, references):
 
         expr = get_regex_for_reference(ref)
         matching_keys = [key for key in key_to_reference if expr.match(key)]
-        assert matching_keys, \
-            "{} does not match any keys. Possible keys are: {}".format(
-                ref, sorted(key_to_reference.keys()))
+        if not matching_keys:
+            raise NetworkValidationError(
+                "{} does not match any keys. Possible keys are: {}".format(
+                    ref, sorted(key_to_reference.keys())))
 
         for key in matching_keys:
             key_to_reference[key].add(ref)
@@ -77,8 +78,10 @@ def empty_dict_from(structure):
 
 
 def add_or_update(s, v):
-    if isinstance(v, (list, set, tuple)):
+    if isinstance(v, set):
         s.update(v)
+    elif isinstance(v, (list, tuple)):
+        s.add(tuple(v))
     else:
         s.add(v)
 

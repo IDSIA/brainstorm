@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+import numpy as np
+
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.structure.buffers import BufferManager
@@ -8,7 +10,7 @@ from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import (resolve_references,
                                                   prune_view_references,
                                                   order_and_copy_modifiers)
-from brainstorm.initializers import evaluate_initializer
+from brainstorm.initializers import evaluate_initializer, ArrayInitializer
 from brainstorm.randomness import Seedable
 from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
@@ -154,6 +156,7 @@ class Network(Seedable):
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.forward.items()
                           if 'parameters' in v}
+        replace_lists_with_array_initializers(init_refs)
         initializers, fallback = resolve_references(all_parameters, init_refs)
         init_rnd = self.rnd.create_random_state(seed)
         for layer_name, views in sorted(all_parameters.items()):
@@ -282,3 +285,11 @@ def _update_references_with_dict(refs, ref_dict):
     references.update(ref_dict)
 
     return references
+
+
+def replace_lists_with_array_initializers(ref_dict):
+    for key, value in ref_dict.items():
+        if isinstance(value, dict):
+            replace_lists_with_array_initializers(value)
+        elif isinstance(value, (list, np.ndarray)):
+            ref_dict[key] = ArrayInitializer(value)
