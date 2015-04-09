@@ -118,7 +118,26 @@ class NumpyHandler(object):
         """
         out[:] = m / v
 
-    # Activation functions
+    @staticmethod
+    def mult_mv(m, v, out):
+        """
+        Multiply (M, N) matrix elementwise by a (1, N) vector using
+        broadcasting.
+        """
+        out[:] = m * v
+
+    @staticmethod
+    def binarize_v(v, out):
+        out[:] = 0.
+        for i in range(v.shape[0]):
+            out[i, int(v[i])] = 1.0
+
+    @staticmethod
+    def index_m_by_v(m, v, out):
+        for i in range(m.shape[0]):
+            out[i] = m[i, int(v[i])]
+
+    # ---------------- Activation functions -----------------------------------
 
     @staticmethod
     def sigmoid(x, y):
@@ -143,3 +162,10 @@ class NumpyHandler(object):
     @staticmethod
     def rel_deriv(x, y, dy, dx):
         dx[:] = dy * (x > 0)
+
+    @staticmethod
+    def softmax_m(m, out):
+        """Applies softmax to matrix over last dimension"""
+        maxes = np.amax(m, axis=1, keepdims=True)
+        e = np.exp(m - maxes)
+        out[:] = e / np.sum(e, axis=1, keepdims=True)

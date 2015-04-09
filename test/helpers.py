@@ -31,9 +31,11 @@ def approx_fprime(x0, f, epsilon, *args):
     return grad
 
 
-def get_output_error(_h, forward_buffers):
+def get_output_error(_h, forward_buffers, skip_outputs=()):
     error = 0.0
     for key in forward_buffers.outputs.keys():
+        if key in skip_outputs:
+            continue
         value = _h.get_numpy_copy(forward_buffers.outputs[key])
         error += value.sum()
     return error
@@ -168,7 +170,8 @@ def setup_buffers(time_steps, batch_size, layer):
 
 
 def run_layer_test(layer, time_steps, batch_size, eps,
-                   skip_inputs=(), skip_parameters=(), **inputs):
+                   skip_inputs=(), skip_parameters=(), skip_outputs=(),
+                   **inputs):
     """
     Checks the gradients w.r.t. parameters and inputs for a given layer.
     Accepts a named list of initializations for inputs views only.
@@ -212,7 +215,7 @@ def run_layer_test(layer, time_steps, batch_size, eps,
                 _h.set_from_numpy(flat_view, x)  # set to new value
                 layer.forward_pass(forward_buffers)
                 _h.set_from_numpy(flat_view, x0)  # reset
-                return get_output_error(_h, forward_buffers)
+                return get_output_error(_h, forward_buffers, skip_outputs)
 
             grad_approx = approx_fprime(x0, f, eps)
             print("Approx grad:", grad_approx)
@@ -237,7 +240,7 @@ def run_layer_test(layer, time_steps, batch_size, eps,
                 _h.set_from_numpy(flat_view, x)  # set to new value
                 layer.forward_pass(forward_buffers)
                 _h.set_from_numpy(flat_view, x0)  # reset
-                return get_output_error(_h, forward_buffers)
+                return get_output_error(_h, forward_buffers, skip_outputs)
 
             grad_approx = approx_fprime(x0, f, eps)
             print("Approx grad:", grad_approx)

@@ -105,6 +105,22 @@ class PyCudaHandler(object):
         """
         raise NotImplementedError()
 
+    @staticmethod
+    def mult_mv(m, v, out):
+        """
+        Multiply (M, N) matrix elementwise by a (1, N) vector using
+        broadcasting.
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def binarize_v(v, out):
+        raise NotImplementedError()
+
+    @staticmethod
+    def index_m_by_v(m, v, out):
+        raise NotImplementedError()
+
     # Activation functions
 
     @staticmethod
@@ -130,6 +146,11 @@ class PyCudaHandler(object):
     @staticmethod
     def rel_deriv(x, y, dy, dx):
         rel_deriv_kernel(x, y, dy, dx)
+
+    @staticmethod
+    def softmax_m(m, out):
+        """Applies softmax to matrix over last dimension"""
+        raise NotImplementedError()
 
 
 elem_mult_kernel = ElementwiseKernel(
