@@ -45,7 +45,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
                 'loss': ('T', 'B', 1)}
 
     def get_internal_structure(self):
-        feature_shape = self.in_shapes['default'][2:]
+        feature_shape = self.out_shapes['output'][2:]
         return {
             'Ha': {
                 '@shape': ('T', 'B') + feature_shape,
@@ -119,14 +119,15 @@ class ClassificationLayerImpl(LayerBaseImpl):
         dHa = backward_buffers.internals.Ha
 
         # reshape
-        t, b, f = input.shape
+        t, b, f_in = input.shape
+        f_out = output.shape[2]
         i = t * b
-        flat_input = input.reshape((i, f))
-        flat_output = output.reshape((i, f))
+        flat_input = input.reshape((i, f_in))
+        flat_output = output.reshape((i, f_out))
         flat_targets = targets.reshape(i, 1)
         flat_dHa = dHa.reshape((i, self.out_shapes['output'][2]))
         flat_dloss = dloss.reshape((i, 1))
-        flat_dinput = dinput.reshape((i, f))
+        flat_dinput = dinput.reshape((i, f_in))
 
         # derivative of multinomial cross-entropy error wrt softmax:
         # y - t

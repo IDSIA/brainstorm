@@ -47,7 +47,7 @@ def BinomialCrossEntropyLayer(name=None):
                                       name=name)
 
 
-def ClassificationLayer(name=None):
+def ClassificationLayer(shape, name=None):
     return ConstructionWrapper.create('ClassificationLayer',
                                       shape=shape,
                                       name=name)
