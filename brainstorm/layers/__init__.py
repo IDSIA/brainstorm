@@ -31,9 +31,9 @@ def InputLayer(out_shapes, name=None):
                                       out_shapes=out_shapes)
 
 
-def FullyConnectedLayer(shape, activation_function='linear', name=None):
+def FullyConnectedLayer(size, activation_function='linear', name=None):
     return ConstructionWrapper.create('FullyConnectedLayer',
-                                      shape=shape,
+                                      size=size,
                                       name=name,
                                       activation_function=activation_function)
 
@@ -47,9 +47,9 @@ def BinomialCrossEntropyLayer(name=None):
                                       name=name)
 
 
-def ClassificationLayer(shape, name=None):
+def ClassificationLayer(size, name=None):
     return ConstructionWrapper.create('ClassificationLayer',
-                                      shape=shape,
+                                      size=size,
                                       name=name)
 
 

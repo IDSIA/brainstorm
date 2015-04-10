@@ -219,6 +219,10 @@ def test_shape_template_matches1(shape, expected):
 def test_shape_template_matches2(shape, expected):
     st = ShapeTemplate('T', 'B', 'F', 'F')
     assert st.matches(shape) == expected
+    try:
+        assert st.matches(ShapeTemplate(*shape)) == expected
+    except ShapeValidationError:
+        pass
 
 
 @pytest.mark.parametrize('shape, expected', [
@@ -237,6 +241,10 @@ def test_shape_template_matches2(shape, expected):
 def test_shape_template_matches3(shape, expected):
     st = ShapeTemplate('T', 'B', '...')
     assert st.matches(shape) == expected
+    try:
+        assert st.matches(ShapeTemplate(*shape)) == expected
+    except ShapeValidationError:
+        pass
 
 
 @pytest.mark.parametrize('shape, expected', [
@@ -252,3 +260,7 @@ def test_shape_template_matches3(shape, expected):
 def test_shape_template_matches3(shape, expected):
     st = ShapeTemplate(1, 2, 7)
     assert st.matches(shape) == expected
+    try:
+        assert st.matches(ShapeTemplate(*shape)) == expected
+    except ShapeValidationError:
+        pass

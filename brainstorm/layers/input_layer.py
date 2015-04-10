@@ -21,7 +21,7 @@ class InputLayerImpl(LayerBaseImpl):
         if 'out_shapes' not in self.kwargs:
             raise LayerValidationError("InputLayer requires 'out_shapes'")
 
-        return {ShapeTemplate.from_tuple(s)
+        return {n: ShapeTemplate.from_tuple(s)
                 for n, s in self.kwargs['out_shapes'].items()}
 
     def _validate_in_shapes(self):

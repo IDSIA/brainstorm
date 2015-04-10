@@ -40,6 +40,10 @@ class ShapeTemplate(object):
         return len(self._shape[self.first_feature_dim:])
 
     @property
+    def scaling_shape(self):
+        return self._shape[:self.first_feature_dim]
+
+    @property
     def feature_shape(self):
         return self._shape[self.first_feature_dim:]
 
@@ -154,6 +158,9 @@ class ShapeTemplate(object):
     def __getitem__(self, item):
         return self._shape.__getitem__(item)
 
+    def __len__(self):
+        return len(self._shape)
+
     def __repr__(self):
         return "<{}>".format(self._shape)
 
@@ -201,32 +208,30 @@ def combine_input_shapes(shapes):
     """
     Concatenate the given sizes on the outermost feature dimension.
     Check that the other dimensions match.
-    :param shapes: list of size-tuples or integers
-    :type shapes: list[tuple[int]] or list[int]
-    :return: tuple[int]
+    :param shapes: list of shape templates
+    :type shapes: list[ShapeTemplates]
+    :return: ShapeTemplate
     """
     if not shapes:
-        return 0,
-    tupled_shapes = [ensure_tuple_or_none(s) for s in shapes]
-    dimensions = [len(s) for s in tupled_shapes]
+        return ShapeTemplate(0)
+    dimensions = [s.nr_dims for s in shapes]
     if min(dimensions) != max(dimensions):
-        raise ValueError('Dimensionality mismatch. {}'.format(tupled_shapes))
-    first_feature_indices = [validate_shape_template(s) for s in tupled_shapes]
-    some_shape = tupled_shapes[0]
-    if min(first_feature_indices) != max(first_feature_indices):
+        raise ValueError('Dimensionality mismatch. {}'.format(shapes))
+    shape_types = [s.shape_type for s in shapes]
+    if min(shape_types) != max(shape_types):
         raise ValidationError('All buffer shapes need to have the same type. '
-                              'But were: {}'.format(tupled_shapes))
+                              'But were: {}'.format(shape_types))
+    some_shape = shapes[0]
+    fixed_feature_shape = some_shape.feature_shape[1:]
 
-    first_feature_index = first_feature_indices[0]
-    fixed_feature_shape = some_shape[first_feature_index + 1:]
+    if not all([s.feature_shape[1:] == fixed_feature_shape for s in shapes]):
+        raise ValueError('Feature size mismatch. {}'.format(shapes))
 
-    if not all([s[first_feature_index + 1:] == fixed_feature_shape
-                for s in tupled_shapes]):
-        raise ValueError('Feature size mismatch. {}'.format(tupled_shapes))
-    summed_shape = sum(s[first_feature_index] for s in tupled_shapes)
-    return (some_shape[:first_feature_index] +
-            (summed_shape,) +
-            fixed_feature_shape)
+    summed_shape = sum(s.feature_shape[0] for s in shapes)
+    final_shape = (some_shape.scaling_shape +
+                   (summed_shape,) +
+                   fixed_feature_shape)
+    return ShapeTemplate(*final_shape)
 
 
 def get_feature_size(shape):

@@ -143,7 +143,7 @@ class LayerBaseImpl(object):
                 .format(self.name, input_names - in_shape_names))
 
         for input_name, in_shape in self.in_shapes.items():
-            if self.inputs[input_name].matches(in_shape):
+            if not self.inputs[input_name].matches(in_shape):
                 raise LayerValidationError(
                     "{}: in_shape ({}) for {} doesn't match shape-template {}"
                     .format(self.name, in_shape, input_name,
@@ -209,8 +209,9 @@ class LayerBaseImpl(object):
             elif out_c.output_name not in self.out_shapes:
                 raise LayerValidationError(
                     '{}: Invalid outgoing connection ({}). Layer has no output'
-                    ' named "{}"'.format(self.name, out_c,
-                                         out_c.output_name))
+                    ' named "{}". Choices are: {}'.format(
+                        self.name, out_c, out_c.output_name,
+                        list(self.out_shapes.keys())))
 
     def _get_output_shapes(self):
         """ Determines the output-shape of this layer.

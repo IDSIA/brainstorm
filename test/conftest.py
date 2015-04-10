@@ -32,22 +32,22 @@ def layers():
         },
         'A': {
             '@type': 'FullyConnectedLayer',
-            'shape': 3,
+            'size': 3,
             '@outgoing_connections': {'C'}
         },
         'B': {
             '@type': 'FullyConnectedLayer',
-            'shape': 5,
+            'size': 5,
             '@outgoing_connections': {'C', 'D'}
         },
         'C': {
             '@type': 'FullyConnectedLayer',
-            'shape': 7,
+            'size': 7,
             '@outgoing_connections': {'D'}
         },
         'D': {
             '@type': 'FullyConnectedLayer',
-            'shape': 11,
+            'size': 11,
             '@outgoing_connections': set()
         }
     }
