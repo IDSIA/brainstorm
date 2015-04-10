@@ -3,8 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError
+from brainstorm.structure.shapes import ShapeTemplate
 
 
 class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
@@ -20,58 +22,31 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
     undefined.
     """
 
-    inputs = {'default': ('T', 'B', 'F'),
-              'targets': ('T', 'B', 'F')
-              }
+    inputs = {'default': ShapeTemplate('T', 'B', '...'),
+              'targets': ShapeTemplate('T', 'B', '...')}
 
-    outputs = {'default': ('T', 'B', 1)}
+    outputs = {'default': ShapeTemplate('T', 'B', 1)}
 
     expected_kwargs = {}
 
     def _get_output_shapes(self):
-        return {'default': (self.in_shapes['default'][0],
-                            self.in_shapes['default'][1], 1)}
+        return {'default': ShapeTemplate('T', 'B', 1)}
 
     def get_internal_structure(self):
-        feature_shape = self.in_shapes['default'][2:]
-        return {
-            'cee': {
-                '@shape': ('T', 'B') + feature_shape,
-                '@index': 0}
-        }
+        feature_shape = self.in_shapes['default'].feature_shape
+        internals = OrderedDict()
+        internals['cee'] = ShapeTemplate('T', 'B', *feature_shape)
+        return internals
 
     def _validate_in_shapes(self):
         super(BinomialCrossEntropyLayerImpl, self)._validate_in_shapes()
 
-        # 'default' and 'targets' must be wired in
-        # and their shapes must match
-        if 'default' not in self.in_shapes or 'targets' not in self.in_shapes:
-            raise LayerValidationError("{} must have both 'default' and "
-                                       "'targets' as inputs".format(self.name))
         if self.in_shapes['default'] != self.in_shapes['targets']:
             raise LayerValidationError("{}: default and targets must have the "
                                        "same shapes but got {} and {}"
                                        .format(self.name,
                                                self.in_shapes['default'],
                                                self.in_shapes['targets']))
-
-    def _validate_out_shapes(self):
-        super(BinomialCrossEntropyLayerImpl, self)._validate_out_shapes()
-        assert self.out_shapes['default'][:2] == self.in_shapes['default'][:2]
-
-        if len(self.out_shapes['default']) != 3:
-            raise LayerValidationError(
-                '{}: this layer sums over feature '
-                'dimensions, so len(out_shape) must be 3, '
-                'but shape is {}'.format(self.name,
-                                         self.out_shapes['default'])
-            )
-        if self.out_shapes['default'][2] != 1:
-            raise LayerValidationError(
-                '{}: this layer sums over feature dimensions, so out_shape[2] '
-                'must be 1, but got {}'.format(self.name,
-                                               self.out_shapes['default'][2])
-            )
 
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare

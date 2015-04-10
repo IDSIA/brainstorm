@@ -10,6 +10,16 @@ class ShapeTemplate(object):
              'TBF+', 'BF+', 'F+',
              'TBF*', 'BF*', 'F*', ]
 
+    @staticmethod
+    def from_tuple(shape):
+        if isinstance(shape, ShapeTemplate):
+            return shape
+        elif not isinstance(shape, (tuple, list)):
+            raise ShapeValidationError(
+                'Requires tuple or list but got {}'.format(shape))
+        else:
+            return ShapeTemplate(*shape)
+
     def __init__(self, *args, context_size=0):
         self._shape = args
         self.context_size = context_size
@@ -30,14 +40,14 @@ class ShapeTemplate(object):
         return len(self._shape[self.first_feature_dim:])
 
     @property
-    def feature_dims(self):
+    def feature_shape(self):
         return self._shape[self.first_feature_dim:]
 
     @property
     def feature_size(self):
         if self.shape_type.endswith('*') or self.shape_type.endswith('+'):
             raise TypeError('feature size not fixed')
-        return int(np.prod(self.feature_dims))
+        return int(np.prod(self.feature_shape))
 
     @property
     def scales_with_time(self):
@@ -90,22 +100,22 @@ class ShapeTemplate(object):
 
         if self.shape_type.endswith('*'):
             if len(self._shape) > self.first_feature_dim + 1 or\
-                    self.feature_dims != ('...',):
+                    self.feature_shape != ('...',):
                 raise ShapeValidationError(
                     'Wildcard-shapes can ONLY have a single feature dimension'
-                    ' entry "...". (But had {})'.format(self.feature_dims))
+                    ' entry "...". (But had {})'.format(self.feature_shape))
 
         elif self.shape_type.endswith('+'):
-            if not all([f == 'F' for f in self.feature_dims]):
+            if not all([f == 'F' for f in self.feature_shape]):
                 raise ShapeValidationError(
                     'The feature dimensions of shapes with feature templates '
                     '("F") have to consist only of "F"s. (But was {})'
-                    .format(self.feature_dims))
+                    .format(self.feature_shape))
         else:
-            if not all([isinstance(f, int) for f in self.feature_dims]):
+            if not all([isinstance(f, int) for f in self.feature_shape]):
                 raise ShapeValidationError(
                     'The feature dimensions have to be all-integer. But was {}'
-                    .format(self.feature_dims))
+                    .format(self.feature_shape))
 
         # validate context_size
         if not isinstance(self.context_size, int) or self.context_size < 0:
@@ -141,12 +151,11 @@ class ShapeTemplate(object):
                 return False
         return True
 
+    def __getitem__(self, item):
+        return self._shape.__getitem__(item)
+
     def __repr__(self):
         return "<{}>".format(self._shape)
-
-
-
-
 
 
 def ensure_tuple_or_none(a):

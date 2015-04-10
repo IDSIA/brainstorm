@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError
+from brainstorm.structure.shapes import ShapeTemplate
 
 
 class ClassificationLayerImpl(LayerBaseImpl):
@@ -20,56 +22,37 @@ class ClassificationLayerImpl(LayerBaseImpl):
     and it also does not use the deltas coming in from the 'ouputs'.
     """
 
-    inputs = {'default': ('T', 'B', 'F'),
-              'targets': ('T', 'B', 1)
+    inputs = {'default': ShapeTemplate('T', 'B', 'F'),
+              'targets': ShapeTemplate('T', 'B', 1)
               }
 
-    outputs = {'output': ('T', 'B', 'F'),
-               'loss': ('T', 'B', 1)}
+    outputs = {'output': ShapeTemplate('T', 'B', 'F'),
+               'loss': ShapeTemplate('T', 'B', 1)}
 
-    expected_kwargs = {'shape'}
+    expected_kwargs = {'size'}
 
     def _get_output_shapes(self):
-        s = self.kwargs.get('shape', self.in_shapes.get('default'))
+        s = self.kwargs.get('size', self.in_shapes.get('default')[2])
+        if not isinstance(s, int):
+            raise LayerValidationError('size must be int but was {}'.format(s))
 
-        if isinstance(s, (tuple, list)):
-            out_shape = tuple(s)
-        else:
-            assert isinstance(s, int), \
-                "shape datatype not understood {}".format(type(s))
-            out_shape = (s,)
-        assert len(out_shape) == 1, \
-            'Classification layer only works with 1D shape'
-
-        return {'output': ('T', 'B') + out_shape,
-                'loss': ('T', 'B', 1)}
+        return {'output': ShapeTemplate('T', 'B', s),
+                'loss': ShapeTemplate('T', 'B', 1)}
 
     def get_internal_structure(self):
-        feature_shape = self.out_shapes['output'][2:]
-        return {
-            'Ha': {
-                '@shape': ('T', 'B') + feature_shape,
-                '@index': 0
-            }
-        }
+        internals = OrderedDict()
+        size = self.out_shapes['output'].feature_size
+        internals['Ha'] = ShapeTemplate('T', 'B', size)
+        return internals
 
     def get_parameter_structure(self):
-        return {
-            'W': {
-                '@shape': (self.in_shapes['default'][2],
-                           self.out_shapes['output'][2]),
-                '@index': 0},
-            'b': {
-                '@shape': (self.out_shapes['output'][2],),
-                '@index': 1}
-        }
+        in_size = self.in_shapes['default'].feature_size
+        out_size = self.out_shapes['output'].feature_size
 
-    def _validate_in_shapes(self):
-        super(ClassificationLayerImpl, self)._validate_in_shapes()
-        # 'default' and 'targets' must be wired in
-        if 'default' not in self.in_shapes or 'targets' not in self.in_shapes:
-            raise LayerValidationError("{} must have both 'default' and "
-                                       "'targets' as inputs".format(self.name))
+        parameters = OrderedDict()
+        parameters['W'] = ShapeTemplate(in_size, out_size)
+        parameters['b'] = ShapeTemplate(out_size)
+        return parameters
 
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare

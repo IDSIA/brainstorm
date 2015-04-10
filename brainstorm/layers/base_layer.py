@@ -176,7 +176,7 @@ class LayerBaseImpl(object):
         Raise LayerValidationError otherwise.
         """
         for in_c in self.incoming:
-            if in_c.input_name not in self.inputs:
+            if in_c.input_name not in self.in_shapes:
                 raise LayerValidationError(
                     '{}: Invalid incoming connection ({}). Layer has no input '
                     'named "{}"'.format(self.name, in_c, in_c.sink_name))
@@ -206,7 +206,7 @@ class LayerBaseImpl(object):
                             " '{}' does not exist. Choices are {}".format(
                                 self.name, out_c, list(internals.keys())))
 
-            elif out_c.output_name not in self.outputs:
+            elif out_c.output_name not in self.out_shapes:
                 raise LayerValidationError(
                     '{}: Invalid outgoing connection ({}). Layer has no output'
                     ' named "{}"'.format(self.name, out_c,

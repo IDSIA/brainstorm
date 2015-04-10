@@ -40,7 +40,7 @@ def test_shape_templates1_nr_feature_dims(shape, nr_feature_dims):
                          zip(shapes_1, feature_dims_1))
 def test_shape_templates1_nr_feature_dims(shape, feature_dims):
     st = ShapeTemplate(*shape)
-    assert st.feature_dims == feature_dims
+    assert st.feature_shape == feature_dims
 
 
 @pytest.mark.parametrize('shape, feature_size', zip(shapes_1, feature_size_1))

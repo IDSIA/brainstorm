@@ -9,13 +9,10 @@ class NoOpLayerImpl(LayerBaseImpl):
     """
     This layer just copies its input into its output.
     """
+    expected_kwargs = {}
 
-    def _validate_out_shapes(self):
-        if self.out_shapes != self.in_shapes:
-            raise LayerValidationError(
-                "For {} (NoOpLayer) in_ and out_shapes must be equal, "
-                "but {} != {}".format(self.name, self.in_shapes['default'],
-                                      self.out_shapes['default']))
+    def _get_output_shapes(self):
+        return self.in_shapes
 
     def forward_pass(self, forward_buffers, training_pass=True):
         self.handler.copy_to(forward_buffers.inputs.default,

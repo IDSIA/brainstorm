@@ -4,15 +4,15 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.utils import LayerValidationError
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from structure.shapes import ShapeTemplate
 
 
-class FullyConnectedLayerImpl(LayerBaseImpl):
+class RnnLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size', 'activation_function'}
 
     def __init__(self, name, in_shapes, incoming_connections,
                  outgoing_connections, **kwargs):
-        super(FullyConnectedLayerImpl, self).__init__(
+        super(RnnLayerImpl, self).__init__(
             name, in_shapes, incoming_connections, outgoing_connections,
             **kwargs)
         self.act_func = None
@@ -20,7 +20,7 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         self.kwargs = kwargs
 
     def set_handler(self, new_handler):
-        super(FullyConnectedLayerImpl, self).set_handler(new_handler)
+        super(RnnLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
         activation_functions = {
@@ -34,49 +34,47 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         self.act_func, self.act_func_deriv = activation_functions[
             self.kwargs.get('activation_function', 'linear')]
 
-    def get_internal_structure(self):
-        size = self.out_shapes['default'].feature_size
-
-        internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', size)
-        return internals
-
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
         out_size = self.out_shapes['default'].feature_size
 
         parameters = OrderedDict()
         parameters['W'] = ShapeTemplate(in_size, out_size)
-        parameters['b'] = ShapeTemplate(out_size)
+        parameters['R'] = ShapeTemplate(out_size, out_size)
+        parameters['bias'] = ShapeTemplate(out_size)
         return parameters
+
+    def get_internal_structure(self):
+        out_size = self.out_shapes['default'].feature_size
+
+        internals = OrderedDict()
+        internals['Ha'] = ShapeTemplate('T', 'B', out_size)
+        return internals
 
     def _get_output_shapes(self):
         s = self.kwargs.get('size', self.in_shapes['default'].feature_size)
         if not isinstance(s, int):
             raise LayerValidationError('size must be int but was {}'.format(s))
 
-        return {'default': ShapeTemplate('T', 'B', s)}
+        return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
 
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
         _h = self.handler
-        WX, W_bias = forward_buffers.parameters
-        input = forward_buffers.inputs.default
-        output = forward_buffers.outputs.default
+        W, R, bias = forward_buffers.parameters
+        inputs = forward_buffers.inputs.default
+        outputs = forward_buffers.outputs.default
         Ha = forward_buffers.internals.Ha
 
-        # reshape
-        t, b, f = input.shape
-        flat_input = _h.reshape(input, (t * b, f))
-        flat_Ha = _h.reshape(Ha, (t * b, self.out_shapes['default'][2]))
-
-        # calculate outputs
-        _h.dot_mm(flat_input, WX, flat_Ha)
-        _h.add_mv(flat_Ha, W_bias, flat_Ha)
-        self.act_func(Ha, output)
+        for t in range(inputs.shape[0]):
+            # calculate outputs
+            _h.dot_mm(inputs[t], W, Ha[t])
+            _h.dot_mm(outputs[t], R, Ha[t])  # outputs has a time offset of 1
+            _h.add_mv(Ha[t], bias, Ha[t])
+            self.act_func(Ha[t], outputs[t+1])
 
     def backward_pass(self, forward_buffers, backward_buffers):
-
+        # TODO: IMPLEMENT
         # prepare
         _h = self.handler
         WX, W_bias = forward_buffers.parameters
