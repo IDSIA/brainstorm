@@ -68,7 +68,7 @@ class ShapeTemplate(object):
     def get_shape(self, t, b, *feature_dims):
         shape = ()
         if self.scales_with_time:
-            shape += (t,)
+            shape += (t + self.context_size,)
         if self.scales_with_batch_size:
             shape += (b,)
         if 'F' in self.shape_type:

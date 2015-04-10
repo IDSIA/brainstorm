@@ -79,9 +79,7 @@ def setup_buffers(time_steps, batch_size, layer):
     print("Setting up inputs")
     assert set(input_names) == set(layer.in_shapes.keys())
     for name in input_names:
-        shape = buffer_shape_from_in_out_shape(time_steps,
-                                               batch_size,
-                                               layer.in_shapes[name])
+        shape = layer.in_shapes[name].get_shape(time_steps, batch_size)
         print(name, " : ", shape)
         data = _h.zeros(shape)
         _h.set_from_numpy(data, np.random.randn(*shape))
@@ -102,9 +100,7 @@ def setup_buffers(time_steps, batch_size, layer):
     print("Setting up outputs")
     assert set(output_names) == set(layer.out_shapes.keys())
     for name in output_names:
-        shape = buffer_shape_from_in_out_shape(time_steps,
-                                               batch_size,
-                                               layer.out_shapes[name])
+        shape = layer.out_shapes[name].get_shape(time_steps, batch_size)
         print(name, " : ", shape)
         forward_output_buffers.append(_h.zeros(shape))
         backward_output_buffers.append(_h.zeros(shape))

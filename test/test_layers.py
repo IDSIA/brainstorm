@@ -12,6 +12,7 @@ from brainstorm.handlers import NumpyHandler
 from .helpers import run_layer_test
 import numpy as np
 from brainstorm.structure.shapes import ShapeTemplate
+from layers.rnn_layer import RnnLayerImpl
 
 np.random.seed(1234)
 
@@ -91,3 +92,18 @@ def test_classification_layer():
     run_layer_test(layer, time_steps, batch_size, eps,
                    skip_inputs=['targets'], skip_outputs=['output'],
                    targets=targets)
+
+
+def test_rnn_layer():
+    eps = 1e-5
+    time_steps = 3
+    batch_size = 2
+    feature_dim = 5
+    in_shapes = {'default': ShapeTemplate('T', 'B', feature_dim)}
+
+    layer = RnnLayerImpl('TestLayer', in_shapes, NO_CON, NO_CON,
+                         size=feature_dim)
+    layer.set_handler(NumpyHandler(np.float64))
+
+    print("\n---------- Testing RnnLayer ----------")
+    run_layer_test(layer, time_steps, batch_size, eps)

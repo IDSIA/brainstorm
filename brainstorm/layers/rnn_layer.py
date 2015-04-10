@@ -74,26 +74,34 @@ class RnnLayerImpl(LayerBaseImpl):
             self.act_func(Ha[t], outputs[t+1])
 
     def backward_pass(self, forward_buffers, backward_buffers):
-        # TODO: IMPLEMENT
         # prepare
         _h = self.handler
-        WX, W_bias = forward_buffers.parameters
-        dWX, dW_bias = backward_buffers.parameters
-        input_buffer = forward_buffers.inputs.default
-        output_buffer = forward_buffers.outputs.default
-        in_delta_buffer = backward_buffers.inputs.default
-        out_delta_buffer = backward_buffers.outputs.default
+        W, R, bias = forward_buffers.parameters
+        dW, dR, dbias = backward_buffers.parameters
+        inputs = forward_buffers.inputs.default
+        outputs = forward_buffers.outputs.default
+        dinputs = backward_buffers.inputs.default
+        doutputs = backward_buffers.outputs.default
         Ha = forward_buffers.internals.Ha
         dHa = backward_buffers.internals.Ha
 
-        # reshape
-        t, b, f = input_buffer.shape
-        flat_input = _h.reshape(input_buffer, (t * b, f))
-        flat_dHa = _h.reshape(dHa, (t * b, self.out_shapes['default'][2]))
-        flat_in_delta_buffer = _h.reshape(in_delta_buffer, (t * b, f))
+        _h.copy_to(dHa, doutputs[1:])
+        for t in range(inputs.shape[0] - 2, -1, -1):
+            _h.dot_add_mm(doutputs[t+2], R, dHa[t], transb='T')
+            self.act_func_deriv(Ha[t], outputs[t+1], doutputs[t+1], dHa[t])
+            if t:
+                _h.dot_add_mm(Ha[t-1], dHa[t], dR, transa='T')
+
+        t, b, f = dHa.shape
+        i = t * b
+        flat_dHa = dHa.reshape((i, f))
+        flat_inputs = inputs.reshape((i, inputs.shape[2]))
+        flat_dinputs = dinputs.reshape((i, dinputs.shape[2]))
 
         # calculate in_deltas and gradients
-        self.act_func_deriv(Ha, output_buffer, out_delta_buffer, dHa)
-        _h.dot_add_mm(flat_dHa, WX, out=flat_in_delta_buffer, transb='T')
-        _h.dot_mm(flat_input, flat_dHa, dWX, transa='T')
-        _h.sum_t(flat_dHa, axis=0, out=dW_bias)
+        _h.dot_add_mm(flat_dHa, W, flat_dinputs, transb='T')
+
+        _h.dot_mm(flat_inputs, flat_dHa, dW, transa='T')
+        dbias_tmp = _h.allocate(dbias.shape)
+        _h.sum_t(flat_dHa, axis=0, out=dbias_tmp)
+        _h.add_tt(dbias, dbias_tmp, dbias)
