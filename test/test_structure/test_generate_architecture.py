@@ -7,6 +7,7 @@ from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
+from brainstorm.structure.shapes import ShapeTemplate
 
 
 def test_get_layer_description():
@@ -108,22 +109,18 @@ def test_instantiate_layers_from_architecture():
         },
         'A': {
             '@type': 'NoOpLayer',
-            'shape': 10,
             '@outgoing_connections': {'B'}
         },
         'B': {
             '@type': 'NoOpLayer',
-            'shape': 20,
             '@outgoing_connections': {'D'}
         },
         'C': {
             '@type': 'NoOpLayer',
-            'shape': 10,
             '@outgoing_connections': {'D'}
         },
         'D': {
             '@type': 'NoOpLayer',
-            'shape': 30,
             '@outgoing_connections': set()
         }
     }
@@ -137,12 +134,13 @@ def test_instantiate_layers_from_architecture():
     assert type(layers['D']) == NoOpLayerImpl
 
     assert layers['InputLayer'].in_shapes == {}
-    assert layers['InputLayer'].out_shapes == {'default': ('T', 'B', 10)}
-    assert layers['A'].in_shapes == {'default': ('T', 'B', 10)}
-    assert layers['A'].out_shapes == {'default': ('T', 'B', 10)}
-    assert layers['B'].in_shapes == {'default': ('T', 'B', 20)}
-    assert layers['B'].out_shapes == {'default': ('T', 'B', 20)}
-    assert layers['C'].in_shapes == {'default': ('T', 'B', 10)}
-    assert layers['C'].out_shapes == {'default': ('T', 'B', 10)}
-    assert layers['D'].in_shapes == {'default': ('T', 'B', 30)}
-    assert layers['D'].out_shapes == {'default': ('T', 'B', 30)}
+    assert layers['InputLayer'].out_shapes == {'default':
+                                               ShapeTemplate('T', 'B', 10)}
+    assert layers['A'].in_shapes == {'default': ShapeTemplate('T', 'B', 10)}
+    assert layers['A'].out_shapes == {'default': ShapeTemplate('T', 'B', 10)}
+    assert layers['B'].in_shapes == {'default': ShapeTemplate('T', 'B', 20)}
+    assert layers['B'].out_shapes == {'default': ShapeTemplate('T', 'B', 20)}
+    assert layers['C'].in_shapes == {'default': ShapeTemplate('T', 'B', 10)}
+    assert layers['C'].out_shapes == {'default': ShapeTemplate('T', 'B', 10)}
+    assert layers['D'].in_shapes == {'default': ShapeTemplate('T', 'B', 30)}
+    assert layers['D'].out_shapes == {'default': ShapeTemplate('T', 'B', 30)}

@@ -30,7 +30,7 @@ architectures = [{
         }},
     'OutputLayer': {
         '@type': 'FullyConnectedLayer',
-        'shape': 2,
+        'size': 2,
         '@outgoing_connections': {
             'default': ['LossLayer']
         }},

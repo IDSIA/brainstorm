@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.utils import get_inheritors, LayerValidationError, get_by_path
 from brainstorm.structure.shapes import ShapeTemplate
 
@@ -34,7 +35,7 @@ class LayerBaseImpl(object):
                  outgoing_connections, **kwargs):
         """
         :param in_shapes: A dictionary of input shapes for all named sinks
-        :type in_shapes: dict[str, tuple[int]]
+        :type in_shapes: dict[str, ShapeTemplate]
         :param outgoing_connections: Set of all outgoing connections
         :type outgoing_connections: set[Connection]
         :param incoming_connections: Set of all incoming connections
@@ -82,7 +83,7 @@ class LayerBaseImpl(object):
         :return: OrderedDict describing parameter buffers
         :rtype: OrderedDict[str, ShapeTemplate]
         """
-        return {}
+        return OrderedDict()
 
     def get_internal_structure(self):
         """Return a OrderedDict internal-state names to to ShapeTemplate.
@@ -90,7 +91,7 @@ class LayerBaseImpl(object):
         :return: OrderedDict describing internals
         :rtype: OrderedDict[str, ShapeTemplate]
         """
-        return {}
+        return OrderedDict()
 
     def forward_pass(self, forward_buffers, training_pass=True):
         pass

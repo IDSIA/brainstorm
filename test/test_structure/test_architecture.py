@@ -5,45 +5,37 @@ import pytest
 from brainstorm.structure.architecture import combine_input_shapes, \
     validate_architecture, get_canonical_layer_order
 from brainstorm.utils import NetworkValidationError
-
-
-def test_combine_input_sizes_int():
-    assert combine_input_shapes([7]) == (7,)
-    assert combine_input_shapes([1, 2, 3, 4]) == (10,)
-
-
-def test_combine_input_sizes_int_and_unituples():
-    assert combine_input_shapes([1, 2, (3,), (4,), 5]) == (15,)
+from brainstorm.structure.shapes import ShapeTemplate
 
 
 def test_combine_input_sizes_tuples():
-    assert combine_input_shapes([(1, 4)]) == (1, 4)
+    assert combine_input_shapes([ShapeTemplate(1, 4)]) == ShapeTemplate(1, 4)
 
-    assert combine_input_shapes([(1, 4),
-                                (3, 4),
-                                (6, 4)]) == (10, 4)
+    assert combine_input_shapes([ShapeTemplate(1, 4),
+                                ShapeTemplate(3, 4),
+                                ShapeTemplate(6, 4)]) == ShapeTemplate(10, 4)
 
-    assert combine_input_shapes([(2, 3, 4),
-                                (3, 3, 4),
-                                (2, 3, 4)]) == (7, 3, 4)
+    assert combine_input_shapes([ShapeTemplate(2, 3, 4),
+                                ShapeTemplate(3, 3, 4),
+                                ShapeTemplate(2, 3, 4)]) == \
+        ShapeTemplate(7, 3, 4)
 
 
 def test_combine_input_sizes_tuple_templates():
-    assert combine_input_shapes([('B', 4)]) == ('B', 4)
-    assert combine_input_shapes([('B', 4), ('B', 3)]) == ('B', 7)
-    assert combine_input_shapes([('T', 'B', 4)]) == ('T', 'B', 4)
-    assert combine_input_shapes([('T', 'B', 4), ('T', 'B', 3)]) == \
-        ('T', 'B', 7)
-    assert combine_input_shapes([('T', 'B', 4, 3, 2), ('T', 'B', 3, 3, 2)]) ==\
-        ('T', 'B', 7, 3, 2)
+    assert combine_input_shapes([ShapeTemplate('B', 4)]) == ShapeTemplate('B', 4)
+    assert combine_input_shapes([ShapeTemplate('B', 4), ShapeTemplate('B', 3)]) == ShapeTemplate('B', 7)
+    assert combine_input_shapes([ShapeTemplate('T', 'B', 4)]) == ShapeTemplate('T', 'B', 4)
+    assert combine_input_shapes([ShapeTemplate('T', 'B', 4), ShapeTemplate('T', 'B', 3)]) == \
+        ShapeTemplate('T', 'B', 7)
+    assert combine_input_shapes([ShapeTemplate('T', 'B', 4, 3, 2), ShapeTemplate('T', 'B', 3, 3, 2)]) ==\
+        ShapeTemplate('T', 'B', 7, 3, 2)
 
 
 @pytest.mark.parametrize('sizes', [
-    [2, (1, 2)],
-    [(2, 3), (2, 2)],
-    [(2,), (1, 2)],
-    [(2, 1, 3), (3, 1, 3), (2, 2, 3)],
-    [(2, 1, 3), (3, 1, 3), (1, 1, 2)]
+    [ShapeTemplate(2, 3), ShapeTemplate(2, 2)],
+    [ShapeTemplate(2), ShapeTemplate(1, 2)],
+    [ShapeTemplate(2, 1, 3), ShapeTemplate(3, 1, 3), ShapeTemplate(2, 2, 3)],
+    [ShapeTemplate(2, 1, 3), ShapeTemplate(3, 1, 3), ShapeTemplate(1, 1, 2)]
 ])
 def test_combine_input_sizes_mismatch(sizes):
     with pytest.raises(ValueError):

@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.utils import LayerValidationError
 from brainstorm.layers.base_layer import LayerBaseImpl
-from structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import ShapeTemplate
 
 
 class RnnLayerImpl(LayerBaseImpl):

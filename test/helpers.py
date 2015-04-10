@@ -123,14 +123,14 @@ def setup_buffers(time_steps, batch_size, layer):
 
     param_structure = layer.get_parameter_structure()
     print("Setting up parameters")
-    for name, attributes in sorted(param_structure.items(),
-                                   key=lambda x: x[1]['@index']):
+    for name, shape_template in param_structure.items():
         param_names.append(name)
-        print(name, " : ", attributes['@shape'])
-        data = _h.zeros(attributes['@shape'])
-        _h.set_from_numpy(data, np.random.randn(*attributes['@shape']))
+        print(name, " : ", shape_template)
+        shape = shape_template.get_shape(1, 1)
+        data = _h.zeros(shape)
+        _h.set_from_numpy(data, np.random.randn(*shape))
         forward_param_buffers.append(data)
-        backward_param_buffers.append(_h.zeros(attributes['@shape']))
+        backward_param_buffers.append(_h.zeros(shape))
 
     forward_buffer_names.append('parameters')
     forward_buffer_views.append(BufferView(param_names, forward_param_buffers))
@@ -145,13 +145,10 @@ def setup_buffers(time_steps, batch_size, layer):
 
     internal_structure = layer.get_internal_structure()
     print("Setting up internals")
-    for name, attributes in sorted(internal_structure.items(),
-                                   key=lambda x: x[1]['@index']):
-        print(name, attributes)
+    for name, shape_template in internal_structure.items():
+        print(name, shape_template)
         internal_names.append(name)
-        shape = buffer_shape_from_in_out_shape(time_steps,
-                                               batch_size,
-                                               attributes['@shape'])
+        shape = shape_template.get_shape(time_steps, batch_size)
         print(name, " : ", shape)
         forward_internal_buffers.append(_h.zeros(shape))
         backward_internal_buffers.append(_h.zeros(shape))

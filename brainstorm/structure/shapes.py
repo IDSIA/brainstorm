@@ -20,9 +20,13 @@ class ShapeTemplate(object):
         else:
             return ShapeTemplate(*shape)
 
-    def __init__(self, *args, context_size=0):
+    # def __init__(self, *args, context_size=0):  # Not python2 compatible
+    def __init__(self, *args, **kwargs):  # Not python2 compatible
         self._shape = args
-        self.context_size = context_size
+        self.context_size = kwargs.get('context_size', 0)
+        if kwargs and list(kwargs.keys()) != ['context_size']:
+            raise TypeError('Unexpected keyword argument {}'
+                            .format(list(kwargs.keys())))
         self.shape_type = self.get_shape_type()
         self.first_feature_dim = self.get_first_feature_dim()
         self.validate()
@@ -60,6 +64,17 @@ class ShapeTemplate(object):
     @property
     def scales_with_batch_size(self):
         return 'B' in self.shape_type
+
+    def get_shape(self, t, b, *feature_dims):
+        shape = ()
+        if self.scales_with_time:
+            shape += (t,)
+        if self.scales_with_batch_size:
+            shape += (b,)
+        if 'F' in self.shape_type:
+            shape += feature_dims
+        shape += self._shape[len(shape):]
+        return shape
 
     def get_shape_type(self):
         shape_type = ''
@@ -160,6 +175,14 @@ class ShapeTemplate(object):
 
     def __len__(self):
         return len(self._shape)
+
+    def __eq__(self, other):
+        if not isinstance(other, ShapeTemplate):
+            return False
+        return self._shape == other._shape
+
+    def __hash__(self):
+        return hash(self._shape)
 
     def __repr__(self):
         return "<{}>".format(self._shape)

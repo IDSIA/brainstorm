@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 import itertools
 
 import numpy as np
 from brainstorm.structure.shapes import (
-    get_feature_size, validate_shape_template)
+    get_feature_size, validate_shape_template, ShapeTemplate)
 from brainstorm.utils import (NetworkValidationError, flatten,
                               convert_to_nested_indices, sort_by_index_key,
                               get_normalized_path)
@@ -133,33 +134,34 @@ def get_layout_stub_for_layer(layer):
     layout = {}
 
     layout['inputs'] = {
-        k: {'@type': 'array',
-            '@index': i,
-            '@shape': layer.in_shapes[k],
-            } for i, k in enumerate(layer.inputs)
+        k: convert_to_array_json(layer.in_shapes[k], i)
+        for i, k in enumerate(sorted(layer.in_shapes))
     }
     layout['inputs']['@type'] = 'BufferView'
     layout['inputs']['@index'] = 0
 
     layout['outputs'] = {
-        k: {'@type': 'array',
-            '@index': i,
-            '@shape': layer.out_shapes[k],
-            } for i, k in enumerate(layer.out_shapes)
+        k: convert_to_array_json(layer.out_shapes[k], i)
+        for i, k in enumerate(sorted(layer.out_shapes))
     }
     layout['outputs']['@type'] = 'BufferView'
     layout['outputs']['@index'] = 1
 
+    parameters = layer.get_parameter_structure()
+    assert isinstance(parameters, OrderedDict)
     layout['parameters'] = {
-        k: add_array_type(v)
-        for k, v in layer.get_parameter_structure().items()
+        k: convert_to_array_json(v, i)
+        for i, (k, v) in enumerate(parameters.items())
     }
     layout['parameters']['@type'] = 'BufferView'
     layout['parameters']['@index'] = 2
 
+    internals = layer.get_internal_structure()
+    assert isinstance(parameters, OrderedDict)
+
     layout['internals'] = {
-        k: add_array_type(v)
-        for k, v in layer.get_internal_structure().items()
+        k: convert_to_array_json(v, i)
+        for i, (k, v) in enumerate(internals.items())
     }
     layout['internals']['@type'] = 'BufferView'
     layout['internals']['@index'] = 3
@@ -167,8 +169,11 @@ def get_layout_stub_for_layer(layer):
     return layout
 
 
-def add_array_type(d):
+def convert_to_array_json(shape_template, i):
+    assert isinstance(shape_template, ShapeTemplate)
+    d = shape_template.to_json()
     d['@type'] = 'array'
+    d['@index'] = i
     return d
 
 
@@ -219,12 +224,12 @@ def get_order(structure):
 
 def get_parameter_order(layer_name, layer):
     return tuple([get_normalized_path(layer_name, 'parameters', o)
-                  for o in get_order(layer.get_parameter_structure())])
+                  for o in layer.get_parameter_structure()])
 
 
 def get_internal_order(layer_name, layer):
     return tuple([get_normalized_path(layer_name, 'internals', o)
-                  for o in get_order(layer.get_internal_structure())])
+                  for o in layer.get_internal_structure()])
 
 
 def merge_connections(connections, forced_orders):
