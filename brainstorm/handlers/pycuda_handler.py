@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
-from __future__ import division, print_function, unicode_literals
+from __future__ import division, print_function
 import numpy as np
 from pycuda import gpuarray, cumath
 import pycuda.driver as drv
 import pycuda.autoinit
 from pycuda.elementwise import ElementwiseKernel
+from pycuda.compiler import SourceModule
 import scikits.cuda.linalg as culinalg
 import scikits.cuda.misc as cumisc
 culinalg.init()
@@ -157,7 +158,7 @@ class PyCudaHandler(object):
         """Applies softmax to matrix over last dimension"""
         n, k = m.shape
         tmp = gpuarray.empty((1, n), dtype=m.dtype)
-        __cuda_softmax_impl(m.gpudata, tmp.gpudata, out.gpudata, np.int32(n),
+        _softmax_impl(m.gpudata, tmp.gpudata, out.gpudata, np.int32(n),
             np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
         return out
 
@@ -236,6 +237,8 @@ div_kernel = ElementwiseKernel(
 
 
 __softmax_kernel_code = """
+    #include "float.h"
+
     __global__ void softmax_kernel(float* mat, float* tmp, float* out,
                                    unsigned int height, unsigned int width) {
           __shared__ float max_vals[32];
@@ -281,5 +284,5 @@ __softmax_kernel_code = """
         }
     }
     """
-    mod = SourceModule(__softmax_kernel_code)
-    _softmax_impl = mod.get_function("softmax_kernel")
+_mod = SourceModule(__softmax_kernel_code)
+_softmax_impl = _mod.get_function("softmax_kernel")
