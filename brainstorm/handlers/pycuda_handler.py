@@ -154,33 +154,33 @@ class PyCudaHandler(object):
 
 
 elem_mult_kernel = ElementwiseKernel(
-    b"float* x, float* y, float *out",
-    b"out[i] = x[i] * y[i]",
-    b"elem_mult_kernel"
+    "float* x, float* y, float *out",
+    "out[i] = x[i] * y[i]",
+    "elem_mult_kernel"
 )
 
 elem_mult_st_kernel = ElementwiseKernel(
-    b"float x, float* y, float *out",
-    b"out[i] = x * y[i]",
-    b"elem_mult_kernel"
+    "float x, float* y, float *out",
+    "out[i] = x * y[i]",
+    "elem_mult_kernel"
 )
 
 add_mm_kernel = ElementwiseKernel(
-    b"float* x, float* y, float *out",
-    b"out[i] = x[i] + y[i]",
-    b"add_mm_kernel"
+    "float* x, float* y, float *out",
+    "out[i] = x[i] + y[i]",
+    "add_mm_kernel"
 )
 
 subtract_mm_kernel = ElementwiseKernel(
-    b"float* x, float* y, float *out",
-    b"out[i] = x[i] - y[i]",
-    b"subtract_mm_kernel"
+    "float* x, float* y, float *out",
+    "out[i] = x[i] - y[i]",
+    "subtract_mm_kernel"
 )
 
 sigmoid_kernel = ElementwiseKernel(
-    b"float* x, float* y",
-    b"y[i] = 1.0/(1.0 + exp(-1*x[i])",
-    b"sigmoid_kernel"
+    "float* x, float* y",
+    "y[i] = 1.0/(1.0 + exp(-1*x[i])",
+    "sigmoid_kernel"
 )
 
 sigmoid_deriv_kernel = ElementwiseKernel(
