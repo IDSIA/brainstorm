@@ -193,27 +193,27 @@ sigmoid_kernel = ElementwiseKernel(
 )
 
 sigmoid_deriv_kernel = ElementwiseKernel(
-    b"float* x, float* y, float* dy, float* dx",
-    b"dx[i] = dy[i] * y[i] * (1.0 - y[i])",
-    b"sigmoid_deriv_kernel"
+    "float* x, float* y, float* dy, float* dx",
+    "dx[i] = dy[i] * y[i] * (1.0 - y[i])",
+    "sigmoid_deriv_kernel"
 )
 
 tanh_deriv_kernel = ElementwiseKernel(
-    b"float* x, float* y, float* dy, float* dx",
-    b"dx[i] = dy[i] * (1.0 - y[i] * y[i])",
-    b"tanh_deriv_kernel"
+    "float* x, float* y, float* dy, float* dx",
+    "dx[i] = dy[i] * (1.0 - y[i] * y[i])",
+    "tanh_deriv_kernel"
 )
 
 rel_kernel = ElementwiseKernel(
-    b"float* x, float* y",
-    b"if (x[i]>0) y[i] = x[i]; else y[i]=0.0;",
-    b"rel_kernel"
+    "float* x, float* y",
+    "if (x[i]>0) y[i] = x[i]; else y[i]=0.0;",
+    "rel_kernel"
 )
 
 rel_deriv_kernel = ElementwiseKernel(
-    b"float* x, float* y, float* dy, float* dx",
-    b"if (x[i]>0) dx[i] = dy[i]; else dx[i]=0.0;",
-    b"rel_deriv_kernel"
+    "float* x, float* y, float* dy, float* dx",
+    "if (x[i]>0) dx[i] = dy[i]; else dx[i]=0.0;",
+    "rel_deriv_kernel"
 )
 
 broadcast_features_kernel = ElementwiseKernel(
