@@ -93,15 +93,15 @@ class PyCudaHandler(object):
 
     @staticmethod
     def clip_t(a, a_min, a_max, out):
-        raise NotImplementedError()
+        clip_kernel(a, out, a_min, a_max)
 
     @staticmethod
     def log_t(a, out):
-        raise NotImplementedError()
+        cumath.log(a, out=out)
 
     @staticmethod
     def divide_tt(a, b, out):
-        raise NotImplementedError()
+        div_kernel(a, b, out)
 
     @staticmethod
     def divide_mv(m, v, out):
@@ -155,7 +155,11 @@ class PyCudaHandler(object):
     @staticmethod
     def softmax_m(m, out):
         """Applies softmax to matrix over last dimension"""
-        raise NotImplementedError()
+        n, k = m.shape
+        tmp = gpuarray.empty((1, n), dtype=m.dtype)
+        __cuda_softmax_impl(m.gpudata, tmp.gpudata, out.gpudata, np.int32(n),
+            np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
+        return out
 
 
 elem_mult_kernel = ElementwiseKernel(
@@ -217,3 +221,65 @@ broadcast_features_kernel = ElementwiseKernel(
     "out[i] = a[i / broadcast_size]",
     "bc_features_kernel"
 )
+
+clip_kernel = ElementwiseKernel(
+    "float* a, float* out, float a_min, float a_max",
+    "out[i] = fminf(fmaxf(a[i], a_min), a_max);",
+    "clip_kernel"
+)
+
+div_kernel = ElementwiseKernel(
+    "float* a, float* b, float* out",
+    "out[i] = a[i] / b[i];",
+    "div_kernel"
+)
+
+
+__softmax_kernel_code = """
+    __global__ void softmax_kernel(float* mat, float* tmp, float* out,
+                                   unsigned int height, unsigned int width) {
+          __shared__ float max_vals[32];
+        float cur_max = -FLT_MAX;
+        float val = 0;
+
+        for (unsigned int i = threadIdx.x; i < width; i += 32) {
+            val = mat[blockIdx.x * width + i];
+            if (val > cur_max)
+                cur_max = val;
+        }
+
+        max_vals[threadIdx.x] = cur_max;
+        __syncthreads();
+        if (threadIdx.x == 0) {
+            cur_max = -FLT_MAX;
+            for (unsigned int i = 0; i < 32; i++) {
+                if (max_vals[i] > cur_max)
+                    cur_max = max_vals[i];
+            }
+            tmp[blockIdx.x] = cur_max;
+        }
+        __syncthreads();
+
+
+        float sum = 0.0;
+        for (unsigned int i = threadIdx.x; i < width; i += 32) {
+            float x =  __expf(mat[blockIdx.x * width + i] - tmp[blockIdx.x]);
+            out[blockIdx.x * width + i] = x;
+            sum += x;
+        }
+        max_vals[threadIdx.x] = sum;
+        __syncthreads();
+        if (threadIdx.x == 0) {
+            sum = 0.0;
+            for (unsigned int i = 0; i < 32; i++)
+                sum += max_vals[i];
+            tmp[blockIdx.x] = sum;
+        }
+        __syncthreads();
+        for (unsigned int i = threadIdx.x; i < width; i += 32) {
+            out[blockIdx.x * width + i] /= tmp[blockIdx.x];
+        }
+    }
+    """
+    mod = SourceModule(__softmax_kernel_code)
+    _softmax_impl = mod.get_function("softmax_kernel")
