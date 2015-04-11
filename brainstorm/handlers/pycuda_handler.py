@@ -84,7 +84,12 @@ class PyCudaHandler(object):
 
     @staticmethod
     def broadcast_features_t(a, out):
-        raise NotImplementedError()
+        assert len(a.shape) == 3
+        assert a.shape[2] == 1
+        assert len(out.shape) > 2
+        a_flat = a.reshape(-1)
+        out_flat = out.reshape(-1)
+        broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
 
     @staticmethod
     def clip_t(a, a_min, a_max, out):
@@ -205,4 +210,10 @@ rel_deriv_kernel = ElementwiseKernel(
     b"float* x, float* y, float* dy, float* dx",
     b"if (x[i]>0) dx[i] = dy[i]; else dx[i]=0.0;",
     b"rel_deriv_kernel"
+)
+
+broadcast_features_kernel = ElementwiseKernel(
+    "float* out, float* a, unsigned int broadcast_size",
+    "out[i] = a[i / broadcast_size]",
+    "bc_features_kernel"
 )
