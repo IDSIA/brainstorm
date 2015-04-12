@@ -109,7 +109,7 @@ class PyCudaHandler(object):
         """
         Divide (M, N) matrix elementwise by a (1, N) vector using broadcasting.
         """
-        raise NotImplementedError()
+        cumisc.div_matvec(m, v, out=out)
 
     @staticmethod
     def mult_mv(m, v, out):
@@ -117,7 +117,7 @@ class PyCudaHandler(object):
         Multiply (M, N) matrix elementwise by a (1, N) vector using
         broadcasting.
         """
-        raise NotImplementedError()
+        cumisc.mutl_matvec(m, v, out=out)
 
     @staticmethod
     def binarize_v(v, out):
