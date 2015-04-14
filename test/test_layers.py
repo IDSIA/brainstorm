@@ -9,7 +9,7 @@ from brainstorm.layers.squared_difference_layer import \
 from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
 from brainstorm.handlers import NumpyHandler
-from .helpers import run_layer_test
+from .helpers import run_deltas_test, setup_buffers, run_gradients_test
 import numpy as np
 from brainstorm.structure.shapes import ShapeTemplate
 from layers.rnn_layer import RnnLayerImpl
@@ -18,58 +18,47 @@ import pytest
 np.random.seed(1234)
 
 NO_CON = set()
+HANDLER = NumpyHandler(np.float64)
+
 
 def test_fully_connected_layer():
-
-    eps = 1e-6
-    time_steps = 3
-    batch_size = 2
-    input_shape = 3
-    layer_shape = 2
-
-    in_shapes = {'default': ShapeTemplate('T', 'B', input_shape,)}
-    layer = FullyConnectedLayerImpl('TestLayer', in_shapes, NO_CON, NO_CON,
-                                    size=layer_shape,
+    in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
+    layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
+                                    NO_CON, NO_CON,
+                                    size=4,
                                     activation_function='sigmoid')
-    layer.set_handler(NumpyHandler(np.float64))
-    print("\n---------- Testing FullyConnectedLayer ----------")
-    run_layer_test(layer, time_steps, batch_size, eps)
+    return layer, {}
 
 
-def test_squared_difference_layer():
-
-    eps = 1e-4
-    time_steps = 3
-    batch_size = 2
+def squared_difference_layer():
     in_shapes = {'inputs_1': ShapeTemplate('T', 'B', 3, 2),
                  'inputs_2': ShapeTemplate('T', 'B', 3, 2)
                  }
 
-    layer = SquaredDifferenceLayerImpl('TestLayer', in_shapes, NO_CON, NO_CON)
-    layer.set_handler(NumpyHandler(np.float64))
-
-    print("\n---------- Testing SquaredDifferenceLayer ----------")
-    # run_layer_test(layer, time_steps, batch_size, eps)
+    layer = SquaredDifferenceLayerImpl('SquaredDifferenceLayer',
+                                       in_shapes, NO_CON, NO_CON)
+    return layer, {}
 
 
-def test_binomial_crossentropy_layer():
-    eps = 1e-5
+def binomial_crossentropy_layer():
     time_steps = 3
     batch_size = 2
-    feature_shape = (5,)
-    shape = (time_steps, batch_size) + feature_shape
+    size = 5
+    shape = (time_steps, batch_size, size)
     default = np.random.rand(*shape)
     targets = np.random.randint(0, 2, shape)
-    print(default)
-    print(targets)
-    in_shapes = {'default': ShapeTemplate('T', 'B', *feature_shape),
-                 'targets': ShapeTemplate('T', 'B', *feature_shape)}
+    in_shapes = {'default': ShapeTemplate('T', 'B', size),
+                 'targets': ShapeTemplate('T', 'B', size)}
 
-    layer = BinomialCrossEntropyLayerImpl('TestLayer', in_shapes, NO_CON, NO_CON)
-
-
-    #run_layer_test(layer, time_steps, batch_size, eps,
-    #               skip_inputs=['targets'], default=default, targets=targets)
+    layer = BinomialCrossEntropyLayerImpl('BinomialCrossEntropyError',
+                                          in_shapes, NO_CON, NO_CON)
+    return layer, {
+        'time_steps': time_steps,
+        'batch_size': batch_size,
+        'default': default,
+        'targets': targets,
+        'skip_inputs': ['targets']
+    }
 
 
 def classification_layer():
@@ -93,14 +82,17 @@ def classification_layer():
 
 
 def rnn_layer():
-    in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
-    layer = RnnLayerImpl('RnnLayer', in_shapes, NO_CON, NO_CON,
+    layer = RnnLayerImpl('RnnLayer',
+                         {'default': ShapeTemplate('T', 'B', 5)},
+                         NO_CON, NO_CON,
                          size=7)
     return layer, {}
 
 layers_to_test = [
+    binomial_crossentropy_layer,
     classification_layer,
-    rnn_layer
+    rnn_layer,
+    squared_difference_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]
@@ -112,9 +104,39 @@ def layer_specs(request):
     return layer, specs
 
 
-def test_layer(layer_specs):
+def test_deltas_for_layer(layer_specs):
     layer, specs = layer_specs
-    print("\n---------- Testing {} ----------".format(layer.name))
-    layer.set_handler(NumpyHandler(np.float64))
+    print("\n---------- Testing Deltas for: {} ----------".format(layer.name))
+    layer.set_handler(HANDLER)
+    time_steps = specs.get('time_steps', 3)
+    batch_size = specs.get('batch_size', 2)
+    eps = specs.get('eps', 1e-5)
+    fwd_buffers, bwd_buffers = setup_buffers(time_steps, batch_size, layer)
 
-    run_layer_test(layer, 3, 2, 1e-5, **specs)
+    for key, value in fwd_buffers.inputs.items():
+        if key in specs:
+            print("Using special input:", key)
+            HANDLER.set_from_numpy(fwd_buffers.inputs[key], specs[key])
+
+    run_deltas_test(layer, fwd_buffers, bwd_buffers, eps,
+                    skip_inputs=specs.get('skip_inputs', []),
+                    skip_outputs=specs.get('skip_outputs', []))
+
+
+def test_gradients_for_layer(layer_specs):
+    layer, specs = layer_specs
+    print("\n---------- Testing Gradients for: {} ----------".format(layer.name))
+    layer.set_handler(HANDLER)
+    time_steps = specs.get('time_steps', 3)
+    batch_size = specs.get('batch_size', 2)
+    eps = specs.get('eps', 1e-5)
+    fwd_buffers, bwd_buffers = setup_buffers(time_steps, batch_size, layer)
+
+    for key, value in fwd_buffers.inputs.items():
+        if key in specs:
+            print("Using special input:", key)
+            HANDLER.set_from_numpy(fwd_buffers.inputs[key], specs[key])
+
+    run_gradients_test(layer, fwd_buffers, bwd_buffers, eps,
+                       skip_parameters=specs.get('skip_parameters', []),
+                       skip_outputs=specs.get('skip_outputs', []))
