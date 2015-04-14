@@ -12,7 +12,7 @@ from brainstorm.handlers import NumpyHandler
 from .helpers import run_deltas_test, setup_buffers, run_gradients_test
 import numpy as np
 from brainstorm.structure.shapes import ShapeTemplate
-from layers.rnn_layer import RnnLayerImpl
+from brainstorm.layers.rnn_layer import RnnLayerImpl
 import pytest
 
 np.random.seed(1234)
