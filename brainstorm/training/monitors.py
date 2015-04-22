@@ -146,5 +146,6 @@ class MonitorLoss(Monitor):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
         errors = []
         for i in run_network(net, iterator):
+            net.forward_pass()
             errors.append(net.get_loss_value())
         return np.mean(errors)
