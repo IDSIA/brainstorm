@@ -133,7 +133,7 @@ class MaxEpochsSeen(Monitor):
 class MonitorLoss(Monitor):
     def __init__(self, iter_name, timescale='epoch', interval=1, name=None,
                  verbose=None):
-        super().__init__(name, timescale, interval, verbose)
+        super(MonitorLoss, self).__init__(name, timescale, interval, verbose)
         self.iter_name = iter_name
         self.iter = None
 
