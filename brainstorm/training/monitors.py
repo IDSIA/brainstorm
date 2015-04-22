@@ -5,6 +5,7 @@ import numpy as np
 
 from collections import OrderedDict
 from brainstorm.describable import Describable
+from brainstorm.training.trainer import run_network
 
 
 class Monitor(Describable):
@@ -127,3 +128,23 @@ class MaxEpochsSeen(Monitor):
     def __call__(self, epoch, net, stepper, logs):
         if epoch >= self.max_epochs:
             raise StopIteration
+
+
+class MonitorLoss(Monitor):
+    def __init__(self, iter_name, timescale='epoch', interval=1, name=None,
+                 verbose=None):
+        super().__init__(name, timescale, interval, verbose)
+        self.iter_name = iter_name
+        self.iter = None
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(MonitorLoss, self).start(net, stepper, verbose, monitor_kwargs)
+        assert self.iter_name in monitor_kwargs
+        self.iter = monitor_kwargs[self.iter_name]
+
+    def __call__(self, epoch, net, stepper, logs):
+        iterator = self.iter(verbose=self.verbose, handler=net.handler)
+        errors = []
+        for i in run_network(net, iterator):
+            errors.append(net.get_loss_value())
+        return np.mean(errors)
