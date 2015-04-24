@@ -121,11 +121,11 @@ class PyCudaHandler(object):
 
     @staticmethod
     def binarize_v(v, out):
-        raise NotImplementedError()
+        binarize_v_kernel(out, v, out.shape[0], out.shape[1])
 
     @staticmethod
     def index_m_by_v(m, v, out):
-        raise NotImplementedError()
+        index_m_by_v_kernel(out, v, m, m.shape[0], m.shape[1])
 
     # Activation functions
 
@@ -235,6 +235,17 @@ div_kernel = ElementwiseKernel(
     "div_kernel"
 )
 
+binarize_v_kernel = ElementwiseKernel(
+    "float* out, float* v, int nrows, int ncols",
+    "out[i] = v[i/ncols] == (i % ncols) ? 1.0f : 0.0f",
+    "binarize_v_kernel"
+)
+
+index_m_by_v_kernel = ElementwiseKernel(
+    "float* out, float* v, float* m, int nrows, int ncols",
+    "out[i] = m[i*ncols + int(v[i])]",
+    "index_m_by_v_kernel"
+)
 
 __softmax_kernel_code = """
     #include "float.h"
