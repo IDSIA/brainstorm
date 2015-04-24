@@ -6,6 +6,7 @@ import numpy as np
 from collections import OrderedDict
 from brainstorm.describable import Describable
 from brainstorm.training.trainer import run_network
+from brainstorm.utils import get_by_path
 
 
 class Monitor(Describable):
@@ -127,7 +128,65 @@ class MaxEpochsSeen(Monitor):
 
     def __call__(self, epoch, net, stepper, logs):
         if epoch >= self.max_epochs:
-            raise StopIteration
+            raise StopIteration("Maximum number of epochs ({}) reached."
+                                .format(self.max_epochs))
+
+
+class ErrorRises(Monitor):
+    __default_values__ = {'delay': 1}
+
+    def __init__(self, error, delay=1, name=None):
+        super(ErrorRises, self).__init__(name, 'epoch', 1)
+        self.error = error.split('.')
+        self.delay = delay
+
+    def __call__(self, epoch, net, stepper, logs):
+        errors = logs
+        for en in self.error:
+            errors = errors[en]
+        best_error_idx = np.argmin(errors)
+        if len(errors) > best_error_idx + self.delay:
+            raise StopIteration("Error did not fall for %d epochs! Stopping."
+                                % self.delay)
+
+
+class StopOnNan(Monitor):
+    """ Stop the training if infinite or NaN values are found in parameters.
+
+    Can also check logs for invalid values.
+    """
+    def __init__(self, logs_to_check=(), check_parameters=True, name=None):
+        super(StopOnNan, self).__init__(name, 'epoch', 1)
+        self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check, str)
+                              else logs_to_check)
+        self.check_parameters = check_parameters
+
+    def __call__(self, epoch, net, stepper, logs):
+        for log_name in self.logs_to_check:
+            log = get_by_path(logs, log_name)
+            if not np.all(np.isfinite(log)):
+                raise StopIteration("NaN or infinite value detected in {}"
+                                    .format(log_name))
+        if self.check_parameters:
+            params = net.handler.get_numpy_copy(net.buffer.forward.parameters)
+            if not np.all(np.isfinite(params)):
+                raise StopIteration("Nan or infinite value detected in the "
+                                    "parameters!")
+
+
+class InfoUpdater(Monitor):
+    """ Save the information from logs to the Sacred custom info dict"""
+    def __init__(self, run, name=None):
+        super(InfoUpdater, self).__init__(name, 'epoch', 1)
+        self.run = run
+        self.__name__ = self.__class__.__name__ if name is None else name
+
+    def __call__(self, epoch, net, stepper, logs):
+        info = self.run.info
+        info['epoch'] = epoch
+        info['monitor'] = logs
+        if 'nr_parameters' not in info:
+            info['nr_parameters'] = net.buffer.forward.parameters.size
 
 
 class MonitorLoss(Monitor):
@@ -149,3 +208,4 @@ class MonitorLoss(Monitor):
             net.forward_pass()
             errors.append(net.get_loss_value())
         return np.mean(errors)
+
