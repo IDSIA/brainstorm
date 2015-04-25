@@ -162,7 +162,7 @@ def test_gradients_for_layer(layer_specs):
         assert successful, "Gradients check failed for {}".format(layer.name)
 
 
-def test_layer_insensitive_to_internal_state_init(layer_specs):
+def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
     print("\n========= Testing Internal State Insensitivity for: {} ========="
           .format(layer.name))
@@ -183,6 +183,38 @@ def test_layer_insensitive_to_internal_state_init(layer_specs):
         layer.forward_pass(fwd_buffers)
         for key, value in fwd_buffers.outputs.items():
             assert np.allclose(outputs[key], value, rtol=eps, atol=eps)
+
+
+def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
+    layer, specs = layer_specs
+    print("\n========= Testing Internal State Insensitivity for: {} ========="
+          .format(layer.name))
+    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    eps = specs.get('eps', 1e-8)
+    layer.forward_pass(fwd_buffers)
+    layer.backward_pass(fwd_buffers, bwd_buffers)
+
+    # get deltas after normal backward pass
+    deltas = {}
+    for key, value in bwd_buffers.inputs.items():
+        deltas[key] = HANDLER.get_numpy_copy(value)
+
+    # randomize internal state
+    for key in fwd_buffers.internals.keys():
+        fwd_intern = fwd_buffers.internals[key]
+        bwd_intern = bwd_buffers.internals[key]
+        HANDLER.set_from_numpy(fwd_intern, np.random.randn(*fwd_intern.shape))
+        HANDLER.set_from_numpy(bwd_intern, np.random.randn(*bwd_intern.shape))
+
+        # clear deltas
+        for k, v in bwd_buffers.inputs.items():
+            HANDLER.fill(v, 0.0)
+
+        # compare new deltas
+        layer.forward_pass(fwd_buffers)
+        layer.backward_pass(fwd_buffers, bwd_buffers)
+        for key, value in bwd_buffers.inputs.items():
+            assert np.allclose(deltas[key], value, rtol=eps, atol=eps)
 
 
 def test_layer_add_to_deltas(layer_specs):
