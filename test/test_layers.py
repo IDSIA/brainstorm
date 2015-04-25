@@ -8,17 +8,30 @@ from brainstorm.layers.squared_difference_layer import \
     SquaredDifferenceLayerImpl
 from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
-from brainstorm.handlers import NumpyHandler
-from .helpers import run_deltas_test, setup_buffers, run_gradients_test
+
+from .helpers import run_gradients_test, run_deltas_test, set_up_layer, HANDLER
 import numpy as np
 from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.layers.rnn_layer import RnnLayerImpl
+from brainstorm.layers.noop_layer import NoOpLayerImpl
+from brainstorm.layers.loss_layer import LossLayerImpl
 import pytest
 
 np.random.seed(1234)
 
 NO_CON = set()
-HANDLER = NumpyHandler(np.float64)
+
+
+def noop_layer():
+    in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
+    layer = NoOpLayerImpl('NoOpLayer', in_shapes, NO_CON, NO_CON)
+    return layer, {}
+
+
+def loss_layer():
+    in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
+    layer = LossLayerImpl('LossLayer', in_shapes, NO_CON, NO_CON)
+    return layer, {}
 
 
 def fully_connected_layer():
@@ -89,6 +102,8 @@ def rnn_layer():
     return layer, {}
 
 layers_to_test = [
+    noop_layer,
+    loss_layer,
     fully_connected_layer,
     binomial_crossentropy_layer,
     classification_layer,
@@ -105,47 +120,52 @@ def layer_specs(request):
     return layer, specs
 
 
-def set_up_layer(layer, specs):
-    layer.set_handler(HANDLER)
-    time_steps = specs.get('time_steps', 3)
-    batch_size = specs.get('batch_size', 2)
-
-    fwd_buffers, bwd_buffers = setup_buffers(time_steps, batch_size, layer)
-
-    for key, value in fwd_buffers.inputs.items():
-        if key in specs:
-            print("Using special input:", key)
-            HANDLER.set_from_numpy(fwd_buffers.inputs[key], specs[key])
-
-    return fwd_buffers, bwd_buffers
-
-
-def test_deltas_for_layer(layer_specs):
+def test_deltas_calculation_of_layer(layer_specs):
     layer, specs = layer_specs
-    print("\n---------- Testing Deltas for: {} ----------".format(layer.name))
-    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
-    eps = specs.get('eps', 1e-5)
+    print("\n========= Testing Deltas for: '{}' =========".format(layer.name))
 
-    run_deltas_test(layer, fwd_buffers, bwd_buffers, eps,
-                    skip_inputs=specs.get('skip_inputs', []),
-                    skip_outputs=specs.get('skip_outputs', []))
+    skip_outputs = specs.get('skip_outputs', [])
+    skip_inputs = specs.get('skip_inputs', [])
+    successful = True
+    for outputs_name in layer.out_shapes:
+        if outputs_name in skip_outputs:
+            continue
+        print("----------- WRT Output: '{}' ----------- ".format(outputs_name))
+
+        for inputs_name in layer.in_shapes:
+            if inputs_name in skip_inputs:
+                continue
+            successful &= run_deltas_test(layer, specs, inputs_name,
+                                          outputs_name)
+
+        assert successful, "Deltas check failed for {}".format(layer.name)
 
 
 def test_gradients_for_layer(layer_specs):
     layer, specs = layer_specs
-    print("\n-------- Testing Gradients for: {} --------".format(layer.name))
-    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
-    eps = specs.get('eps', 1e-5)
+    print("\n======== Testing Gradients for: '{}' ========".format(layer.name))
 
-    run_gradients_test(layer, fwd_buffers, bwd_buffers, eps,
-                       skip_parameters=specs.get('skip_parameters', []),
-                       skip_outputs=specs.get('skip_outputs', []))
+    skip_outputs = specs.get('skip_outputs', [])
+    skip_parameters = specs.get('skip_parameters', [])
+    successful = True
+    for outputs_name in layer.out_shapes:
+        if outputs_name in skip_outputs:
+            continue
+        print("----------- WRT Output: '{}' ----------- ".format(outputs_name))
+
+        for inputs_name in layer.get_parameter_structure():
+            if inputs_name in skip_parameters:
+                continue
+            successful &= run_gradients_test(layer, specs, inputs_name,
+                                             outputs_name)
+
+        assert successful, "Gradients check failed for {}".format(layer.name)
 
 
 def test_layer_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
-    print("\n----- Testing Internal State Insensitivity for: {} -----".format(
-        layer.name))
+    print("\n========= Testing Internal State Insensitivity for: {} ========="
+          .format(layer.name))
     fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
     eps = specs.get('eps', 1e-8)
     layer.forward_pass(fwd_buffers)
@@ -187,10 +207,13 @@ def test_layer_add_to_deltas(layer_specs):
         HANDLER.fill(value, 0)
     for key, value in bwd_buffers.parameters.items():
         HANDLER.fill(value, 0)
+    # set all bwd_buffer inputs to 1.0
+    for key, value in bwd_buffers.inputs.items():
+        HANDLER.fill(value, 1.0)
 
     # do a second backward pass
     layer.backward_pass(fwd_buffers, bwd_buffers)
 
-    # assert all input deltas are doubled
+    # assert all input deltas are 1.0 bigger
     for key, value in bwd_buffers.inputs.items():
-        assert np.allclose(deltas[key] * 2, value, rtol=eps, atol=eps), key
+        assert np.allclose(deltas[key] + 1.0, value, rtol=eps, atol=eps), key

@@ -20,7 +20,8 @@ class LossLayerImpl(LayerBaseImpl):
                            forward_buffer.outputs.loss.reshape(tuple()))
 
     def backward_pass(self, forward_buffers, backward_buffers):
-        self.handler.fill(backward_buffers.inputs.default, 1.0)
+        self.handler.add_st(1.0, backward_buffers.inputs.default,
+                            out=backward_buffers.inputs.default)
 
     def _get_output_shapes(self):
         return {'loss': ShapeTemplate(1)}
