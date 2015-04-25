@@ -76,6 +76,10 @@ class PyCudaHandler(object):
         add_mm_kernel(a, b, out)
 
     @staticmethod
+    def add_st(s, t, out):
+        elem_mult_st_kernel(s, t, out)
+
+    @staticmethod
     def subtract_tt(a, b, out):
         subtract_mm_kernel(a, b, out)
 
@@ -179,6 +183,12 @@ add_mm_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] + y[i]",
     "add_mm_kernel"
+)
+
+add_st_kernel = ElementwiseKernel(
+    "float x, float* y, float *out",
+    "out[i] = x + y[i]",
+    "add_st_kernel"
 )
 
 subtract_mm_kernel = ElementwiseKernel(

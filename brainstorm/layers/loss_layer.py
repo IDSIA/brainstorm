@@ -31,8 +31,9 @@ class LossLayerImpl(LayerBaseImpl):
 
     def backward_pass(self, forward_buffers, backward_buffers):
         time_size, batch_size = forward_buffers.inputs.default.shape[:2]
-        self.handler.fill(backward_buffers.inputs.default,
-                          self.importance / batch_size)
+        self.handler.add_st(self.importance / batch_size, 
+                            backward_buffers.inputs.default,
+                            backward_buffers.inputs.default)
 
     def _get_output_shapes(self):
         return {'loss': ShapeTemplate(1)}

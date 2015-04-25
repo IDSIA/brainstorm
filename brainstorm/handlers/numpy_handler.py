@@ -80,6 +80,10 @@ class NumpyHandler(object):
         out[:] = a + b
 
     @staticmethod
+    def add_st(s, t, out):
+        out[:] = t + s
+
+    @staticmethod
     def subtract_tt(a, b, out):
         assert a.shape == b.shape == out.shape
         out[:] = a - b

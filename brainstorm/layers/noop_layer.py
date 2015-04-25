@@ -2,7 +2,6 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.utils import LayerValidationError
 
 
 class NoOpLayerImpl(LayerBaseImpl):
@@ -15,10 +14,10 @@ class NoOpLayerImpl(LayerBaseImpl):
         return self.in_shapes
 
     def forward_pass(self, forward_buffers, training_pass=True):
-        self.handler.copy_to(forward_buffers.inputs.default,
-                             forward_buffers.outputs.default)
+        self.handler.copy_to(forward_buffers.outputs.default,
+                             forward_buffers.inputs.default)
 
     def backward_pass(self, forward_buffers, backward_buffers):
-        self.handler.add(backward_buffers.outputs.default,
-                         backward_buffers.inputs.default,
-                         out=backward_buffers.inputs.default)
+        self.handler.add_tt(backward_buffers.outputs.default,
+                            backward_buffers.inputs.default,
+                            out=backward_buffers.inputs.default)
