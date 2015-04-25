@@ -52,7 +52,7 @@ class RescaleIncomingWeights(WeightModifier):
 
         column_sum = handler.allocate((1, view.shape[1]))
         handler.sum_t(view, axis=0, out=column_sum)
-        handler.elem_mult_st(self.target_sum, column_sum, column_sum)
+        handler.mult_st(self.target_sum, column_sum, column_sum)
         handler.divide_mv(view, column_sum, view)
 
     def __repr__(self):
@@ -115,7 +115,7 @@ class MaskWeights(WeightModifier):
                 not isinstance(self.device_mask, handler.array_type)):
             self.device_mask = handler.allocate(self.mask.shape)
             handler.set_from_numpy(self.device_mask, self.mask)
-        handler.elem_mult_tt(view, self.device_mask, view)
+        handler.mult_tt(view, self.device_mask, view)
 
 
 class FreezeWeights(WeightModifier):

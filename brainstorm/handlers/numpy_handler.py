@@ -63,15 +63,15 @@ class NumpyHandler(object):
         out[:] += np.dot(x, y)
 
     @staticmethod
-    def elem_mult_tt(a, b, out):
+    def mult_tt(a, b, out):
         np.multiply(a, b, out)
 
     @staticmethod
-    def elem_mult_add_tt(a, b, out):
+    def mult_add_tt(a, b, out):
         out[:] += a * b
 
     @staticmethod
-    def elem_mult_st(a, b, out):
+    def mult_st(a, b, out):
         np.multiply(a, b, out)
 
     @staticmethod

@@ -64,12 +64,16 @@ class PyCudaHandler(object):
         culinalg.add_dot(a, b, out, transa, transb)
 
     @staticmethod
-    def elem_mult_tt(a, b, out):
-        elem_mult_kernel(a, b, out)
+    def mult_tt(a, b, out):
+        mult_kernel(a, b, out)
 
     @staticmethod
-    def elem_mult_st(a, b, out):
-        elem_mult_st_kernel(a, b, out)
+    def mult_add_tt(a, b, out):
+        mult_add_kernel(a, b, out)
+
+    @staticmethod
+    def mult_st(a, b, out):
+        mult_st_kernel(a, b, out)
 
     @staticmethod
     def add_tt(a, b, out):
@@ -77,7 +81,7 @@ class PyCudaHandler(object):
 
     @staticmethod
     def add_st(s, t, out):
-        elem_mult_st_kernel(s, t, out)
+        add_st_kernel(s, t, out)
 
     @staticmethod
     def subtract_tt(a, b, out):
@@ -167,13 +171,19 @@ class PyCudaHandler(object):
         return out
 
 
-elem_mult_kernel = ElementwiseKernel(
+mult_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] * y[i]",
     "elem_mult_kernel"
 )
 
-elem_mult_st_kernel = ElementwiseKernel(
+mult_add_kernel = ElementwiseKernel(
+    "float* x, float* y, float *out",
+    "out[i] += x[i] * y[i]",
+    "elem_mult_kernel"
+)
+
+mult_st_kernel = ElementwiseKernel(
     "float x, float* y, float *out",
     "out[i] = x * y[i]",
     "elem_mult_kernel"

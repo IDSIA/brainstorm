@@ -25,7 +25,7 @@ class LossLayerImpl(LayerBaseImpl):
         self.handler.sum_t(forward_buffers.inputs.default,
                            None,
                            forward_buffers.outputs.loss.reshape(tuple()))
-        self.handler.elem_mult_st(self.importance / batch_size,
+        self.handler.mult_st(self.importance / batch_size,
                                   forward_buffers.outputs.loss,
                                   forward_buffers.outputs.loss)
 
