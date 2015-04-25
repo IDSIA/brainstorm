@@ -85,7 +85,11 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         _h.broadcast_features_t(grad_diff_sum, grad_diff)
 
         # calculate
-        _h.subtract_tt(inputs_1, inputs_2, out=grad_inputs_1)
-        _h.subtract_tt(inputs_2, inputs_1, out=grad_inputs_2)
-        _h.elem_mult_tt(grad_diff, grad_inputs_1, grad_inputs_1)
-        _h.elem_mult_tt(grad_diff, grad_inputs_2, grad_inputs_2)
+        _h.add_tt(inputs_1, grad_inputs_1, out=grad_inputs_1)
+        _h.subtract_tt(grad_inputs_1, inputs_2, out=grad_inputs_1)
+
+        _h.add_tt(inputs_2, grad_inputs_2, out=grad_inputs_2)
+        _h.subtract_tt(grad_inputs_2, inputs_1, out=grad_inputs_2)
+
+        _h.elem_mult_add_tt(grad_diff, grad_inputs_1, grad_inputs_1)
+        _h.elem_mult_add_tt(grad_diff, grad_inputs_2, grad_inputs_2)

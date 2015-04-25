@@ -75,7 +75,8 @@ class RnnLayerImpl(LayerBaseImpl):
 
         for t in range(inputs.shape[0]):
             # calculate outputs
-            _h.dot_add_mm(outputs[t], R, Ha[t])  # outputs has a time offset of 1
+            # outputs has a time offset of 1
+            _h.dot_add_mm(outputs[t], R, Ha[t])
             _h.add_mv(Ha[t], bias, Ha[t])
             self.act_func(Ha[t], outputs[t + 1])
 
@@ -93,9 +94,9 @@ class RnnLayerImpl(LayerBaseImpl):
 
         _h.copy_to(dHa, doutputs[1:])
         T = inputs.shape[0] - 1
-        self.act_func_deriv(Ha[T], outputs[T+1], doutputs[T+1], dHa[T])
-        for t in range(T-1, -1, -1):
-            self.act_func_deriv(Ha[t], outputs[t+1], doutputs[t+1], dHa[t])
+        self.act_func_deriv(Ha[T], outputs[T + 1], doutputs[T + 1], dHa[T])
+        for t in range(T - 1, -1, -1):
+            self.act_func_deriv(Ha[t], outputs[t + 1], doutputs[t + 1], dHa[t])
             _h.dot_add_mm(dHa[t + 1], R, dHa[t], transb='T')
 
         t, b, f = dHa.shape

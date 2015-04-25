@@ -4,6 +4,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 import numpy as np
+
 np.random.seed(1234)
 
 
@@ -24,8 +25,7 @@ def approx_fprime(x0, f, epsilon, *args):
     for k in range(len(x0)):
         ei[k] = epsilon
         f_right = f(*((x0 + ei,) + args))
-        ei[k] = -epsilon
-        f_left = f(*((x0 + ei,) + args))
+        f_left = f(*((x0 - ei,) + args))
         grad[k] = (f_right - f_left)/(2 * epsilon)
         ei[k] = 0.0
     return grad
@@ -162,60 +162,25 @@ def setup_buffers(time_steps, batch_size, layer):
     return forward_buffers, backward_buffers
 
 
-def run_layer_test(layer, time_steps, batch_size, eps,
-                   skip_inputs=(), skip_parameters=(), skip_outputs=(),
-                   **inputs):
+def run_deltas_test(layer, forward_buffers, backward_buffers, eps,
+                    skip_inputs=(), skip_outputs=()):
     """
     Checks the gradients w.r.t. parameters and inputs for a given layer.
     Accepts a named list of initializations for inputs views only.
 
     :param layer: The $Layer$ object which should be tested.
-    :param time_steps: Number of time-steps in each sequence.
-    :param batch_size: Number of sequences.
     :param eps: Size of perturbation for analytical gradient computation.
     :param skip_inputs: A list of names of inputs to skip checking.
-    :param skip_parameters: A list of names of parameters to skip checking.
+    :param skip_outputs: A list of names of outputs to skip checking.
     :return:
     """
     _h = layer.handler
-    forward_buffers, backward_buffers = setup_buffers(time_steps, batch_size,
-                                                      layer)
-    for key, value in forward_buffers.inputs.items():
-        if key in inputs:
-            print("Found:", key)
-            _h.set_from_numpy(forward_buffers.inputs[key], inputs[key])
 
     # First do a forward and backward pass to calculate gradients
     layer.forward_pass(forward_buffers)
     for key in forward_buffers.outputs.keys():
         _h.fill(backward_buffers.outputs[key], 1.0)
     layer.backward_pass(forward_buffers, backward_buffers)
-
-    # Now calculate approximate gradients
-    for key in forward_buffers.parameters.keys():
-        if key not in skip_parameters:
-            print("\nChecking parameter: ", key)
-            view = forward_buffers.parameters[key]
-            size = _h.size(forward_buffers.parameters[key])
-            x0 = _h.get_numpy_copy(view).reshape((size,))
-            grad_calc = _h.get_numpy_copy(backward_buffers.parameters[
-                key]).reshape((size,))
-            print("x0: ", x0)
-            print("Expected grad: ", grad_calc)
-
-            def f(x):
-                flat_view = _h.reshape(view, (size,))
-                _h.set_from_numpy(flat_view, x)  # set to new value
-                layer.forward_pass(forward_buffers)
-                _h.set_from_numpy(flat_view, x0)  # reset
-                return get_output_error(_h, forward_buffers, skip_outputs)
-
-            grad_approx = approx_fprime(x0, f, eps)
-            print("Approx grad:", grad_approx)
-            assert np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
-
-        else:
-            print("\nSkipping parameter: ", key)
 
     for key in forward_buffers.inputs.keys():
         if key not in skip_inputs:
@@ -241,3 +206,52 @@ def run_layer_test(layer, time_steps, batch_size, eps,
 
         else:
             print("\nSkipping input: ", key)
+
+
+def run_gradients_test(layer, forward_buffers, backward_buffers, eps,
+                       skip_parameters=(), skip_outputs=()):
+    """
+    Checks the gradients w.r.t. parameters and inputs for a given layer.
+    Accepts a named list of initializations for inputs views only.
+
+    :param layer: The $Layer$ object which should be tested.
+    :param eps: Size of perturbation for analytical gradient computation.
+    :param skip_parameters: A list of names of inputs to skip checking.
+    :param skip_outputs: A list of names of parameters to skip checking.
+    :return:
+    """
+    _h = layer.handler
+
+    # First do a forward and backward pass to calculate gradients
+    layer.forward_pass(forward_buffers)
+    for key in forward_buffers.outputs.keys():
+        _h.fill(backward_buffers.outputs[key], 1.0)
+    layer.backward_pass(forward_buffers, backward_buffers)
+
+    # Now calculate approximate gradients
+    for key in forward_buffers.parameters.keys():
+        if key in skip_parameters:
+            print("\nSkipping parameter: ", key)
+            continue
+
+        print("\nChecking parameter: ", key)
+        view = forward_buffers.parameters[key]
+        size = _h.size(forward_buffers.parameters[key])
+        x0 = _h.get_numpy_copy(view).reshape((size,))
+        grad_calc = _h.get_numpy_copy(backward_buffers.parameters[
+            key]).reshape((size,))
+        print("x0: ", x0)
+        print("Expected grad: ", grad_calc)
+
+        def f(x):
+            flat_view = _h.reshape(view, (size,))
+            _h.set_from_numpy(flat_view, x)  # set to new value
+            layer.forward_pass(forward_buffers)
+            _h.set_from_numpy(flat_view, x0)  # reset
+            return get_output_error(_h, forward_buffers, skip_outputs)
+
+        grad_approx = approx_fprime(x0, f, eps)
+        print("Approx grad:", grad_approx)
+        assert np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
+
+

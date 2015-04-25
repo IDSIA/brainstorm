@@ -67,6 +67,10 @@ class NumpyHandler(object):
         np.multiply(a, b, out)
 
     @staticmethod
+    def elem_mult_add_tt(a, b, out):
+        out[:] += a * b
+
+    @staticmethod
     def elem_mult_st(a, b, out):
         np.multiply(a, b, out)
 
@@ -145,7 +149,7 @@ class NumpyHandler(object):
 
     @staticmethod
     def sigmoid_deriv(x, y, dy, dx):
-        dx[:] = dy * y * (1. - y)
+        dx[:] += dy * y * (1. - y)
 
     @staticmethod
     def tanh(x, y):
@@ -153,7 +157,7 @@ class NumpyHandler(object):
 
     @staticmethod
     def tanh_deriv(x, y, dy, dx):
-        dx[:] = dy * (1. - y * y)
+        dx[:] += dy * (1. - y * y)
 
     @staticmethod
     def rel(x, y):
@@ -161,7 +165,7 @@ class NumpyHandler(object):
 
     @staticmethod
     def rel_deriv(x, y, dy, dx):
-        dx[:] = dy * (x > 0)
+        dx[:] += dy * (x > 0)
 
     @staticmethod
     def softmax_m(m, out):
