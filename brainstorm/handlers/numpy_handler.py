@@ -2,16 +2,18 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
+from brainstorm.handlers.base_handler import Handler
 
 
-class NumpyHandler(object):
+# noinspection PyMethodOverriding
+class NumpyHandler(Handler):
+
     def __init__(self, dtype):
         self.array_type = np.ndarray
         self.dtype = dtype
         self.size = lambda x: x.size
         self.shape = lambda x: x.shape
         self.reshape = lambda x, s: x.reshape(s)
-        self.slice = lambda x, s: x[s]
         self.context = 'numpy'
         self.EMPTY = np.zeros(0)
 

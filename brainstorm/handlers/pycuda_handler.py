@@ -9,10 +9,12 @@ from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
 import scikits.cuda.linalg as culinalg
 import scikits.cuda.misc as cumisc
+from brainstorm.handlers.base_handler import Handler
 culinalg.init()
 
 
-class PyCudaHandler(object):
+# noinspection PyMethodOverriding
+class PyCudaHandler(Handler):
     def __init__(self):
         self.array_type = pycuda.gpuarray.GPUArray
         self.dtype = np.float32
