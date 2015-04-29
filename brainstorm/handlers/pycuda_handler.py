@@ -211,7 +211,7 @@ subtract_mm_kernel = ElementwiseKernel(
 
 sigmoid_kernel = ElementwiseKernel(
     "float* x, float* y",
-    "y[i] = 1.0/(1.0 + exp(-1*x[i])",
+    "y[i] = 1.0/(1.0 + exp(-1*x[i]))",
     "sigmoid_kernel"
 )
 
