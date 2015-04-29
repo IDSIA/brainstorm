@@ -63,11 +63,11 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         _h.subtract_tt(tmp, t, tmp)     # tmp  = 1-t
         _h.clip_t(cee, 1e-6, 1.0, cee)
         _h.log_t(cee, cee)              # cee = ln(1-y)
-        _h.elem_mult_tt(tmp, cee, tmp)  # tmp = (1-t) * ln(1-y)
+        _h.mult_tt(tmp, cee, tmp)  # tmp = (1-t) * ln(1-y)
 
         _h.clip_t(y, 1e-6, 1.0, cee)
         _h.log_t(cee, cee)              # cee = ln(y)
-        _h.elem_mult_tt(t, cee, cee)    # cee = t * ln(y)
+        _h.mult_tt(t, cee, cee)    # cee = t * ln(y)
 
         _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
 
@@ -77,7 +77,7 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         cee = cee.reshape((t, b, f))
 
         _h.sum_t(cee, axis=2, out=cee_sum)
-        _h.elem_mult_st(-1, cee_sum, cee_sum)  # * -1
+        _h.mult_st(-1, cee_sum, cee_sum)  # * -1
 
     def backward_pass(self, forward_buffers, backward_buffers):
         # prepare
@@ -94,7 +94,7 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         # the derivative of the binomial cross entropy error is given by
         # (y - t) / (y - y²)
 
-        _h.elem_mult_tt(y, y, ceed)       # ceed = y²
+        _h.mult_tt(y, y, ceed)       # ceed = y²
         _h.subtract_tt(y, ceed, ceed)     # ceed = y - y²
         _h.clip_t(ceed, 1e-6, 1.0, ceed)  # clip
 
@@ -105,6 +105,6 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         # ceed_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
         _h.broadcast_features_t(ceed_sum, tmp)
-        _h.elem_mult_tt(ceed, tmp, ceed)
+        _h.mult_tt(ceed, tmp, ceed)
 
         _h.add_tt(ceed, yd, yd)

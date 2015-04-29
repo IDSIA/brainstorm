@@ -20,9 +20,10 @@ class Trainer(Describable):
     }
     __default_values__ = {'verbose': True}
 
-    def __init__(self, stepper, verbose=True):
+    def __init__(self, stepper, verbose=True, double_buffering=True):
         self.stepper = stepper
         self.verbose = verbose
+        self.double_buffering = double_buffering
         self.monitors = OrderedDict()
         self.current_epoch = 0
         self.logs = dict()
@@ -47,6 +48,10 @@ class Trainer(Describable):
         self.stepper.start(net)
         self._start_monitors(net, monitor_kwargs)
         self._emit_monitoring(net, 'epoch')
+
+        run = (run_network_double_buffer if self.double_buffering else
+               run_network)
+
         while True:
             self.current_epoch += 1
             sys.stdout.flush()
@@ -56,7 +61,7 @@ class Trainer(Describable):
                       15 * ' -')
             iterator = training_data_getter(verbose=self.verbose,
                                             handler=net.handler)
-            for i in run_network(net, iterator):
+            for i in run(net, iterator):
                 train_errors.append(self.stepper.run())
                 net.apply_weight_modifiers()
                 if self._emit_monitoring(net, 'update', i + 1):
@@ -140,7 +145,7 @@ class Trainer(Describable):
             raise
 
 
-def run_network(net, iterator):
+def run_network_double_buffer(net, iterator):
     def run_it(it):
         try:
             run_it.data = next(it)
@@ -157,3 +162,9 @@ def run_network(net, iterator):
         yield i
         t.join()
         i += 1
+
+
+def run_network(net, iterator):
+    for i, data in enumerate(iterator):
+        net.provide_external_data(data)
+        yield i

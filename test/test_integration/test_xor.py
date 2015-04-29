@@ -26,7 +26,7 @@ def test_learn_xor_function():
     print(net.buffer.forward.parameters)
 
     # set up the trainer
-    tr = Trainer(SgdStep(learning_rate=1.0), verbose=False)
+    tr = Trainer(SgdStep(learning_rate=4.0), verbose=False)
     tr.add_monitor(MaxEpochsSeen(300))
 
     # generate the data

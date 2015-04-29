@@ -9,10 +9,12 @@ from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
 import scikits.cuda.linalg as culinalg
 import scikits.cuda.misc as cumisc
+from brainstorm.handlers.base_handler import Handler
 culinalg.init()
 
 
-class PyCudaHandler(object):
+# noinspection PyMethodOverriding
+class PyCudaHandler(Handler):
     def __init__(self):
         self.array_type = pycuda.gpuarray.GPUArray
         self.dtype = np.float32
@@ -64,16 +66,24 @@ class PyCudaHandler(object):
         culinalg.add_dot(a, b, out, transa, transb)
 
     @staticmethod
-    def elem_mult_tt(a, b, out):
-        elem_mult_kernel(a, b, out)
+    def mult_tt(a, b, out):
+        mult_kernel(a, b, out)
 
     @staticmethod
-    def elem_mult_st(a, b, out):
-        elem_mult_st_kernel(a, b, out)
+    def mult_add_tt(a, b, out):
+        mult_add_kernel(a, b, out)
+
+    @staticmethod
+    def mult_st(a, b, out):
+        mult_st_kernel(a, b, out)
 
     @staticmethod
     def add_tt(a, b, out):
         add_mm_kernel(a, b, out)
+
+    @staticmethod
+    def add_st(s, t, out):
+        add_st_kernel(s, t, out)
 
     @staticmethod
     def subtract_tt(a, b, out):
@@ -121,11 +131,11 @@ class PyCudaHandler(object):
 
     @staticmethod
     def binarize_v(v, out):
-        raise NotImplementedError()
+        binarize_v_kernel(out, v, out.shape[0], out.shape[1])
 
     @staticmethod
     def index_m_by_v(m, v, out):
-        raise NotImplementedError()
+        index_m_by_v_kernel(out, v, m, m.shape[0], m.shape[1])
 
     # Activation functions
 
@@ -163,13 +173,19 @@ class PyCudaHandler(object):
         return out
 
 
-elem_mult_kernel = ElementwiseKernel(
+mult_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] * y[i]",
     "elem_mult_kernel"
 )
 
-elem_mult_st_kernel = ElementwiseKernel(
+mult_add_kernel = ElementwiseKernel(
+    "float* x, float* y, float *out",
+    "out[i] += x[i] * y[i]",
+    "elem_mult_kernel"
+)
+
+mult_st_kernel = ElementwiseKernel(
     "float x, float* y, float *out",
     "out[i] = x * y[i]",
     "elem_mult_kernel"
@@ -179,6 +195,12 @@ add_mm_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] + y[i]",
     "add_mm_kernel"
+)
+
+add_st_kernel = ElementwiseKernel(
+    "float x, float* y, float *out",
+    "out[i] = x + y[i]",
+    "add_st_kernel"
 )
 
 subtract_mm_kernel = ElementwiseKernel(
@@ -235,6 +257,17 @@ div_kernel = ElementwiseKernel(
     "div_kernel"
 )
 
+binarize_v_kernel = ElementwiseKernel(
+    "float* out, float* v, int nrows, int ncols",
+    "out[i] = v[i/ncols] == (i % ncols) ? 1.0f : 0.0f",
+    "binarize_v_kernel"
+)
+
+index_m_by_v_kernel = ElementwiseKernel(
+    "float* out, float* v, float* m, int nrows, int ncols",
+    "out[i] = m[i*ncols + int(v[i])]",
+    "index_m_by_v_kernel"
+)
 
 __softmax_kernel_code = """
     #include "float.h"

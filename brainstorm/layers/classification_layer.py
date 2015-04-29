@@ -86,7 +86,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         _h.fill(loss, 0.)
         _h.index_m_by_v(flat_output, flat_targets, flat_loss)
         _h.log_t(loss, loss)
-        _h.elem_mult_st(-1, loss, loss)
+        _h.mult_st(-1, loss, loss)
 
     def backward_pass(self, forward_buffers, backward_buffers):
         # prepare
@@ -115,7 +115,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         # derivative of multinomial cross-entropy error wrt softmax:
         # y - t
         _h.binarize_v(flat_targets, flat_dHa)
-        _h.elem_mult_st(-1, flat_dHa, flat_dHa)
+        _h.mult_st(-1, flat_dHa, flat_dHa)
         _h.add_tt(flat_dHa, flat_output, flat_dHa)
         _h.mult_mv(flat_dHa, flat_dloss, flat_dHa)
 

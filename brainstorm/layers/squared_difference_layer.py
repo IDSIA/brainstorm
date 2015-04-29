@@ -60,7 +60,7 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
 
         # calculate
         _h.subtract_tt(inputs_1, inputs_2, out=diff)
-        _h.elem_mult_tt(diff, diff, out=diff)
+        _h.mult_tt(diff, diff, out=diff)
 
         # reshape for summation
         t, b = diff.shape[0], diff.shape[1]
@@ -68,7 +68,7 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         diff = _h.reshape(diff, (t, b, f))
 
         _h.sum_t(diff, axis=2, out=diff_sum)
-        _h.elem_mult_st(0.5, diff_sum, out=diff_sum)
+        _h.mult_st(0.5, diff_sum, out=diff_sum)
 
     def backward_pass(self, forward_buffers, backward_buffers):
         # prepare
@@ -79,13 +79,15 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         grad_inputs_2 = backward_buffers.inputs.inputs_2
         inputs_1 = forward_buffers.inputs.inputs_1
         inputs_2 = forward_buffers.inputs.inputs_2
+        tmp = _h.allocate(inputs_1.shape)
 
         # grad_diff_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
         _h.broadcast_features_t(grad_diff_sum, grad_diff)
 
         # calculate
-        _h.subtract_tt(inputs_1, inputs_2, out=grad_inputs_1)
-        _h.subtract_tt(inputs_2, inputs_1, out=grad_inputs_2)
-        _h.elem_mult_tt(grad_diff, grad_inputs_1, grad_inputs_1)
-        _h.elem_mult_tt(grad_diff, grad_inputs_2, grad_inputs_2)
+        _h.subtract_tt(inputs_1, inputs_2, out=tmp)
+        _h.mult_add_tt(grad_diff, tmp, grad_inputs_1)
+
+        _h.subtract_tt(inputs_2, inputs_1, out=tmp)
+        _h.mult_add_tt(grad_diff, tmp, grad_inputs_2)

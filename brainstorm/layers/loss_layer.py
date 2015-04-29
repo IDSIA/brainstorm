@@ -6,21 +6,34 @@ from brainstorm.structure.shapes import ShapeTemplate
 
 
 class LossLayerImpl(LayerBaseImpl):
-    # TODO: handle masks and batch/sequence normalization
-    # TODO: add importance factor
+    # TODO: handle masks
     inputs = {'default': ShapeTemplate('...')}
     outputs = {'loss': ShapeTemplate(1)}
-    expected_kwargs = {}
+    expected_kwargs = {'importance'}
 
-    def forward_pass(self, forward_buffer, training_pass=True):
+    def __init__(self, name, in_shapes, incoming_connections,
+                 outgoing_connections, **kwargs):
+        super(LossLayerImpl, self).__init__(
+            name, in_shapes, incoming_connections, outgoing_connections,
+            **kwargs)
+        self.importance = kwargs.get('importance', 1.0)
+
+    def forward_pass(self, forward_buffers, training_pass=True):
         # TODO: passing axis=None works with numpy an pycuda
         # TODO: but is this the intended interface?
-        self.handler.sum_t(forward_buffer.inputs.default,
+        time_size, batch_size = forward_buffers.inputs.default.shape[:2]
+        self.handler.sum_t(forward_buffers.inputs.default,
                            None,
-                           forward_buffer.outputs.loss.reshape(tuple()))
+                           forward_buffers.outputs.loss.reshape(tuple()))
+        self.handler.mult_st(self.importance / batch_size,
+                                  forward_buffers.outputs.loss,
+                                  forward_buffers.outputs.loss)
 
     def backward_pass(self, forward_buffers, backward_buffers):
-        self.handler.fill(backward_buffers.inputs.default, 1.0)
+        time_size, batch_size = forward_buffers.inputs.default.shape[:2]
+        self.handler.add_st(self.importance / batch_size, 
+                            backward_buffers.inputs.default,
+                            backward_buffers.inputs.default)
 
     def _get_output_shapes(self):
         return {'loss': ShapeTemplate(1)}

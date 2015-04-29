@@ -92,17 +92,68 @@ class Online(DataIterator, Seedable):
         for i, idx in enumerate(indices):
             if need_copy:
                 device_data = {}
-                i = 0
+                j = 0
                 for key, value in self.data.items():
                     val_s = value[:, idx:idx + 1]
-                    device_data[key] = arr[i:i+val_s.size].reshape(val_s.shape)
+                    device_data[key] = arr[j:j+val_s.size].reshape(val_s.shape)
                     handler.set_from_numpy(device_data[key], val_s)
-                    i += val_s.size
+                    j += val_s.size
             else:
                 device_data = {k: v[:, idx:idx + 1]
                                for k, v in self.data.items()}
             yield device_data
             print(p_bar.send(i + 1), end='')
+
+
+class Minibatches(DataIterator, Seedable):
+    """
+    Minibatch iterator for inputs and targets.
+
+    Only randomizes the order of minibatches, doesn't shuffle between
+    minibatches.
+    """
+    def __init__(self, batch_size=10, shuffle=True, verbose=None,
+                 seed=None, **named_data):
+        Seedable.__init__(self, seed=seed)
+        self.nr_sequences = _assert_correct_data_format(named_data)
+        self.data = named_data
+        self.shuffle = shuffle
+        self.verbose = True
+        self.batch_size = batch_size
+        self.sample_size = sum(d.shape[0] * np.prod(d.shape[2:]) * batch_size
+                               for d in self.data.values())
+
+    def __call__(self, handler, verbose=False):
+        if (self.verbose is None and verbose) or self.verbose:
+            p_bar = progress_bar(self.nr_sequences)
+        else:
+            p_bar = silence()
+
+        need_copy = not all([isinstance(v, handler.array_type)
+                            for v in self.data.values()])
+        if need_copy:
+            arr = handler.allocate(self.sample_size)
+
+        print(next(p_bar), end='')
+        indices = np.arange(int(math.ceil(self.nr_sequences / self.batch_size)))
+        if self.shuffle:
+            self.rnd.shuffle(indices)
+        for i, idx in enumerate(indices):
+            chunk = (slice(None), slice(idx*self.batch_size, (idx+1) * self.batch_size))
+
+            if need_copy:
+                device_data = {}
+                j = 0
+                for key, value in self.data.items():
+                    val_s = value[chunk]
+                    device_data[key] = arr[j:j+val_s.size].reshape(val_s.shape)
+                    handler.set_from_numpy(device_data[key], val_s)
+                    j += val_s.size
+            else:
+                device_data = {k: v[chunk]
+                               for k, v in self.data.items()}
+            yield device_data
+            print(p_bar.send((i + 1) * self.batch_size), end='')
 
 
 def _assert_correct_data_format(named_data):
