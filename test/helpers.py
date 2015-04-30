@@ -188,11 +188,16 @@ def run_deltas_test(layer, specs, inputs_name, outputs_name):
     print("Deltas check for '{}' WRT '{}' failed with a MSE of {}"
           .format(inputs_name, outputs_name,
                   np.sqrt(np.sum((delta_calc - delta_approx)**2))))
-    for t in range(delta_calc.shape[0]):
-        print(".......... Timestep {} ..........".format(t))
-        print("Calculated Deltas:\n", delta_calc[t])
-        print("Approx Deltas:\n", delta_approx[t])
-        print("Difference:\n", delta_calc[t] - delta_approx[t])
+    if layer.in_shapes[inputs_name].scales_with_time:
+        for t in range(delta_calc.shape[0]):
+            print(".......... Timestep {} ..........".format(t))
+            print("Calculated Deltas:\n", delta_calc[t])
+            print("Approx Deltas:\n", delta_approx[t])
+            print("Difference:\n", delta_calc[t] - delta_approx[t])
+    else:
+        print("Calculated Deltas:\n", delta_calc)
+        print("Approx Deltas:\n", delta_approx)
+        print("Difference:\n", delta_calc - delta_approx)
 
     return False
 
