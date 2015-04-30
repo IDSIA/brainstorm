@@ -34,10 +34,10 @@ def create_layout(layers):
     layout['parameters']['@shape'] = (param_slice[1] - param_slice[0],)
 
     # determine max-time offset
-    time_offsets = [get_by_path(s, layout).get('@time_offset', 0)
-                    for s in gather_array_nodes(layout)]
+    context_sizes = [get_by_path(s, layout).get('@context_size', 0)
+                     for s in gather_array_nodes(layout)]
 
-    return buffer_sizes, max(time_offsets), layout
+    return buffer_sizes, max(context_sizes), layout
 
 
 def layout_hubs(arranged_hubs_by_buffer_type, all_sinks, connections, layout):
