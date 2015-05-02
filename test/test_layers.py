@@ -16,6 +16,8 @@ from brainstorm.layers.rnn_layer import RnnLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
+from brainstorm.layers.lstm_layer_opt import LstmOptLayerImpl
+
 import pytest
 
 np.random.seed(1234)
@@ -107,7 +109,16 @@ def lstm_layer():
     layer = LstmLayerImpl('LstmLayer',
                           {'default': ShapeTemplate('T', 'B', 5)},
                           NO_CON, NO_CON,
-                          size=7)
+                          size=7,
+                          activation_function='tanh')
+    return layer, {}
+
+def lstm_opt_layer():
+    layer = LstmOptLayerImpl('LstmOptLayer',
+                          {'default': ShapeTemplate('T', 'B', 5)},
+                          NO_CON, NO_CON,
+                          size=7,
+                          activation_function='tanh')
     return layer, {}
 
 layers_to_test = [
@@ -118,7 +129,8 @@ layers_to_test = [
     classification_layer,
     rnn_layer,
     squared_difference_layer,
-    lstm_layer
+    lstm_layer,
+    lstm_opt_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]

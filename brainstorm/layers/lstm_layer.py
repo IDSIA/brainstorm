@@ -32,7 +32,7 @@ class LstmLayerImpl(LayerBaseImpl):
         }
 
         self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'linear')]
+            self.kwargs.get('activation_function', 'tanh')]
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
@@ -155,24 +155,24 @@ class LstmLayerImpl(LayerBaseImpl):
             _h.dot_add_mm(dZa[t + 1], Rz, dy[t], transb='T')
 
             # Output Gate
-            _h.mult_tt(dy[t], Cb[t], dOb)
+            _h.mult_tt(dy[t], Cb[t], dOb[t])
             _h.sigmoid_deriv(Oa[t], Ob[t], dOb[t], dOa[t])
 
             # Cell
-            _h.mult_tt(dy[t], Ob[t], dCb)
+            _h.mult_tt(dy[t], Ob[t], dCb[t])
             self.act_func_deriv(Ca[t], Cb[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], Fb[t + 1], dCa[t])
 
             # Forget Gate
-            _h.mult_tt(dCa[t], Ca[t - 1], dFb)
+            _h.mult_tt(dCa[t], Ca[t - 1], dFb[t])
             _h.sigmoid_deriv(Fa[t], Fb[t], dFb[t], dFa[t])
 
             # Input Gate
-            _h.mult_tt(dCa[t], Zb[t], dIb)
+            _h.mult_tt(dCa[t], Zb[t], dIb[t])
             _h.sigmoid_deriv(Ia[t], Ib[t], dIb[t], dIa[t])
 
             # Block Input
-            _h.mult_tt(dCa[t], Ib[t], dZb)
+            _h.mult_tt(dCa[t], Ib[t], dZb[t])
             self.act_func_deriv(Za[t], Zb[t], dZb[t], dZa[t])
 
             # Input Deltas
