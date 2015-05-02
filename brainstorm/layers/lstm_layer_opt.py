@@ -22,7 +22,7 @@ class LstmOptLayerImpl(LayerBaseImpl):
     def set_handler(self, new_handler):
         super(LstmOptLayerImpl, self).set_handler(new_handler)
 
-        # Assign act_func and act_dunc_derivs
+        # Assign act_func and act_func_derivs
         activation_functions = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
@@ -32,27 +32,16 @@ class LstmOptLayerImpl(LayerBaseImpl):
         }
 
         self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'linear')]
+            self.kwargs.get('activation_function', 'tanh')]
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
         out_size = self.out_shapes['default'].feature_size
 
         parameters = OrderedDict()
-        parameters['Wz'] = ShapeTemplate(in_size, out_size)
-        parameters['Wi'] = ShapeTemplate(in_size, out_size)
-        parameters['Wf'] = ShapeTemplate(in_size, out_size)
-        parameters['Wo'] = ShapeTemplate(in_size, out_size)
-
-        parameters['Rz'] = ShapeTemplate(out_size, out_size)
-        parameters['Ri'] = ShapeTemplate(out_size, out_size)
-        parameters['Rf'] = ShapeTemplate(out_size, out_size)
-        parameters['Ro'] = ShapeTemplate(out_size, out_size)
-
-        parameters['bz'] = ShapeTemplate(out_size)
-        parameters['bi'] = ShapeTemplate(out_size)
-        parameters['bf'] = ShapeTemplate(out_size)
-        parameters['bo'] = ShapeTemplate(out_size)
+        parameters['W'] = ShapeTemplate(in_size, out_size*4)
+        parameters['R'] = ShapeTemplate(out_size, out_size*4)
+        parameters['b'] = ShapeTemplate(out_size*4)
 
         return parameters
 
@@ -60,10 +49,7 @@ class LstmOptLayerImpl(LayerBaseImpl):
         out_size = self.out_shapes['default'].feature_size
         internals = OrderedDict()
 
-        internals['Z'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['I'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['F'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['O'] = ShapeTemplate('T', 'B', out_size, context_size=1)
+        internals['S'] = ShapeTemplate('T', 'B', out_size*4, context_size=1)
         internals['Ca'] = ShapeTemplate('T', 'B', out_size, context_size=1)
         internals['Cb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
 
@@ -79,43 +65,34 @@ class LstmOptLayerImpl(LayerBaseImpl):
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
         _h = self.handler
-        (Wz, Wi, Wf, Wo,
-         Rz, Ri, Rf, Ro,
-         bz, bi, bf, bo) = forward_buffers.parameters
-        Z, I, F, O, Ca, Cb = forward_buffers.internals
+        W, R, b = forward_buffers.parameters
+        S, Ca, Cb = forward_buffers.internals
         x = forward_buffers.inputs.default
         y = forward_buffers.outputs.default
 
         time_size, batch_size, in_size = x.shape
+        out_size = y.shape[2]
         flat_size = time_size * batch_size
         flat_x = x.reshape((flat_size, in_size))
 
-        flat_Zb = Z[:-1].reshape((flat_size, Z.shape[2]))
-        flat_Ib = I[:-1].reshape((flat_size, I.shape[2]))
-        flat_Fb = F[:-1].reshape((flat_size, F.shape[2]))
-        flat_Ob = O[:-1].reshape((flat_size, O.shape[2]))
+        flat_S = S[:-1].reshape((flat_size, S.shape[2]))
 
-        _h.dot_mm(flat_x, Wz, flat_Zb)
-        _h.dot_mm(flat_x, Wi, flat_Ib)
-        _h.dot_mm(flat_x, Wf, flat_Fb)
-        _h.dot_mm(flat_x, Wo, flat_Ob)
+        Z = S[:, :, :out_size]
+        gates = S[:, :, out_size:]
+        I = S[:, :, out_size:2*out_size]
+        F = S[:, :, out_size*2:out_size*3]
+        O = S[:, :, out_size*3:]
 
-        _h.add_mv(flat_Zb, bz, flat_Zb)
-        _h.add_mv(flat_Ib, bi, flat_Ib)
-        _h.add_mv(flat_Fb, bf, flat_Fb)
-        _h.add_mv(flat_Ob, bo, flat_Ob)
+        _h.dot_mm(flat_x, W, flat_S)  # all inputs times weights
+        _h.add_mv(flat_S, b, flat_S)  # all biases
 
         for t in range(time_size):
-            _h.dot_add_mm(y[t - 1], Rz, Z[t])
-            _h.dot_add_mm(y[t - 1], Ri, I[t])
-            _h.dot_add_mm(y[t - 1], Rf, F[t])
-            _h.dot_add_mm(y[t - 1], Ro, O[t])
+            # Recurrent Connections
+            _h.dot_add_mm(y[t - 1], R, S[t])
 
-            # Activations for Z I F O
+            # Activations for Z and gates
             self.act_func(Z[t], Z[t])
-            _h.sigmoid(I[t], I[t])
-            _h.sigmoid(F[t], F[t])
-            _h.sigmoid(O[t], O[t])
+            _h.sigmoid(gates[t], gates[t])
 
             # Cell
             _h.mult_tt(I[t], Z[t], Ca[t])
@@ -128,15 +105,11 @@ class LstmOptLayerImpl(LayerBaseImpl):
     def backward_pass(self, forward_buffers, backward_buffers):
         # prepare
         _h = self.handler
-        (Wz, Wi, Wf, Wo,
-         Rz, Ri, Rf, Ro,
-         bz, bi, bf, bo) = forward_buffers.parameters
-        (dWz, dWi, dWf, dWo,
-         dRz, dRi, dRf, dRo,
-         dbz, dbi, dbf, dbo) = backward_buffers.parameters
+        W, R, b = forward_buffers.parameters
+        dW, dR, db = backward_buffers.parameters
 
-        Z, I, F, O, Ca, Cb = forward_buffers.internals
-        dZb, dIb, dFb, dOb, dCa, dCb = backward_buffers.internals
+        S, Ca, Cb = forward_buffers.internals
+        dS, dCa, dCb = backward_buffers.internals
 
         x = forward_buffers.inputs.default
         dx = backward_buffers.inputs.default
@@ -146,22 +119,29 @@ class LstmOptLayerImpl(LayerBaseImpl):
         dy = _h.allocate(y.shape)
 
         time_size, batch_size, in_size = x.shape
+        out_size = y.shape[2]
         flat_size = time_size * batch_size
         flat_dx = dx.reshape((flat_size, in_size))
         flat_x = x.reshape((flat_size, in_size))
-        flat_dZb = dZb[:-1].reshape((flat_size, Z.shape[2]))
-        flat_dIb = dIb[:-1].reshape((flat_size, I.shape[2]))
-        flat_dFb = dFb[:-1].reshape((flat_size, F.shape[2]))
-        flat_dOb = dOb[:-1].reshape((flat_size, O.shape[2]))
+        flat_dS = dS[:-1].reshape((flat_size, S.shape[2]))
+
+        gates = S[:, :, out_size:]
+        Z = S[:, :, :out_size]
+        I = S[:, :, out_size:2*out_size]
+        F = S[:, :, out_size*2:out_size*3]
+        O = S[:, :, out_size*3:]
+
+        dgates = dS[:, :, out_size:]
+        dZ = dS[:, :, :out_size]
+        dI = dS[:, :, out_size:2*out_size]
+        dF = dS[:, :, out_size*2:out_size*3]
+        dO = dS[:, :, out_size*3:]
 
         _h.copy_to(dy, deltas)
 
         for t in range(time_size - 1, -1, - 1):
             # cumulate recurrent deltas
-            _h.dot_add_mm(dZb[t + 1], Rz, dy[t], transb='T')
-            _h.dot_add_mm(dIb[t + 1], Ri, dy[t], transb='T')
-            _h.dot_add_mm(dFb[t + 1], Rf, dy[t], transb='T')
-            _h.dot_add_mm(dOb[t + 1], Ro, dy[t], transb='T')
+            _h.dot_add_mm(dS[t + 1], R, dy[t], transb='T')
 
             # Cell
             _h.mult_tt(dy[t], O[t], dCb[t])
@@ -169,48 +149,27 @@ class LstmOptLayerImpl(LayerBaseImpl):
             _h.mult_add_tt(dCa[t + 1], F[t + 1], dCa[t])
 
             # Block Input and Gates
-            _h.mult_tt(dCa[t], I[t], dZb[t])
-            _h.mult_tt(dCa[t], Z[t], dIb[t])
-            _h.mult_tt(dCa[t], Ca[t - 1], dFb[t])
-            _h.mult_tt(dy[t], Cb[t], dOb[t])
+            _h.mult_tt(dCa[t], I[t], dZ[t])
+            _h.mult_tt(dCa[t], Z[t], dI[t])
+            _h.mult_tt(dCa[t], Ca[t - 1], dF[t])
+            _h.mult_tt(dy[t], Cb[t], dO[t])
 
             # Activation functions
-            self.act_func_deriv(None, Z[t], dZb[t], dZb[t])
-            _h.sigmoid_deriv(None, I[t], dIb[t], dIb[t])
-            _h.sigmoid_deriv(None, F[t], dFb[t], dFb[t])
-            _h.sigmoid_deriv(None, O[t], dOb[t], dOb[t])
+            self.act_func_deriv(None, Z[t], dZ[t], dZ[t])
+            _h.sigmoid_deriv(None, gates[t], dgates[t], dgates[t])
 
-
-        flat_y = y[:-2].reshape(((time_size - 1) * batch_size, y.shape[2]))
         # Gradient for the recurrent weights
-        _h.dot_add_mm(flat_y, flat_dZb[batch_size:], dRz, transa='T')
-        _h.dot_add_mm(flat_y, flat_dIb[batch_size:], dRi, transa='T')
-        _h.dot_add_mm(flat_y, flat_dFb[batch_size:], dRf, transa='T')
-        _h.dot_add_mm(flat_y, flat_dOb[batch_size:], dRo, transa='T')
-        _h.dot_add_mm(y[-1], dZb[0], dRz, transa='T')
-        _h.dot_add_mm(y[-1], dIb[0], dRi, transa='T')
-        _h.dot_add_mm(y[-1], dFb[0], dRf, transa='T')
-        _h.dot_add_mm(y[-1], dOb[0], dRo, transa='T')
+        flat_y = y[:-2].reshape(((time_size - 1) * batch_size, y.shape[2]))
+        _h.dot_add_mm(flat_y, flat_dS[batch_size:], dR, transa='T')
+        _h.dot_add_mm(y[-1], dS[0], dR, transa='T')
 
         # biases
-        bias_tmp = _h.allocate(dbz.shape)
-        _h.sum_t(flat_dZb, axis=0, out=bias_tmp)
-        _h.add_tt(bias_tmp, dbz, dbz)
-        _h.sum_t(flat_dIb, axis=0, out=bias_tmp)
-        _h.add_tt(bias_tmp, dbi, dbi)
-        _h.sum_t(flat_dFb, axis=0, out=bias_tmp)
-        _h.add_tt(bias_tmp, dbf, dbf)
-        _h.sum_t(flat_dOb, axis=0, out=bias_tmp)
-        _h.add_tt(bias_tmp, dbo, dbo)
+        bias_tmp = _h.allocate(db.shape)
+        _h.sum_t(flat_dS, axis=0, out=bias_tmp)
+        _h.add_tt(bias_tmp, db, db)
 
         # Gradients for the input weights
-        _h.dot_add_mm(flat_x, flat_dZb, dWz, transa='T')
-        _h.dot_add_mm(flat_x, flat_dIb, dWi, transa='T')
-        _h.dot_add_mm(flat_x, flat_dFb, dWf, transa='T')
-        _h.dot_add_mm(flat_x, flat_dOb, dWo, transa='T')
+        _h.dot_add_mm(flat_x, flat_dS, dW, transa='T')
 
         # Input Deltas
-        _h.dot_add_mm(flat_dZb, Wz, flat_dx, transb='T')
-        _h.dot_add_mm(flat_dIb, Wi, flat_dx, transb='T')
-        _h.dot_add_mm(flat_dFb, Wf, flat_dx, transb='T')
-        _h.dot_add_mm(flat_dOb, Wo, flat_dx, transb='T')
+        _h.dot_add_mm(flat_dS, W, flat_dx, transb='T')
