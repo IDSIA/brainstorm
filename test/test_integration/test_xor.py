@@ -6,6 +6,7 @@ import pytest
 from brainstorm import (
     InputLayer, FullyConnectedLayer, LossLayer, BinomialCrossEntropyLayer,
     build_net, Gaussian, Trainer, SgdStep, MaxEpochsSeen, Undivided)
+# from brainstorm.handlers.pycuda_handler import PyCudaHandler
 
 
 @pytest.mark.slow
@@ -22,11 +23,13 @@ def test_learn_xor_function():
      LossLayer())
 
     net = build_net(inp - 'targets' >> 'targets' - error_func)
+    # net.set_memory_handler(PyCudaHandler())
     net.initialize(Gaussian(1.0), seed=42)  # high weight-init needed
     print(net.buffer.forward.parameters)
 
     # set up the trainer
-    tr = Trainer(SgdStep(learning_rate=4.0), verbose=False)
+    tr = Trainer(SgdStep(learning_rate=4.0), verbose=False,
+                 double_buffering=False)
     tr.add_monitor(MaxEpochsSeen(300))
 
     # generate the data

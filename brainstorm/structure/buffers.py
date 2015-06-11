@@ -126,6 +126,7 @@ class BufferManager(object):
         parameters = None
         if self.forward is not None:
             parameters = self.handler.get_numpy_copy(self.forward.parameters)
+        self.forward = None
         self.handler = new_handler
         self.resize(0, 0)
         if parameters is not None:

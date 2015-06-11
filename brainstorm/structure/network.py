@@ -5,6 +5,7 @@ import numpy as np
 
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
+from brainstorm.structure.buffer_views import BufferView
 from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import (resolve_references,
@@ -155,7 +156,7 @@ class Network(Seedable):
         init_refs = _update_references_with_dict(default_or_init_dict, kwargs)
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.forward.items()
-                          if 'parameters' in v}
+                          if isinstance(v, BufferView) and 'parameters' in v}
         replace_lists_with_array_initializers(init_refs)
         initializers, fallback = resolve_references(all_parameters, init_refs)
         init_rnd = self.rnd.create_random_state(seed)

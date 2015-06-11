@@ -86,7 +86,8 @@ def test_undivided_default():
     targets = np.ones((2, 3, 1))
     iter = Undivided(my_data=input_data, my_targets=targets)(default_handler)
     x = next(iter)
-    assert x == {'my_data': input_data, 'my_targets': targets}
+    assert np.all(x['my_data'] == input_data)
+    assert np.all(x['my_targets'] == targets)
     with pytest.raises(StopIteration):
         next(iter)
 
@@ -99,9 +100,9 @@ def test_undivided_named_targets():
                      targets1=targets1,
                      targets2=targets2)(default_handler)
     x = next(iter)
-    assert x == {'my_data': input_data,
-                 'targets1': targets1,
-                 'targets2': targets2}
+    assert np.all(x['my_data'] == input_data)
+    assert np.all(x['targets1'] == targets1)
+    assert np.all(x['targets2'] == targets2)
 
     with pytest.raises(StopIteration):
         next(iter)

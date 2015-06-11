@@ -54,11 +54,11 @@ class Undivided(DataIterator):
             device_data = {}
             i = 0
             for key, value in self.data.items():
-                device_data[key] = arr[i:i+value.size].reshape(value.shape)
+                device_data[key] = arr[i:i + value.size].reshape(value.shape)
                 handler.set_from_numpy(device_data[key], value)
                 i += value.size
 
-        yield self.data
+        yield device_data
 
 
 class Online(DataIterator, Seedable):
