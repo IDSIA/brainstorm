@@ -53,6 +53,8 @@ class SgdStep(TrainingStep):
     """
     Stochastic Gradient Descent.
     """
+    __undescribed__ = {'update'}
+
     def __init__(self, learning_rate=0.1):
         super(SgdStep, self).__init__()
         self.learning_rate_schedule = get_schedule(learning_rate)
