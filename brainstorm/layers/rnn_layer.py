@@ -13,6 +13,11 @@ class RnnLayerImpl(LayerBaseImpl):
     def _setup_hyperparameters(self):
         self.act_func = None
         self.act_func_deriv = None
+        self.size = self.kwargs.get('size',
+                                    self.in_shapes['default'].feature_size)
+        if not isinstance(self.size, int):
+            raise LayerValidationError('size must be int but was {}'.
+                                       format(self.size))
 
     def set_handler(self, new_handler):
         super(RnnLayerImpl, self).set_handler(new_handler)
@@ -31,27 +36,19 @@ class RnnLayerImpl(LayerBaseImpl):
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['default'].feature_size
-
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, out_size)
-        parameters['R'] = ShapeTemplate(out_size, out_size)
-        parameters['bias'] = ShapeTemplate(out_size)
+        parameters['W'] = ShapeTemplate(in_size, self.size)
+        parameters['R'] = ShapeTemplate(self.size, self.size)
+        parameters['bias'] = ShapeTemplate(self.size)
         return parameters
 
     def get_internal_structure(self):
-        out_size = self.out_shapes['default'].feature_size
-
         internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', out_size)
+        internals['Ha'] = ShapeTemplate('T', 'B', self.size)
         return internals
 
     def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes['default'].feature_size)
-        if not isinstance(s, int):
-            raise LayerValidationError('size must be int but was {}'.format(s))
-
-        return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
+        return {'default': ShapeTemplate('T', 'B', self.size, context_size=1)}
 
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
