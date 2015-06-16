@@ -46,7 +46,7 @@ class LayerBaseImpl(object):
         """ The name of this layer as specified in the architecture"""
 
         self.kwargs = kwargs
-        """ Additional parameters for this layer"""
+        """ Additional options or hyperparameters for this layer"""
 
         self.in_shapes = in_shapes
         """ Dictionary of shape tuples for every sink (input). """
@@ -57,15 +57,19 @@ class LayerBaseImpl(object):
         self.outgoing = outgoing_connections
         """ List of outgoing connections """
 
-        self.out_shapes = self._get_output_shapes()
-        """ Dictionary of shape tuples for every source (output). """
-
         self.handler = None
-
         self._validate_kwargs()
+        self._setup_hyperparameters()
+
+        """ Dictionary of shape tuples for every source (output). """
+        self.out_shapes = self._get_output_shapes()
         self._validate_in_shapes()
         self._validate_out_shapes()
         self._validate_connections()
+
+    def _setup_hyperparameters(self):
+        """Performs initial setup for a layer."""
+        pass
 
     def set_handler(self, new_handler):
         """Set the handler of this layer to a new one.
@@ -92,6 +96,17 @@ class LayerBaseImpl(object):
         :rtype: OrderedDict[str, ShapeTemplate]
         """
         return OrderedDict()
+
+    def _get_output_shapes(self):
+        """ Determines the output-shape of this layer.
+
+        Default behaviour is to look for 'shape' in kwargs. If that is not
+        found try to use 'default' in_shape.
+
+        Should be overridden by derived classes to customize this behaviour
+        """
+        raise NotImplementedError('LayerImplementations need to implement '
+                                  'the _get_output_shapes method.')
 
     def forward_pass(self, forward_buffers, training_pass=True):
         pass
@@ -214,13 +229,5 @@ class LayerBaseImpl(object):
                         self.name, out_c, out_c.output_name,
                         list(self.out_shapes.keys())))
 
-    def _get_output_shapes(self):
-        """ Determines the output-shape of this layer.
 
-        Default behaviour is to look for 'shape' in kwargs. If that is not
-        found try to use 'default' in_shape.
 
-        Should be overridden by derived classes to customize this behaviour
-        """
-        raise NotImplementedError('LayerImplementations need to implement '
-                                  'the _get_output_shapes method.')
