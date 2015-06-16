@@ -10,14 +10,9 @@ from brainstorm.structure.shapes import ShapeTemplate
 class RnnLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size', 'activation_function'}
 
-    def __init__(self, name, in_shapes, incoming_connections,
-                 outgoing_connections, **kwargs):
-        super(RnnLayerImpl, self).__init__(
-            name, in_shapes, incoming_connections, outgoing_connections,
-            **kwargs)
+    def _setup_hyperparameters(self):
         self.act_func = None
         self.act_func_deriv = None
-        self.kwargs = kwargs
 
     def set_handler(self, new_handler):
         super(RnnLayerImpl, self).set_handler(new_handler)

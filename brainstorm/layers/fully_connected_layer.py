@@ -10,14 +10,14 @@ from brainstorm.structure.shapes import ShapeTemplate
 class FullyConnectedLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size', 'activation_function'}
 
-    def __init__(self, name, in_shapes, incoming_connections,
-                 outgoing_connections, **kwargs):
-        super(FullyConnectedLayerImpl, self).__init__(
-            name, in_shapes, incoming_connections, outgoing_connections,
-            **kwargs)
+    def _setup_hyperparameters(self):
         self.act_func = None
         self.act_func_deriv = None
-        self.kwargs = kwargs
+        self.size = self.kwargs.get('size',
+                                    self.in_shapes['default'].feature_size)
+        if not isinstance(self.size, int):
+            raise LayerValidationError('size must be int but was {}'.
+                                       format(self.size))
 
     def set_handler(self, new_handler):
         super(FullyConnectedLayerImpl, self).set_handler(new_handler)
@@ -34,28 +34,20 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         self.act_func, self.act_func_deriv = activation_functions[
             self.kwargs.get('activation_function', 'linear')]
 
-    def get_internal_structure(self):
-        size = self.out_shapes['default'].feature_size
-
-        internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', size)
-        return internals
-
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['default'].feature_size
-
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, out_size)
-        parameters['b'] = ShapeTemplate(out_size)
+        parameters['W'] = ShapeTemplate(in_size, self.size)
+        parameters['b'] = ShapeTemplate(self.size)
         return parameters
 
-    def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes['default'].feature_size)
-        if not isinstance(s, int):
-            raise LayerValidationError('size must be int but was {}'.format(s))
+    def get_internal_structure(self):
+        internals = OrderedDict()
+        internals['Ha'] = ShapeTemplate('T', 'B', self.size)
+        return internals
 
-        return {'default': ShapeTemplate('T', 'B', s)}
+    def _get_output_shapes(self):
+        return {'default': ShapeTemplate('T', 'B', self.size)}
 
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
