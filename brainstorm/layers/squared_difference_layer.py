@@ -19,12 +19,6 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
 
     expected_kwargs = {}
 
-    def _get_output_shapes(self):
-        """
-        Sets the shape of the 'default' output using in_shapes['inputs_1']
-        """
-        return {'default': ShapeTemplate('T', 'B', 1)}
-
     def get_internal_structure(self):
         """
         Returns a dictionary describing the 'squared_diff' internal-state.
@@ -35,6 +29,12 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         internals['squared_diff'] = ShapeTemplate('T', 'B', *feature_shape)
         return internals
 
+    def _get_output_shapes(self):
+        """
+        Sets the shape of the 'default' output using in_shapes['inputs_1']
+        """
+        return {'default': ShapeTemplate('T', 'B', 1)}
+
     def _validate_in_shapes(self):
         """Ensure self.in_shapes are all valid.
 
@@ -44,8 +44,7 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         # 'inputs_1' and 'inputs_2' must have same shape
         if self.in_shapes['inputs_1'] != self.in_shapes['inputs_2']:
             raise LayerValidationError("{}: inputs_1 and inputs_2 must have "
-                                       "same shape but got {} and"
-                                       " {}"
+                                       "same shape but got {} and {}"
                                        .format(self.name,
                                                self.in_shapes['inputs_1'],
                                                self.in_shapes['inputs_2']))
