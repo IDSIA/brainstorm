@@ -204,8 +204,180 @@ class MonitorLoss(Monitor):
     def __call__(self, epoch, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
         errors = []
-        for i in run_network(net, iterator):
+        for _ in run_network(net, iterator):
             net.forward_pass()
             errors.append(net.get_loss_value())
         return np.mean(errors)
 
+
+class MonitorAccuracy(Monitor):
+    """
+    Monitor the classification accuracy of a given layer wrt. to given targets
+    using a given data iterator.
+
+    Parameters
+    ----------
+    iter_name : str
+        name of the data iterator to use (as specified in the train() call)
+    output : str
+        name of the output to use formatted like this:
+        LAYER_NAME[.OUTPUT_NAME]
+        Where OUTPUT_NAME defaults to 'default'
+    targets_name : str, optional
+        name of the targets (as specified in the InputLayer)
+        defaults to 'targets'
+
+
+    Other Parameters
+    ----------------
+    timescale : {'epoch', 'update'}, optional
+        Specifies whether the Monitor should be called after each epoch or
+        after each update. Default is 'epoch'
+    interval : int, optional
+        This monitor should be called every ``interval`` epochs/updates.
+        Default is 1
+    name: str, optional
+        Name of this monitor. This name is used as a key in the trainer logs.
+        Default is 'MonitorAccuracy'
+    verbose: bool, optional
+        Specifies whether the logs of this monitor should be printed, and
+        acts as a fallback verbosity for the used data iterator.
+        If not set it defaults to the verbosity setting of the trainer.
+
+    See Also
+    --------
+    MonitorLoss : monitor the overall loss of the network.
+    MonitorHammingScore : monitor the Hamming score which is a generalization
+        of accuracy for multi-label classification tasks.
+
+    Notes
+    -----
+    Can be used both with integer and one-hot targets.
+
+    """
+    def __init__(self, iter_name, output, targets_name='targets',
+                 timescale='epoch', interval=1, name=None, verbose=None):
+
+        super(MonitorAccuracy, self).__init__(name, timescale, interval,
+                                              verbose)
+        self.iter_name = iter_name
+        self.out_layer, _, self.out_name = output.partition('.')
+        self.out_name = self.out_name or 'default'
+        self.targets_name = targets_name
+        self.iter = None
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(MonitorAccuracy, self).start(net, stepper, verbose,
+                                           monitor_kwargs)
+        assert self.iter_name in monitor_kwargs
+        assert self.out_layer in net.layers
+        self.iter = monitor_kwargs[self.iter_name]
+
+    def __call__(self, epoch, net, stepper, logs):
+        iterator = self.iter(verbose=self.verbose, handler=net.handler)
+        _h = net.handler
+        errors = 0
+        totals = 0
+        for _ in run_network(net, iterator):
+            net.forward_pass()
+            out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
+                                    .outputs[self.out_name])
+            target = _h.get_numpy_copy(net.buffer.forward.InputLayer
+                                       .outputs[self.targets_name])
+
+            out = out.reshape(out.shape[0], out.shape[1], -1)
+            target = target.reshape(target.shape[0], target.shape[1], -1)
+
+            out_class = np.argmax(out, axis=2)
+            if target.shape[2] > 1:
+                target_class = np.argmax(target, axis=2)
+            else:
+                target_class = target[:, :, 0]
+
+            assert out_class.shape == target_class.shape
+
+            errors += np.sum(out_class != target_class)
+            totals += np.prod(target_class.shape)
+
+        return 1.0 - errors / totals
+
+
+class MonitorHammingScore(Monitor):
+    r"""
+    Monitor the Hamming score of a given layer wrt. to given targets
+    using a given data iterator.
+
+    Hamming loss is defined as the fraction of the correct labels to the
+    total number of labels.
+
+
+    Parameters
+    ----------
+    iter_name : str
+        name of the data iterator to use (as specified in the train() call)
+    output : str
+        name of the output to use formatted like this:
+        LAYER_NAME[.OUTPUT_NAME]
+        Where OUTPUT_NAME defaults to 'default'
+    targets_name : str, optional
+        name of the targets (as specified in the InputLayer)
+        defaults to 'targets'
+
+
+    Other Parameters
+    ----------------
+    timescale : {'epoch', 'update'}, optional
+        Specifies whether the Monitor should be called after each epoch or
+        after each update. Default is 'epoch'
+    interval : int, optional
+        This monitor should be called every ``interval`` epochs/updates.
+        Default is 1
+    name: str, optional
+        Name of this monitor. This name is used as a key in the trainer logs.
+        Default is 'MonitorAccuracy'
+    verbose: bool, optional
+        Specifies whether the logs of this monitor should be printed and
+        acts as a fallback verbosity for the used data iterator.
+        If not set it defaults to the verbosity setting of the trainer.
+
+    See Also
+    --------
+    MonitorLoss : monitor the overall loss of the network.
+    MonitorAccuracy : monitor the classification accuracy
+    """
+    def __init__(self, iter_name, output, targets_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        super(MonitorHammingScore, self).__init__(name, timescale, interval,
+                                                  verbose)
+        self.iter_name = iter_name
+        self.out_layer, _, self.out_name = output.partition('.')
+        self.out_name = self.out_name or 'default'
+        self.targets_name = targets_name
+        self.iter = None
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(MonitorHammingScore, self).start(net, stepper, verbose,
+                                               monitor_kwargs)
+        assert self.iter_name in monitor_kwargs
+        assert self.out_layer in net.layers
+        self.iter = monitor_kwargs[self.iter_name]
+
+    def __call__(self, epoch, net, stepper, logs):
+        iterator = self.iter(verbose=self.verbose, handler=net.handler)
+        _h = net.handler
+        errors = 0
+        totals = 0
+        for _ in run_network(net, iterator):
+            net.forward_pass()
+            out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
+                                    .outputs[self.out_name])
+            target = _h.get_numpy_copy(net.buffer.forward.InputLayer
+                                       .outputs[self.targets_name])
+
+            out = out.reshape(out.shape[0], out.shape[1], -1)
+            target = target.reshape(target.shape[0], target.shape[1], -1)
+
+            errors += np.sum(np.logical_xor(out >= 0.5, target))
+            totals += np.prod(target.shape)
+
+        return 1.0 - errors / totals
