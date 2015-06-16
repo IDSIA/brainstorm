@@ -10,14 +10,14 @@ from brainstorm.structure.shapes import ShapeTemplate
 class LstmLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size', 'activation_function'}
 
-    def __init__(self, name, in_shapes, incoming_connections,
-                 outgoing_connections, **kwargs):
-        super(LstmLayerImpl, self).__init__(
-            name, in_shapes, incoming_connections, outgoing_connections,
-            **kwargs)
+    def _setup_hyperparameters(self):
         self.act_func = lambda x, y: None
         self.act_func_deriv = lambda x, y, dy, dx: None
-        self.kwargs = kwargs
+        self.size = self.kwargs.get('size',
+                                    self.in_shapes['default'].feature_size)
+        if not isinstance(self.size, int):
+            raise LayerValidationError('size must be int but was {}'.
+                                       format(self.size))
 
     def set_handler(self, new_handler):
         super(LstmLayerImpl, self).set_handler(new_handler)
@@ -36,40 +36,38 @@ class LstmLayerImpl(LayerBaseImpl):
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['default'].feature_size
-
+        
         parameters = OrderedDict()
-        parameters['Wz'] = ShapeTemplate(in_size, out_size)
-        parameters['Wi'] = ShapeTemplate(in_size, out_size)
-        parameters['Wf'] = ShapeTemplate(in_size, out_size)
-        parameters['Wo'] = ShapeTemplate(in_size, out_size)
+        parameters['Wz'] = ShapeTemplate(in_size, self.size)
+        parameters['Wi'] = ShapeTemplate(in_size, self.size)
+        parameters['Wf'] = ShapeTemplate(in_size, self.size)
+        parameters['Wo'] = ShapeTemplate(in_size, self.size)
 
-        parameters['Rz'] = ShapeTemplate(out_size, out_size)
-        parameters['Ri'] = ShapeTemplate(out_size, out_size)
-        parameters['Rf'] = ShapeTemplate(out_size, out_size)
-        parameters['Ro'] = ShapeTemplate(out_size, out_size)
+        parameters['Rz'] = ShapeTemplate(self.size, self.size)
+        parameters['Ri'] = ShapeTemplate(self.size, self.size)
+        parameters['Rf'] = ShapeTemplate(self.size, self.size)
+        parameters['Ro'] = ShapeTemplate(self.size, self.size)
 
-        parameters['bz'] = ShapeTemplate(out_size)
-        parameters['bi'] = ShapeTemplate(out_size)
-        parameters['bf'] = ShapeTemplate(out_size)
-        parameters['bo'] = ShapeTemplate(out_size)
+        parameters['bz'] = ShapeTemplate(self.size)
+        parameters['bi'] = ShapeTemplate(self.size)
+        parameters['bf'] = ShapeTemplate(self.size)
+        parameters['bo'] = ShapeTemplate(self.size)
 
         return parameters
 
     def get_internal_structure(self):
-        out_size = self.out_shapes['default'].feature_size
         internals = OrderedDict()
 
-        internals['Za'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Zb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ia'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ib'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Fa'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Fb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Oa'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ob'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ca'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Cb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
+        internals['Za'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Zb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ia'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ib'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Fa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Fb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Oa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ob'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ca'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Cb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
 
         return internals
 

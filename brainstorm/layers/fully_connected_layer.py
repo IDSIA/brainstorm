@@ -36,6 +36,7 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
+
         parameters = OrderedDict()
         parameters['W'] = ShapeTemplate(in_size, self.size)
         parameters['b'] = ShapeTemplate(self.size)
