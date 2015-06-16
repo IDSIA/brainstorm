@@ -115,9 +115,10 @@ The ``@shape`` entry is a shape-template and describes the dimensionality of
 the array.
 
 If an array-node has a shape of a type 2 buffer (time-scaled) it can
-(optionally) contain a ``@time_offset`` entry. This determines at what
-time-index time "officially starts" for that buffer. All time steps before are
-considered context and need not be set.
+(optionally) contain a ``@context_size`` entry. This determines how many extra
+time steps are added to the end of that buffer. Notice that this way you can
+access the context slices using negative indexing.
+
 
 Example leaf for a 4 times 5 weight matrix:
 
@@ -170,13 +171,13 @@ We use the following network as an example here:
                 '@type': 'BufferView',
                 '@index': 0,
                 '@slice': (0, 4),
-                'default': {'@type': 'array', '@index': 0, '@slice': (0, 4), '@shape': ('T', 'B', 4), '@time_offset':1}
+                'default': {'@type': 'array', '@index': 0, '@slice': (0, 4), '@shape': ('T', 'B', 4), '@context_size':1}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 '@slice': (14, 19),
-                'default': {'@type': 'array', '@index': 0, '@slice': (14, 19), '@shape': ('T', 'B', 5), '@time_offset':1}
+                'default': {'@type': 'array', '@index': 0, '@slice': (14, 19), '@shape': ('T', 'B', 5), '@context_size':1}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -190,7 +191,7 @@ We use the following network as an example here:
                 '@type': 'BufferView',
                 '@index': 3,
                 '@slice': (30, 35),
-                'Ha': {'@type': 'array', '@index': 0, '@slice': (30, 35), '@shape': ('T', 'B', 5), '@time_offset':1}
+                'Ha': {'@type': 'array', '@index': 0, '@slice': (30, 35), '@shape': ('T', 'B', 5), '@context_size':1}
             },
         },
         'OutLayer': {

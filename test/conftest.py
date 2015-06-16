@@ -28,27 +28,27 @@ def layers():
         'InputLayer': {
             '@type': 'InputLayer',
             'out_shapes': {'default': ('T', 'B', 2)},
-            '@outgoing_connections': {'A', 'B'}
+            '@outgoing_connections': ['A', 'B']
         },
         'A': {
             '@type': 'FullyConnectedLayer',
             'size': 3,
-            '@outgoing_connections': {'C'}
+            '@outgoing_connections': ['C']
         },
         'B': {
             '@type': 'FullyConnectedLayer',
             'size': 5,
-            '@outgoing_connections': {'C', 'D'}
+            '@outgoing_connections': ['C', 'D']
         },
         'C': {
             '@type': 'FullyConnectedLayer',
             'size': 7,
-            '@outgoing_connections': {'D'}
+            '@outgoing_connections': ['D']
         },
         'D': {
             '@type': 'FullyConnectedLayer',
             'size': 11,
-            '@outgoing_connections': set()
+            '@outgoing_connections': []
         }
     }
     return instantiate_layers_from_architecture(arch)
