@@ -25,11 +25,11 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
                                         "ConvolutionLayer"
         self.num_filters = kwargs['num_filters']
         self.kernel_size = kwargs['kernel_size']
-        self.pad = kwargs['pad']
-        self.stride = kwargs['stride']
+        self.pad = kwargs.get('pad', (0, 0))
+        self.stride = kwargs.get('stride', (0, 0))
 
     def set_handler(self, new_handler):
-        super(ConvolutionLayerImpl, self).set_handler(new_handler)
+        super(ConvolutionLayer2DImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
         activation_functions = {
@@ -45,8 +45,6 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
 
     def get_parameter_structure(self):
         in_shape = self.in_shapes['default'].feature_size
-        assert len(in_shape) == 3, "The shape of input must be 3 for " \
-                                   "ConvolutionLayer2D"
         num_input_maps = in_shape[0]
         num_filters = self.num_filters
         kernel_x = self.kernel_size[0]
@@ -66,11 +64,47 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         return internals
 
     def _get_output_shapes(self):
-        output_shape = None
+        kernel_size = self.kernel_size
+        pad = self.pad
+        stride = self.stride
+        num_filters = self.num_filters
+        in_shape = self.in_shapes['default'].feature_size
+        assert len(in_shape) == 3, "The shape of input must be 3 for " \
+                                   "ConvolutionLayer2D"
+
+        output_height = ((in_shape[1] + 2 * pad[0] - kernel_size[0]) /
+                         stride[0]) + 1
+        output_width = ((in_shape[2] + 2 * pad[1] - kernel_size[1]) /
+                        stride[1]) + 1
+        output_shape = (num_filters, output_height, output_width)
         return {'default': ShapeTemplate('T', 'B', output_shape)}
 
     def forward_pass(self, forward_buffers, training_pass=True):
-        pass
+        # prepare
+        _h = self.handler
+        WX, W_bias = forward_buffers.parameters
+        input = forward_buffers.inputs.default
+        output = forward_buffers.outputs.default
+        Ha = forward_buffers.internals.Ha
+
+        # calculate outputs
+        _h.conv2d_forward_batch(input, WX, Ha)
+        self.act_func(Ha, output)
 
     def backward_pass(self, forward_buffers, backward_buffers):
-        pass
+
+        # prepare
+        _h = self.handler
+        WX, W_bias = forward_buffers.parameters
+        dWX, dW_bias = backward_buffers.parameters
+        inputs = forward_buffers.inputs.default
+        outputs = forward_buffers.outputs.default
+        in_deltas = backward_buffers.inputs.default
+        out_deltas = backward_buffers.outputs.default
+        Ha = forward_buffers.internals.Ha
+        dHa = backward_buffers.internals.Ha
+
+        # calculate in_deltas and gradients
+        self.act_func_deriv(Ha, outputs, out_deltas, dHa)
+        _h.conv2d_backward_batch(dHa, inputs, in_deltas,
+                                 WX, W_bias, dWX, dW_bias)
