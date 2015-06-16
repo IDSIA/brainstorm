@@ -7,9 +7,9 @@ from brainstorm.training.steppers import SgdStep
 from brainstorm.training.monitors import (
     MaxEpochsSeen, SaveWeights, SaveBestWeights, MonitorLayerProperties,
     MonitorLoss, ErrorRises, InfoUpdater, StopOnNan, MonitorAccuracy,
-    MonitorHammingLoss)
+    MonitorHammingScore)
 
 __all__ = ['Trainer', 'SgdStep', 'MaxEpochsSeen', 'SaveWeights',
            'SaveBestWeights', 'MonitorLayerProperties', 'MonitorLoss',
            'ErrorRises', 'InfoUpdater', 'StopOnNan', 'MonitorAccuracy',
-           'MonitorHammingLoss']
+           'MonitorHammingScore']
