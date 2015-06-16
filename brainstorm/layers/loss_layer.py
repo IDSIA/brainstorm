@@ -11,12 +11,8 @@ class LossLayerImpl(LayerBaseImpl):
     outputs = {'loss': ShapeTemplate(1)}
     expected_kwargs = {'importance'}
 
-    def __init__(self, name, in_shapes, incoming_connections,
-                 outgoing_connections, **kwargs):
-        super(LossLayerImpl, self).__init__(
-            name, in_shapes, incoming_connections, outgoing_connections,
-            **kwargs)
-        self.importance = kwargs.get('importance', 1.0)
+    def _setup_hyperparameters(self):
+        self.importance = self.kwargs.get('importance', 1.0)
 
     def forward_pass(self, forward_buffers, training_pass=True):
         # TODO: passing axis=None works with numpy an pycuda
@@ -26,12 +22,12 @@ class LossLayerImpl(LayerBaseImpl):
                            None,
                            forward_buffers.outputs.loss.reshape(tuple()))
         self.handler.mult_st(self.importance / batch_size,
-                                  forward_buffers.outputs.loss,
-                                  forward_buffers.outputs.loss)
+                             forward_buffers.outputs.loss,
+                             forward_buffers.outputs.loss)
 
     def backward_pass(self, forward_buffers, backward_buffers):
         time_size, batch_size = forward_buffers.inputs.default.shape[:2]
-        self.handler.add_st(self.importance / batch_size, 
+        self.handler.add_st(self.importance / batch_size,
                             backward_buffers.inputs.default,
                             backward_buffers.inputs.default)
 
