@@ -7,13 +7,13 @@ from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
 
-class ConvolutionLayerImpl(LayerBaseImpl):
+class ConvolutionLayer2DImpl(LayerBaseImpl):
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'pad',
                        'activation_function'}
 
     def __init__(self, name, in_shapes, incoming_connections,
                  outgoing_connections, **kwargs):
-        super(ConvolutionLayerImpl, self).__init__(
+        super(ConvolutionLayer2DImpl, self).__init__(
             name, in_shapes, incoming_connections, outgoing_connections,
             **kwargs)
         self.act_func = None
@@ -25,6 +25,8 @@ class ConvolutionLayerImpl(LayerBaseImpl):
                                         "ConvolutionLayer"
         self.num_filters = kwargs['num_filters']
         self.kernel_size = kwargs['kernel_size']
+        self.pad = kwargs['pad']
+        self.stride = kwargs['stride']
 
     def set_handler(self, new_handler):
         super(ConvolutionLayerImpl, self).set_handler(new_handler)
@@ -41,25 +43,34 @@ class ConvolutionLayerImpl(LayerBaseImpl):
         self.act_func, self.act_func_deriv = activation_functions[
             self.kwargs.get('activation_function', 'linear')]
 
-    def get_internal_structure(self):
-       self.num_filters = self.out_shapes['default'].feature_size
-
-       internals = OrderedDict()
-       internals['Ha'] = ShapeTemplate('T', 'B', size)
-       return internals
-
     def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['default'].feature_size
+        in_shape = self.in_shapes['default'].feature_size
+        assert len(in_shape) == 3, "The shape of input must be 3 for " \
+                                   "ConvolutionLayer2D"
+        num_input_maps = in_shape[0]
+        num_filters = self.num_filters
+        kernel_x = self.kernel_size[0]
+        kernel_y = self.kernel_size[1]
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, out_size)
-        parameters['b'] = ShapeTemplate(out_size)
+        parameters['W'] = ShapeTemplate(num_input_maps, num_filters,
+                                        kernel_x, kernel_y)
+        parameters['b'] = ShapeTemplate(num_filters)
         return parameters
 
-    def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes['default'].feature_size)
-        if not isinstance(s, int):
-            raise LayerValidationError('size must be int but was {}'.format(s))
+    def get_internal_structure(self):
+        output_shape = self.out_shapes['default'].feature_size
 
-        return {'default': ShapeTemplate('T', 'B', s)}
+        internals = OrderedDict()
+        internals['Ha'] = ShapeTemplate('T', 'B', output_shape)
+        return internals
+
+    def _get_output_shapes(self):
+        output_shape = None
+        return {'default': ShapeTemplate('T', 'B', output_shape)}
+
+    def forward_pass(self, forward_buffers, training_pass=True):
+        pass
+
+    def backward_pass(self, forward_buffers, backward_buffers):
+        pass
