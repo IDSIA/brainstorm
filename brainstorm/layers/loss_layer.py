@@ -14,6 +14,9 @@ class LossLayerImpl(LayerBaseImpl):
     def _setup_hyperparameters(self):
         self.importance = self.kwargs.get('importance', 1.0)
 
+    def _get_output_shapes(self):
+        return {'loss': ShapeTemplate(1)}
+
     def forward_pass(self, forward_buffers, training_pass=True):
         # TODO: passing axis=None works with numpy an pycuda
         # TODO: but is this the intended interface?
@@ -30,6 +33,3 @@ class LossLayerImpl(LayerBaseImpl):
         self.handler.add_st(self.importance / batch_size,
                             backward_buffers.inputs.default,
                             backward_buffers.inputs.default)
-
-    def _get_output_shapes(self):
-        return {'loss': ShapeTemplate(1)}
