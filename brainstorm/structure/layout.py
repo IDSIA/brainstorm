@@ -1,15 +1,100 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
 import itertools
 
 import numpy as np
+
 from brainstorm.structure.shapes import (
     get_feature_size, validate_shape_template, ShapeTemplate)
 from brainstorm.utils import (NetworkValidationError, flatten,
                               convert_to_nested_indices, sort_by_index_key,
                               get_normalized_path)
+
+
+class Hub(object):
+
+    def __init__(self, sources, sinks, btype):
+        self.sources = sources
+        self.sinks = sinks
+        self.btype = btype
+        self.connection_table = None
+
+    def setup(self, connections):
+        self.set_up_connection_table(connections)
+        self.permute_rows()
+
+    def set_up_connection_table(self, connections):
+        """
+        Construct a source/sink connection table from a list of connections.
+        :type connections: list[tuple[object, object]]
+        :rtype: np.ndarray
+        """
+        # set up connection table
+        flat_sources = list(flatten(self.sources))
+        self.connection_table = np.zeros((len(flat_sources), len(self.sinks)))
+        for start, stop in connections:
+            if start in self.sources and stop in self.sinks:
+                start_idx = flat_sources.index(start)
+                stop_idx = self.sinks.index(stop)
+                self.connection_table[start_idx, stop_idx] = 1
+
+    def permute_rows(self):
+        """
+        Given a list of sources and a connection table, find a permutation of
+        the sources, such that they can be connected to the sinks via a single
+        buffer.
+        """
+        flat_sources = list(flatten(self.sources))
+        nested_indices = convert_to_nested_indices(self.sources)
+        # systematically try all permutations until one satisfies the condition
+        for perm in itertools.permutations(nested_indices):
+            perm = list(flatten(perm))
+            ct = np.atleast_2d(self.connection_table[perm])
+            if Hub.can_be_connected_with_single_buffer(ct):
+                self.connection_table = ct
+                self.sources = [flat_sources[i] for i in perm]
+                return
+
+        raise NetworkValidationError("Failed to lay out buffers. "
+                                     "Please change connectivity.")
+
+    @staticmethod
+    def can_be_connected_with_single_buffer(connection_table):
+        """
+        Check for a connection table if it represents a layout that can be
+        realized by a single buffer.
+
+        This means checking if in every column of the table all the ones form a
+        connected block.
+
+        Parameters
+        ----------
+        connection_table : array_like
+            2d array of zeros and ones representing the connectivity between
+            inputs and outputs of a hub.
+
+        Returns
+        -------
+        bool
+        """
+        padded = np.zeros((connection_table.shape[0] + 2,
+                           connection_table.shape[1]))
+        padded[1:-1, :] = connection_table
+        return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)
+
+    def get_indices(self, sizes):
+        idxs = np.cumsum([0] + sizes)
+        for source_name, start, stop in zip(self.sources, idxs, idxs[1:]):
+            yield source_name, (int(start), int(stop))
+
+        for i, sink_name in enumerate(self.sinks):
+            start = idxs[np.argmax(self.connection_table[:, i])]
+            stop = idxs[self.connection_table.shape[0] -
+                        np.argmax(self.connection_table[::-1, i])]
+            yield sink_name, (int(start), int(stop))
 
 
 def create_layout(layers):
@@ -25,9 +110,10 @@ def create_layout(layers):
 
     # group into hubs and lay them out
     hubs = group_into_hubs(all_sources, m_cons, layout)
-    arranged_hubs_by_buffer_type = order_sources_within_hubs(hubs, connections)
-    buffer_sizes = layout_hubs(arranged_hubs_by_buffer_type, all_sinks,
-                               connections, layout)
+    hubs = sorted(hubs, key=lambda x: x.btype)
+    for hub in hubs:
+        hub.setup(connections)
+    buffer_sizes = layout_hubs(hubs, layout)
 
     # add shape to parameters
     param_slice = layout['parameters']['@slice']
@@ -40,35 +126,21 @@ def create_layout(layers):
     return buffer_sizes, max(context_sizes), layout
 
 
-def layout_hubs(arranged_hubs_by_buffer_type, all_sinks, connections, layout):
+def layout_hubs(hubs, layout):
     """
     Determine and fill in the @slice entries into the layout and return total
     buffer sizes.
     """
-    buffer_sizes = [0, 0, 0]
-    for btype, sources in enumerate(arranged_hubs_by_buffer_type):
-
-        c_table = set_up_connection_table(sources, all_sinks, connections)
+    buffer_sizes = [[], [], []]
+    for hub_nr, hub in enumerate(hubs):
         sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
-                 for s in sources]
-        indexes = np.cumsum([0] + sizes)
+                 for s in hub.sources]
+        for buffer_name, _slice in hub.get_indices(sizes):
+            buffer_layout = get_by_path(buffer_name, layout)
+            buffer_layout['@slice'] = _slice
+            buffer_layout['@hub'] = hub_nr
 
-        for source_name, start, stop in zip(sources, indexes, indexes[1:]):
-            source_layout = get_by_path(source_name, layout)
-            # int conversion is needed to get rid of np.int64
-            source_layout['@slice'] = (int(start), int(stop))
-
-        for i, sink_name in enumerate(all_sinks):
-            if c_table[:, i].sum() == 0:
-                continue  # this sink is not connected
-            start = indexes[np.argmax(c_table[:, i])]
-            stop = indexes[c_table.shape[0] - np.argmax(c_table[::-1, i])]
-
-            sink_layout = get_by_path(sink_name, layout)
-            # int conversion is needed to get rid of np.int64
-            sink_layout['@slice'] = (int(start), int(stop))
-
-        buffer_sizes[btype] = int(indexes[-1])
+        buffer_sizes[hub.btype].append(sum(sizes))
     return buffer_sizes
 
 
@@ -80,26 +152,14 @@ def get_all_sinks_and_sources(forced_orders, connections, layout):
         if s in all_sinks:
             continue
         for fo in forced_orders:
-            if s in all_sources:
+            if s in set(flatten(all_sources)):
                 break
             elif s in fo:
-                all_sources.extend(fo)
+                all_sources.append(fo)
                 break
         else:
             all_sources.append(s)
     return all_sinks, all_sources
-
-
-def order_sources_within_hubs(hubs, connections):
-    ordered_sources_by_btype = [[], [], []]
-    for sources, sinks, btype in hubs:
-        connection_table = set_up_connection_table(sources, sinks, connections)
-        flat_sources = list(flatten(sources))
-        source_index_structure = convert_to_nested_indices(sources)
-        perm = permute_rows(connection_table, source_index_structure)
-        final_sources = [flat_sources[i] for i in perm]
-        ordered_sources_by_btype[btype].extend(final_sources)
-    return ordered_sources_by_btype
 
 
 def get_forced_orders(layers):
@@ -260,7 +320,7 @@ def group_into_hubs(remaining_sources, connections, layout):
         assert min(btypes) == max(btypes)
         btype = btypes[0]
         # get hub size
-        buffer_hubs.append((sorted(source_set), sorted(sink_set), btype))
+        buffer_hubs.append(Hub(sorted(source_set), sorted(sink_set), btype))
     return buffer_hubs
 
 
@@ -299,53 +359,4 @@ def get_forward_closure(node, connections):
     return source_set, sink_set
 
 
-def set_up_connection_table(sources, sinks, connections):
-    """
-    Construct a source/sink connection table from a list of connections.
 
-    :type sources: list[object]
-    :type sinks: list[object]
-    :type connections: list[tuple[object, object]]
-    :rtype: np.ndarray
-    """
-    # set up connection table
-    connection_table = np.zeros((len(sources), len(sinks)))
-    for start, stop in connections:
-        if start in sources and stop in sinks:
-            start_idx = sources.index(start)
-            stop_idx = sinks.index(stop)
-            connection_table[start_idx, stop_idx] = 1
-
-    return connection_table
-
-
-def permute_rows(connection_table, nested_indices):
-    """
-    Given a list of sources and a connection table, find a permutation of the
-    sources, such that they can be connected to the sinks via a single buffer.
-    :type connection_table: np.ndarray
-    :rtype: list[int]
-    """
-    # systematically try all permutations until one satisfies the condition
-    for perm in itertools.permutations(nested_indices):
-        perm = list(flatten(perm))
-        ct = np.atleast_2d(connection_table[perm])
-        if can_be_connected_with_single_buffer(ct):
-            return perm
-
-    raise NetworkValidationError("Failed to lay out buffers. "
-                                 "Please change connectivity.")
-
-
-def can_be_connected_with_single_buffer(connection_table):
-    """
-    Check for a connection table if it represents a layout that can be realized
-    by a single buffer. This is equivalent to checking if in every column of
-    the table all the ones form a connected block.
-    :type connection_table: np.ndarray
-    :rtype: bool
-    """
-    padded = np.zeros((connection_table.shape[0] + 2,
-                       connection_table.shape[1]))
-    padded[1:-1, :] = connection_table
-    return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)

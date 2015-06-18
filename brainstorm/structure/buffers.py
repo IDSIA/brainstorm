@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+from itertools import repeat
 import numpy as np
 from brainstorm.handlers import default_handler
 from brainstorm.structure.buffer_views import BufferView
@@ -11,6 +12,7 @@ from brainstorm.utils import sort_by_index_key
 
 def create_buffer_views_from_layout(layout, buffers, total_context_size):
     if '@slice' in layout:
+        buffer_nr = layout['@hub']
         start, stop = layout['@slice']
         shape = layout['@shape']
 
@@ -18,14 +20,14 @@ def create_buffer_views_from_layout(layout, buffers, total_context_size):
         t_slice = slice(0, -cutoff if cutoff else None)
         buffer_type = validate_shape_template(shape)
         if buffer_type == 0:
-            full_buffer = buffers[buffer_type][start:stop]
+            full_buffer = buffers[buffer_nr][start:stop]
             full_buffer = full_buffer.reshape(shape[buffer_type:])
         elif buffer_type == 1:
-            full_buffer = buffers[buffer_type][:, start:stop]
+            full_buffer = buffers[buffer_nr][:, start:stop]
             full_buffer = full_buffer.reshape(full_buffer.shape[:1] +
                                               shape[buffer_type:])
         else:  # buffer_type == 2
-            full_buffer = buffers[buffer_type][t_slice, :, start:stop]
+            full_buffer = buffers[buffer_nr][t_slice, :, start:stop]
             full_buffer = full_buffer.reshape(
                 (full_buffer.shape[0] - cutoff,
                  full_buffer.shape[1]) +
@@ -52,7 +54,11 @@ def create_buffer_views_from_layout(layout, buffers, total_context_size):
 class BufferManager(object):
     def __init__(self, layout, sizes, max_context_size,
                  handler=default_handler):
-        self.feature_sizes = sizes
+        self.hubs = list(zip(sizes[0], repeat(0))) + \
+                    list(zip(sizes[1], repeat(1))) + \
+                    list(zip(sizes[2], repeat(2)))
+
+        self.feature_sizes = [sum(s) for s in sizes]
         self.handler = handler
         self.layout = layout
         self.max_context_size = max_context_size
@@ -66,14 +72,12 @@ class BufferManager(object):
         self.forward_buffers = []
         self.backward_buffers = []
 
+    def get_hub_shape(self, size, btype):
+        return (self.time_size, self.batch_size, size)[2 - btype:]
+
     def get_total_size_slices_and_shapes(self):
-        shapes = [
-            (self.feature_sizes[0],),
-            (self.batch_size, self.feature_sizes[1]),
-            (self.time_size + self.max_context_size, self.batch_size,
-             self.feature_sizes[2]),
-        ]
-        totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes] * 2)
+        shapes = [self.get_hub_shape(s, t) for s, t in self.hubs] * 2
+        totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes])
         size = int(totals[-1])
         slices = [slice(int(i), int(j)) for i, j in zip(totals[:-1],
                                                         totals[1:])]
@@ -83,6 +87,8 @@ class BufferManager(object):
         if time_size == self.time_size and batch_size == self.batch_size:
             return  # lazy
 
+        N = len(self.hubs)
+
         self.time_size = time_size
         self.batch_size = batch_size
         total_size, slices, shapes = self.get_total_size_slices_and_shapes()
@@ -91,11 +97,8 @@ class BufferManager(object):
             self.full_buffer = self.handler.allocate(total_size)
             self.size = total_size
 
-        self.forward_buffers = [
-            self.full_buffer[slices[0]].reshape(shapes[0]),
-            self.full_buffer[slices[1]].reshape(shapes[1]),
-            self.full_buffer[slices[2]].reshape(shapes[2])
-        ]
+        self.forward_buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
+                                for i in range(N)]
 
         parameters = None
         if self.forward is not None:
@@ -109,11 +112,8 @@ class BufferManager(object):
             self.handler.set_from_numpy(self.forward.parameters, parameters)
 
         # TODO optimization: allocate the backward pass only if needed
-        self.backward_buffers = [
-            self.full_buffer[slices[3]].reshape(shapes[0]),
-            self.full_buffer[slices[4]].reshape(shapes[1]),
-            self.full_buffer[slices[5]].reshape(shapes[2])
-        ]
+        self.backward_buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
+                                 for i in range(N, 2 * N)]
 
         self.backward = create_buffer_views_from_layout(
             self.layout, self.backward_buffers, self.max_context_size)

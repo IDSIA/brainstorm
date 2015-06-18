@@ -7,8 +7,7 @@ import pytest
 from brainstorm.structure.layout import (
     create_layout_stub, get_order, get_parameter_order, get_internal_order,
     get_forced_orders, get_connections, merge_connections, get_forward_closure,
-    can_be_connected_with_single_buffer,
-    permute_rows, create_layout, gather_array_nodes)
+    create_layout, gather_array_nodes, Hub)
 
 
 def test_get_order():
@@ -122,7 +121,7 @@ def test_get_forward_closure():
     ([1, 1, 0, 1, 1], False),
 ])
 def test_col_can_be_connected_with_single_buffer(col, expected):
-    assert can_be_connected_with_single_buffer(np.array(col).reshape(-1, 1))\
+    assert Hub.can_be_connected_with_single_buffer(np.array(col).reshape(-1, 1))\
            == expected
 
 
@@ -133,7 +132,7 @@ def test_can_be_connected_with_single_buffer():
         [0, 0, 0, 1, 1],
         [0, 1, 1, 1, 0],
         [1, 1, 1, 1, 1]]).T
-    assert can_be_connected_with_single_buffer(con_table)
+    assert Hub.can_be_connected_with_single_buffer(con_table)
 
     con_table = np.array([
         [0, 0, 0, 0, 0],
@@ -142,27 +141,47 @@ def test_can_be_connected_with_single_buffer():
         [0, 1, 0, 1, 0],  # < the bad boy
         [0, 1, 1, 1, 0],
         [1, 1, 1, 1, 1]]).T
-    assert not can_be_connected_with_single_buffer(con_table)
+    assert not Hub.can_be_connected_with_single_buffer(con_table)
 
 
-def test_permute_rows():
-    con_table = np.array([
+def test_permute_rows1():
+    h = Hub([0, 1, 2, [3, 4]], [1, 2, 3, 4, 5], 0)
+
+    h.connection_table = np.array([
         [1, 1, 0, 0, 0],
         [0, 1, 1, 1, 0],
         [1, 1, 0, 0, 0],
         [0, 0, 1, 1, 1],
         [0, 0, 1, 1, 1]])
-    perm = permute_rows(con_table, [0, 1, 2, [3, 4]])
-    assert perm == [0, 2, 1, 3, 4]
+    h.permute_rows()
+    assert h.sources == [0, 2, 1, 3, 4]
+    # noinspection PyTypeChecker
+    assert np.all(h.connection_table == np.array([
+        [1, 1, 0, 0, 0],
+        [1, 1, 0, 0, 0],
+        [0, 1, 1, 1, 0],
+        [0, 0, 1, 1, 1],
+        [0, 0, 1, 1, 1]]))
 
-    con_table = np.array([
+def test_permute_rows2():
+    h = Hub([0, 1, 2, [3, 4]], [1, 2, 3, 4, 5], 0)
+
+    h.connection_table = np.array([
         [1, 1, 0, 0, 0],
         [1, 1, 0, 0, 0],
         [0, 0, 1, 1, 1],
         [0, 1, 1, 1, 0],
         [0, 0, 1, 1, 1]])
-    perm = permute_rows(con_table, [[0, 1], 2, 3, 4])
-    assert perm == [0, 1, 3, 2, 4]
+    h.permute_rows()
+    assert h.sources == [0, 1, 3, 4, 2]
+    # noinspection PyTypeChecker
+    assert np.all(h.connection_table == np.array([
+        [1, 1, 0, 0, 0],
+        [1, 1, 0, 0, 0],
+        [0, 1, 1, 1, 0],
+        [0, 0, 1, 1, 1],
+        [0, 0, 1, 1, 1]]))
+
 
 
 def test_create_layout_stub(layers):
@@ -352,6 +371,7 @@ def test_create_layout(layers):
         'parameters': {
             '@type': 'array',
             '@index': 0,
+            '@hub': 0,
             '@slice': (0, 230),
             '@shape': (230, ),
         },
@@ -363,7 +383,8 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 2), '@slice': (0, 2)},
+                            '@shape': ('T', 'B', 2),
+                            '@hub': 1, '@slice': (0, 2)},
             },
             'parameters': {'@type': 'BufferView', '@index': 2},
             'internals': {'@type': 'BufferView', '@index': 3},
@@ -375,27 +396,29 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 2), '@slice': (0, 2)}
+                            '@shape': ('T', 'B', 2),
+                            '@hub': 1, '@slice': (0, 2)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 3), '@slice': (2, 5)}
+                            '@shape': ('T', 'B', 3),
+                            '@hub': 2, '@slice': (0, 3)}
             },
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
                 'W': {'@type': 'array', '@index': 0, '@shape': (2, 3),
-                      '@slice': (0, 6)},
+                      '@hub': 0, '@slice': (0, 6)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (3,),
-                      '@slice': (6, 9)}
+                      '@hub': 0, '@slice': (6, 9)}
             },
             'internals': {
                 '@type': 'BufferView',
                 '@index': 3,
                 'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3),
-                       '@slice': (17, 20)}
+                       '@hub': 3, '@slice': (0, 3)}
             },
         },
         'B': {
@@ -405,27 +428,29 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 2), '@slice': (0, 2)}
+                            '@shape': ('T', 'B', 2),
+                            '@hub': 1, '@slice': (0, 2)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 5), '@slice': (5, 10)}
+                            '@shape': ('T', 'B', 5),
+                            '@hub': 2, '@slice': (3, 8)}
             },
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
                 'W': {'@type': 'array', '@index': 0, '@shape': (2, 5),
-                      '@slice': (9, 19)},
+                      '@hub': 0, '@slice': (9, 19)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (5,),
-                      '@slice': (19, 24)}
+                      '@hub': 0, '@slice': (19, 24)}
             },
             'internals': {
                 '@type': 'BufferView',
                 '@index': 3,
                 'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 5),
-                       '@slice': (20, 25)}
+                       '@hub': 4, '@slice': (0, 5)}
             },
         },
         'C': {
@@ -435,27 +460,29 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 8), '@slice': (2, 10)}
+                            '@shape': ('T', 'B', 8),
+                            '@hub': 2, '@slice': (0, 8)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 7), '@slice': (10, 17)}
+                            '@shape': ('T', 'B', 7),
+                            '@hub': 2, '@slice': (8, 15)}
             },
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
                 'W': {'@type': 'array', '@index': 0, '@shape': (8, 7),
-                      '@slice': (24, 80)},
+                      '@hub': 0, '@slice': (24, 80)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (7,),
-                      '@slice': (80, 87)}
+                      '@hub': 0, '@slice': (80, 87)}
             },
             'internals': {
                 '@type': 'BufferView',
                 '@index': 3,
                 'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 7),
-                       '@slice': (25, 32)}
+                       '@hub': 5, '@slice': (0, 7)}
             },
         },
         'D': {
@@ -465,26 +492,28 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 12), '@slice': (5, 17)}
+                            '@shape': ('T', 'B', 12),
+                            '@hub': 2, '@slice': (3, 15)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
-                            '@shape': ('T', 'B', 11), '@slice': (32, 43)}
+                            '@shape': ('T', 'B', 11),
+                            '@hub': 6, '@slice': (0, 11)}
             },
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
                 'W': {'@type': 'array', '@index': 0, '@shape': (12, 11),
-                      '@slice': (87, 219)},
+                      '@hub': 0, '@slice': (87, 219)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (11,),
-                      '@slice': (219, 230)}
+                      '@hub': 0, '@slice': (219, 230)}
             },
             'internals': {
                 '@type': 'BufferView',
                 '@index': 3,
                 'Ha': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 11),
-                       '@slice': (43, 54)}
+                       '@hub': 7, '@slice': (0, 11)}
             },
         }}
