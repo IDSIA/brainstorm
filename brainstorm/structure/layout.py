@@ -16,11 +16,32 @@ from brainstorm.utils import (NetworkValidationError, flatten,
 
 class Hub(object):
 
-    def __init__(self, sources, sinks, btype):
+    @staticmethod
+    def create(source_set, sink_set, layout, connections):
+        # get buffer type for hub and assert its uniform
+        btypes = [validate_shape_template(get_by_path(s, layout)['@shape'])
+                  for s in flatten(source_set)]
+        assert min(btypes) == max(btypes)
+        btype = btypes[0]
+        # max context size
+        context_size = max([get_by_path(s, layout).get('@context_size', 0)
+                            for s in flatten(source_set)])
+
+        hub = Hub(sorted(source_set), sorted(sink_set), btype, context_size)
+        hub.setup(connections)
+        hub.sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
+                     for s in hub.sources]
+        hub.size = sum(hub.sizes)
+        return hub
+
+    def __init__(self, sources, sinks, btype, context_size=0):
         self.sources = sources
         self.sinks = sinks
         self.btype = btype
-        self.connection_table = None
+        self.context_size = context_size
+        self.connection_table = []
+        self.sizes = []
+        self.size = -1
 
     def setup(self, connections):
         self.set_up_connection_table(connections)
@@ -85,8 +106,8 @@ class Hub(object):
         padded[1:-1, :] = connection_table
         return np.all(np.abs(np.diff(padded, axis=0)).sum(axis=0) <= 2)
 
-    def get_indices(self, sizes):
-        idxs = np.cumsum([0] + sizes)
+    def get_indices(self):
+        idxs = np.cumsum([0] + self.sizes)
         for source_name, start, stop in zip(self.sources, idxs, idxs[1:]):
             yield source_name, (int(start), int(stop))
 
@@ -101,7 +122,6 @@ def create_layout(layers):
     # gather connections and order-constraints
     forced_orders = get_forced_orders(layers)
     connections = get_connections(layers)
-    m_cons = merge_connections(connections, forced_orders)
 
     # create a stub layout
     layout = create_layout_stub(layers)
@@ -109,21 +129,15 @@ def create_layout(layers):
                                                        connections, layout)
 
     # group into hubs and lay them out
-    hubs = group_into_hubs(all_sources, m_cons, layout)
+    hubs = group_into_hubs(all_sources, forced_orders, connections, layout)
     hubs = sorted(hubs, key=lambda x: x.btype)
-    for hub in hubs:
-        hub.setup(connections)
-    buffer_sizes = layout_hubs(hubs, layout)
+    layout_hubs(hubs, layout)
 
     # add shape to parameters
     param_slice = layout['parameters']['@slice']
     layout['parameters']['@shape'] = (param_slice[1] - param_slice[0],)
 
-    # determine max-time offset
-    context_sizes = [get_by_path(s, layout).get('@context_size', 0)
-                     for s in gather_array_nodes(layout)]
-
-    return buffer_sizes, max(context_sizes), layout
+    return hubs, layout
 
 
 def layout_hubs(hubs, layout):
@@ -131,17 +145,11 @@ def layout_hubs(hubs, layout):
     Determine and fill in the @slice entries into the layout and return total
     buffer sizes.
     """
-    buffer_sizes = [[], [], []]
     for hub_nr, hub in enumerate(hubs):
-        sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
-                 for s in hub.sources]
-        for buffer_name, _slice in hub.get_indices(sizes):
+        for buffer_name, _slice in hub.get_indices():
             buffer_layout = get_by_path(buffer_name, layout)
             buffer_layout['@slice'] = _slice
             buffer_layout['@hub'] = hub_nr
-
-        buffer_sizes[hub.btype].append(sum(sizes))
-    return buffer_sizes
 
 
 def get_all_sinks_and_sources(forced_orders, connections, layout):
@@ -307,21 +315,18 @@ def merge_connections(connections, forced_orders):
     return merged_connections
 
 
-def group_into_hubs(remaining_sources, connections, layout):
-    buffer_hubs = []
+def group_into_hubs(remaining_sources, forced_orders, connections, layout):
+    m_cons = merge_connections(connections, forced_orders)
+    hubs = []
     while remaining_sources:
         node = remaining_sources[0]
-        source_set, sink_set = get_forward_closure(node, connections)
+        source_set, sink_set = get_forward_closure(node, m_cons)
         for s in source_set:
             remaining_sources.remove(s)
-        # get buffer type for hub and assert its uniform
-        btypes = [validate_shape_template(get_by_path(s, layout)['@shape'])
-                  for s in flatten(source_set)]
-        assert min(btypes) == max(btypes)
-        btype = btypes[0]
-        # get hub size
-        buffer_hubs.append(Hub(sorted(source_set), sorted(sink_set), btype))
-    return buffer_hubs
+
+        hubs.append(Hub.create(source_set, sink_set, layout, connections))
+
+    return hubs
 
 
 def get_forward_closure(node, connections):

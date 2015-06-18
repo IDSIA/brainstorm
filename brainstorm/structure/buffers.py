@@ -2,7 +2,6 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from itertools import repeat
 import numpy as np
 from brainstorm.handlers import default_handler
 from brainstorm.structure.buffer_views import BufferView
@@ -10,13 +9,13 @@ from brainstorm.structure.layout import validate_shape_template
 from brainstorm.utils import sort_by_index_key
 
 
-def create_buffer_views_from_layout(layout, buffers, total_context_size):
+def create_buffer_views_from_layout(layout, buffers, hubs):
     if '@slice' in layout:
         buffer_nr = layout['@hub']
         start, stop = layout['@slice']
         shape = layout['@shape']
 
-        cutoff = total_context_size - layout.get('@context_size', 0)
+        cutoff = hubs[buffer_nr].context_size - layout.get('@context_size', 0)
         t_slice = slice(0, -cutoff if cutoff else None)
         buffer_type = validate_shape_template(shape)
         if buffer_type == 0:
@@ -37,7 +36,7 @@ def create_buffer_views_from_layout(layout, buffers, total_context_size):
 
     if layout['@type'] == 'BufferView':
         children = [(n, create_buffer_views_from_layout(sub_node, buffers,
-                                                        total_context_size))
+                                                        hubs))
                     for n, sub_node in sorted(layout.items(),
                                               key=sort_by_index_key)
                     if not n.startswith('@')]
@@ -52,16 +51,11 @@ def create_buffer_views_from_layout(layout, buffers, total_context_size):
 
 
 class BufferManager(object):
-    def __init__(self, layout, sizes, max_context_size,
+    def __init__(self, layout, hubs,
                  handler=default_handler):
-        self.hubs = list(zip(sizes[0], repeat(0))) + \
-                    list(zip(sizes[1], repeat(1))) + \
-                    list(zip(sizes[2], repeat(2)))
-
-        self.feature_sizes = [sum(s) for s in sizes]
+        self.hubs = hubs
         self.handler = handler
         self.layout = layout
-        self.max_context_size = max_context_size
         self.time_size = -1
         self.batch_size = -1
         self.size = -1
@@ -72,11 +66,11 @@ class BufferManager(object):
         self.forward_buffers = []
         self.backward_buffers = []
 
-    def get_hub_shape(self, size, btype):
-        return (self.time_size, self.batch_size, size)[2 - btype:]
+    def get_hub_shape(self, hub):
+        return (self.time_size, self.batch_size, hub.size)[2 - hub.btype:]
 
     def get_total_size_slices_and_shapes(self):
-        shapes = [self.get_hub_shape(s, t) for s, t in self.hubs] * 2
+        shapes = [self.get_hub_shape(h) for h in self.hubs] * 2
         totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes])
         size = int(totals[-1])
         slices = [slice(int(i), int(j)) for i, j in zip(totals[:-1],
@@ -106,7 +100,7 @@ class BufferManager(object):
             parameters = self.handler.get_numpy_copy(self.forward.parameters)
 
         self.forward = create_buffer_views_from_layout(
-            self.layout, self.forward_buffers, self.max_context_size)
+            self.layout, self.forward_buffers, self.hubs)
 
         if parameters is not None:
             self.handler.set_from_numpy(self.forward.parameters, parameters)
@@ -116,7 +110,7 @@ class BufferManager(object):
                                  for i in range(N, 2 * N)]
 
         self.backward = create_buffer_views_from_layout(
-            self.layout, self.backward_buffers, self.max_context_size)
+            self.layout, self.backward_buffers, self.hubs)
 
     def set_memory_handler(self, new_handler):
         self.full_buffer = None
@@ -135,37 +129,37 @@ class BufferManager(object):
     def get_context(self):
         if self.forward_buffers is None:
             return None
-
-        c_start_idx = self.time_size - self.max_context_size
         context = []
-        for (s, t), buf in zip(self.hubs, self.forward_buffers):
-            if t != 2:
+        for hub, buf in zip(self.hubs, self.forward_buffers):
+            if hub.btype != 2 or not hub.context_size:
                 context.append(None)
             else:
                 c = self.handler.zeros(
-                    (self.max_context_size, self.batch_size, s))
+                    (hub.context_size, self.batch_size, hub.size))
+
+                context_start_idx = self.time_size - hub.context_size * 2
+                context_stop_idx = self.time_size - hub.context_size
+
                 self.handler.copy_to(
-                    c, buf[c_start_idx - self.max_context_size:c_start_idx])
+                    c, buf[context_start_idx:context_stop_idx])
                 context.append(c)
 
         return context
 
     def apply_context(self, context):
-        c_start_idx = self.time_size - self.max_context_size
         for c, buf in zip(context, self.forward_buffers):
             if c is None:
                 continue
-            self.handler.copy_to(buf[c_start_idx:], c)
+            self.handler.copy_to(buf[self.time_size - context.shape[0]:], c)
 
     def clear_context(self):
         if self.forward_buffers is None:
             return None
-        c_start_idx = self.time_size - self.max_context_size
-        for (s, t), buf in zip(self.hubs, self.forward_buffers):
-            if t != 2:
+        for hub, buf in zip(self.hubs, self.forward_buffers):
+            if hub.btype != 2 or not hub.context_size:
                 continue
             self.handler.fill(
-                buf[c_start_idx - self.max_context_size:c_start_idx], 0.)
+                buf[self.time_size - hub.context_size:], 0.)
 
     def clear_backward_buffers(self):
         for b in self.backward_buffers:

@@ -365,7 +365,7 @@ def test_traverse_layout():
 
 
 def test_create_layout(layers):
-    sizes, max_context_size, layout = create_layout(layers)
+    hubs, layout = create_layout(layers)
     assert layout == {
         '@type': 'BufferView',
         'parameters': {
