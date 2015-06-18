@@ -135,26 +135,37 @@ class BufferManager(object):
     def get_context(self):
         if self.forward_buffers is None:
             return None
-        timed_buffer = self.forward_buffers[2]
-        t, b, f = timed_buffer.shape
-        context = self.handler.zeros((self.max_context_size, b, f))
-        c_start_idx = timed_buffer.shape[0] - self.max_context_size
-        self.handler.copy_to(
-            context,
-            timed_buffer[c_start_idx - self.max_context_size:c_start_idx])
+
+        c_start_idx = self.time_size - self.max_context_size
+        context = []
+        for (s, t), buf in zip(self.hubs, self.forward_buffers):
+            if t != 2:
+                context.append(None)
+            else:
+                c = self.handler.zeros(
+                    (self.max_context_size, self.batch_size, s))
+                self.handler.copy_to(
+                    c, buf[c_start_idx - self.max_context_size:c_start_idx])
+                context.append(c)
+
         return context
 
     def apply_context(self, context):
-        timed_buffer = self.forward_buffers[2]
-        c_start_idx = timed_buffer.shape[0] - self.max_context_size
-        context_slice = timed_buffer[c_start_idx:]
-        self.handler.copy_to(context_slice, context)
+        c_start_idx = self.time_size - self.max_context_size
+        for c, buf in zip(context, self.forward_buffers):
+            if c is None:
+                continue
+            self.handler.copy_to(buf[c_start_idx:], c)
 
     def clear_context(self):
-        timed_buffer = self.forward_buffers[2]
-        c_start_idx = timed_buffer.shape[0] - self.max_context_size
-        context_slice = timed_buffer[c_start_idx:]
-        self.handler.fill(context_slice, 0.)
+        if self.forward_buffers is None:
+            return None
+        c_start_idx = self.time_size - self.max_context_size
+        for (s, t), buf in zip(self.hubs, self.forward_buffers):
+            if t != 2:
+                continue
+            self.handler.fill(
+                buf[c_start_idx - self.max_context_size:c_start_idx], 0.)
 
     def clear_backward_buffers(self):
         for b in self.backward_buffers:
