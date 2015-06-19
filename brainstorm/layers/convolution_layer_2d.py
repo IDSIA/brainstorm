@@ -25,8 +25,11 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
                                         "ConvolutionLayer"
         self.num_filters = kwargs['num_filters']
         self.kernel_size = kwargs['kernel_size']
-        self.pad = kwargs.get('pad', (0, 0))
+        self.pad = kwargs.get('pad', 0)
         self.stride = kwargs.get('stride', (0, 0))
+        assert type(self.pad) is int and self.pad >= 0
+        assert type(self.stride) is tuple and self.stride[0] >= 0 and \
+            self.stride >= 0
 
     def set_handler(self, new_handler):
         super(ConvolutionLayer2DImpl, self).set_handler(new_handler)
@@ -88,7 +91,7 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         Ha = forward_buffers.internals.Ha
 
         # calculate outputs
-        _h.conv2d_forward_batch(input, WX, Ha)
+        _h.conv2d_forward_batch(input, WX, W_bias, Ha, self.pad, self.stride)
         self.act_func(Ha, output)
 
     def backward_pass(self, forward_buffers, backward_buffers):
@@ -106,5 +109,5 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
 
         # calculate in_deltas and gradients
         self.act_func_deriv(Ha, outputs, out_deltas, dHa)
-        _h.conv2d_backward_batch(dHa, inputs, in_deltas,
-                                 WX, W_bias, dWX, dW_bias)
+        _h.conv2d_backward_batch(dHa, inputs, in_deltas, WX, W_bias, dWX,
+                                 dW_bias, self.pad, self.stride)

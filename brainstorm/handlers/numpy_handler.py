@@ -147,6 +147,75 @@ class NumpyHandler(Handler):
         for i in range(m.shape[0]):
             out[i] = m[i, int(v[i])]
 
+    @staticmethod
+    def get_im2col_map(num_input_maps, input_rows, input_cols,
+                       kernel_size, stride):
+        # im2col built upon http://stackoverflow.com/a/30110497
+        # Returns a 2D map which performs im2col on a 3D array
+        # Apply map to a 3D array using numpy.take(array, map)
+
+        # Parameters
+        col_extent = input_cols - kernel_size[1] + 1
+        row_extent = input_rows - kernel_size[0] + 1
+
+        # Get Starting block indices
+        start_idx = np.arange(kernel_size[0])[:, None] * input_cols + \
+            np.arange(kernel_size[1])
+
+        # Get offsetted indices across the height and width of input array
+        offset_idx = np.arange(row_extent)[:, None] * input_cols + \
+            np.arange(col_extent)
+
+        indices = start_idx.ravel()[:, None] + \
+            offset_idx[::stride[0]].ravel()[::stride[1]]
+        adder = (np.arange(num_input_maps) * input_rows * input_cols)\
+            .reshape((num_input_maps, 1, 1))
+
+        # Extend to multiple input maps
+        im2col_map = indices + adder
+
+        # Reshape to stack input maps
+        im2col_map = im2col_map.reshape((kernel_size[0] * kernel_size[1] *
+                                         num_input_maps, -1))
+
+        return im2col_map
+
+    @classmethod
+    def conv2d_forward_batch(cls, inputs, weights, bias, outputs, pad, stride):
+
+        num_filters = weights.shape[0]
+        num_images, num_input_maps, input_rows, input_cols = inputs.shape
+        kernel_size = (weights.shape[2], weights.shape[3])
+
+        im2col_map = cls.get_im2col_map(num_input_maps, input_rows + 2 * pad,
+                                        input_cols + 2 * pad, kernel_size,
+                                        stride)
+
+        # reshape
+        for i in range(inputs.shape[0]):
+            # pad
+            if pad == 0:
+                im = inputs[i]
+            else:
+                im = np.zeros((inputs.shape[1], inputs.shape[2] + 2 * pad,
+                               inputs.shape[3] + 2 * pad))
+                im[:, pad: -pad, pad: -pad] = inputs[i]
+
+            # Get all actual indices & index into input array for final output
+            col = np.take(im, im2col_map)
+
+            # multiply
+            reshaped_weights = weights.reshape(num_filters, kernel_size[0] *
+                                               kernel_size[1] * num_input_maps)
+            outputs[i] = np.dot(reshaped_weights, col).reshape(outputs[i].shape)
+
+        outputs += bias
+
+    @staticmethod
+    def conv2d_backward_batch(out_deltas, inputs, in_deltas, weights, bias,
+                              weight_deltas, bias_deltas, pad, stride):
+        pass
+
     # ---------------- Activation functions -----------------------------------
 
     @staticmethod
