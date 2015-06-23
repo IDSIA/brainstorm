@@ -167,7 +167,7 @@ class NumpyHandler(Handler):
             np.arange(col_extent)
 
         indices = start_idx.ravel()[:, None] + \
-            offset_idx[::stride[0]].ravel()[::stride[1]]
+            offset_idx[::stride[0], ::stride[1]].ravel()
         adder = (np.arange(num_input_maps) * input_rows * input_cols)\
             .reshape((num_input_maps, 1, 1))
 
@@ -209,7 +209,7 @@ class NumpyHandler(Handler):
                                                kernel_size[1] * num_input_maps)
             outputs[i] = np.dot(reshaped_weights, col).reshape(outputs[i].shape)
 
-        outputs += bias
+        outputs += bias.reshape((1, num_filters, 1, 1))
 
     @staticmethod
     def conv2d_backward_batch(out_deltas, inputs, in_deltas, weights, bias,
