@@ -7,9 +7,6 @@ from brainstorm.handlers.debug_handler import DebugHandler
 import numpy as np
 
 try:
-    from pycuda import gpuarray
-    import scikits.cuda.linalg as culinalg
-    import scikits.cuda.misc as cumisc
     from brainstorm.handlers.pycuda_handler import PyCudaHandler
 except ImportError as e:
     print(e)

@@ -12,7 +12,6 @@ import scikits.cuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 culinalg.init()
 
-
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
     def __init__(self):
@@ -61,7 +60,10 @@ class PyCudaHandler(Handler):
 
     @staticmethod
     def sum_t(a, axis, out):
-        cumisc.sum(a, axis, out)
+        # cumisc.sum(a, axis, out)
+        s = cumisc.sum(a.reshape((a.shape[0], np.prod(a.shape[1:]))),
+                       axis=0).reshape(a.shape[1:])
+        PyCudaHandler.copy_to(out, s)
 
     @staticmethod
     def dot_mm(a, b, out, transa='N', transb='N'):
