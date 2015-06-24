@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
+from six import string_types
 
 from collections import OrderedDict
 from brainstorm.describable import Describable
@@ -157,7 +158,7 @@ class StopOnNan(Monitor):
     """
     def __init__(self, logs_to_check=(), check_parameters=True, name=None):
         super(StopOnNan, self).__init__(name, 'epoch', 1)
-        self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check, str)
+        self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check, string_types)
                               else logs_to_check)
         self.check_parameters = check_parameters
 
