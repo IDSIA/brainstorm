@@ -61,9 +61,8 @@ class PyCudaHandler(Handler):
     @staticmethod
     def sum_t(a, axis, out):
         # cumisc.sum(a, axis, out)
-        s = cumisc.sum(a.reshape((a.shape[0], np.prod(a.shape[1:]))),
-                       axis=0).reshape(a.shape[1:])
-        PyCudaHandler.copy_to(out, s)
+        cumisc.sum(a.reshape((a.shape[0], np.prod(a.shape[1:]))), axis=0,
+                   out=out.reshape(np.prod(a.shape[1:])))
 
     @staticmethod
     def dot_mm(a, b, out, transa='N', transb='N'):
