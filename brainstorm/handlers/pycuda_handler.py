@@ -41,6 +41,10 @@ class PyCudaHandler(Handler):
         return mem.get()
 
     @staticmethod
+    def create_from_numpy(arr):
+        return gpuarray.to_gpu(arr)
+
+    @staticmethod
     def copy_to(dest, src):
         # Copy data from src to dest (both must be GPUArrays)
         drv.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)

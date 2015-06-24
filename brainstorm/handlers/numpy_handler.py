@@ -27,9 +27,13 @@ class NumpyHandler(Handler):
     def set_from_numpy(self, mem, arr):
         mem[:] = arr.astype(self.dtype)
 
-    def get_numpy_copy(self, mem):
-        assert type(mem) == self.array_type
-        return mem.copy()
+    def get_numpy_copy(self, arr):
+        assert type(arr) == self.array_type
+        return arr.copy()
+
+    @staticmethod
+    def create_from_numpy(arr):
+        return arr.copy()
 
     @staticmethod
     def copy_to(dest, src):
@@ -50,7 +54,7 @@ class NumpyHandler(Handler):
             keepdims = True
         else:
             keepdims = False
-        np.sum(a, axis=axis, dtype=self.dtype, out=out, keepdims=keepdims)
+        np.sum(a, axis=axis, out=out, keepdims=keepdims)
 
     @staticmethod
     def dot_mm(a, b, out, transa='N', transb='N'):
