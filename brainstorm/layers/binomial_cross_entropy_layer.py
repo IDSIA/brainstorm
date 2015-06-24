@@ -73,10 +73,10 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
 
         # reshape for summation
         t, b = cee.shape[:2]
-        f = _h.size(cee) / (t * b)
-        cee = cee.reshape((t, b, f))
-
-        _h.sum_t(cee, axis=2, out=cee_sum)
+        f = int(_h.size(cee) / (t * b))
+        cee = cee.reshape((t * b, f))
+        cee_sum = cee_sum.reshape((t * b, 1))
+        _h.sum_t(cee, axis=1, out=cee_sum)
         _h.mult_st(-1, cee_sum, cee_sum)  # * -1
 
     def backward_pass(self, forward_buffers, backward_buffers):

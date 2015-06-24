@@ -49,7 +49,9 @@ class PyCudaHandler(Handler):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
 
     def ones(self, shape):
-        return gpuarray.ones(shape=shape, dtype=self.dtype)
+        a = self.zeros(shape)
+        self.fill(a, 1.0)
+        return a
 
     # ---------------- Mathematical Operations ---------------- #
 
@@ -98,8 +100,8 @@ class PyCudaHandler(Handler):
         assert len(a.shape) == 3
         assert a.shape[2] == 1
         assert len(out.shape) > 2
-        a_flat = a.reshape(-1)
-        out_flat = out.reshape(-1)
+        a_flat = a.reshape(a.size)
+        out_flat = out.reshape(out.size)
         broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
 
     @staticmethod
