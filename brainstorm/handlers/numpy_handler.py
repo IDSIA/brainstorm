@@ -44,7 +44,8 @@ class NumpyHandler(Handler):
 
     # ---------------- Mathematical Operations ---------------- #
 
-    def sum_t(self, a, axis, out):
+    @staticmethod
+    def sum_t(a, axis, out):
         if len(out.shape) == len(a.shape):
             keepdims = True
         else:
