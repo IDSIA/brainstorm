@@ -50,6 +50,8 @@ class NumpyHandler(Handler):
 
     @staticmethod
     def sum_t(a, axis, out):
+        assert axis is None or (len(a.shape) < 3 and (axis == 0 or axis == 1))
+
         if len(out.shape) == len(a.shape):
             keepdims = True
         else:

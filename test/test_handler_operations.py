@@ -53,6 +53,7 @@ def test_get_im2col_map():  # TODO
     pass
 
 def test_conv2d_forward_batch():
+    print("\n--------- Testing conv2d_forward_batch ---------")
     _h = NumpyHandler(np.float64)
     for input_shape in ((3, 3), (5, 4), (4, 9)):
         for num_images in (1, 4):

@@ -7,8 +7,8 @@ import pycuda.driver as drv
 import pycuda.autoinit
 from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
-import scikits.cuda.linalg as culinalg
-import scikits.cuda.misc as cumisc
+import skcuda.linalg as culinalg
+import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 culinalg.init()
 
@@ -60,9 +60,8 @@ class PyCudaHandler(Handler):
 
     @staticmethod
     def sum_t(a, axis, out):
-        # cumisc.sum(a, axis, out)
-        cumisc.sum(a.reshape((a.shape[0], np.prod(a.shape[1:]))), axis=0,
-                   out=out.reshape(np.prod(a.shape[1:])))
+        assert axis is None or (len(a.shape) < 3 and (axis == 0 or axis == 1))
+        cumisc.sum(a, axis, out)
 
     @staticmethod
     def dot_mm(a, b, out, transa='N', transb='N'):
