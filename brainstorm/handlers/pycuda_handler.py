@@ -96,8 +96,11 @@ class PyCudaHandler(Handler):
         subtract_mm_kernel(a, b, out)
 
     @staticmethod
-    def add_mv(a, b, out):
-        cumisc.add_matvec(a, b, out=out)
+    def add_mv(m, v, out):
+        if m.shape[0] == m.shape[1]:
+            cumisc.add_matvec(m, v, axis=1, out=out)
+        else:
+            cumisc.add_matvec(m, v, out=out)
 
     @staticmethod
     def broadcast_features_t(a, out):
@@ -125,7 +128,10 @@ class PyCudaHandler(Handler):
         """
         Divide (M, N) matrix elementwise by a (1, N) vector using broadcasting.
         """
-        cumisc.div_matvec(m, v, out=out)
+        if m.shape[0] == m.shape[1]:
+            cumisc.div_matvec(m, v, axis=1, out=out)
+        else:
+            cumisc.div_matvec(m, v, out=out)
 
     @staticmethod
     def mult_mv(m, v, out):
@@ -133,7 +139,10 @@ class PyCudaHandler(Handler):
         Multiply (M, N) matrix elementwise by a (1, N) vector using
         broadcasting.
         """
-        cumisc.mutl_matvec(m, v, out=out)
+        if m.shape[0] == m.shape[1]:
+            cumisc.mult_matvec(m, v, axis=1, out=out)
+        else:
+            cumisc.mult_matvec(m, v, out=out)
 
     @staticmethod
     def binarize_v(v, out):
