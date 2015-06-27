@@ -98,11 +98,16 @@ class NumpyHandler(Handler):
         out[:] = a - b
 
     @staticmethod
-    def add_mv(a, b, out):
+    def add_mv(m, v, out):
+        """
+        Add (M, N) matrix elementwise to (1, N) or (N, 1) or (N,) vector using
+        broadcasting.
+        """
         # TODO: Generalize to support broadcast along both dimensions
-        assert len(a.shape) == 2
-        assert len(b.shape) == 1
-        out[:] = a + b
+        assert len(m.shape) == 2
+        assert (len(v.shape) == 2 and (v.shape[0] == 1 or v.shape[1] == 1)) \
+            or (len(v.shape) == 1 and v.shape[0] == m.shape[1])
+        out[:] = m + v
 
     @staticmethod
     def broadcast_features_t(a, out):
@@ -118,6 +123,7 @@ class NumpyHandler(Handler):
 
     @staticmethod
     def clip_t(a, a_min, a_max, out):
+        assert a_max >= a_min
         np.clip(a, a_min, a_max, out)
 
     @staticmethod
@@ -131,16 +137,23 @@ class NumpyHandler(Handler):
     @staticmethod
     def divide_mv(m, v, out):
         """
-        Divide (M, N) matrix elementwise by a (1, N) vector using broadcasting.
+        Divide (M, N) matrix elementwise by a (1, N) or (N, 1) or (N,) vector
+        using broadcasting.
         """
+        assert len(m.shape) == 2
+        assert (len(v.shape) == 2 and (v.shape[0] == 1 or v.shape[1] == 1)) \
+            or (len(v.shape) == 1 and v.shape[0] == m.shape[1])
         out[:] = m / v
 
     @staticmethod
     def mult_mv(m, v, out):
         """
-        Multiply (M, N) matrix elementwise by a (1, N) vector using
-        broadcasting.
+        Multiply (M, N) matrix elementwise by a (1, N) or (N, 1) or (N,) vector
+        using broadcasting.
         """
+        assert len(m.shape) == 2
+        assert (len(v.shape) == 2 and (v.shape[0] == 1 or v.shape[1] == 1)) \
+            or (len(v.shape) == 1 and v.shape[0] == m.shape[1])
         out[:] = m * v
 
     @staticmethod

@@ -19,7 +19,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
     'loss' output.
 
     WARNING: This layer does not compute derivatives wrt the 'targets' input
-    and it also does not use the deltas coming in from the 'ouputs'.
+    and it also does not use the deltas coming in from the 'outputs'.
     """
 
     inputs = {'default': ShapeTemplate('T', 'B', 'F'),
@@ -58,16 +58,16 @@ class ClassificationLayerImpl(LayerBaseImpl):
         # prepare
         _h = self.handler
         W, bias = forward_buffers.parameters
-        input = forward_buffers.inputs.default
+        inputs = forward_buffers.inputs.default
         targets = forward_buffers.inputs.targets
         output = forward_buffers.outputs.output
         loss = forward_buffers.outputs.loss
         Ha = forward_buffers.internals.Ha
 
         # reshape
-        t, b, f = input.shape
+        t, b, f = inputs.shape
         i = t * b
-        flat_input = input.reshape((i, f))
+        flat_input = inputs.reshape((i, f))
         flat_output = output.reshape((i, self.out_shapes['output'][2]))
         flat_Ha = Ha.reshape((i, self.out_shapes['output'][2]))
         flat_loss = loss.reshape((i, 1))
@@ -92,7 +92,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         # prepare
         _h = self.handler
         W, bias = forward_buffers.parameters
-        input = forward_buffers.inputs.default
+        inputs = forward_buffers.inputs.default
         targets = forward_buffers.inputs.targets
         output = forward_buffers.outputs.output
 
@@ -102,10 +102,10 @@ class ClassificationLayerImpl(LayerBaseImpl):
         dHa = backward_buffers.internals.Ha
 
         # reshape
-        t, b, f_in = input.shape
+        t, b, f_in = inputs.shape
         f_out = output.shape[2]
         i = t * b
-        flat_input = input.reshape((i, f_in))
+        flat_input = inputs.reshape((i, f_in))
         flat_output = output.reshape((i, f_out))
         flat_targets = targets.reshape(i, 1)
         flat_dHa = dHa.reshape((i, self.out_shapes['output'][2]))

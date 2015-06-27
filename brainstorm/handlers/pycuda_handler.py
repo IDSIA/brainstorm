@@ -12,6 +12,7 @@ import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 culinalg.init()
 
+
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
     def __init__(self):
@@ -184,7 +185,7 @@ class PyCudaHandler(Handler):
         n, k = m.shape
         tmp = gpuarray.empty((1, n), dtype=m.dtype)
         _softmax_impl(m.gpudata, tmp.gpudata, out.gpudata, np.int32(n),
-            np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
+                      np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
         return out
 
 
