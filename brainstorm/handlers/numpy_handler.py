@@ -52,7 +52,7 @@ class NumpyHandler(Handler):
     def sum_t(a, axis, out):
         assert axis is None or (len(a.shape) < 3 and (axis == 0 or axis == 1))
 
-        if len(out.shape) == len(a.shape):
+        if axis is not None and len(out.shape) == len(a.shape):
             keepdims = True
         else:
             keepdims = False

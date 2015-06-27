@@ -2,15 +2,21 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+import itertools
 import numpy as np
 from brainstorm.handlers import NumpyHandler, PyCudaHandler
 
 # np.random.seed(1234)
 ref = NumpyHandler(np.float32)
 handler = PyCudaHandler()
+some_2d_shapes = [[1, 1], (5, 5), [3, 4]]
+some_nd_shapes = [[1, 1, 4], [1, 1, 3, 3], [3, 4, 2, 1]]
 
 def operation_check(ref_op, op, ref_args, args):
     ref_op(*ref_args)
+    # print("Args are: ")
+    # for arg in args:
+    #     print(arg)
     op(*args)
     check = True
     for (ref_arg, arg) in zip(ref_args, args):
@@ -35,12 +41,147 @@ def get_args_from_ref_args(ref_args):
             args.append(ref_arg)
     return args
 
-def test_sum_t():
-    a = np.random.rand(5, 5)
-    a = a.astype(np.float32)
-    axis = 1
-    out = np.zeros((5, 1), dtype=np.float32)
-    ref_args = (a, axis, out)
+def get_random_arrays(shapes=some_2d_shapes, dtype=np.float32):
+    arrays = []
+    for shape in shapes:
+        arrays.append(np.random.rand(*shape).astype(dtype))
+    return arrays
 
-    assert operation_check(ref.sum_t, handler.sum_t, ref_args,
-                           get_args_from_ref_args(ref_args))
+def test_sum_t():
+    list_a = get_random_arrays()
+    list_axis = [0, 1]
+    for a, axis in itertools.product(list_a, list_axis):
+        if axis == 0:
+            out = np.zeros((1, a.shape[1]), dtype=np.float32)
+        elif axis == 1:
+            out = np.zeros((a.shape[0]), dtype=np.float32)
+        ref_args = (a, axis, out)
+
+        assert operation_check(ref.sum_t, handler.sum_t, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_dot_mm():
+    list_a = get_random_arrays()
+    list_b = get_random_arrays()
+    list_b = [b.T.copy() for b in list_b]
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.zeros((a.shape[0], a.shape[0]), dtype=np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.dot_mm, handler.dot_mm, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_add_dot_mm():
+    list_a = get_random_arrays()
+    list_b = get_random_arrays()
+    list_b = [b.T.copy() for b in list_b]
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.random.randn(a.shape[0], a.shape[0]).astype(np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.dot_mm, handler.dot_mm, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_mult_tt():
+    list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
+    list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.zeros_like(a, dtype=np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.mult_tt, handler.mult_tt, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_mult_add_tt():
+    list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
+    list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.random.randn(*a.shape).astype(np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.mult_add_tt, handler.mult_add_tt, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_mult_st():
+    list_a = [0, 0.5, -1]
+    list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.zeros_like(b, dtype=np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.mult_st, handler.mult_st, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_add_tt():
+    list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
+    list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.zeros_like(a, dtype=np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.add_tt, handler.add_tt, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_add_st():
+    list_a = [0, 0.5, -1]
+    list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.zeros_like(b, dtype=np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.add_st, handler.add_st, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_subtract_tt():
+    list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
+    list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.zeros_like(a, dtype=np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.subtract_tt, handler.subtract_tt, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_add_mv():
+    pass
+
+def test_broadcast_features_t():
+    pass
+
+def test_clip_t():
+    pass
+
+def test_log_t():
+    pass
+
+def test_divide_tt():
+    list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
+    list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
+
+    for a, b in itertools.izip(list_a, list_b):
+        out = np.zeros_like(a, dtype=np.float32)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.divide_tt, handler.divide_tt, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+def test_divide_mv():
+    pass
+
+def test_mult_mv():
+    pass
+
+def test_binarize_v():
+    pass
+
+def test_index_m_by_v():
+    pass
+
