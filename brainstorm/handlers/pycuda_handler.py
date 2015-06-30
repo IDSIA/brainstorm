@@ -59,10 +59,13 @@ class PyCudaHandler(Handler):
 
     # ---------------- Mathematical Operations ---------------- #
 
-    @staticmethod
-    def sum_t(a, axis, out):
-        assert axis is None or (len(a.shape) < 3 and (axis == 0 or axis == 1))
-        cumisc.sum(a, axis, out)
+    def sum_t(self, a, axis, out):
+        if len(a.shape) < 3 and (axis == 0 or axis == 1):
+            cumisc.sum(a, axis, out)
+        elif axis is None:
+            self.set_from_numpy(out, cumisc.sum(a))
+        else:
+            raise NotImplementedError
 
     @staticmethod
     def dot_mm(a, b, out, transa='N', transb='N'):
@@ -184,7 +187,7 @@ class PyCudaHandler(Handler):
         """Applies softmax to matrix over last dimension"""
         n, k = m.shape
         tmp = gpuarray.empty((1, n), dtype=m.dtype)
-        _softmax_impl(m.gpudata, tmp.gpudata, out.gpudata, np.int32(n),
+        _softmax_impl(m, tmp.gpudata, out, np.int32(n),
                       np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
         return out
 

@@ -15,14 +15,15 @@ some_nd_shapes = [[1, 1, 4], [1, 1, 3, 3], [3, 4, 2, 1]]
 
 
 def operation_check(ref_op, op, ref_args, args):
+    print("--" * 80)
     ref_op(*ref_args)
     op(*args)
     check = True
     for (ref_arg, arg) in zip(ref_args, args):
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
-            print("\nref:\n", ref_arg)
-            print("\narg:\n", arg)
+            print("\narray ref:\n", ref_arg)
+            print("\narray arg:\n", arg)
             check = np.allclose(ref_arg, arg_ref)
         else:
             print("\nref:\n", ref_arg)
@@ -51,12 +52,14 @@ def get_random_arrays(shapes=some_2d_shapes, dtype=ref_dtype):
 
 def test_sum_t():
     list_a = get_random_arrays()
-    list_axis = [0, 1]
+    list_axis = [0, 1, None]
     for a, axis in itertools.product(list_a, list_axis):
         if axis == 0:
             out = np.zeros((1, a.shape[1]), dtype=ref_dtype)
         elif axis == 1:
             out = np.zeros((a.shape[0]), dtype=ref_dtype)
+        else:
+            out = np.array([0.], dtype=ref_dtype).reshape(tuple())
         ref_args = (a, axis, out)
 
         assert operation_check(ref.sum_t, handler.sum_t, ref_args,
