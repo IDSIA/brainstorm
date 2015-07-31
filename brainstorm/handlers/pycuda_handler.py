@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function
 import numpy as np
+import warnings
 from pycuda import gpuarray, cumath
 import pycuda.driver as drv
 import pycuda.autoinit
@@ -12,16 +13,34 @@ import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 culinalg.init()
 
+try:
+    import ctypes
+    import libcudnn as cudnn
+except ImportError:
+    warnings.warn("CUDNN libraries are not available.")
+
 
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
 
     __undescribed__ = {'context', 'dtype', 'EMPTY'}
 
-    def __init__(self):
+    def __init__(self, init_cudnn=False):
         self.context = cumisc._global_cublas_handle
         self.dtype = np.float32
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
+
+        if init_cudnn:
+            self.cudnn_context = cudnn.cudnnCreate()
+            self.cudnn_tensor_format = cudnn.cudnnTensorFormat[
+                'CUDNN_TENSOR_NCHW']
+            self.cudnn_data_type = cudnn.cudnnDataType[
+                'CUDNN_DATA_FLOAT']
+            self.cudnn_convmode = cudnn.cudnnConvolutionMode[
+                'CUDNN_CROSS_CORRELATION']
+            self.cudnn_convpref = cudnn.cudnnConvolutionFwdPreference[
+                'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
+            self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_FEATURE_MAP']
 
     array_type = pycuda.gpuarray.GPUArray
     size = staticmethod(lambda x: x.size)
@@ -31,6 +50,7 @@ class PyCudaHandler(Handler):
 
     def __init_from_description__(self, description):
         self.__init__()
+
 
     def allocate(self, size):
         return gpuarray.zeros(size, dtype=self.dtype)
@@ -157,6 +177,64 @@ class PyCudaHandler(Handler):
     @staticmethod
     def index_m_by_v(m, v, out):
         index_m_by_v_kernel(out, v, m, m.shape[0], m.shape[1])
+
+
+    @classmethod
+    def conv2d_forward_batch(cls, inputs, weights, bias, outputs, pad, stride):
+        upscalex, upscaley = 1, 1  # currently not exposed to API
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *inputs.shape)
+
+        w_desc = cudnn.cudnnCreateFilterDescriptor()
+        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
+            *weights.shape)
+
+        b_desc = cudnn.cudnnCreateFilterDescriptor()
+        cudnn.cudnnSetFilter4dDescriptor(b_desc, self.cudnn_data_type,
+            1, bias.size, 1, 1)
+
+        conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
+        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, pad[0], pad[1],
+            stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
+
+        # TODO: remove this sanity check once implementation works
+        outshape = cudnn.cudnnGetConvolution2dForwardOutputDim(
+            conv_desc, x_desc, w_desc)
+        assert(outshape == outputs.shape)
+
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+        self.cudnn_data_type, *outputs.shape)
+
+        # TODO: we hardcode a memory limit of zero for cudnn
+        algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
+            self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
+            filters_desc, conv_desc, Y_desc, self.cudnn_convpref, 0)
+
+        alpha, beta = 1.0, 1.0
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        w_data = ctypes.c_void_p(int(weights.gpudata))
+        b_data = ctypes.c_void_p(int(outputs.gpudata))
+        y_data = ctypes.c_void_p(int(outputs.gpudata))
+        cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
+            x_data, w_desc, w_data, conv_desc, algo, None, 0, beta, y_desc,
+            y_data)
+        cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
+            b_desc, b_data, beta, y_desc, y_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyTensorDescriptor(y_desc)
+        cudnn.cudnnDestroyFilterDescriptor(w_desc)
+        cudnn.cudnnDestroyFilterDescriptor(b_desc)
+        cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
+        #cudnn.cudnnDestroy(cudnn_context)
+
+    @staticmethod
+    def conv2d_backward_batch(out_deltas, inputs, in_deltas, weights, bias,
+                              weight_deltas, bias_deltas, pad, stride):
+        pass
 
     # Activation functions
 
