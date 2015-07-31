@@ -71,7 +71,7 @@ def test_dot_mm():
     list_b = get_random_arrays()
     list_b = [b.T.copy() for b in list_b]
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros((a.shape[0], a.shape[0]), dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -84,7 +84,7 @@ def test_add_dot_mm():
     list_b = get_random_arrays()
     list_b = [b.T.copy() for b in list_b]
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.random.randn(a.shape[0], a.shape[0]).astype(np.float32)
         ref_args = (a, b, out)
 
@@ -96,7 +96,7 @@ def test_mult_tt():
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -108,7 +108,7 @@ def test_mult_add_tt():
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.random.randn(*a.shape).astype(np.float32)
         ref_args = (a, b, out)
 
@@ -120,7 +120,7 @@ def test_mult_st():
     list_a = [0, 0.5, -1]
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(b, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -132,7 +132,7 @@ def test_add_tt():
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -144,7 +144,7 @@ def test_add_st():
     list_a = [0, 0.5, -1]
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(b, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -156,7 +156,7 @@ def test_subtract_tt():
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -170,7 +170,7 @@ def test_add_mv():
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -222,7 +222,7 @@ def test_divide_tt():
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -236,7 +236,7 @@ def test_divide_mv():
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -250,7 +250,7 @@ def test_mult_mv():
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
-    for a, b in itertools.izip(list_a, list_b):
+    for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -281,7 +281,7 @@ def test_sigmoid_deriv():
     list_y = get_random_arrays(some_nd_shapes)
     list_dy = get_random_arrays(some_nd_shapes)
 
-    for x, y, dy in itertools.izip(list_x, list_y, list_dy):
+    for x, y, dy in zip(list_x, list_y, list_dy):
         dx = np.zeros_like(x, dtype=ref_dtype)
         ref_args = (x, y, dy, dx)
         assert operation_check(ref.sigmoid_deriv, handler.sigmoid_deriv,
@@ -303,7 +303,7 @@ def test_tanh_deriv():
     list_y = get_random_arrays(some_nd_shapes)
     list_dy = get_random_arrays(some_nd_shapes)
 
-    for x, y, dy in itertools.izip(list_x, list_y, list_dy):
+    for x, y, dy in zip(list_x, list_y, list_dy):
         dx = np.zeros_like(x, dtype=ref_dtype)
         ref_args = (x, y, dy, dx)
         assert operation_check(ref.tanh_deriv, handler.tanh_deriv,
@@ -325,7 +325,7 @@ def test_rel_deriv():
     list_y = get_random_arrays(some_nd_shapes)
     list_dy = get_random_arrays(some_nd_shapes)
 
-    for x, y, dy in itertools.izip(list_x, list_y, list_dy):
+    for x, y, dy in zip(list_x, list_y, list_dy):
         dx = np.zeros_like(x, dtype=ref_dtype)
         ref_args = (x, y, dy, dx)
         assert operation_check(ref.rel_deriv, handler.rel_deriv,
