@@ -3,7 +3,7 @@
 
 from __future__ import division, print_function, unicode_literals
 import numpy as np
-from brainstorm.handlers import NumpyHandler
+from brainstorm.handlers import NumpyHandler, PyCudaHandler
 
 np.random.seed(1234)
 
@@ -52,7 +52,7 @@ def _conv2d_forward_batch(inputs, weights, bias, outputs, pad, stride):
 def test_get_im2col_map():  # TODO
     pass
 
-def test_conv2d_forward_batch():
+def test_conv2d_forward_batch_numpy():
     print("\n--------- Testing conv2d_forward_batch ---------")
     _h = NumpyHandler(np.float64)
     for input_shape in ((3, 3), (5, 4), (4, 9)):
@@ -98,3 +98,54 @@ def test_conv2d_forward_batch():
 
                                 assert np.allclose(outputs, true_outputs)
 
+
+def test_conv2d_forward_batch_pycuda():
+    print("\n--------- Testing conv2d_forward_batch ---------")
+    _h = PyCudaHandler(init_cudnn=True)
+    for input_shape in ((3, 3), (5, 4), (4, 9)):
+        for num_images in (1, 4):
+            for num_input_maps in (1, 3):
+                for num_filters in (1, 3):
+                    for kernel_shape in ((1, 1), (2, 2), (3, 2)):
+                        for stride in ((1, 1), (2, 2), (1, 2)):
+                            for pad in (0, 1):
+                                print("Checking Inputs:", (num_images,
+                                      num_input_maps) + input_shape)
+                                print("Filters:", (num_filters, num_input_maps)
+                                      + kernel_shape)
+                                print("Stride: ", stride, "Pad: ", pad)
+                                inputs = np.random.rand(num_images,
+                                                        num_input_maps,
+                                                        *input_shape)
+                                weights = np.random.rand(num_filters,
+                                                         num_input_maps,
+                                                         *kernel_shape)
+                                bias =  np.random.rand(num_filters)
+
+                                output_height = \
+                                    (input_shape[0] + 2 * pad -
+                                     kernel_shape[0]) / stride[0] + 1
+                                output_width = \
+                                    (input_shape[1] + 2 * pad -
+                                     kernel_shape[1]) / stride[1] + 1
+
+                                true_outputs = np.zeros((num_images,
+                                                         num_filters)
+                                                        + (output_height,
+                                                           output_width))
+
+                                _conv2d_forward_batch(inputs, weights, bias,
+                                                      true_outputs, pad, stride)
+
+                                outputs = np.zeros((num_images, num_filters) +
+                                                   (output_height,
+                                                    output_width))
+                                i_dev = _h.create_from_numpy(inputs)
+                                w_dev = _h.create_from_numpy(weights)
+                                b_dev = _h.create_from_numpy(bias)
+                                o_dev = _h.create_from_numpy(outputs)
+                                _h.conv2d_forward_batch(i_dev, w_dev, b_dev,
+                                                        o_dev, pad, stride)
+                                outputs = _h.get_numpy_copy(o_dev)
+
+                                assert np.allclose(outputs, true_outputs)

@@ -40,7 +40,7 @@ class PyCudaHandler(Handler):
                 'CUDNN_CROSS_CORRELATION']
             self.cudnn_convpref = cudnn.cudnnConvolutionFwdPreference[
                 'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
-            self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_FEATURE_MAP']
+            self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
 
     array_type = pycuda.gpuarray.GPUArray
     size = staticmethod(lambda x: x.size)
@@ -179,8 +179,7 @@ class PyCudaHandler(Handler):
         index_m_by_v_kernel(out, v, m, m.shape[0], m.shape[1])
 
 
-    @classmethod
-    def conv2d_forward_batch(cls, inputs, weights, bias, outputs, pad, stride):
+    def conv2d_forward_batch(self, inputs, weights, bias, outputs, pad, stride):
         upscalex, upscaley = 1, 1  # currently not exposed to API
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
@@ -191,18 +190,20 @@ class PyCudaHandler(Handler):
         cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
             *weights.shape)
 
-        b_desc = cudnn.cudnnCreateFilterDescriptor()
-        cudnn.cudnnSetFilter4dDescriptor(b_desc, self.cudnn_data_type,
-            1, bias.size, 1, 1)
+        b_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, 1, bias.size, 1, 1)
 
         conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
-        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, pad[0], pad[1],
+        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, pad, pad,
             stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
 
         # TODO: remove this sanity check once implementation works
         outshape = cudnn.cudnnGetConvolution2dForwardOutputDim(
             conv_desc, x_desc, w_desc)
         assert(outshape == outputs.shape)
+        assert(weights.shape[0] == bias.size)
+        assert(outputs.shape[1] == bias.size)
 
         y_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
@@ -211,16 +212,18 @@ class PyCudaHandler(Handler):
         # TODO: we hardcode a memory limit of zero for cudnn
         algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
             self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
-            filters_desc, conv_desc, Y_desc, self.cudnn_convpref, 0)
+            self.cudnn_convpref, 0)
 
         alpha, beta = 1.0, 1.0
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         w_data = ctypes.c_void_p(int(weights.gpudata))
-        b_data = ctypes.c_void_p(int(outputs.gpudata))
+        b_data = ctypes.c_void_p(int(bias.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
         cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
             x_data, w_desc, w_data, conv_desc, algo, None, 0, beta, y_desc,
             y_data)
+        print(cudnn.cudnnGetTensor4dDescriptor(b_desc))
+        print(cudnn.cudnnGetTensor4dDescriptor(y_desc))
         cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
             b_desc, b_data, beta, y_desc, y_data)
 
