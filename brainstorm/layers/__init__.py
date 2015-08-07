@@ -17,6 +17,7 @@ from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
 from brainstorm.layers.classification_layer import ClassificationLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
+from brainstorm.layers.mask_layer import MaskLayerImpl
 
 
 CONSTRUCTION_LAYERS = {}
@@ -58,6 +59,10 @@ def SquaredDifferenceLayer(name=None):
                                       name=name)
 
 
+def MaskLayer(name=None):
+    return ConstructionWrapper.create('MaskLayer', name=name)
+
+
 # ------------------------ Automatic Construction Layers ----------------------
 
 def construction_layer_for(layer_impl):
@@ -78,7 +83,6 @@ this_module = sys.modules[__name__]  # this module
 for name, cl in CONSTRUCTION_LAYERS.items():
     if not hasattr(this_module, name):
         setattr(this_module, name, cl)
-
 
 
 # somehow str is needed because in __all__ unicode does not work

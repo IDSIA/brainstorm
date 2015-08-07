@@ -16,6 +16,8 @@ from brainstorm.layers.rnn_layer import RnnLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
+from brainstorm.layers.mask_layer import MaskLayerImpl
+
 import pytest
 
 np.random.seed(1234)
@@ -110,6 +112,14 @@ def lstm_layer():
                           size=7)
     return layer, {}
 
+
+def mask_layer():
+    layer = MaskLayerImpl('MaskLayer',
+                          {'default': ShapeTemplate('T', 'B', 3, 2),
+                           'mask': ShapeTemplate('T', 'B', 1)},
+                          NO_CON, NO_CON)
+    return layer, {'skip_inputs': ['mask']}
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -118,7 +128,8 @@ layers_to_test = [
     classification_layer,
     rnn_layer,
     squared_difference_layer,
-    lstm_layer
+    lstm_layer,
+    mask_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]
