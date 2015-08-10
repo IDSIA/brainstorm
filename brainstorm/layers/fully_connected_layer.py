@@ -38,7 +38,7 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         in_size = self.in_shapes['default'].feature_size
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, self.size)
+        parameters['W'] = ShapeTemplate(self.size, in_size)
         parameters['b'] = ShapeTemplate(self.size)
         return parameters
 
@@ -64,7 +64,7 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         flat_Ha = _h.reshape(Ha, (t * b, self.out_shapes['default'][2]))
 
         # calculate outputs
-        _h.dot_mm(flat_input, WX, flat_Ha)
+        _h.dot_mm(flat_input, WX, flat_Ha, transb='T')
         _h.add_mv(flat_Ha, W_bias, flat_Ha)
         self.act_func(Ha, outputs)
 
@@ -89,6 +89,6 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
 
         # calculate in_deltas and gradients
         self.act_func_deriv(Ha, outputs, out_deltas, dHa)
-        _h.dot_add_mm(flat_dHa, WX, out=flat_in_delta_buffer, transb='T')
-        _h.dot_mm(flat_input, flat_dHa, dWX, transa='T')
+        _h.dot_add_mm(flat_dHa, WX, out=flat_in_delta_buffer)
+        _h.dot_mm(flat_dHa, flat_input, dWX, transa='T')
         _h.sum_t(flat_dHa, axis=0, out=dW_bias)

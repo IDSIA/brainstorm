@@ -72,8 +72,9 @@ def test_initialize_with_array(net):
     net.initialize(0,
                    FullyConnectedLayer_1={'b': [1, 2]},
                    FullyConnectedLayer_2={'b': np.array([3, 4, 5]),
-                                          'W': [[6, 7, 8],
-                                                [9, 10, 11]]},
+                                          'W': [[6, 7],
+                                                [8, 9],
+                                                [10, 11]]},
                    OutputLayer={'b': [12]})
 
     assert np.all(net.buffer.forward.FullyConnectedLayer_1.parameters.W == 0)
@@ -82,7 +83,7 @@ def test_initialize_with_array(net):
     assert np.all(net.buffer.forward.FullyConnectedLayer_2.parameters.b ==
                   [3, 4, 5])
     assert np.all(net.buffer.forward.FullyConnectedLayer_2.parameters.W ==
-                  [[6, 7, 8], [9, 10, 11]])
+                  [[6, 7], [8, 9], [10, 11]])
     assert np.all(net.buffer.forward.OutputLayer.parameters.W == 0)
     assert np.all(net.buffer.forward.OutputLayer.parameters.b == 12)
 

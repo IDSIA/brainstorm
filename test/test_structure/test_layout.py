@@ -223,7 +223,7 @@ def test_create_layout_stub(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (2, 3)},
+                'W': {'@type': 'array', '@index': 0, '@shape': (3, 2)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (3,)}
             },
             'internals': {
@@ -250,7 +250,7 @@ def test_create_layout_stub(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (2, 5)},
+                'W': {'@type': 'array', '@index': 0, '@shape': (5, 2)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (5,)}
             },
             'internals': {
@@ -277,7 +277,7 @@ def test_create_layout_stub(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (8, 7)},
+                'W': {'@type': 'array', '@index': 0, '@shape': (7, 8)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (7,)}
             },
             'internals': {
@@ -304,7 +304,7 @@ def test_create_layout_stub(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (12, 11)},
+                'W': {'@type': 'array', '@index': 0, '@shape': (11, 12)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (11,)}
             },
             'internals': {
@@ -409,7 +409,7 @@ def test_create_layout(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (2, 3),
+                'W': {'@type': 'array', '@index': 0, '@shape': (3, 2),
                       '@hub': 0, '@slice': (0, 6)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (3,),
                       '@hub': 0, '@slice': (6, 9)}
@@ -441,7 +441,7 @@ def test_create_layout(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (2, 5),
+                'W': {'@type': 'array', '@index': 0, '@shape': (5, 2),
                       '@hub': 0, '@slice': (9, 19)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (5,),
                       '@hub': 0, '@slice': (19, 24)}
@@ -473,7 +473,7 @@ def test_create_layout(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (8, 7),
+                'W': {'@type': 'array', '@index': 0, '@shape': (7, 8),
                       '@hub': 0, '@slice': (24, 80)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (7,),
                       '@hub': 0, '@slice': (80, 87)}
@@ -505,7 +505,7 @@ def test_create_layout(layers):
             'parameters': {
                 '@type': 'BufferView',
                 '@index': 2,
-                'W': {'@type': 'array', '@index': 0, '@shape': (12, 11),
+                'W': {'@type': 'array', '@index': 0, '@shape': (11, 12),
                       '@hub': 0, '@slice': (87, 219)},
                 'b': {'@type': 'array', '@index': 1, '@shape': (11,),
                       '@hub': 0, '@slice': (219, 230)}
