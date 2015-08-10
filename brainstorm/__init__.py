@@ -9,7 +9,7 @@ from brainstorm.initializers import *
 from brainstorm.training import *
 from brainstorm.data_iterators import Online, Undivided, Minibatches
 from brainstorm.weight_modifiers import (
-    ClipWeights, MaskWeights, FreezeWeights, RescaleIncomingWeights)
+    ClipWeights, MaskWeights, FreezeWeights, ConstrainL2Norm)
 
 
 __version__ = '0.1'

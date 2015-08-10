@@ -54,7 +54,7 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         kernel_y = self.kernel_size[1]
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(num_input_maps, num_filters,
+        parameters['W'] = ShapeTemplate(num_filters, num_input_maps,
                                         kernel_x, kernel_y)
         parameters['b'] = ShapeTemplate(num_filters)
         return parameters
