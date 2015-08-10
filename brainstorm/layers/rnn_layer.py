@@ -37,7 +37,7 @@ class RnnLayerImpl(LayerBaseImpl):
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, self.size)
+        parameters['W'] = ShapeTemplate(self.size, in_size)
         parameters['R'] = ShapeTemplate(self.size, self.size)
         parameters['bias'] = ShapeTemplate(self.size)
         return parameters
@@ -63,7 +63,7 @@ class RnnLayerImpl(LayerBaseImpl):
         flat_inputs = inputs.reshape((i, f))
         flat_Ha = Ha[:-1].reshape((i, Ha.shape[2]))
 
-        _h.dot_mm(flat_inputs, W, flat_Ha)
+        _h.dot_mm(flat_inputs, W, flat_Ha, transb='T')
         _h.add_mv(flat_Ha, bias, flat_Ha)
 
         for t in range(inputs.shape[0]):
@@ -95,8 +95,8 @@ class RnnLayerImpl(LayerBaseImpl):
         flat_dHa = dHa[:-1].reshape((i, dHa.shape[2]))
 
         # calculate in_deltas and gradients
-        _h.dot_add_mm(flat_dHa, W, flat_dinputs, transb='T')
-        _h.dot_add_mm(flat_inputs, flat_dHa, dW, transa='T')
+        _h.dot_add_mm(flat_dHa, W, flat_dinputs)
+        _h.dot_add_mm(flat_dHa, flat_inputs, dW, transa='T')
         dbias_tmp = _h.allocate(dbias.shape)
         _h.sum_t(flat_dHa, axis=0, out=dbias_tmp)
         _h.add_tt(dbias, dbias_tmp, dbias)
