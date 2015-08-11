@@ -39,12 +39,12 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
 
         parameters = OrderedDict()
         parameters['W'] = ShapeTemplate(self.size, in_size)
-        parameters['b'] = ShapeTemplate(self.size)
+        parameters['bias'] = ShapeTemplate(self.size)
         return parameters
 
     def get_internal_structure(self):
         internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', self.size)
+        internals['H'] = ShapeTemplate('T', 'B', self.size)
         return internals
 
     def _get_output_shapes(self):
@@ -53,42 +53,42 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
         _h = self.handler
-        WX, W_bias = forward_buffers.parameters
+        W, bias = forward_buffers.parameters
         inputs = forward_buffers.inputs.default
         outputs = forward_buffers.outputs.default
-        Ha = forward_buffers.internals.Ha
+        H = forward_buffers.internals.H
 
         # reshape
         t, b, f = inputs.shape
         flat_input = _h.reshape(inputs, (t * b, f))
-        flat_Ha = _h.reshape(Ha, (t * b, self.out_shapes['default'][2]))
+        flat_H = _h.reshape(H, (t * b, self.out_shapes['default'][2]))
 
         # calculate outputs
-        _h.dot_mm(flat_input, WX, flat_Ha, transb='T')
-        _h.add_mv(flat_Ha, W_bias, flat_Ha)
-        self.act_func(Ha, outputs)
+        _h.dot_mm(flat_input, W, flat_H, transb='T')
+        _h.add_mv(flat_H, bias, flat_H)
+        self.act_func(H, outputs)
 
     def backward_pass(self, forward_buffers, backward_buffers):
 
         # prepare
         _h = self.handler
-        WX, W_bias = forward_buffers.parameters
-        dWX, dW_bias = backward_buffers.parameters
+        W, bias = forward_buffers.parameters
+        dW, dbias = backward_buffers.parameters
         inputs = forward_buffers.inputs.default
         outputs = forward_buffers.outputs.default
         in_deltas = backward_buffers.inputs.default
         out_deltas = backward_buffers.outputs.default
-        Ha = forward_buffers.internals.Ha
-        dHa = backward_buffers.internals.Ha
+        H = forward_buffers.internals.H
+        dH = backward_buffers.internals.H
 
         # reshape
         t, b, f = inputs.shape
         flat_input = _h.reshape(inputs, (t * b, f))
-        flat_dHa = _h.reshape(dHa, (t * b, self.out_shapes['default'][2]))
+        flat_dH = _h.reshape(dH, (t * b, self.out_shapes['default'][2]))
         flat_in_delta_buffer = _h.reshape(in_deltas, (t * b, f))
 
         # calculate in_deltas and gradients
-        self.act_func_deriv(Ha, outputs, out_deltas, dHa)
-        _h.dot_add_mm(flat_dHa, WX, out=flat_in_delta_buffer)
-        _h.dot_mm(flat_dHa, flat_input, dWX, transa='T')
-        _h.sum_t(flat_dHa, axis=0, out=dW_bias)
+        self.act_func_deriv(H, outputs, out_deltas, dH)
+        _h.dot_add_mm(flat_dH, W, out=flat_in_delta_buffer)
+        _h.dot_mm(flat_dH, flat_input, dW, transa='T')
+        _h.sum_t(flat_dH, axis=0, out=dbias)

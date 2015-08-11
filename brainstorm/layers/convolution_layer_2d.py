@@ -56,14 +56,14 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         parameters = OrderedDict()
         parameters['W'] = ShapeTemplate(num_filters, num_input_maps,
                                         kernel_x, kernel_y)
-        parameters['b'] = ShapeTemplate(num_filters)
+        parameters['bias'] = ShapeTemplate(num_filters)
         return parameters
 
     def get_internal_structure(self):
         output_shape = self.out_shapes['default'].feature_size
 
         internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', output_shape)
+        internals['H'] = ShapeTemplate('T', 'B', output_shape)
         return internals
 
     def _get_output_shapes(self):
@@ -85,29 +85,29 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
         _h = self.handler
-        WX, W_bias = forward_buffers.parameters
-        input = forward_buffers.inputs.default
+        W, bias = forward_buffers.parameters
+        inputs = forward_buffers.inputs.default
         output = forward_buffers.outputs.default
-        Ha = forward_buffers.internals.Ha
+        H = forward_buffers.internals.H
 
         # calculate outputs
-        _h.conv2d_forward_batch(input, WX, W_bias, Ha, self.pad, self.stride)
-        self.act_func(Ha, output)
+        _h.conv2d_forward_batch(inputs, W, bias, H, self.pad, self.stride)
+        self.act_func(H, output)
 
     def backward_pass(self, forward_buffers, backward_buffers):
 
         # prepare
         _h = self.handler
-        WX, W_bias = forward_buffers.parameters
-        dWX, dW_bias = backward_buffers.parameters
+        W, bias = forward_buffers.parameters
+        dW, dbias = backward_buffers.parameters
         inputs = forward_buffers.inputs.default
         outputs = forward_buffers.outputs.default
         in_deltas = backward_buffers.inputs.default
         out_deltas = backward_buffers.outputs.default
-        Ha = forward_buffers.internals.Ha
-        dHa = backward_buffers.internals.Ha
+        H = forward_buffers.internals.H
+        dH = backward_buffers.internals.H
 
         # calculate in_deltas and gradients
-        self.act_func_deriv(Ha, outputs, out_deltas, dHa)
-        _h.conv2d_backward_batch(dHa, inputs, in_deltas, WX, W_bias, dWX,
-                                 dW_bias, self.pad, self.stride)
+        self.act_func_deriv(H, outputs, out_deltas, dH)
+        _h.conv2d_backward_batch(dH, inputs, in_deltas, W, bias, dW,
+                                 dbias, self.pad, self.stride)

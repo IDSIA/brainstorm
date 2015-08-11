@@ -1,6 +1,7 @@
 # Created by https://www.gitignore.io
 
 *.gz
+*.npy
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

@@ -67,29 +67,32 @@ class SaveBestWeights(Monitor):
     __undescribed__ = {'weights': None}
     __default_values__ = {'filename': None}
 
-    def __init__(self, error_log_name, filename=None, name=None, verbose=None):
+    def __init__(self, error_log_name, filename=None, name=None,
+                 criterion='max', verbose=None):
         super(SaveBestWeights, self).__init__(name, 'epoch', 1, verbose)
         self.error_log_name = error_log_name.split('.')
         self.filename = filename
         self.weights = None
+        assert criterion == 'min' or criterion == 'max'
+        self.criterion = criterion
 
     def __call__(self, epoch, net, stepper, logs):
         e = logs
         for en in self.error_log_name:
             e = e[en]
-        min_error_idx = np.argmin(e)
-        if min_error_idx == len(e) - 1:
+        best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
+        if best_idx == len(e) - 1:
             params = net.handler.get_numpy_copy(net.buffer.forward.parameters)
             if self.filename is not None:
                 if self.run_verbosity:
-                    print(">> Saving weights to {0}...".format(self.filename))
+                    print(">> Saving weights to {0} ...".format(self.filename))
                 np.save(self.filename, params)
             else:
                 if self.run_verbosity:
-                    print(">> Caching weights")
+                    print(">> Caching weights on improvement ...")
                 self.weights = params
         elif self.run_verbosity:
-            print(">> Last saved weigths after epoch {}".format(min_error_idx))
+            print(">> Last saved weights after epoch {}".format(best_idx))
 
     def load_weights(self):
         return np.load(self.filename) if self.filename is not None \
