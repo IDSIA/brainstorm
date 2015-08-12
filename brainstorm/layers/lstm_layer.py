@@ -32,7 +32,7 @@ class LstmLayerImpl(LayerBaseImpl):
         }
 
         self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'linear')]
+            self.kwargs.get('activation_function', 'tanh')]
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
