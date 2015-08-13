@@ -70,8 +70,8 @@ class SgdStep(TrainingStep):
         loss = self.net.get_loss_value()
         self.net.backward_pass()
         self.net.handler.mult_st(-learning_rate,
-                                      self.net.buffer.backward.parameters,
-                                      out=self.update)
+                                 self.net.buffer.backward.parameters,
+                                 out=self.update)
         self.net.handler.add_tt(self.update,
                                 self.net.buffer.forward.parameters,
                                 out=self.net.buffer.forward.parameters)

@@ -40,9 +40,8 @@ class PyCudaHandler(Handler):
         assert type(mem) == self.array_type
         return mem.get()
 
-    @staticmethod
-    def create_from_numpy(arr):
-        return gpuarray.to_gpu(arr)
+    def create_from_numpy(self, arr):
+        return gpuarray.to_gpu(arr.astype(self.dtype))
 
     @staticmethod
     def copy_to(dest, src):

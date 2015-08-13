@@ -32,16 +32,16 @@ class LstmLayerImpl(LayerBaseImpl):
         }
 
         self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'linear')]
+            self.kwargs.get('activation_function', 'tanh')]
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
         
         parameters = OrderedDict()
-        parameters['Wz'] = ShapeTemplate(in_size, self.size)
-        parameters['Wi'] = ShapeTemplate(in_size, self.size)
-        parameters['Wf'] = ShapeTemplate(in_size, self.size)
-        parameters['Wo'] = ShapeTemplate(in_size, self.size)
+        parameters['Wz'] = ShapeTemplate(self.size, in_size)
+        parameters['Wi'] = ShapeTemplate(self.size, in_size)
+        parameters['Wf'] = ShapeTemplate(self.size, in_size)
+        parameters['Wo'] = ShapeTemplate(self.size, in_size)
 
         parameters['Rz'] = ShapeTemplate(self.size, self.size)
         parameters['Ri'] = ShapeTemplate(self.size, self.size)
@@ -92,19 +92,19 @@ class LstmLayerImpl(LayerBaseImpl):
 
         for t in range(time_size):
             # Block input
-            _h.dot_mm(x[t], Wz, Za[t])
+            _h.dot_mm(x[t], Wz, Za[t], transb='T')
             _h.dot_add_mm(y[t - 1], Rz, Za[t])
             _h.add_mv(Za[t], bz, Za[t])
             self.act_func(Za[t], Zb[t])
 
             # Input Gate
-            _h.dot_mm(x[t], Wi, Ia[t])
+            _h.dot_mm(x[t], Wi, Ia[t], transb='T')
             _h.dot_add_mm(y[t - 1], Ri, Ia[t])
             _h.add_mv(Ia[t], bi, Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
-            _h.dot_mm(x[t], Wf, Fa[t])
+            _h.dot_mm(x[t], Wf, Fa[t], transb='T')
             _h.dot_add_mm(y[t - 1], Rf, Fa[t])
             _h.add_mv(Fa[t], bf, Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
@@ -114,7 +114,7 @@ class LstmLayerImpl(LayerBaseImpl):
             _h.mult_add_tt(Fb[t], Ca[t - 1], Ca[t])
 
             # Output Gate
-            _h.dot_mm(x[t], Wo, Oa[t])
+            _h.dot_mm(x[t], Wo, Oa[t], transb='T')
             _h.dot_add_mm(y[t - 1], Ro, Oa[t])
             _h.add_mv(Oa[t], bo, Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
@@ -174,16 +174,16 @@ class LstmLayerImpl(LayerBaseImpl):
             self.act_func_deriv(Za[t], Zb[t], dZb[t], dZa[t])
 
             # Input Deltas
-            _h.dot_add_mm(dIa[t], Wi, dx[t], transb='T')
-            _h.dot_add_mm(dFa[t], Wf, dx[t], transb='T')
-            _h.dot_add_mm(dOa[t], Wo, dx[t], transb='T')
-            _h.dot_add_mm(dZa[t], Wz, dx[t], transb='T')
+            _h.dot_add_mm(dIa[t], Wi, dx[t])
+            _h.dot_add_mm(dFa[t], Wf, dx[t])
+            _h.dot_add_mm(dOa[t], Wo, dx[t])
+            _h.dot_add_mm(dZa[t], Wz, dx[t])
 
             # Gradients for the input weights
-            _h.dot_add_mm(x[t], dIa[t], dWi, transa='T')
-            _h.dot_add_mm(x[t], dFa[t], dWf, transa='T')
-            _h.dot_add_mm(x[t], dOa[t], dWo, transa='T')
-            _h.dot_add_mm(x[t], dZa[t], dWz, transa='T')
+            _h.dot_add_mm(dIa[t], x[t], dWi, transa='T')
+            _h.dot_add_mm(dFa[t], x[t], dWf, transa='T')
+            _h.dot_add_mm(dOa[t], x[t], dWo, transa='T')
+            _h.dot_add_mm(dZa[t], x[t], dWz, transa='T')
 
             # Gradient for the recurrent weights
             _h.dot_add_mm(y[t], dIa[t + 1], dRi, transa='T')

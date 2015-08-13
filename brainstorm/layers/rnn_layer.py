@@ -32,12 +32,12 @@ class RnnLayerImpl(LayerBaseImpl):
         }
 
         self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'linear')]
+            self.kwargs.get('activation_function', 'tanh')]
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, self.size)
+        parameters['W'] = ShapeTemplate(self.size, in_size)
         parameters['R'] = ShapeTemplate(self.size, self.size)
         parameters['bias'] = ShapeTemplate(self.size)
         return parameters
@@ -45,6 +45,7 @@ class RnnLayerImpl(LayerBaseImpl):
     def get_internal_structure(self):
         internals = OrderedDict()
         internals['Ha'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Hb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
         return internals
 
     def _get_output_shapes(self):
@@ -61,10 +62,10 @@ class RnnLayerImpl(LayerBaseImpl):
         t, b, f = inputs.shape
         i = t * b
         flat_inputs = inputs.reshape((i, f))
-        flat_Ha = Ha[:-1].reshape((i, Ha.shape[2]))
+        flat_H = Ha[:-1].reshape((i, Ha.shape[2]))
 
-        _h.dot_mm(flat_inputs, W, flat_Ha)
-        _h.add_mv(flat_Ha, bias, flat_Ha)
+        _h.dot_mm(flat_inputs, W, flat_H, transb='T')
+        _h.add_mv(flat_H, bias, flat_H)
 
         for t in range(inputs.shape[0]):
             _h.dot_add_mm(outputs[t - 1], R, Ha[t])
@@ -81,12 +82,15 @@ class RnnLayerImpl(LayerBaseImpl):
         doutputs = backward_buffers.outputs.default
         Ha = forward_buffers.internals.Ha
         dHa = backward_buffers.internals.Ha
+        dHb = backward_buffers.internals.Hb
 
-        _h.copy_to(dHa, doutputs)
+        _h.copy_to(dHb, doutputs)
         T = inputs.shape[0] - 1
+        self.act_func_deriv(Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
-            self.act_func_deriv(Ha[t], outputs[t], doutputs[t], dHa[t])
-            _h.dot_add_mm(dHa[t + 1], R, dHa[t], transb='T')
+            _h.dot_add_mm(dHa[t + 1], R, dHb[t], transb='T')
+            self.act_func_deriv(Ha[t], outputs[t],
+                                dHb[t], dHa[t])
 
         t, b, f = inputs.shape
         i = t * b
@@ -95,8 +99,8 @@ class RnnLayerImpl(LayerBaseImpl):
         flat_dHa = dHa[:-1].reshape((i, dHa.shape[2]))
 
         # calculate in_deltas and gradients
-        _h.dot_add_mm(flat_dHa, W, flat_dinputs, transb='T')
-        _h.dot_add_mm(flat_inputs, flat_dHa, dW, transa='T')
+        _h.dot_add_mm(flat_dHa, W, flat_dinputs)
+        _h.dot_add_mm(flat_dHa, flat_inputs, dW, transa='T')
         dbias_tmp = _h.allocate(dbias.shape)
         _h.sum_t(flat_dHa, axis=0, out=dbias_tmp)
         _h.add_tt(dbias, dbias_tmp, dbias)

@@ -50,7 +50,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         out_size = self.out_shapes['output'].feature_size
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, out_size)
+        parameters['W'] = ShapeTemplate(out_size, in_size)
         parameters['b'] = ShapeTemplate(out_size)
         return parameters
 
@@ -74,7 +74,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         flat_targets = targets.reshape(i, 1)
 
         # calculate activation
-        _h.dot_mm(flat_input, W, flat_Ha)
+        _h.dot_mm(flat_input, W, flat_Ha, transb='T')
         _h.add_mv(flat_Ha, bias, flat_Ha)
 
         # softmax
@@ -120,6 +120,6 @@ class ClassificationLayerImpl(LayerBaseImpl):
         _h.mult_mv(flat_dHa, flat_dloss, flat_dHa)
 
         # calculate in_deltas and gradients
-        _h.dot_add_mm(flat_dHa, W, out=flat_dinput, transb='T')
-        _h.dot_mm(flat_input, flat_dHa, dW, transa='T')
+        _h.dot_add_mm(flat_dHa, W, out=flat_dinput)
+        _h.dot_mm(flat_dHa, flat_input, dW, transa='T')
         _h.sum_t(flat_dHa, axis=0, out=dbias)

@@ -18,6 +18,8 @@ from brainstorm.layers.binomial_cross_entropy_layer import \
 from brainstorm.layers.classification_layer import ClassificationLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.mask_layer import MaskLayerImpl
+from brainstorm.layers.lstm_layer import LstmLayerImpl
+from brainstorm.layers.rnn_layer import RnnLayerImpl
 
 
 CONSTRUCTION_LAYERS = {}
@@ -43,6 +45,13 @@ def LossLayer(name=None):
     return ConstructionWrapper.create('LossLayer', name=name)
 
 
+def LstmLayer(size, activation_function='tanh', name=None):
+    return ConstructionWrapper.create('LstmLayer',
+                                      size=size,
+                                      name=name,
+                                      activation_function=activation_function)
+
+
 def BinomialCrossEntropyLayer(name=None):
     return ConstructionWrapper.create('BinomialCrossEntropyLayer',
                                       name=name)
@@ -52,6 +61,13 @@ def ClassificationLayer(size, name=None):
     return ConstructionWrapper.create('ClassificationLayer',
                                       size=size,
                                       name=name)
+
+
+def RnnLayer(size, activation_function='tanh', name=None):
+    return ConstructionWrapper.create('RnnLayer',
+                                      size=size,
+                                      name=name,
+                                      activation_function=activation_function)
 
 
 def SquaredDifferenceLayer(name=None):

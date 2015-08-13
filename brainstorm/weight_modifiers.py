@@ -24,40 +24,45 @@ class WeightModifier(Seedable, Describable):
                                     self.__class__.__name__)
 
 
-class RescaleIncomingWeights(WeightModifier):
+class ConstrainL2Norm(WeightModifier):
 
     """
-    Rescales the incoming weights for every neuron to sum to one (target_sum).
+    Consrrains the L2 norm of the incoming weights to every neuron/unit to be
+    less than or equal to a limit.
+    If the L2 norm for any unit exceeds the limit, the weights are
+    rescaled such that the squared L2 norm equals the limit.
     Ignores Biases.
 
     Should be added to the network via the set_weight_modifiers method like so:
 
-    >> net.set_weight_modifiers(RnnLayer={'HX': RescaleIncomingWeights()})
+    >> net.set_weight_modifiers(RnnLayer={'HX': ConstrainL2Norm()})
 
     See Network.set_weight_modifiers for more information on how to control
     which weights to affect.
     """
 
-    __default_values__ = {'target_sum': 1.0}
+    __default_values__ = {'limit': 1.0}
 
-    def __init__(self, target_sum=1.0):
-        super(RescaleIncomingWeights, self).__init__()
-        self.target_sum = target_sum
+    def __init__(self, limit=1.0):
+        super(ConstrainL2Norm, self).__init__()
+        self.limit = limit
 
     def __call__(self, handler, view):
-        if not len(view.shape) == 2:  # only works for two dimensional inputs
-            raise WeightModificationError(
-                '{} only works for two dimensional parameters'
-                .format(self.__class__.__name__))
+        if len(view.shape) < 2:
+            return
+        mat = handler.reshape(view, (view.shape[0], view.size // view.shape[0]))
+        sq_norm = handler.allocate((view.shape[0], 1))
+        divisor = handler.allocate(sq_norm.shape)
 
-        column_sum = handler.allocate((1, view.shape[1]))
-        handler.sum_t(view, axis=0, out=column_sum)
-        handler.mult_st(self.target_sum, column_sum, column_sum)
-        handler.divide_mv(view, column_sum, view)
+        handler.sum_t(mat * mat, axis=1, out=sq_norm)
+        handler.mult_st(1 / self.limit, sq_norm ** 0.5, out=divisor)
+        handler.clip_t(divisor, a_min=1.0,
+                       a_max=np.finfo(handler.dtype).max, out=divisor)
+        handler.divide_mv(mat, divisor, mat)
 
     def __repr__(self):
-        return "<{}.{}.RescaleIncomingWeights to {:0.4f}>"\
-            .format(self.layer_name, self.view_name, self.target_sum)
+        return "<{}.{}.ConstrainL2Norm to {:0.4f}>"\
+            .format(self.layer_name, self.view_name, self.limit)
 
 
 class ClipWeights(WeightModifier):
