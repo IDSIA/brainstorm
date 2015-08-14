@@ -260,7 +260,8 @@ class MonitorAccuracy(Monitor):
 
     """
     def __init__(self, iter_name, output, targets_name='targets',
-                 timescale='epoch', interval=1, name=None, verbose=None):
+                 mask_name='mask', timescale='epoch', interval=1,
+                 name=None, verbose=None):
 
         super(MonitorAccuracy, self).__init__(name, timescale, interval,
                                               verbose)
@@ -268,7 +269,9 @@ class MonitorAccuracy(Monitor):
         self.out_layer, _, self.out_name = output.partition('.')
         self.out_name = self.out_name or 'default'
         self.targets_name = targets_name
+        self.mask_name = mask_name
         self.iter = None
+        self.masked = False
 
     def start(self, net, stepper, verbose, monitor_kwargs):
         super(MonitorAccuracy, self).start(net, stepper, verbose,
@@ -276,6 +279,7 @@ class MonitorAccuracy(Monitor):
         assert self.iter_name in monitor_kwargs
         assert self.out_layer in net.layers
         self.iter = monitor_kwargs[self.iter_name]
+        self.masked = self.mask_name in self.iter.data.keys()
 
     def __call__(self, epoch, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
@@ -300,8 +304,14 @@ class MonitorAccuracy(Monitor):
 
             assert out_class.shape == target_class.shape
 
-            errors += np.sum(out_class != target_class)
-            totals += np.prod(target_class.shape)
+            if self.masked:
+                mask = _h.get_numpy_copy(net.buffer.forward.InputLayer
+                                         .outputs[self.mask_name])[:, :, 0]
+                errors += np.sum((out_class != target_class) * mask)
+                totals += np.sum(mask)
+            else:
+                errors += np.sum(out_class != target_class)
+                totals += np.prod(target_class.shape)
 
         return 1.0 - errors / totals
 

@@ -139,7 +139,8 @@ class Minibatches(DataIterator, Seedable):
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
-            chunk = (slice(None), slice(idx*self.batch_size, (idx+1) * self.batch_size))
+            chunk = (slice(None),
+                     slice(idx * self.batch_size, (idx + 1) * self.batch_size))
 
             if need_copy:
                 device_data = {}
