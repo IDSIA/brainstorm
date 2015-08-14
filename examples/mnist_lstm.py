@@ -49,14 +49,14 @@ test_getter = bs.Minibatches(batch_size=10, verbose=True, mask=test_mask,
                              default=test_inputs, targets=test_targets)
 
 # ----------------------------- Set up Network ------------------------------ #
-inp_layer = bs.InputLayer(out_shapes={'default': ('T', 'B', 784),
+inp_layer = bs.InputLayer(out_shapes={'default': ('T', 'B', 1),
                                       'targets': ('T', 'B', 1),
                                       'mask': ('T', 'B', 1)})
 out_layer = bs.ClassificationLayer(10, name="out")
 mask_layer = bs.MaskLayer()
 
 inp_layer >> \
-    bs.FullyConnectedLayer(100, name='lstm') >> \
+    bs.LstmLayer(100, name='lstm') >> \
     out_layer - "loss" >> \
     mask_layer >> \
     bs.LossLayer()
@@ -65,7 +65,8 @@ inp_layer - 'mask' >> 'mask' - mask_layer
 
 network = bs.build_net(inp_layer - 'targets' >> 'targets' - out_layer)
 network.set_memory_handler(PyCudaHandler())
-network.initialize(bs.Gaussian(0.01), seed=42)
+network.initialize({"default": bs.Gaussian(0.01),
+                    "lstm": {'bf': 1}}, seed=42)
 
 # ----------------------------- Set up Trainer ------------------------------ #
 
