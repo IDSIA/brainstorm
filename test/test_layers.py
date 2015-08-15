@@ -127,7 +127,7 @@ def convolution_layer_2d():
                                    {'default':
                                     ShapeTemplate('T', 'B', 3, 5, 4)},
                                    NO_CON, NO_CON, num_filters=1,
-                                   kernel_size=(2, 3))
+                                   kernel_size=(2, 3), stride=(2, 1))
     return layer, {}
 
 

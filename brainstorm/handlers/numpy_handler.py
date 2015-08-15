@@ -246,15 +246,14 @@ class NumpyHandler(Handler):
                                         input_cols + 2 * pad, kernel_size,
                                         stride)
 
-        dpadh = ((input_rows - 1) * stride[0] + kernel_size[0] - output_rows) // 2
-        dpadw = ((input_cols - 1) * stride[1] + kernel_size[1] - output_cols) // 2
-        tot_padh = pad + dpadh
-        tot_padw = pad + dpadw
+        dpadh = ((input_rows + 2 * pad - 1) * stride[0] + kernel_size[0] -
+                 output_rows) // 2
+        dpadw = ((input_cols + 2 * pad - 1) * stride[1] + kernel_size[1] -
+                 output_cols) // 2
         col2im_map = cls.get_im2col_map(num_output_maps,
-                                        output_rows + 2 * tot_padh,
-                                        output_cols + 2 * tot_padw,
-                                        kernel_size,
-                                        stride)
+                                        output_rows + 2 * dpadh,
+                                        output_cols + 2 * dpadw,
+                                        kernel_size, (1, 1))
         weight_deltas.fill(0.0)
         bias_deltas.fill(0.0)
         for i in range(num_images):
@@ -262,8 +261,8 @@ class NumpyHandler(Handler):
             if pad == 0:
                 im = inputs[i]
             else:
-                im = np.zeros((inputs.shape[1], inputs.shape[2] + 2 * pad,
-                               inputs.shape[3] + 2 * pad))
+                im = np.zeros((num_input_maps, input_rows + 2 * pad,
+                               input_cols + 2 * pad))
                 im[:, pad: -pad, pad: -pad] = inputs[i]
 
             # Get all actual indices & index into input array for final output
@@ -286,24 +285,25 @@ class NumpyHandler(Handler):
             _weights = np.fliplr(weights.reshape(-1, prod_k)).reshape(
                 weights.shape)
             reshaped_weights = _weights.swapaxes(0, 1).reshape(num_input_maps,
-                                                               kernel_size[0] *
-                                                               kernel_size[1] *
+                                                               prod_k *
                                                                num_filters)
-            reshaped_in_deltas = in_deltas[i].reshape((num_input_maps, -1))
 
-            # Remove this conditional
-            if pad == 0:
-                im = np.zeros((num_filters, output_rows + 2 * dpadh,
-                               output_cols + 2 * dpadw))
-                im[:, dpadh: -dpadh, dpadw: -dpadw] = out_deltas[i]
-            else:
-                im = np.zeros((num_filters, output_rows + 2 * tot_padh,
-                               output_cols + 2 * tot_padw))
-                im[:, tot_padh: -tot_padh, tot_padw: -tot_padw] = out_deltas[i]
+            im = np.zeros((num_filters, output_rows + 2 * dpadh,
+                           output_cols + 2 * dpadw))
+            im[:, dpadh: -dpadh, dpadw: -dpadw] = out_deltas[i]
 
             col = np.take(im, col2im_map)
-            print(reshaped_weights.shape, col.shape, reshaped_in_deltas.shape)
-            cls.dot_add_mm(reshaped_weights, col, out=reshaped_in_deltas)
+
+            # temp contains deltas WRT padded inputs
+            padded = np.dot(reshaped_weights, col).reshape((num_input_maps,
+                                                          input_rows + 2 * pad,
+                                                          input_cols + 2 *
+                                                          pad))
+            # Remove padding
+            if pad == 0:
+                in_deltas[i] += padded
+            else:
+                in_deltas[i] += padded[:, pad: -pad, pad: -pad]
 
     # ---------------- Activation functions -----------------------------------
 
