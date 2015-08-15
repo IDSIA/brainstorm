@@ -206,13 +206,58 @@ class NumpyHandler(Handler):
         num_filters = weights.shape[0]
         num_images, num_input_maps, input_rows, input_cols = inputs.shape
         kernel_size = (weights.shape[2], weights.shape[3])
+        out_shape = outputs.shape[1:]
 
         im2col_map = cls.get_im2col_map(num_input_maps, input_rows + 2 * pad,
                                         input_cols + 2 * pad, kernel_size,
                                         stride)
 
         # reshape
-        for i in range(inputs.shape[0]):
+        for i in range(num_images):
+            # pad
+            if pad == 0:
+                im = inputs[i]
+            else:
+                im = np.zeros((inputs.shape[1], inputs.shape[2] + 2 * pad,
+                               inputs.shape[3] + 2 * pad))
+                im[:, pad: -pad, pad: -pad] = inputs[i]
+
+            # Get all actual indices & index into input array for output
+            col = np.take(im, im2col_map)
+
+            # multiply
+            reshaped_weights = weights.reshape(num_filters,
+                                               kernel_size[0] *
+                                               kernel_size[1] *
+                                               num_input_maps)
+            outputs[i] = np.dot(reshaped_weights, col).reshape(out_shape)
+
+        outputs += bias.reshape((1, num_filters, 1, 1))
+
+    @classmethod
+    def conv2d_backward_batch(cls, inputs, weights, pad, stride, in_deltas,
+                              out_deltas, weight_deltas, bias_deltas):
+        num_filters = weights.shape[0]
+        num_images, num_input_maps, input_rows, input_cols = inputs.shape
+        _, num_output_maps, output_rows, output_cols = out_deltas.shape
+        kernel_size = (weights.shape[2], weights.shape[3])
+
+        im2col_map = cls.get_im2col_map(num_input_maps, input_rows + 2 * pad,
+                                        input_cols + 2 * pad, kernel_size,
+                                        stride)
+
+        dpadh = ((input_rows - 1) * stride[0] + kernel_size[0] - output_rows) // 2
+        dpadw = ((input_cols - 1) * stride[1] + kernel_size[1] - output_cols) // 2
+        tot_padh = pad + dpadh
+        tot_padw = pad + dpadw
+        col2im_map = cls.get_im2col_map(num_output_maps,
+                                        output_rows + 2 * tot_padh,
+                                        output_cols + 2 * tot_padw,
+                                        kernel_size,
+                                        stride)
+        weight_deltas.fill(0.0)
+        bias_deltas.fill(0.0)
+        for i in range(num_images):
             # pad
             if pad == 0:
                 im = inputs[i]
@@ -224,17 +269,41 @@ class NumpyHandler(Handler):
             # Get all actual indices & index into input array for final output
             col = np.take(im, im2col_map)
 
-            # multiply
-            reshaped_weights = weights.reshape(num_filters, kernel_size[0] *
-                                               kernel_size[1] * num_input_maps)
-            outputs[i] = np.dot(reshaped_weights, col).reshape(outputs[i].shape)
+            # Compute gradients
+            reshaped_dweights = weight_deltas.reshape(num_filters,
+                                                      kernel_size[0] *
+                                                      kernel_size[1] *
+                                                      num_input_maps)
+            reshaped_out_deltas = out_deltas[i].reshape((num_filters, -1))
+            cls.dot_add_mm(reshaped_out_deltas, col, out=reshaped_dweights,
+                           transb='T')
+            bias_deltas += np.sum(reshaped_out_deltas, axis=1)
 
-        outputs += bias.reshape((1, num_filters, 1, 1))
+            # Compute in_deltas
 
-    @staticmethod
-    def conv2d_backward_batch(out_deltas, inputs, in_deltas, weights, bias,
-                              weight_deltas, bias_deltas, pad, stride):
-        pass
+            # But first some reshaping magic to rotate all kernels twice by 90
+            prod_k = kernel_size[0] * kernel_size[1]
+            _weights = np.fliplr(weights.reshape(-1, prod_k)).reshape(
+                weights.shape)
+            reshaped_weights = _weights.swapaxes(0, 1).reshape(num_input_maps,
+                                                               kernel_size[0] *
+                                                               kernel_size[1] *
+                                                               num_filters)
+            reshaped_in_deltas = in_deltas[i].reshape((num_input_maps, -1))
+
+            # Remove this conditional
+            if pad == 0:
+                im = np.zeros((num_filters, output_rows + 2 * dpadh,
+                               output_cols + 2 * dpadw))
+                im[:, dpadh: -dpadh, dpadw: -dpadw] = out_deltas[i]
+            else:
+                im = np.zeros((num_filters, output_rows + 2 * tot_padh,
+                               output_cols + 2 * tot_padw))
+                im[:, tot_padh: -tot_padh, tot_padw: -tot_padw] = out_deltas[i]
+
+            col = np.take(im, col2im_map)
+            print(reshaped_weights.shape, col.shape, reshaped_in_deltas.shape)
+            cls.dot_add_mm(reshaped_weights, col, out=reshaped_in_deltas)
 
     # ---------------- Activation functions -----------------------------------
 

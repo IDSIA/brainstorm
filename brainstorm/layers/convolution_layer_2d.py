@@ -10,23 +10,21 @@ from brainstorm.structure.shapes import ShapeTemplate
 class ConvolutionLayer2DImpl(LayerBaseImpl):
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'pad',
                        'activation_function'}
+    inputs = {'default': ShapeTemplate('T', 'B', '...')}
+    outputs = {'default': ShapeTemplate('T', 'B', '...')}
 
-    def __init__(self, name, in_shapes, incoming_connections,
-                 outgoing_connections, **kwargs):
-        super(ConvolutionLayer2DImpl, self).__init__(
-            name, in_shapes, incoming_connections, outgoing_connections,
-            **kwargs)
+    def _setup_hyperparameters(self):
         self.act_func = None
         self.act_func_deriv = None
-        self.kwargs = kwargs
-        assert 'num_filters' in kwargs, "num_filters must be specified for " \
-                                        "ConvolutionLayer"
-        assert 'kernel_size' in kwargs, "kernel_size must be specified for " \
-                                        "ConvolutionLayer"
-        self.num_filters = kwargs['num_filters']
-        self.kernel_size = kwargs['kernel_size']
-        self.pad = kwargs.get('pad', 0)
-        self.stride = kwargs.get('stride', (0, 0))
+        self.kwargs = self.kwargs
+        assert 'num_filters' in self.kwargs, "num_filters must be specified " \
+                                             " for ConvolutionLayer"
+        assert 'kernel_size' in self.kwargs, "kernel_size must be specified " \
+                                             "for ConvolutionLayer"
+        self.num_filters = self.kwargs['num_filters']
+        self.kernel_size = self.kwargs['kernel_size']
+        self.pad = self.kwargs.get('pad', 0)
+        self.stride = self.kwargs.get('stride', (1, 1))
         assert type(self.pad) is int and self.pad >= 0
         assert type(self.stride) is tuple and self.stride[0] >= 0 and \
             self.stride >= 0
@@ -47,7 +45,7 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
             self.kwargs.get('activation_function', 'linear')]
 
     def get_parameter_structure(self):
-        in_shape = self.in_shapes['default'].feature_size
+        in_shape = self.in_shapes['default'].feature_shape
         num_input_maps = in_shape[0]
         num_filters = self.num_filters
         kernel_x = self.kernel_size[0]
@@ -60,10 +58,10 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         return parameters
 
     def get_internal_structure(self):
-        output_shape = self.out_shapes['default'].feature_size
+        output_shape = self.out_shapes['default'].feature_shape
 
         internals = OrderedDict()
-        internals['H'] = ShapeTemplate('T', 'B', output_shape)
+        internals['H'] = ShapeTemplate('T', 'B', *output_shape)
         return internals
 
     def _get_output_shapes(self):
@@ -71,28 +69,35 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         pad = self.pad
         stride = self.stride
         num_filters = self.num_filters
-        in_shape = self.in_shapes['default'].feature_size
-        assert len(in_shape) == 3, "The shape of input must be 3 for " \
-                                   "ConvolutionLayer2D"
+        in_shape = self.in_shapes['default'].feature_shape
+        assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
+            "ConvolutionLayer2D must have 3 dimensional input but input " \
+            "shape was %s" % in_shape
 
-        output_height = ((in_shape[1] + 2 * pad[0] - kernel_size[0]) /
+        output_height = ((in_shape[1] + 2 * pad - kernel_size[0]) //
                          stride[0]) + 1
-        output_width = ((in_shape[2] + 2 * pad[1] - kernel_size[1]) /
+        output_width = ((in_shape[2] + 2 * pad - kernel_size[1]) //
                         stride[1]) + 1
         output_shape = (num_filters, output_height, output_width)
-        return {'default': ShapeTemplate('T', 'B', output_shape)}
+        return {'default': ShapeTemplate('T', 'B', *output_shape)}
 
     def forward_pass(self, forward_buffers, training_pass=True):
         # prepare
         _h = self.handler
         W, bias = forward_buffers.parameters
         inputs = forward_buffers.inputs.default
-        output = forward_buffers.outputs.default
+        outputs = forward_buffers.outputs.default
         H = forward_buffers.internals.H
 
+        # reshape
+        t, b, c, h, w = inputs.shape
+        flat_inputs = _h.reshape(inputs, (t * b, c, h, w))
+        flat_H = _h.reshape(H, (t * b,) + self.out_shapes['default'][2:])
+
         # calculate outputs
-        _h.conv2d_forward_batch(inputs, W, bias, H, self.pad, self.stride)
-        self.act_func(H, output)
+        _h.conv2d_forward_batch(flat_inputs, W, bias, flat_H,
+                                self.pad, self.stride)
+        self.act_func(H, outputs)
 
     def backward_pass(self, forward_buffers, backward_buffers):
 
@@ -107,7 +112,13 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         H = forward_buffers.internals.H
         dH = backward_buffers.internals.H
 
+        # reshape
+        t, b, c, h, w = inputs.shape
+        flat_inputs = _h.reshape(inputs, (t * b, c, h, w))
+        flat_in_deltas = _h.reshape(in_deltas, (t * b, c, h, w))
+        flat_dH = _h.reshape(dH, (t * b,) + self.out_shapes['default'][2:])
+
         # calculate in_deltas and gradients
         self.act_func_deriv(H, outputs, out_deltas, dH)
-        _h.conv2d_backward_batch(dH, inputs, in_deltas, W, bias, dW,
-                                 dbias, self.pad, self.stride)
+        _h.conv2d_backward_batch(flat_inputs, W, self.pad, self.stride,
+                                 flat_in_deltas, flat_dH, dW, dbias)

@@ -90,5 +90,5 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         # calculate in_deltas and gradients
         self.act_func_deriv(H, outputs, out_deltas, dH)
         _h.dot_add_mm(flat_dH, W, out=flat_in_delta_buffer)
-        _h.dot_mm(flat_dH, flat_input, dW, transa='T')
+        _h.dot_mm(flat_dH, flat_input, out=dW, transa='T')
         _h.sum_t(flat_dH, axis=0, out=dbias)

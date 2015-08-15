@@ -17,6 +17,7 @@ from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
 from brainstorm.layers.mask_layer import MaskLayerImpl
+from brainstorm.layers.convolution_layer_2d import ConvolutionLayer2DImpl
 
 import pytest
 
@@ -120,6 +121,16 @@ def mask_layer():
                           NO_CON, NO_CON)
     return layer, {'skip_inputs': ['mask']}
 
+def convolution_layer_2d():
+    y = ShapeTemplate('T', 'B', 3, 5, 4)
+    layer = ConvolutionLayer2DImpl('ConvolutionLayer2D',
+                                   {'default':
+                                    ShapeTemplate('T', 'B', 3, 5, 4)},
+                                   NO_CON, NO_CON, num_filters=1,
+                                   kernel_size=(2, 3))
+    return layer, {}
+
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -129,7 +140,8 @@ layers_to_test = [
     rnn_layer,
     squared_difference_layer,
     lstm_layer,
-    mask_layer
+    mask_layer,
+    convolution_layer_2d
 ]
 
 ids = [f.__name__ for f in layers_to_test]

@@ -259,6 +259,8 @@ def run_gradients_test(layer, specs, parameter_name, outputs_name):
     eps = specs.get('eps', 1e-5)
     print("Checking parameter '{}' ...".format(parameter_name))
     fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    print("Shape of parameter is {}".
+          format(fwd_buffers.parameters[parameter_name].shape))
     # First do a forward and backward pass to calculate gradients
     layer.forward_pass(fwd_buffers)
     HANDLER.fill(bwd_buffers.outputs[outputs_name], 1.0)
