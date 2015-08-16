@@ -115,7 +115,7 @@ def get_description(this):
     if isinstance(this, Describable):
         return this.__describe__()
 
-    elif isinstance(this, list):
+    elif isinstance(this, (list, tuple)):
         result = []
         try:
             for i, v in enumerate(this):

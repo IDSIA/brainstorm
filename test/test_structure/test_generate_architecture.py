@@ -20,7 +20,7 @@ def test_get_layer_description():
     assert descr == {
         '@type': 'layertype',
         '@outgoing_connections': {
-            'default': {'bar.default', 'baz.default'}
+            'default': ['bar.default', 'baz.default']
         },
         'shape': 10
     }
@@ -36,8 +36,8 @@ def test_get_layer_description_named_inputs_outputs():
     assert descr == {
         '@type': 'layertype',
         '@outgoing_connections': {
-            'default': {'baz.A'},
-            'out1': {'bar.default'}
+            'default': ['baz.A'],
+            'out1': ['bar.default']
         },
         'shape': 10
     }
@@ -73,8 +73,8 @@ def test_generate_architecture():
             '@type': 'DataLayer',
             'shape': 10,
             '@outgoing_connections': {
-                'foo': {'bar.default'},
-                'bar': {'baz.default'},
+                'foo': ['bar.default'],
+                'bar': ['baz.default'],
             }
 
         },
@@ -82,14 +82,14 @@ def test_generate_architecture():
             '@type': 'layertype',
             'shape': 20,
             '@outgoing_connections': {
-                'default': {'out.A'},
+                'default': ['out.A'],
             }
         },
         'baz': {
             '@type': 'layertype',
             'shape': 30,
             '@outgoing_connections': {
-                'default': {'out.B'},
+                'default': ['out.B'],
             }
         },
         'out': {
@@ -105,23 +105,23 @@ def test_instantiate_layers_from_architecture():
         'InputLayer': {
             '@type': 'InputLayer',
             'out_shapes': {'default': ('T', 'B', 10,)},
-            '@outgoing_connections': {'A', 'B', 'C'}
+            '@outgoing_connections': ['A', 'B', 'C']
         },
         'A': {
             '@type': 'NoOpLayer',
-            '@outgoing_connections': {'B'}
+            '@outgoing_connections': ['B']
         },
         'B': {
             '@type': 'NoOpLayer',
-            '@outgoing_connections': {'D'}
+            '@outgoing_connections': ['D']
         },
         'C': {
             '@type': 'NoOpLayer',
-            '@outgoing_connections': {'D'}
+            '@outgoing_connections': ['D']
         },
         'D': {
             '@type': 'NoOpLayer',
-            '@outgoing_connections': set()
+            '@outgoing_connections': []
         }
     }
     layers = instantiate_layers_from_architecture(arch)

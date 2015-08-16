@@ -26,9 +26,9 @@ def get_layer_description(layer_details):
     outgoing = {}
     for outp, inp, end_layer in layer_details.outgoing:
         if outp in outgoing:
-            outgoing[outp].add("{}.{}".format(end_layer.name, inp))
+            outgoing[outp].append("{}.{}".format(end_layer.name, inp))
         else:
-            outgoing[outp] = {"{}.{}".format(end_layer.name, inp)}
+            outgoing[outp] = ["{}.{}".format(end_layer.name, inp)]
 
     description = {
         '@type': layer_details.layer_type,
@@ -93,7 +93,7 @@ def validate_architecture(architecture):
                 name, type(layer['@type'])))
 
         if '@outgoing_connections' in layer and not isinstance(
-                layer['@outgoing_connections'], (set, list, tuple, dict)):
+                layer['@outgoing_connections'], (list, tuple, dict)):
             raise NetworkValidationError(
                 'Invalid @outgoing_connections for "{}"'.format(name))
 

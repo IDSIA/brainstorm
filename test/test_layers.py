@@ -189,6 +189,8 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
     print("\n========= Testing Internal State Insensitivity for: {} ========="
           .format(layer.name))
     fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    time_steps = specs.get('time_steps', 3)
+
     eps = specs.get('eps', 1e-8)
     layer.forward_pass(fwd_buffers)
 
@@ -199,7 +201,8 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
 
     # randomize internal state
     for internal, value in fwd_buffers.internals.items():
-        HANDLER.set_from_numpy(value, np.random.randn(*value.shape))
+        # but exclude context slice located at the end
+        HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
 
         # compare new output
         layer.forward_pass(fwd_buffers)
@@ -212,6 +215,7 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
     print("\n========= Testing Internal State Insensitivity for: {} ========="
           .format(layer.name))
     fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    time_steps = specs.get('time_steps', 3)
     eps = specs.get('eps', 1e-8)
     layer.forward_pass(fwd_buffers)
     layer.backward_pass(fwd_buffers, bwd_buffers)
@@ -225,8 +229,8 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
     for key in fwd_buffers.internals.keys():
         fwd_intern = fwd_buffers.internals[key]
         bwd_intern = bwd_buffers.internals[key]
-        HANDLER.set_from_numpy(fwd_intern, np.random.randn(*fwd_intern.shape))
-        HANDLER.set_from_numpy(bwd_intern, np.random.randn(*bwd_intern.shape))
+        HANDLER.set_from_numpy(fwd_intern[:time_steps], np.random.randn(time_steps, *fwd_intern.shape[1:]))
+        HANDLER.set_from_numpy(bwd_intern[:time_steps], np.random.randn(time_steps, *bwd_intern.shape[1:]))
 
         # clear deltas
         for k, v in bwd_buffers.inputs.items():
