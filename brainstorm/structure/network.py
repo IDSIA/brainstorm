@@ -17,6 +17,7 @@ from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
 from brainstorm.layers.loss_layer import LossLayerImpl
+from brainstorm.describable import get_description, create_from_description
 
 __all__ = ['Network']
 
@@ -24,56 +25,60 @@ __all__ = ['Network']
 # ################################ Network ####################################
 
 class Network(Seedable):
+    __undescribed__ = {'layers', 'loss_layers', 'buffer'}
+
     # -------------------------- Constructors ---------------------------------
-    @staticmethod
-    def from_layer(some_layer):
+    @classmethod
+    def from_layer(cls, some_layer):
         """
         Create Network instance from a construction layer.
 
-        Parameters
-        ----------
-        some_layer: brainstorm.construction.ConstructionWrapper
-            Some layer used to wire up an architecture with `>>`.
+        :param some_layer: Some layer used to wire up an architecture with `>>`
+        :type some_layer: brainstorm.construction.ConstructionWrapper
 
-        Returns
-        -------
-
-        net: brainstorm.structure.Network
-            A fully functional Network instance.
-
+        :returns: A fully functional Network instance.
+        :rtype: brainstorm.structure.Network
         """
         arch = generate_architecture(some_layer)
-        return Network.from_architecture(arch)
+        return cls.from_architecture(arch)
 
-    @staticmethod
-    def from_architecture(architecture):
+    @classmethod
+    def from_architecture(cls, architecture):
         """
         Create Network instance from given architecture.
 
-        Parameters
-        ----------
-        architecture: dict
-            JSON serializable Architecture description.
+        :param architecture: JSON serializable Architecture description.
+        :type architecture: dict
 
-        Returns
-        -------
-        Network
-            A fully functional Network instance.
+        :returns: A fully functional Network instance.
+        :rtype: brainstorm.structure.Network
         """
         layers = instantiate_layers_from_architecture(architecture)
         hubs, layout = create_layout(layers)
         buffer_manager = BufferManager(layout, hubs)
-        return Network(layers, buffer_manager)
+        return cls(layers, buffer_manager, architecture)
 
-    def __init__(self, layers, buffer_manager, seed=None,
+    @classmethod
+    def __new_from_description__(cls, description):
+        net = Network.from_architecture(description['architecture'])
+        net.set_memory_handler(create_from_description(description['handler']))
+        net.initialize(create_from_description(description['initializers']))
+        net.set_gradient_modifiers(
+            create_from_description(description['gradient_modifiers']))
+        net.set_weight_modifiers(
+            create_from_description(description['weight_modifiers']))
+        return net
+
+    def __init__(self, layers, buffer_manager, architecture, seed=None,
                  handler=default_handler):
         super(Network, self).__init__(seed)
         self.layers = layers
         self.loss_layers = _get_loss_layers(layers)
         self.buffer = buffer_manager
-        self.errors = None
+        self.architecture = architecture
         self.handler = None
         self.set_memory_handler(handler)
+        self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
 
@@ -147,6 +152,7 @@ class Network(Seedable):
         >> net.initialize({'default': bs.Gaussian()}, seed=1234)
         """
         init_refs = _update_references_with_dict(default_or_init_dict, kwargs)
+        self.initializers = get_description(init_refs)
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.forward.items()
                           if isinstance(v, BufferView) and 'parameters' in v}

@@ -10,6 +10,7 @@ from brainstorm.handlers.numpy_handler import NumpyHandler
 
 
 # ######################### get_all_undescribed ###############################
+from brainstorm.structure.architecture import generate_architecture
 
 
 def test_get_all_undescribed_on_empty_describable():
@@ -324,3 +325,37 @@ def test_describe_numpy_handler():
     nh2 = create_from_description(d)
     assert isinstance(nh2, NumpyHandler)
     assert nh2.dtype == np.float32
+
+# ################# test describing a Network #################################
+import brainstorm as bs
+import json
+
+arch = generate_architecture(
+    bs.InputLayer(out_shapes={'default': ('T', 'B', 7)}) >>
+    bs.FullyConnectedLayer(3) >>
+    bs.LossLayer())
+
+
+def test_describe_network():
+    net = bs.Network.from_architecture(arch)
+    net.initialize(1)
+    assert get_description(net) == {
+        '@type': 'Network',
+        'architecture': json.loads(json.dumps(arch)),
+        'handler': {'@type': 'NumpyHandler', 'dtype': 'float32'},
+        'initializers': {'default': 1},
+        'weight_modifiers': {},
+        'gradient_modifiers': {}
+    }
+
+
+def test_get_network_from_description():
+    net = bs.Network.from_architecture(arch)
+    net.initialize(1)
+    d = get_description(net)
+    net2 = create_from_description(d)
+    assert isinstance(net2, bs.Network)
+    assert net2.layers.keys() == net.layers.keys()
+    assert isinstance(net2.handler, NumpyHandler)
+    assert net2.handler.dtype == np.float32
+    assert np.all(net2.buffer.forward.parameters == net.buffer.forward.parameters)
