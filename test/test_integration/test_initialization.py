@@ -9,7 +9,7 @@ from brainstorm.utils import NetworkValidationError
 
 @pytest.fixture
 def net():
-    net = bs.build_net(
+    net = bs.Network.from_layer(
         bs.InputLayer(out_shapes={'default': ('T', 'B', 1)}) >>
         bs.FullyConnectedLayer(2) >>
         bs.FullyConnectedLayer(3) >>

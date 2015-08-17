@@ -69,7 +69,7 @@ inp_layer >> \
 
 inp_layer - 'mask' >> 'mask' - mask_layer
 
-network = bs.build_net(inp_layer - 'targets' >> 'targets' - out_layer)
+network = bs.Network.from_layer(inp_layer - 'targets' >> 'targets' - out_layer)
 network.set_memory_handler(PyCudaHandler())
 network.initialize({"default": bs.Gaussian(0.01),
                     "lstm": {'bf': 1}}, seed=42)
@@ -91,4 +91,3 @@ trainer.add_monitor(bs.SaveBestWeights("validation accuracy",
 trainer.train(network, train_getter, valid_getter=valid_getter)
 print("\nBest validation accuracy: ", max(trainer.logs["validation accuracy"]))
 network.buffer.forward.parameters = trainer.monitors["best weights"].weights
-
