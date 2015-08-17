@@ -5,9 +5,12 @@ import numpy as np
 import pytest
 from brainstorm.describable import (Describable, get_description,
                                     create_from_description)
+from brainstorm.handlers.pycuda_handler import PyCudaHandler
+from brainstorm.handlers.numpy_handler import NumpyHandler
 
 
 # ######################### get_all_undescribed ###############################
+
 
 def test_get_all_undescribed_on_empty_describable():
     class Foo1(Describable):
@@ -302,3 +305,22 @@ def test_create_from_description_with_invalid_description_raises():
         create_from_description(pytest)
 
     assert excinfo.value.args[0].find('module') > -1
+
+
+# ################# test describing handler ###################################
+
+def test_describe_pycuda_handler():
+    pch = PyCudaHandler()
+    d = get_description(pch)
+    assert d == {'@type': 'PyCudaHandler'}
+    pch2 = create_from_description(d)
+    assert isinstance(pch2, PyCudaHandler)
+
+
+def test_describe_numpy_handler():
+    nh = NumpyHandler(np.float32)
+    d = get_description(nh)
+    assert d == {'@type': 'NumpyHandler', 'dtype': 'float32'}
+    nh2 = create_from_description(d)
+    assert isinstance(nh2, NumpyHandler)
+    assert nh2.dtype == np.float32

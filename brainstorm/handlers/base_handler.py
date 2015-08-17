@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from brainstorm.describable import Describable
 import abc
 import six
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Handler(object):
+class Handler(Describable):
 
     """
     Abstract Base Class for all handlers.
