@@ -7,15 +7,26 @@ from brainstorm.handlers.base_handler import Handler
 
 # noinspection PyMethodOverriding
 class NumpyHandler(Handler):
+    __undescribed__ = {'context', 'EMPTY'}
 
     def __init__(self, dtype):
-        self.array_type = np.ndarray
         self.dtype = dtype
-        self.size = lambda x: x.size
-        self.shape = lambda x: x.shape
-        self.reshape = lambda x, s: x.reshape(s)
         self.context = 'numpy'
         self.EMPTY = np.zeros(0)
+
+    array_type = np.ndarray
+    size = lambda x: x.size
+    shape = lambda x: x.shape
+    reshape = lambda x, s: x.reshape(s)
+
+    def __describe__(self):
+        return {
+            '@type': self.__class__.__name__,
+            'dtype': str(np.dtype(self.dtype))
+        }
+
+    def __init_from_description__(self, description):
+        self.__init__(np.dtype(description['dtype']))
 
     def allocate(self, size):
         return np.zeros(size, dtype=self.dtype)

@@ -15,15 +15,22 @@ culinalg.init()
 
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
+
+    __undescribed__ = {'context', 'dtype', 'EMPTY'}
+
     def __init__(self):
-        self.array_type = pycuda.gpuarray.GPUArray
-        self.dtype = np.float32
-        self.size = lambda x: x.size
-        self.shape = lambda x: x.shape
-        self.reshape = lambda x, s: x.reshape(s)
-        self.slice = lambda x, s: x[s]
         self.context = cumisc._global_cublas_handle
+        self.dtype = np.float32
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
+
+    array_type = pycuda.gpuarray.GPUArray
+    size = lambda x: x.size
+    shape = lambda x: x.shape
+    reshape = lambda x, s: x.reshape(s)
+    slice = lambda x, s: x[s]
+
+    def __init_from_description__(self, description):
+        self.__init__()
 
     def allocate(self, size):
         return gpuarray.zeros(size, dtype=self.dtype)

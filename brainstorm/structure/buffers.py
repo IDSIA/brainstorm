@@ -28,7 +28,7 @@ def create_buffer_views_from_layout(layout, buffers, hubs):
         else:  # buffer_type == 2
             full_buffer = buffers[buffer_nr][t_slice, :, start:stop]
             full_buffer = full_buffer.reshape(
-                (full_buffer.shape[0] - cutoff,
+                (full_buffer.shape[0],
                  full_buffer.shape[1]) +
                 shape[buffer_type:])
     else:
@@ -67,7 +67,10 @@ class BufferManager(object):
         self.backward_buffers = []
 
     def get_hub_shape(self, hub):
-        return (self.time_size, self.batch_size, hub.size)[2 - hub.btype:]
+        full_shape = (self.time_size + hub.context_size,
+                      self.batch_size,
+                      hub.size)
+        return full_shape[2 - hub.btype:]
 
     def get_total_size_slices_and_shapes(self):
         shapes = [self.get_hub_shape(h) for h in self.hubs] * 2

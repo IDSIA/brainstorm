@@ -17,74 +17,72 @@ from brainstorm.structure.architecture import generate_architecture
 from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
 from brainstorm.layers.loss_layer import LossLayerImpl
+from brainstorm.describable import get_description, create_from_description
+
+__all__ = ['Network']
 
 
-def build_net(some_layer):
-    arch = generate_architecture(some_layer)
-    return build_network_from_architecture(arch)
-
-
-def build_network_from_architecture(architecture):
-    layers = instantiate_layers_from_architecture(architecture)
-    hubs, layout = create_layout(layers)
-    buffer_manager = BufferManager(layout, hubs)
-    return Network(layers, buffer_manager)
-
-
-def get_loss_layers(layers):
-    return [name for name, l in layers.items() if isinstance(l, LossLayerImpl)]
-
+# ################################ Network ####################################
 
 class Network(Seedable):
-    def __init__(self, layers, buffer_manager, seed=None,
+    __undescribed__ = {'layers', 'loss_layers', 'buffer'}
+
+    # -------------------------- Constructors ---------------------------------
+    @classmethod
+    def from_layer(cls, some_layer):
+        """
+        Create Network instance from a construction layer.
+
+        :param some_layer: Some layer used to wire up an architecture with `>>`
+        :type some_layer: brainstorm.construction.ConstructionWrapper
+
+        :returns: A fully functional Network instance.
+        :rtype: brainstorm.structure.Network
+        """
+        arch = generate_architecture(some_layer)
+        return cls.from_architecture(arch)
+
+    @classmethod
+    def from_architecture(cls, architecture):
+        """
+        Create Network instance from given architecture.
+
+        :param architecture: JSON serializable Architecture description.
+        :type architecture: dict
+
+        :returns: A fully functional Network instance.
+        :rtype: brainstorm.structure.Network
+        """
+        layers = instantiate_layers_from_architecture(architecture)
+        hubs, layout = create_layout(layers)
+        buffer_manager = BufferManager(layout, hubs)
+        return cls(layers, buffer_manager, architecture)
+
+    @classmethod
+    def __new_from_description__(cls, description):
+        net = Network.from_architecture(description['architecture'])
+        net.set_memory_handler(create_from_description(description['handler']))
+        net.initialize(create_from_description(description['initializers']))
+        net.set_gradient_modifiers(
+            create_from_description(description['gradient_modifiers']))
+        net.set_weight_modifiers(
+            create_from_description(description['weight_modifiers']))
+        return net
+
+    def __init__(self, layers, buffer_manager, architecture, seed=None,
                  handler=default_handler):
         super(Network, self).__init__(seed)
         self.layers = layers
-        self.loss_layers = get_loss_layers(layers)
+        self.loss_layers = _get_loss_layers(layers)
         self.buffer = buffer_manager
-        self.errors = None
+        self.architecture = architecture
         self.handler = None
         self.set_memory_handler(handler)
+        self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
 
-    def set_memory_handler(self, new_handler):
-        self.handler = new_handler
-        self.buffer.set_memory_handler(new_handler)
-        for layer in self.layers.values():
-            layer.set_handler(new_handler)
-
-    def provide_external_data(self, data):
-        time_size, batch_size = data[next(iter(data))].shape[:2]
-        self.buffer.resize(time_size, batch_size)
-        for name, val in data.items():
-            self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name],
-                                 val)
-
-    def get_context(self):
-        return self.buffer.get_context()
-
-    def forward_pass(self, training_pass=False, context=None):
-        if context is None:
-            self.buffer.clear_context()
-        else:
-            self.buffer.apply_context(context)
-        for layer_name, layer in list(self.layers.items())[1:]:
-            layer.forward_pass(self.buffer.forward[layer_name], training_pass)
-
-    def backward_pass(self):
-        self.buffer.clear_backward_buffers()
-        for layer_name, layer in reversed(list(self.layers.items())[1:]):
-            layer.backward_pass(self.buffer.forward[layer_name],
-                                self.buffer.backward[layer_name])
-        self.apply_gradient_modifiers()
-
-    def get_loss_value(self):
-        loss = 0.
-        for loss_layer_name in self.loss_layers:
-            loss += float(self.handler.get_numpy_copy(
-                self.buffer.forward[loss_layer_name].outputs.loss))
-        return loss
+    # -------------------------- Setup Methods --------------------------------
 
     def initialize(self, default_or_init_dict=None, seed=None, **kwargs):
         """Initialize the weights of the network.
@@ -154,10 +152,11 @@ class Network(Seedable):
         >> net.initialize({'default': bs.Gaussian()}, seed=1234)
         """
         init_refs = _update_references_with_dict(default_or_init_dict, kwargs)
+        self.initializers = get_description(init_refs)
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.forward.items()
                           if isinstance(v, BufferView) and 'parameters' in v}
-        replace_lists_with_array_initializers(init_refs)
+        _replace_lists_with_array_initializers(init_refs)
         initializers, fallback = resolve_references(all_parameters, init_refs)
         init_rnd = self.rnd.create_random_state(seed)
         for layer_name, views in sorted(all_parameters.items()):
@@ -254,6 +253,46 @@ class Network(Seedable):
         gradient_mods = prune_view_references(gradient_mods)
         self.gradient_modifiers = order_and_copy_modifiers(gradient_mods)
 
+    def set_memory_handler(self, new_handler):
+        self.handler = new_handler
+        self.buffer.set_memory_handler(new_handler)
+        for layer in self.layers.values():
+            layer.set_handler(new_handler)
+
+    # -------------------------- Running Methods ------------------------------
+
+    def provide_external_data(self, data):
+        time_size, batch_size = data[next(iter(data))].shape[:2]
+        self.buffer.resize(time_size, batch_size)
+        for name, val in data.items():
+            self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name],
+                                 val)
+
+    def forward_pass(self, training_pass=False, context=None):
+        if context is None:
+            self.buffer.clear_context()
+        else:
+            self.buffer.apply_context(context)
+        for layer_name, layer in list(self.layers.items())[1:]:
+            layer.forward_pass(self.buffer.forward[layer_name], training_pass)
+
+    def backward_pass(self):
+        self.buffer.clear_backward_buffers()
+        for layer_name, layer in reversed(list(self.layers.items())[1:]):
+            layer.backward_pass(self.buffer.forward[layer_name],
+                                self.buffer.backward[layer_name])
+        self.apply_gradient_modifiers()
+
+    def get_loss_value(self):
+        loss = 0.
+        for loss_layer_name in self.loss_layers:
+            loss += float(self.handler.get_numpy_copy(
+                self.buffer.forward[loss_layer_name].outputs.loss))
+        return loss
+
+    def get_context(self):
+        return self.buffer.get_context()
+
     def apply_weight_modifiers(self):
         for layer_name, views in self.weight_modifiers.items():
             for view_name, weight_mods in views.items():
@@ -269,6 +308,12 @@ class Network(Seedable):
                     gm.rnd.set_seed(self.rnd.generate_seed())
                     gm(self.handler,
                        self.buffer.backward[layer_name].parameters[view_name])
+
+
+# ########################### Helper Methods ##################################
+
+def _get_loss_layers(layers):
+    return [name for name, l in layers.items() if isinstance(l, LossLayerImpl)]
 
 
 def _update_references_with_dict(refs, ref_dict):
@@ -288,9 +333,9 @@ def _update_references_with_dict(refs, ref_dict):
     return references
 
 
-def replace_lists_with_array_initializers(ref_dict):
+def _replace_lists_with_array_initializers(ref_dict):
     for key, value in ref_dict.items():
         if isinstance(value, dict):
-            replace_lists_with_array_initializers(value)
+            _replace_lists_with_array_initializers(value)
         elif isinstance(value, (list, np.ndarray)):
             ref_dict[key] = ArrayInitializer(value)
