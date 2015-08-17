@@ -24,10 +24,10 @@ class PyCudaHandler(Handler):
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
 
     array_type = pycuda.gpuarray.GPUArray
-    size = lambda x: x.size
-    shape = lambda x: x.shape
-    reshape = lambda x, s: x.reshape(s)
-    slice = lambda x, s: x[s]
+    size = staticmethod(lambda x: x.size)
+    shape = staticmethod(lambda x: x.shape)
+    reshape = staticmethod(lambda x, s: x.reshape(s))
+    slice = staticmethod(lambda x, s: x[s])
 
     def __init_from_description__(self, description):
         self.__init__()
