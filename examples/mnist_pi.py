@@ -48,7 +48,7 @@ inp >> \
     bs.FullyConnectedLayer(1000, name='hid2', activation_function='rel') >> \
     out - "loss" >> bs.LossLayer()
 
-network = bs.build_net(inp - 'targets' >> 'targets' - out)
+network = bs.Network.from_layer(inp - 'targets' >> 'targets' - out)
 network.set_memory_handler(PyCudaHandler())
 network.initialize(bs.Gaussian(0.01), seed=42)
 network.set_weight_modifiers({"out": bs.ConstrainL2Norm(1)})
