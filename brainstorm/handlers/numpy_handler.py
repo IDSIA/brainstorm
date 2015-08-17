@@ -15,9 +15,10 @@ class NumpyHandler(Handler):
         self.EMPTY = np.zeros(0)
 
     array_type = np.ndarray
-    size = lambda x: x.size
-    shape = lambda x: x.shape
-    reshape = lambda x, s: x.reshape(s)
+    size = staticmethod(lambda x: x.size)
+    shape = staticmethod(lambda x: x.shape)
+    reshape = staticmethod(lambda x, s: x.reshape(s))
+    slice = staticmethod(lambda x, s: x[s])
 
     def __describe__(self):
         return {
