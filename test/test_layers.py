@@ -125,9 +125,9 @@ def convolution_layer_2d():
     y = ShapeTemplate('T', 'B', 3, 5, 4)
     layer = ConvolutionLayer2DImpl('ConvolutionLayer2D',
                                    {'default':
-                                    ShapeTemplate('T', 'B', 3, 5, 4)},
+                                    ShapeTemplate('T', 'B', 1, 4, 4)},
                                    NO_CON, NO_CON, num_filters=1,
-                                   kernel_size=(2, 3), stride=(2, 1))
+                                   kernel_size=(2, 2), stride=(1, 1))
     return layer, {}
 
 

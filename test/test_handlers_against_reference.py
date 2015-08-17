@@ -258,11 +258,11 @@ def test_mult_mv():
                                get_args_from_ref_args(ref_args))
 
 
-def test_binarize_v():
+def test_binarize_v(): # TODO
     pass
 
 
-def test_index_m_by_v():
+def test_index_m_by_v(): # TODO
     pass
 
 

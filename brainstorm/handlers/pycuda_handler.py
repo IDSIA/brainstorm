@@ -174,7 +174,7 @@ class PyCudaHandler(Handler):
 
     @staticmethod
     def tanh(x, y):
-        cumath.tanh(x, out=y)
+        tanh_kernel(x, y)
 
     @staticmethod
     def tanh_deriv(x, y, dy, dx):
@@ -244,6 +244,12 @@ sigmoid_deriv_kernel = ElementwiseKernel(
     "float* x, float* y, float* dy, float* dx",
     "dx[i] = dy[i] * y[i] * (1.0 - y[i])",
     "sigmoid_deriv_kernel"
+)
+
+tanh_kernel = ElementwiseKernel(
+    "float* x, float* y",
+    "y[i] = tanh(x[i])",
+    "tanh_kernel"
 )
 
 tanh_deriv_kernel = ElementwiseKernel(
