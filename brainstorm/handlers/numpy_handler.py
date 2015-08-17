@@ -249,6 +249,9 @@ class NumpyHandler(Handler):
     @classmethod
     def conv2d_backward_batch(cls, inputs, weights, pad, stride, in_deltas,
                               out_deltas, weight_deltas, bias_deltas):
+        if stride != (1, 1):
+            raise NotImplementedError("Strides > 1 for ConvolutionLayer2D are "
+                                      "not supported yet.")
         num_filters = weights.shape[0]
         num_images, num_input_maps, input_rows, input_cols = inputs.shape
         _, num_output_maps, output_rows, output_cols = out_deltas.shape
@@ -307,15 +310,15 @@ class NumpyHandler(Handler):
             col = np.take(im, col2im_map)
 
             # temp contains deltas WRT padded inputs
-            padded = np.dot(reshaped_weights, col).reshape((num_input_maps,
+            temp = np.dot(reshaped_weights, col).reshape((num_input_maps,
                                                           input_rows + 2 * pad,
                                                           input_cols + 2 *
                                                           pad))
             # Remove padding
             if pad == 0:
-                in_deltas[i] += padded
+                in_deltas[i] += temp
             else:
-                in_deltas[i] += padded[:, pad: -pad, pad: -pad]
+                in_deltas[i] += temp[:, pad: -pad, pad: -pad]
 
     # ---------------- Activation functions -----------------------------------
 
