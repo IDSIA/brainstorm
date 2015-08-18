@@ -47,11 +47,7 @@ def test_get_forced_orders(layers):
         ('A.parameters.W', 'A.parameters.bias'),
         ('B.parameters.W', 'B.parameters.bias'),
         ('C.parameters.W', 'C.parameters.bias'),
-        ('D.parameters.W', 'D.parameters.bias'),
-        ('A.internals.H',),
-        ('B.internals.H',),
-        ('C.internals.H',),
-        ('D.internals.H',)
+        ('D.parameters.W', 'D.parameters.bias')
     ]
 
 
