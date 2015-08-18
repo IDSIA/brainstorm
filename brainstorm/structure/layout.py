@@ -137,6 +137,9 @@ def create_layout(layers):
     param_slice = layout['parameters']['@slice']
     layout['parameters']['@shape'] = (param_slice[1] - param_slice[0],)
 
+    grad_slice = layout['gradients']['@slice']
+    layout['gradients']['@shape'] = (grad_slice[1] - grad_slice[0],)
+
     return hubs, layout
 
 
@@ -172,6 +175,7 @@ def get_all_sinks_and_sources(forced_orders, connections, layout):
 
 def get_forced_orders(layers):
     forced_orders = [get_parameter_order(n, l) for n, l in layers.items()]
+    forced_orders += [get_gradient_order(n, l) for n, l in layers.items()]
     forced_orders = list(filter(None, forced_orders))
     # ensure no overlap
     for fo in forced_orders:
@@ -188,9 +192,12 @@ def create_layout_stub(layers):
     root = {'@type': 'BufferView',
             'parameters': {
                 '@type': 'array',
-                '@index': 0
-            }}
-    for i, (layer_name, layer) in enumerate(layers.items(), start=1):
+                '@index': 0},
+            'gradients': {
+                '@type': 'array',
+                '@index': 1}
+            }
+    for i, (layer_name, layer) in enumerate(layers.items(), start=2):
         root[layer_name] = get_layout_stub_for_layer(layer)
         root[layer_name]['@type'] = 'BufferView'
         root[layer_name]['@index'] = i
@@ -232,6 +239,27 @@ def get_layout_stub_for_layer(layer):
     }
     layout['internals']['@type'] = 'BufferView'
     layout['internals']['@index'] = 3
+
+    layout['input_deltas'] = {
+        k: convert_to_array_json(layer.in_shapes[k], i)
+        for i, k in enumerate(sorted(layer.in_shapes))
+    }
+    layout['input_deltas']['@type'] = 'BufferView'
+    layout['input_deltas']['@index'] = 4
+
+    layout['output_deltas'] = {
+        k: convert_to_array_json(layer.out_shapes[k], i)
+        for i, k in enumerate(sorted(layer.out_shapes))
+    }
+    layout['output_deltas']['@type'] = 'BufferView'
+    layout['output_deltas']['@index'] = 5
+
+    layout['gradients'] = {
+        k: convert_to_array_json(v, i)
+        for i, (k, v) in enumerate(parameters.items())
+    }
+    layout['gradients']['@type'] = 'BufferView'
+    layout['gradients']['@index'] = 6
 
     return layout
 
@@ -275,11 +303,20 @@ def get_connections(layers):
             end = get_normalized_path(con.end_layer, 'inputs', con.input_name)
             connections.append((start, end))
 
-    # add connections to implicit 'parameters'-layer
+            start = get_normalized_path(con.start_layer, 'output_deltas',
+                                        con.output_name)
+            end = get_normalized_path(con.end_layer, 'input_deltas', con.input_name)
+            connections.append((start, end))
+
+    # add connections to implicit 'parameters', and 'gradients'-layer
     for layer_name, layer in layers.items():
         for param_name in layer.get_parameter_structure():
             start = get_normalized_path(layer_name, 'parameters', param_name)
             end = 'parameters'
+            connections.append((start, end))
+
+            start = get_normalized_path(layer_name, 'gradients', param_name)
+            end = 'gradients'
             connections.append((start, end))
 
     return sorted(connections)
@@ -294,9 +331,9 @@ def get_parameter_order(layer_name, layer):
                   for o in layer.get_parameter_structure()])
 
 
-def get_internal_order(layer_name, layer):
-    return tuple([get_normalized_path(layer_name, 'internals', o)
-                  for o in layer.get_internal_structure()])
+def get_gradient_order(layer_name, layer):
+    return tuple([get_normalized_path(layer_name, 'gradients', o)
+                  for o in layer.get_parameter_structure()])
 
 
 def merge_connections(connections, forced_orders):

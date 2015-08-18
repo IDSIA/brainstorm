@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from brainstorm.structure.layout import (
-    create_layout_stub, get_order, get_parameter_order, get_internal_order,
+    create_layout_stub, get_order, get_parameter_order,
     get_forced_orders, get_connections, merge_connections, get_forward_closure,
     create_layout, gather_array_nodes, Hub)
 
@@ -36,37 +36,54 @@ def test_get_parameter_order(layers):
                                                      'B.parameters.bias')
 
 
-def test_get_internals_order(layers):
-    assert get_internal_order('InputLayer', layers['InputLayer']) == ()
-    assert get_internal_order('A', layers['A']) == ('A.internals.H',)
-    assert get_internal_order('B', layers['B']) == ('B.internals.H',)
-
-
 def test_get_forced_orders(layers):
     assert get_forced_orders(layers) == [
         ('A.parameters.W', 'A.parameters.bias'),
         ('B.parameters.W', 'B.parameters.bias'),
         ('C.parameters.W', 'C.parameters.bias'),
-        ('D.parameters.W', 'D.parameters.bias')
+        ('D.parameters.W', 'D.parameters.bias'),
+        ('A.gradients.W', 'A.gradients.bias'),
+        ('B.gradients.W', 'B.gradients.bias'),
+        ('C.gradients.W', 'C.gradients.bias'),
+        ('D.gradients.W', 'D.gradients.bias')
     ]
 
 
 def test_get_connections(layers):
     assert get_connections(layers) == [
+        ('A.gradients.W', 'gradients'),
+        ('A.gradients.bias', 'gradients'),
+        ('A.output_deltas.default', 'C.input_deltas.default'),
         ('A.outputs.default', 'C.inputs.default'),
         ('A.parameters.W', 'parameters'),
         ('A.parameters.bias', 'parameters'),
+
+        ('B.gradients.W', 'gradients'),
+        ('B.gradients.bias', 'gradients'),
+        ('B.output_deltas.default', 'C.input_deltas.default'),
+        ('B.output_deltas.default', 'D.input_deltas.default'),
         ('B.outputs.default', 'C.inputs.default'),
         ('B.outputs.default', 'D.inputs.default'),
         ('B.parameters.W', 'parameters'),
         ('B.parameters.bias', 'parameters'),
+
+        ('C.gradients.W', 'gradients'),
+        ('C.gradients.bias', 'gradients'),
+        ('C.output_deltas.default', 'D.input_deltas.default'),
         ('C.outputs.default', 'D.inputs.default'),
         ('C.parameters.W', 'parameters'),
         ('C.parameters.bias', 'parameters'),
+
+        ('D.gradients.W', 'gradients'),
+        ('D.gradients.bias', 'gradients'),
         ('D.parameters.W', 'parameters'),
         ('D.parameters.bias', 'parameters'),
+
+        ('InputLayer.output_deltas.default', 'A.input_deltas.default'),
+        ('InputLayer.output_deltas.default', 'B.input_deltas.default'),
         ('InputLayer.outputs.default', 'A.inputs.default'),
         ('InputLayer.outputs.default', 'B.inputs.default')
+
     ]
 
 
@@ -179,7 +196,6 @@ def test_permute_rows2():
         [0, 0, 1, 1, 1]]))
 
 
-
 def test_create_layout_stub(layers):
     layout = create_layout_stub(layers)
     assert layout == {
@@ -188,9 +204,13 @@ def test_create_layout_stub(layers):
             '@type': 'array',
             '@index': 0
         },
+        'gradients': {
+            '@type': 'array',
+            '@index': 1
+        },
         'InputLayer': {
             '@type': 'BufferView',
-            '@index': 1,
+            '@index': 2,
             'inputs': {'@type': 'BufferView', '@index': 0},
             'outputs': {
                 '@type': 'BufferView',
@@ -200,10 +220,18 @@ def test_create_layout_stub(layers):
             },
             'parameters': {'@type': 'BufferView', '@index': 2},
             'internals': {'@type': 'BufferView', '@index': 3},
+            'input_deltas': {'@type': 'BufferView', '@index': 4},
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)},
+            },
+            'gradients': {'@type': 'BufferView', '@index': 6},
         },
         'A': {
             '@type': 'BufferView',
-            '@index': 2,
+            '@index': 3,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -227,10 +255,28 @@ def test_create_layout_stub(layers):
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3)}
             },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 3)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (3, 2)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (3,)}
+            },
         },
         'B': {
             '@type': 'BufferView',
-            '@index': 3,
+            '@index': 4,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -254,10 +300,28 @@ def test_create_layout_stub(layers):
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 5)}
             },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 5)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (5, 2)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (5,)}
+            },
         },
         'C': {
             '@type': 'BufferView',
-            '@index': 4,
+            '@index': 5,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -281,10 +345,28 @@ def test_create_layout_stub(layers):
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 7)}
             },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 8)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 7)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (7, 8)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (7,)}
+            },
         },
         'D': {
             '@type': 'BufferView',
-            '@index': 5,
+            '@index': 6,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
@@ -307,6 +389,24 @@ def test_create_layout_stub(layers):
                 '@type': 'BufferView',
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 11)}
+            },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 12)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 11)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (11, 12)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (11,)}
             },
         }}
 
@@ -371,36 +471,53 @@ def test_create_layout(layers):
             '@slice': (0, 230),
             '@shape': (230, ),
         },
+        'gradients': {
+            '@type': 'array',
+            '@index': 1,
+            '@hub': 1,
+            '@slice': (0, 230),
+            '@shape': (230, ),
+        },
+
         'InputLayer': {
             '@type': 'BufferView',
-            '@index': 1,
+            '@index': 2,
             'inputs': {'@type': 'BufferView', '@index': 0},
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 2),
-                            '@hub': 1, '@slice': (0, 2)},
+                            '@hub': 2, '@slice': (0, 2)},
             },
             'parameters': {'@type': 'BufferView', '@index': 2},
             'internals': {'@type': 'BufferView', '@index': 3},
+            'input_deltas': {'@type': 'BufferView', '@index': 4},
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2),
+                            '@hub': 3, '@slice': (0, 2)},
+            },
+            'gradients': {'@type': 'BufferView', '@index': 6},
         },
         'A': {
             '@type': 'BufferView',
-            '@index': 2,
+            '@index': 3,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 2),
-                            '@hub': 1, '@slice': (0, 2)}
+                            '@hub': 2, '@slice': (0, 2)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 3),
-                            '@hub': 2, '@slice': (0, 3)}
+                            '@hub': 4, '@slice': (0, 3)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -414,25 +531,47 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 3),
-                      '@hub': 3, '@slice': (0, 3)}
+                      '@hub': 5, '@slice': (0, 3)}
+            },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2),
+                            '@hub': 3, '@slice': (0, 2)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 3),
+                            '@hub': 6, '@slice': (0, 3)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (3, 2),
+                      '@hub': 1, '@slice': (0, 6)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (3,),
+                         '@hub': 1, '@slice': (6, 9)}
             },
         },
         'B': {
             '@type': 'BufferView',
-            '@index': 3,
+            '@index': 4,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 2),
-                            '@hub': 1, '@slice': (0, 2)}
+                            '@hub': 2, '@slice': (0, 2)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 5),
-                            '@hub': 2, '@slice': (3, 8)}
+                            '@hub': 4, '@slice': (3, 8)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -446,25 +585,47 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 5),
-                      '@hub': 4, '@slice': (0, 5)}
+                      '@hub': 7, '@slice': (0, 5)}
+            },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 2),
+                            '@hub': 3, '@slice': (0, 2)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 5),
+                            '@hub': 6, '@slice': (3, 8)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (5, 2),
+                      '@hub': 1, '@slice': (9, 19)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (5,),
+                         '@hub': 1, '@slice': (19, 24)}
             },
         },
         'C': {
             '@type': 'BufferView',
-            '@index': 4,
+            '@index': 5,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 8),
-                            '@hub': 2, '@slice': (0, 8)}
+                            '@hub': 4, '@slice': (0, 8)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 7),
-                            '@hub': 2, '@slice': (8, 15)}
+                            '@hub': 4, '@slice': (8, 15)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -478,25 +639,47 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 7),
-                      '@hub': 5, '@slice': (0, 7)}
+                      '@hub': 8, '@slice': (0, 7)}
+            },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 8),
+                            '@hub': 6, '@slice': (0, 8)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 7),
+                            '@hub': 6, '@slice': (8, 15)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (7, 8),
+                      '@hub': 1, '@slice': (24, 80)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (7,),
+                         '@hub': 1, '@slice': (80, 87)}
             },
         },
         'D': {
             '@type': 'BufferView',
-            '@index': 5,
+            '@index': 6,
             'inputs': {
                 '@type': 'BufferView',
                 '@index': 0,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 12),
-                            '@hub': 2, '@slice': (3, 15)}
+                            '@hub': 4, '@slice': (3, 15)}
             },
             'outputs': {
                 '@type': 'BufferView',
                 '@index': 1,
                 'default': {'@type': 'array', '@index': 0,
                             '@shape': ('T', 'B', 11),
-                            '@hub': 6, '@slice': (0, 11)}
+                            '@hub': 9, '@slice': (0, 11)}
             },
             'parameters': {
                 '@type': 'BufferView',
@@ -510,6 +693,28 @@ def test_create_layout(layers):
                 '@type': 'BufferView',
                 '@index': 3,
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 11),
-                      '@hub': 7, '@slice': (0, 11)}
+                      '@hub': 10, '@slice': (0, 11)}
+            },
+            'input_deltas': {
+                '@type': 'BufferView',
+                '@index': 4,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 12),
+                            '@hub': 6, '@slice': (3, 15)}
+            },
+            'output_deltas': {
+                '@type': 'BufferView',
+                '@index': 5,
+                'default': {'@type': 'array', '@index': 0,
+                            '@shape': ('T', 'B', 11),
+                            '@hub': 11, '@slice': (0, 11)}
+            },
+            'gradients': {
+                '@type': 'BufferView',
+                '@index': 6,
+                'W': {'@type': 'array', '@index': 0, '@shape': (11, 12),
+                      '@hub': 1, '@slice': (87, 219)},
+                'bias': {'@type': 'array', '@index': 1, '@shape': (11,),
+                         '@hub': 1, '@slice': (219, 230)}
             },
         }}
