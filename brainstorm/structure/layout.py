@@ -172,7 +172,6 @@ def get_all_sinks_and_sources(forced_orders, connections, layout):
 
 def get_forced_orders(layers):
     forced_orders = [get_parameter_order(n, l) for n, l in layers.items()]
-    forced_orders += [get_internal_order(n, l) for n, l in layers.items()]
     forced_orders = list(filter(None, forced_orders))
     # ensure no overlap
     for fo in forced_orders:
