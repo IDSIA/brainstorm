@@ -47,11 +47,11 @@ test_mask[-1, :, :] = 1
 
 # ---------------------------- Set up Iterators ----------------------------- #
 
-train_getter = bs.Minibatches(batch_size=10, verbose=True, mask=train_mask,
+train_getter = bs.Minibatches(batch_size=100, verbose=True, mask=train_mask,
                               default=train_inputs, targets=train_targets)
-valid_getter = bs.Minibatches(batch_size=10, verbose=True, mask=valid_mask,
+valid_getter = bs.Minibatches(batch_size=200, verbose=True, mask=valid_mask,
                               default=valid_inputs, targets=valid_targets)
-test_getter = bs.Minibatches(batch_size=10, verbose=True, mask=test_mask,
+test_getter = bs.Minibatches(batch_size=200, verbose=True, mask=test_mask,
                              default=test_inputs, targets=test_targets)
 
 # ----------------------------- Set up Network ------------------------------ #

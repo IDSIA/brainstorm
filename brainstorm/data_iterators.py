@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from datetime import datetime
 import math
 import numpy as np
+import sys
 from brainstorm.randomness import Seedable
 from brainstorm.utils import IteratorValidationError
 
@@ -103,6 +104,7 @@ class Online(DataIterator, Seedable):
                                for k, v in self.data.items()}
             yield device_data
             print(p_bar.send(i + 1), end='')
+            sys.stdout.flush()
 
 
 class Minibatches(DataIterator, Seedable):
@@ -155,6 +157,7 @@ class Minibatches(DataIterator, Seedable):
                                for k, v in self.data.items()}
             yield device_data
             print(p_bar.send((i + 1) * self.batch_size), end='')
+            sys.stdout.flush()
 
 
 def _assert_correct_data_format(named_data):
