@@ -17,17 +17,25 @@ class MaskLayerImpl(LayerBaseImpl):
 
     def forward_pass(self, forward_buffers, training_pass=True):
         time_size, batch_size = forward_buffers.inputs.default.shape[:2]
-        f_size = np.prod(forward_buffers.inputs.default.shape[2:])
-        inp = forward_buffers.inputs.default.reshape(time_size * batch_size, f_size)
-        self.handler.mult_mv(inp, forward_buffers.inputs.mask.reshape(time_size * batch_size, 1),
-                             forward_buffers.outputs.default.reshape(time_size * batch_size, f_size))
+        flat_size = time_size * batch_size
+        feat_size = np.prod(forward_buffers.inputs.default.shape[2:])
+
+        flat_inp = forward_buffers.inputs.default.reshape(flat_size, feat_size)
+        flat_mask = forward_buffers.inputs.mask.reshape(flat_size, 1)
+        flat_out = forward_buffers.outputs.default.reshape(flat_size, feat_size)
+
+        self.handler.mult_mv(flat_inp, flat_mask, out=flat_out)
 
     def backward_pass(self, forward_buffers, backward_buffers):
         time_size, batch_size = forward_buffers.inputs.default.shape[:2]
-        f_size = np.prod(forward_buffers.inputs.default.shape[2:])
-        flat_shape = (time_size * batch_size, f_size)
-        out_deltas = backward_buffers.outputs.default.reshape(flat_shape)
+        feat_size = np.prod(forward_buffers.inputs.default.shape[2:])
+        flat_size = time_size * batch_size
+
+        flat_shape = (time_size * batch_size, feat_size)
+        flat_out_deltas = backward_buffers.outputs.default.reshape(flat_shape)
         tmp = self.handler.allocate(flat_shape)
-        self.handler.mult_mv(out_deltas, forward_buffers.inputs.mask.reshape(time_size * batch_size, 1),tmp)
-        in_deltas = backward_buffers.inputs.default.reshape(flat_shape)
-        self.handler.add_tt(tmp, in_deltas, in_deltas)
+        flat_mask = forward_buffers.inputs.mask.reshape(flat_size, 1)
+        flat_in_deltas = backward_buffers.inputs.default.reshape(flat_shape)
+
+        self.handler.mult_mv(flat_out_deltas, flat_mask, tmp)
+        self.handler.add_tt(tmp, flat_in_deltas, flat_in_deltas)
