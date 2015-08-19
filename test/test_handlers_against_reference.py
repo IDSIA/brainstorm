@@ -10,8 +10,8 @@ from brainstorm.handlers import NumpyHandler, PyCudaHandler
 ref_dtype = np.float32
 ref = NumpyHandler(np.float32)
 handler = PyCudaHandler()
-some_2d_shapes = [[1, 1], (5, 5), [3, 4]]
-some_nd_shapes = [[1, 1, 4], [1, 1, 3, 3], [3, 4, 2, 1]]
+some_2d_shapes = ((1, 1), (5, 5), (3, 4), (4, 3))
+some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
 
 def operation_check(ref_op, op, ref_args, args):
@@ -23,7 +23,7 @@ def operation_check(ref_op, op, ref_args, args):
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
             print("\nReference (expected) array:\n", ref_arg)
-            print("\nObtained array:\n", arg)
+            print("\nObtained array:\n", arg_ref)
             check = np.allclose(ref_arg, arg_ref)
         else:
             print("\nReference (expected) array:\n", ref_arg)
@@ -79,7 +79,7 @@ def test_dot_mm():
                                get_args_from_ref_args(ref_args))
 
 
-def test_add_dot_mm():
+def test_dot_add_mm():
     list_a = get_random_arrays()
     list_b = get_random_arrays()
     list_b = [b.T.copy() for b in list_b]
@@ -88,7 +88,7 @@ def test_add_dot_mm():
         out = np.random.randn(a.shape[0], a.shape[0]).astype(np.float32)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.dot_mm, handler.dot_mm, ref_args,
+        assert operation_check(ref.dot_add_mm, handler.dot_add_mm, ref_args,
                                get_args_from_ref_args(ref_args))
 
 
