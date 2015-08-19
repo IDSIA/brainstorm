@@ -22,12 +22,12 @@ def operation_check(ref_op, op, ref_args, args):
     for (ref_arg, arg) in zip(ref_args, args):
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
-            print("\narray ref:\n", ref_arg)
-            print("\narray arg:\n", arg)
+            print("\nReference (expected) array:\n", ref_arg)
+            print("\nObtained array:\n", arg)
             check = np.allclose(ref_arg, arg_ref)
         else:
-            print("\nref:\n", ref_arg)
-            print("\narg:\n", arg)
+            print("\nReference (expected) array:\n", ref_arg)
+            print("\nObtained array:\n", arg)
             check = (ref_arg == arg)
     return check
 
@@ -245,12 +245,27 @@ def test_divide_mv():
 
 
 def test_mult_mv():
-    # Only checking with row vectors
     list_a = get_random_arrays()
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
+    print("======================================")
+    print("Testing mult_mv() for with row vectors")
+    print("======================================")
     for a, b in zip(list_a, list_b):
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.mult_mv, handler.mult_mv, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+    print("======================================")
+    print("Testing mult_mv() for with column vectors")
+    print("======================================")
+    list_b = get_random_arrays()
+    list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
+    for a, b in zip(list_a, list_b):
+        print("b:", b)
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
