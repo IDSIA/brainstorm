@@ -8,8 +8,12 @@ import numpy as np
 import os
 import json
 import gzip
-import pickle, hickle
-from urllib import urlretrieve
+import pickle
+import sys
+if sys.version_info < (3,):
+    from urllib import urlretrieve
+else:
+    from urllib.request import urlretrieve
 
 # ------------------------------- Get the data ------------------------------- #
 
@@ -19,7 +23,10 @@ mnist_file = 'mnist.pkl.gz'
 if not os.path.exists(mnist_file):
     urlretrieve(url, mnist_file)
 with gzip.open(mnist_file, 'rb') as f:
-    ds = pickle.load(f)
+    if sys.version_info < (3,):
+        ds = pickle.load(f)
+    else:
+        ds = pickle.load(f, encoding='latin1')
 
 train_inputs, train_targets = \
     ds[0][0].reshape((1, 50000, 784)), ds[0][1].reshape((1, 50000, 1))
