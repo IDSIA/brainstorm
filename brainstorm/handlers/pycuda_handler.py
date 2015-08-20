@@ -137,14 +137,16 @@ class PyCudaHandler(Handler):
         """
         cumisc.div_matvec(m, v, out=out)
 
-    @staticmethod
-    def mult_mv(m, v, out):
+    @classmethod
+    def mult_mv(cls, m, v, out):
         """
         Multiply (M, N) matrix elementwise by a (1, N) vector using
         broadcasting.
         """
-        cumisc.mult_matvec(m, v, out=out)
-
+        if m.shape == v.shape:
+            cls.mult_tt(m, v, out=out)
+        else:
+            cumisc.mult_matvec(m, v, out=out)
 
     @staticmethod
     def binarize_v(v, out):
