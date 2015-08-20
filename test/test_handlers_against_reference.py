@@ -10,7 +10,7 @@ from brainstorm.handlers import NumpyHandler, PyCudaHandler
 ref_dtype = np.float32
 ref = NumpyHandler(np.float32)
 handler = PyCudaHandler()
-some_2d_shapes = ((1, 1), (5, 5), (3, 4), (4, 3))
+some_2d_shapes = ((1, 1), (4, 1), (1, 4), (5, 5), (3, 4), (4, 3))
 some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
 
@@ -265,7 +265,9 @@ def test_mult_mv():
     list_b = get_random_arrays()
     list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
     for a, b in zip(list_a, list_b):
-        print("b:", b)
+        print('-'*40)
+        print("a:\n", a)
+        print("b:\n", b)
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
