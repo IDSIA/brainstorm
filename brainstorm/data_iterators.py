@@ -87,6 +87,7 @@ class Online(DataIterator, Seedable):
             arr = handler.allocate(self.sample_size)
 
         print(next(p_bar), end='')
+        sys.stdout.flush()
         indices = np.arange(self.nr_sequences)
         if self.shuffle:
             self.rnd.shuffle(indices)
@@ -137,6 +138,7 @@ class Minibatches(DataIterator, Seedable):
             arr = handler.allocate(self.sample_size)
 
         print(next(p_bar), end='')
+        sys.stdout.flush()
         indices = np.arange(int(math.ceil(self.nr_sequences / self.batch_size)))
         if self.shuffle:
             self.rnd.shuffle(indices)
