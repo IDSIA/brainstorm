@@ -124,6 +124,29 @@ class MonitorLayerProperties(Monitor):
         return log
 
 
+class MonitorLayerGradients(Monitor):
+    """
+    Monitor some properties of a layer.
+    """
+    def __init__(self, layer_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        if name is None:
+            name = "Monitor{}Gradients".format(layer_name)
+        super(MonitorLayerGradients, self).__init__(name, timescale,
+                                                    interval, verbose)
+        self.layer_name = layer_name
+
+    def __call__(self, epoch, net, stepper, logs):
+        log = OrderedDict()
+        for key, v in net.buffer.backward[self.layer_name].parameters.items():
+            v = net.handler.get_numpy_copy(v)
+            log[key] = OrderedDict()
+            log[key]['min'] = v.min()
+            log[key]['avg'] = v.mean()
+            log[key]['max'] = v.max()
+        return log
+
+
 class MaxEpochsSeen(Monitor):
     def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
                  verbose=None):
