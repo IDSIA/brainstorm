@@ -56,17 +56,17 @@ test_getter = bs.Minibatches(batch_size=200, verbose=True, mask=test_mask,
                              default=test_inputs, targets=test_targets)
 
 # ----------------------------- Set up Network ------------------------------ #
-inp_layer = bs.InputLayer(out_shapes={'default': ('T', 'B', 1),
+inp_layer = bs.layers.Input(out_shapes={'default': ('T', 'B', 1),
                                       'targets': ('T', 'B', 1),
                                       'mask': ('T', 'B', 1)})
-out_layer = bs.ClassificationLayer(10, name="out")
-mask_layer = bs.MaskLayer()
+out_layer = bs.layers.Classification(10, name="out")
+mask_layer = bs.layers.Mask()
 
 inp_layer >> \
-    bs.LstmLayer(100, name='lstm') >> \
+    bs.layers.Lstm(100, name='lstm') >> \
     out_layer - "loss" >> \
     mask_layer >> \
-    bs.LossLayer()
+    bs.layers.Loss()
 
 inp_layer - 'mask' >> 'mask' - mask_layer
 
