@@ -63,11 +63,11 @@ network.set_weight_modifiers({"out": bs.ConstrainL2Norm(1)})
 # ------------------------------ Set up Trainer ------------------------------ #
 
 trainer = bs.Trainer(bs.SgdStep(learning_rate=0.1), double_buffering=False)
-trainer.add_monitor(bs.MaxEpochsSeen(1))
-trainer.add_monitor(bs.MonitorAccuracy("valid_getter", "out.output",
+trainer.add_hook(bs.MaxEpochsSeen(1))
+trainer.add_hook(bs.MonitorAccuracy("valid_getter", "out.output",
                                        name="validation accuracy",
                                        verbose=True))
-trainer.add_monitor(bs.SaveBestWeights("validation accuracy",
+trainer.add_hook(bs.SaveBestWeights("validation accuracy",
                                        name="best weights",
                                        criterion="max"))
 
@@ -75,4 +75,4 @@ trainer.add_monitor(bs.SaveBestWeights("validation accuracy",
 
 trainer.train(network, train_getter, valid_getter=valid_getter)
 print("\nBest validation accuracy: ", max(trainer.logs["validation accuracy"]))
-network.buffer.forward.parameters = trainer.monitors["best weights"].weights
+network.buffer.forward.parameters = trainer.hooks["best weights"].weights
