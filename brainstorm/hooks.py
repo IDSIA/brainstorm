@@ -106,7 +106,7 @@ class MonitorLayerProperties(Hook):
     def __init__(self, layer_name, timescale='epoch',
                  interval=1, name=None, verbose=None):
         if name is None:
-            name = "Monitor{}Properties".format(layer_name)
+            name = "MonitorProperties_{}".format(layer_name)
         super(MonitorLayerProperties, self).__init__(name, timescale,
                                                      interval, verbose)
         self.layer_name = layer_name
@@ -118,9 +118,13 @@ class MonitorLayerProperties(Hook):
             log[key] = OrderedDict()
             log[key]['min'] = v.min()
             log[key]['max'] = v.max()
-            if len(v.shape) > 1 and v.shape[1] > 1:
-                log[key]['min_l2'] = np.sqrt(np.sum(v ** 2, axis=1)).min()
-                log[key]['max_l2'] = np.sqrt(np.sum(v ** 2, axis=1)).max()
+            log[key]['mean'] = v.mean()
+            if len(v.shape) > 1:
+                log[key]['min_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).min()
+                log[key]['max_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).max()
+                log[key]['mean_L2_norm'] = np.sqrt(np.sum(v ** 2,
+                                                          axis=1)).mean()
+
         return log
 
 
@@ -131,7 +135,7 @@ class MonitorLayerGradients(Hook):
     def __init__(self, layer_name, timescale='epoch',
                  interval=1, name=None, verbose=None):
         if name is None:
-            name = "Monitor{}Gradients".format(layer_name)
+            name = "MonitorGradients_{}".format(layer_name)
         super(MonitorLayerGradients, self).__init__(name, timescale,
                                                     interval, verbose)
         self.layer_name = layer_name
@@ -154,9 +158,9 @@ class MonitorLayerDeltas(Hook):
     def __init__(self, layer_name, timescale='epoch',
                  interval=1, name=None, verbose=None):
         if name is None:
-            name = "Monitor{}Deltas".format(layer_name)
+            name = "MonitorDeltas_{}".format(layer_name)
         super(MonitorLayerDeltas, self).__init__(name, timescale,
-                                                    interval, verbose)
+                                                 interval, verbose)
         self.layer_name = layer_name
 
     def __call__(self, epoch, net, stepper, logs):
@@ -224,7 +228,8 @@ class StopOnNan(Hook):
     """
     def __init__(self, logs_to_check=(), check_parameters=True, name=None):
         super(StopOnNan, self).__init__(name, 'epoch', 1)
-        self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check, string_types)
+        self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check,
+                                                            string_types)
                               else logs_to_check)
         self.check_parameters = check_parameters
 

@@ -244,7 +244,7 @@ class Network(Seedable):
                                                          kwargs)
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.forward.items()
-                          if 'parameters' in v}
+                          if k != 'parameters' and 'parameters' in v}
         gradient_mods, fallback = resolve_references(all_parameters,
                                                      gradient_mod_refs)
 

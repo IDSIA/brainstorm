@@ -16,7 +16,7 @@ class Trainer(Describable):
     __undescribed__ = {
         'current_epoch': 0,
         'logs': {},
-        'failed_hookss': {}
+        'failed_hooks': {}
     }
     __default_values__ = {'verbose': True}
 
@@ -133,7 +133,7 @@ class Trainer(Describable):
     def _call_hook(self, hook, net):
         try:
             return hook(epoch=self.current_epoch, net=net,
-                           stepper=self.stepper, logs=self.logs), False
+                        stepper=self.stepper, logs=self.logs), False
         except StopIteration as err:
             print(">> Stopping because:", err)
             if hasattr(err, 'value'):
