@@ -126,7 +126,7 @@ class MonitorLayerProperties(Hook):
 
 class MonitorLayerGradients(Hook):
     """
-    Monitor some properties of a layer.
+    Monitor some statistics about all the gradients of a layer.
     """
     def __init__(self, layer_name, timescale='epoch',
                  interval=1, name=None, verbose=None):
@@ -144,6 +144,46 @@ class MonitorLayerGradients(Hook):
             log[key]['min'] = v.min()
             log[key]['avg'] = v.mean()
             log[key]['max'] = v.max()
+        return log
+
+
+class MonitorLayerDeltas(Hook):
+    """
+    Monitor some statistics about all the deltas of a layer.
+    """
+    def __init__(self, layer_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        if name is None:
+            name = "Monitor{}Deltas".format(layer_name)
+        super(MonitorLayerDeltas, self).__init__(name, timescale,
+                                                    interval, verbose)
+        self.layer_name = layer_name
+
+    def __call__(self, epoch, net, stepper, logs):
+        log = OrderedDict()
+        for key, v in net.buffer.backward[self.layer_name].internals.items():
+            v = net.handler.get_numpy_copy(v)
+            log[key] = OrderedDict()
+            log[key]['min'] = v.min()
+            log[key]['avg'] = v.mean()
+            log[key]['max'] = v.max()
+
+        for key, v in net.buffer.backward[self.layer_name].outputs.items():
+            n = 'out_deltas.{}'.format(key)
+            log[n] = OrderedDict()
+            v = net.handler.get_numpy_copy(v)
+            log[n]['min'] = v.min()
+            log[n]['avg'] = v.mean()
+            log[n]['max'] = v.max()
+
+        for key, v in net.buffer.backward[self.layer_name].inputs.items():
+            n = 'in_deltas.{}'.format(key)
+            log[n] = OrderedDict()
+            v = net.handler.get_numpy_copy(v)
+            log[n]['min'] = v.min()
+            log[n]['avg'] = v.mean()
+            log[n]['max'] = v.max()
+
         return log
 
 

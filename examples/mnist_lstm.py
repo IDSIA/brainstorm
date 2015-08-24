@@ -28,16 +28,16 @@ with gzip.open(mnist_file, 'rb') as f:
     else:
         ds = pickle.load(f, encoding='latin1')
 
-train_inputs = ds[0][0].T.flatten().reshape((784, 50000, 1))
-train_targets = np.zeros((784, 50000, 1))
-train_targets[-1, :, :] = ds[0][1].reshape((1, 50000, 1))
-train_mask = np.zeros((784, 50000, 1))
+train_inputs = ds[0][0].T.flatten().reshape((784, 50000, 1))[:, :500]
+train_targets = np.zeros((784, 500, 1))
+train_targets[-1, :, :] = ds[0][1].reshape((1, 50000, 1))[:, :500]
+train_mask = np.zeros((784, 500, 1))
 train_mask[-1, :, :] = 1
 
-valid_inputs = ds[1][0].T.flatten().reshape((784, 10000, 1))
-valid_targets = np.zeros((784, 10000, 1))
-valid_targets[-1, :, :] = ds[1][1].reshape((1, 10000, 1))
-valid_mask = np.zeros((784, 10000, 1))
+valid_inputs = ds[1][0].T.flatten().reshape((784, 10000, 1))[:, :100]
+valid_targets = np.zeros((784, 100, 1))
+valid_targets[-1, :, :] = ds[1][1].reshape((1, 10000, 1))[:, :100]
+valid_mask = np.zeros((784, 100, 1))
 valid_mask[-1, :, :] = 1
 
 test_inputs = ds[2][0].T.flatten().reshape((784, 10000, 1))
@@ -86,8 +86,6 @@ trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter",
 trainer.add_hook(bs.hooks.SaveBestWeights("validation accuracy",
                                           name="best weights",
                                           criterion="max"))
-trainer.add_hook(bs.hooks.MonitorLayerGradients('lstm', timescale='update'))
-trainer.add_hook(bs.hooks.MonitorLayerGradients('out', timescale='update'))
 
 # -------------------------------- Train ------------------------------------ #
 
