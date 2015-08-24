@@ -2,7 +2,6 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
-from brainstorm.utils import LayerValidationError
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
@@ -27,7 +26,7 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         self.stride = self.kwargs.get('stride', (1, 1))
         assert type(self.pad) is int and self.pad >= 0
         assert type(self.stride) is tuple and self.stride[0] >= 0 and \
-            self.stride >= 0
+            self.stride[1] >= 0
 
     def set_handler(self, new_handler):
         super(ConvolutionLayer2DImpl, self).set_handler(new_handler)

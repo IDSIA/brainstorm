@@ -331,9 +331,9 @@ import brainstorm as bs
 import json
 
 arch = generate_architecture(
-    bs.InputLayer(out_shapes={'default': ('T', 'B', 7)}) >>
-    bs.FullyConnectedLayer(3) >>
-    bs.LossLayer())
+    bs.layers.Input(out_shapes={'default': ('T', 'B', 7)}) >>
+    bs.layers.FullyConnected(3) >>
+    bs.layers.Loss())
 
 
 def test_describe_network():

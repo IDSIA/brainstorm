@@ -265,7 +265,7 @@ class Network(Seedable):
         time_size, batch_size = data[next(iter(data))].shape[:2]
         self.buffer.resize(time_size, batch_size)
         for name, val in data.items():
-            self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name],
+            self.handler.copy_to(self.buffer.forward.Input.outputs[name],
                                  val)
 
     def forward_pass(self, training_pass=False, context=None):

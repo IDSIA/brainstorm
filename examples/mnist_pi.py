@@ -4,9 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 import brainstorm as bs
 from brainstorm.handlers import PyCudaHandler
-import numpy as np
 import os
-import json
 import gzip
 import pickle
 import sys

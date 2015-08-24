@@ -48,17 +48,17 @@ test_mask[-1, :, :] = 1
 
 # ---------------------------- Set up Iterators ----------------------------- #
 
-train_getter = bs.Minibatches(batch_size=100, verbose=True, mask=train_mask,
+train_getter = bs.Minibatches(batch_size=10, verbose=True, mask=train_mask,
                               default=train_inputs, targets=train_targets)
-valid_getter = bs.Minibatches(batch_size=200, verbose=True, mask=valid_mask,
+valid_getter = bs.Minibatches(batch_size=20, verbose=True, mask=valid_mask,
                               default=valid_inputs, targets=valid_targets)
-test_getter = bs.Minibatches(batch_size=200, verbose=True, mask=test_mask,
+test_getter = bs.Minibatches(batch_size=20, verbose=True, mask=test_mask,
                              default=test_inputs, targets=test_targets)
 
 # ----------------------------- Set up Network ------------------------------ #
 inp_layer = bs.layers.Input(out_shapes={'default': ('T', 'B', 1),
-                                      'targets': ('T', 'B', 1),
-                                      'mask': ('T', 'B', 1)})
+                                        'targets': ('T', 'B', 1),
+                                        'mask': ('T', 'B', 1)})
 out_layer = bs.layers.Classification(10, name="out")
 mask_layer = bs.layers.Mask()
 
@@ -80,12 +80,12 @@ network.initialize({"default": bs.Gaussian(0.01),
 trainer = bs.Trainer(bs.SgdStep(learning_rate=0.1), double_buffering=False)
 trainer.add_hook(bs.hooks.MaxEpochsSeen(500))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter",
-                                       output="out.output", mask_name="mask",
-                                       name="validation accuracy",
-                                       verbose=True))
+                                          output="out.output", mask_name="mask",
+                                          name="validation accuracy",
+                                          verbose=True))
 trainer.add_hook(bs.hooks.SaveBestWeights("validation accuracy",
-                                       name="best weights",
-                                       criterion="max"))
+                                          name="best weights",
+                                          criterion="max"))
 trainer.add_hook(bs.hooks.MonitorLayerGradients('lstm', timescale='update'))
 trainer.add_hook(bs.hooks.MonitorLayerGradients('out', timescale='update'))
 

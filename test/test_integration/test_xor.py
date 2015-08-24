@@ -3,26 +3,26 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 import pytest
-from brainstorm import (
-    InputLayer, FullyConnectedLayer, LossLayer, BinomialCrossEntropyLayer,
-    build_net, Gaussian, Trainer, SgdStep, MaxEpochsSeen, Undivided)
+from brainstorm import (Network, Gaussian, Trainer, SgdStep, Undivided)
+from brainstorm.layers import *
+from brainstorm.hooks import MaxEpochsSeen
 # from brainstorm.handlers.pycuda_handler import PyCudaHandler
 
 
 @pytest.mark.slow
 def test_learn_xor_function():
     # set up the network
-    inp = InputLayer(out_shapes={'default': ('T', 'B', 2),
+    inp = Input(out_shapes={'default': ('T', 'B', 2),
                                  'targets': ('T', 'B', 1)})
-    error_func = BinomialCrossEntropyLayer()
+    error_func = BinomialCrossEntropy()
 
     (inp >>
-     FullyConnectedLayer(2, activation_function='sigmoid') >>
-     FullyConnectedLayer(1, activation_function='sigmoid', name='OutLayer') >>
+     FullyConnected(2, activation_function='sigmoid') >>
+     FullyConnected(1, activation_function='sigmoid', name='OutLayer') >>
      error_func >>
-     LossLayer())
+     Loss())
 
-    net = build_net(inp - 'targets' >> 'targets' - error_func)
+    net = Network.from_layer(inp - 'targets' >> 'targets' - error_func)
     # net.set_memory_handler(PyCudaHandler())
     net.initialize(Gaussian(1.0), seed=42)  # high weight-init needed
     print(net.buffer.forward.parameters)

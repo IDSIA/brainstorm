@@ -313,7 +313,7 @@ class MonitorAccuracy(Hook):
             net.forward_pass()
             out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
                                     .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.forward.InputLayer
+            target = _h.get_numpy_copy(net.buffer.forward.Input
                                        .outputs[self.targets_name])
 
             out = out.reshape(out.shape[0], out.shape[1], -1)
@@ -328,7 +328,7 @@ class MonitorAccuracy(Hook):
             assert out_class.shape == target_class.shape
 
             if self.masked:
-                mask = _h.get_numpy_copy(net.buffer.forward.InputLayer
+                mask = _h.get_numpy_copy(net.buffer.forward.Input
                                          .outputs[self.mask_name])[:, :, 0]
                 errors += np.sum((out_class != target_class) * mask)
                 totals += np.sum(mask)
@@ -357,7 +357,7 @@ class MonitorHammingScore(Hook):
         LAYER_NAME[.OUTPUT_NAME]
         Where OUTPUT_NAME defaults to 'default'
     targets_name : str, optional
-        name of the targets (as specified in the InputLayer)
+        name of the targets (as specified in the Input)
         defaults to 'targets'
 
 
@@ -408,7 +408,7 @@ class MonitorHammingScore(Hook):
             net.forward_pass()
             out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
                                     .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.forward.InputLayer
+            target = _h.get_numpy_copy(net.buffer.forward.Input
                                        .outputs[self.targets_name])
 
             out = out.reshape(out.shape[0], out.shape[1], -1)

@@ -4,7 +4,6 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.randomness import Seedable
 from brainstorm.describable import Describable
-from brainstorm.utils import WeightModificationError
 
 
 class WeightModifier(Seedable, Describable):
