@@ -11,12 +11,12 @@ from brainstorm.describable import Describable
 class Trainer(Describable):
     """
     Trainer objects organize the process of training a network. They can employ
-    different training methods (Steppers) and call Monitors.
+    different training methods (Steppers) and call Hooks.
     """
     __undescribed__ = {
         'current_epoch': 0,
         'logs': {},
-        'failed_monitors': {}
+        'failed_hookss': {}
     }
     __default_values__ = {'verbose': True}
 
@@ -24,30 +24,30 @@ class Trainer(Describable):
         self.stepper = stepper
         self.verbose = verbose
         self.double_buffering = double_buffering
-        self.monitors = OrderedDict()
+        self.hooks = OrderedDict()
         self.current_epoch = 0
         self.logs = dict()
 
-    def add_monitor(self, monitor, name=None):
+    def add_hook(self, hook, name=None):
         if name is None:
-            name = monitor.__name__
-        if name in self.monitors:
-            raise ValueError("Monitor '{}' already exists.".format(name))
-        if self.monitors:
-            last = next(reversed(self.monitors))
-            priority = self.monitors[last].priority + 1
+            name = hook.__name__
+        if name in self.hooks:
+            raise ValueError("Hook '{}' already exists.".format(name))
+        if self.hooks:
+            last = next(reversed(self.hooks))
+            priority = self.hooks[last].priority + 1
         else:
             priority = 0
-        self.monitors[name] = monitor
-        monitor.__name__ = name
-        monitor.priority = priority
+        self.hooks[name] = hook
+        hook.__name__ = name
+        hook.priority = priority
 
-    def train(self, net, training_data_getter, **monitor_kwargs):
+    def train(self, net, training_data_getter, **hook_kwargs):
         if self.verbose:
             print('\n\n', 15 * '- ', "Before Training", 15 * ' -')
         self.stepper.start(net)
-        self._start_monitors(net, monitor_kwargs)
-        self._emit_monitoring(net, 'epoch')
+        self._start_hooks(net, hook_kwargs)
+        self._emit_hooks(net, 'epoch')
 
         run = (run_network_double_buffer if self.double_buffering else
                run_network)
@@ -64,35 +64,35 @@ class Trainer(Describable):
             for i in run(net, iterator):
                 train_errors.append(self.stepper.run())
                 net.apply_weight_modifiers()
-                if self._emit_monitoring(net, 'update', i + 1):
+                if self._emit_hooks(net, 'update', i + 1):
                     break
 
             self._add_log('training_errors', np.mean(train_errors))
-            if self._emit_monitoring(net, 'epoch'):
+            if self._emit_hooks(net, 'epoch'):
                 break
 
     def __init_from_description__(self, description):
-        # recover the order of the monitors from their priorities
+        # recover the order of the Hooks from their priorities
         # and set their names
         def get_priority(x):
             return getattr(x[1], 'priority', 0)
-        ordered_mon = sorted(self.monitors.items(), key=get_priority)
-        self.monitors = OrderedDict()
+        ordered_mon = sorted(self.hooks.items(), key=get_priority)
+        self.hooks = OrderedDict()
         for name, mon in ordered_mon:
-            self.monitors[name] = mon
+            self.hooks[name] = mon
             mon.__name__ = name
 
-    def _start_monitors(self, net, monitor_kwargs):
+    def _start_hooks(self, net, hook_kwargs):
         self.logs = {'training_errors': [float('NaN')]}
-        for name, monitor in self.monitors.items():
-            self._start_monitor(net, name, monitor, monitor_kwargs)
+        for name, hook in self.hooks.items():
+            self._start_hook(net, name, hook, hook_kwargs)
 
-    def _start_monitor(self, net, name, monitor, monitor_kwargs):
+    def _start_hook(self, net, name, hook, hook_kwargs):
         try:
-            if hasattr(monitor, 'start'):
-                monitor.start(net, self.stepper, self.verbose, monitor_kwargs)
+            if hasattr(hook, 'start'):
+                hook.start(net, self.stepper, self.verbose, hook_kwargs)
         except Exception:
-            print('An error occurred while starting the "{}" monitor:'
+            print('An error occurred while starting the "{}" hook:'
                   ''.format(name), file=sys.stderr)
             raise
 
@@ -116,23 +116,23 @@ class Trainer(Describable):
                 logs[name] = []
             logs[name].append(val)
 
-    def _emit_monitoring(self, net, timescale, update_nr=None):
+    def _emit_hooks(self, net, timescale, update_nr=None):
         update_nr = self.current_epoch if timescale == 'epoch' else update_nr
         should_stop = False
-        for name, monitor in self.monitors.items():
-            if getattr(monitor, 'timescale', 'epoch') != timescale:
+        for name, hook in self.hooks.items():
+            if getattr(hook, 'timescale', 'epoch') != timescale:
                 continue
-            if update_nr % getattr(monitor, 'interval', 1) == 0:
-                monitor_log, stop = self._call_monitor(monitor, net)
+            if update_nr % getattr(hook, 'interval', 1) == 0:
+                hook_log, stop = self._call_hook(hook, net)
                 should_stop |= stop
-                self._add_log(name, monitor_log,
-                              verbose=getattr(monitor, 'verbose', None))
+                self._add_log(name, hook_log,
+                              verbose=getattr(hook, 'verbose', None))
 
         return should_stop
 
-    def _call_monitor(self, monitor, net):
+    def _call_hook(self, hook, net):
         try:
-            return monitor(epoch=self.current_epoch, net=net,
+            return hook(epoch=self.current_epoch, net=net,
                            stepper=self.stepper, logs=self.logs), False
         except StopIteration as err:
             print(">> Stopping because:", err)
@@ -141,7 +141,7 @@ class Trainer(Describable):
             return None, True
         except Exception as err:
             if hasattr(err, 'args') and err.args:
-                err.args = (str(err.args[0]) + " in " + str(monitor),)
+                err.args = (str(err.args[0]) + " in " + str(hook),)
             raise
 
 

@@ -18,35 +18,35 @@ def pytest_runtest_setup(item):
         pytest.skip("skipped because of --skipslow option")
 
 
-#             /--- A -- C--
-# InputLayer -        /    \
-#             \--- B ------- D
+#        /--- A -- C--
+# Input -        /    \
+#        \--- B ------- D
 
 @pytest.fixture
 def layers():
     arch = {
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'Input': {
+            '@type': 'Input',
             'out_shapes': {'default': ('T', 'B', 2)},
             '@outgoing_connections': ['A', 'B']
         },
         'A': {
-            '@type': 'FullyConnectedLayer',
+            '@type': 'FullyConnected',
             'size': 3,
             '@outgoing_connections': ['C']
         },
         'B': {
-            '@type': 'FullyConnectedLayer',
+            '@type': 'FullyConnected',
             'size': 5,
             '@outgoing_connections': ['C', 'D']
         },
         'C': {
-            '@type': 'FullyConnectedLayer',
+            '@type': 'FullyConnected',
             'size': 7,
             '@outgoing_connections': ['D']
         },
         'D': {
-            '@type': 'FullyConnectedLayer',
+            '@type': 'FullyConnected',
             'size': 11,
             '@outgoing_connections': []
         }

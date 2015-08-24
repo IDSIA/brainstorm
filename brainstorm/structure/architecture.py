@@ -111,16 +111,16 @@ def validate_architecture(architecture):
         raise NetworkValidationError(
             'Could not find end layer(s) "{}"'.format(undefined_end_layers))
 
-    # has exactly one InputLayer and its called InputLayer
-    if "InputLayer" not in architecture or \
-            architecture['InputLayer']['@type'] != 'InputLayer':
+    # has exactly one Input and its called Input
+    if "Input" not in architecture or \
+            architecture['Input']['@type'] != 'Input':
         raise NetworkValidationError(
-            'Needs exactly one InputLayer that is called "InputLayer"')
+            'Needs exactly one Input that is called "Input"')
 
-    # no connections to InputLayer
-    if 'InputLayer' in end_layers:
+    # no connections to Input
+    if 'Input' in end_layers:
         raise NetworkValidationError(
-            'DataLayers can not have incoming connections!')
+            'Input can not have incoming connections!')
 
     # TODO: check if connected
     # TODO: check for cycles
@@ -169,7 +169,7 @@ def instantiate_layers_from_architecture(architecture):
     connections = collect_all_connections(architecture)
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
-        LayerClass = get_layer_class_from_typename(layer['@type'] + 'Impl')
+        LayerClass = get_layer_class_from_typename(layer['@type'] + 'LayerImpl')
         incoming = {c for c in connections if c.end_layer == layer_name}
         outgoing = {c for c in connections if c.start_layer == layer_name}
 

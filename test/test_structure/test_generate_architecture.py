@@ -56,7 +56,7 @@ def test_layer_with_kwargs():
 
 
 def test_generate_architecture():
-    l1 = ConstructionWrapper.create('DataLayer', 10)
+    l1 = ConstructionWrapper.create('Input', 10)
     l2 = ConstructionWrapper.create('layertype', 20, name='bar')
     l3 = ConstructionWrapper.create('layertype', 30, name='baz')
     l4 = ConstructionWrapper.create('layertype', 40, name='out')
@@ -69,8 +69,8 @@ def test_generate_architecture():
     assert arch1 == arch2
     assert arch1 == arch3
     assert arch1 == {
-        'DataLayer': {
-            '@type': 'DataLayer',
+        'Input': {
+            '@type': 'Input',
             'shape': 10,
             '@outgoing_connections': {
                 'foo': ['bar.default'],
@@ -102,40 +102,40 @@ def test_generate_architecture():
 
 def test_instantiate_layers_from_architecture():
     arch = {
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'Input': {
+            '@type': 'Input',
             'out_shapes': {'default': ('T', 'B', 10,)},
             '@outgoing_connections': ['A', 'B', 'C']
         },
         'A': {
-            '@type': 'NoOpLayer',
+            '@type': 'NoOp',
             '@outgoing_connections': ['B']
         },
         'B': {
-            '@type': 'NoOpLayer',
+            '@type': 'NoOp',
             '@outgoing_connections': ['D']
         },
         'C': {
-            '@type': 'NoOpLayer',
+            '@type': 'NoOp',
             '@outgoing_connections': ['D']
         },
         'D': {
-            '@type': 'NoOpLayer',
+            '@type': 'NoOp',
             '@outgoing_connections': []
         }
     }
     layers = instantiate_layers_from_architecture(arch)
     assert set(arch.keys()) == set(layers.keys())
 
-    assert isinstance(layers['InputLayer'], InputLayerImpl)
+    assert isinstance(layers['Input'], InputLayerImpl)
     assert type(layers['A']) == NoOpLayerImpl
     assert type(layers['B']) == NoOpLayerImpl
     assert type(layers['C']) == NoOpLayerImpl
     assert type(layers['D']) == NoOpLayerImpl
 
-    assert layers['InputLayer'].in_shapes == {}
-    assert layers['InputLayer'].out_shapes == {'default':
-                                               ShapeTemplate('T', 'B', 10)}
+    assert layers['Input'].in_shapes == {}
+    assert layers['Input'].out_shapes == {'default':
+                                          ShapeTemplate('T', 'B', 10)}
     assert layers['A'].in_shapes == {'default': ShapeTemplate('T', 'B', 10)}
     assert layers['A'].out_shapes == {'default': ShapeTemplate('T', 'B', 10)}
     assert layers['B'].in_shapes == {'default': ShapeTemplate('T', 'B', 20)}

@@ -28,69 +28,69 @@ CONSTRUCTION_LAYERS = {}
 # defined explicitly to provide improved autocompletion
 
 
-def InputLayer(out_shapes, name=None):
-    return ConstructionWrapper.create('InputLayer',
+def Input(out_shapes, name=None):
+    return ConstructionWrapper.create('Input',
                                       name=name,
                                       out_shapes=out_shapes)
 
 
-def FullyConnectedLayer(size, activation_function='linear', name=None):
-    return ConstructionWrapper.create('FullyConnectedLayer',
+def FullyConnected(size, activation_function='linear', name=None):
+    return ConstructionWrapper.create('FullyConnected',
                                       size=size,
                                       name=name,
                                       activation_function=activation_function)
 
 
-def LossLayer(name=None):
-    return ConstructionWrapper.create('LossLayer', name=name)
+def Loss(name=None):
+    return ConstructionWrapper.create('Loss', name=name)
 
 
-def LstmLayer(size, activation_function='tanh', name=None):
-    return ConstructionWrapper.create('LstmLayer',
+def Lstm(size, activation_function='tanh', name=None):
+    return ConstructionWrapper.create('Lstm',
                                       size=size,
                                       name=name,
                                       activation_function=activation_function)
 
 
-def BinomialCrossEntropyLayer(name=None):
-    return ConstructionWrapper.create('BinomialCrossEntropyLayer',
+def BinomialCrossEntropy(name=None):
+    return ConstructionWrapper.create('BinomialCrossEntropy',
                                       name=name)
 
 
-def ClassificationLayer(size, name=None):
-    return ConstructionWrapper.create('ClassificationLayer',
+def Classification(size, name=None):
+    return ConstructionWrapper.create('Classification',
                                       size=size,
                                       name=name)
 
 
-def RnnLayer(size, activation_function='tanh', name=None):
-    return ConstructionWrapper.create('RnnLayer',
+def Rnn(size, activation_function='tanh', name=None):
+    return ConstructionWrapper.create('Rnn',
                                       size=size,
                                       name=name,
                                       activation_function=activation_function)
 
 
-def SquaredDifferenceLayer(name=None):
-    return ConstructionWrapper.create('SquaredDifferenceLayer',
+def SquaredDifference(name=None):
+    return ConstructionWrapper.create('SquaredDifference',
                                       name=name)
 
 
-def MaskLayer(name=None):
-    return ConstructionWrapper.create('MaskLayer', name=name)
+def Mask(name=None):
+    return ConstructionWrapper.create('Mask', name=name)
 
 
 # ------------------------ Automatic Construction Layers ----------------------
 
 def construction_layer_for(layer_impl):
     layer_name = layer_impl.__name__
-    assert layer_name.endswith('Impl'), \
-        "{} should end with 'Impl'".format(layer_name)
-    layer_name = layer_name[:-4]
+    assert layer_name.endswith('LayerImpl'), \
+        "{} should end with 'LayerImpl'".format(layer_name)
+    layer_name = layer_name[:-9]
     return partial(ConstructionWrapper.create, layer_name)
 
 
 for Layer in get_inheritors(LayerBaseImpl):
-    layer_name = Layer.__name__[:-4]
+    layer_name = Layer.__name__[:-9]
     if layer_name not in CONSTRUCTION_LAYERS:
         CONSTRUCTION_LAYERS[layer_name] = construction_layer_for(Layer)
 

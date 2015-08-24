@@ -29,7 +29,7 @@ def test_get_order_raises_on_missing_index():
 
 
 def test_get_parameter_order(layers):
-    assert get_parameter_order('InputLayer', layers['InputLayer']) == ()
+    assert get_parameter_order('Input', layers['Input']) == ()
     assert get_parameter_order('A', layers['A']) == ('A.parameters.W',
                                                      'A.parameters.bias')
     assert get_parameter_order('B', layers['B']) == ('B.parameters.W',
@@ -37,7 +37,7 @@ def test_get_parameter_order(layers):
 
 
 def test_get_internals_order(layers):
-    assert get_internal_order('InputLayer', layers['InputLayer']) == ()
+    assert get_internal_order('Input', layers['Input']) == ()
     assert get_internal_order('A', layers['A']) == ('A.internals.H',)
     assert get_internal_order('B', layers['B']) == ('B.internals.H',)
 
@@ -65,8 +65,8 @@ def test_get_connections(layers):
         ('C.parameters.bias', 'parameters'),
         ('D.parameters.W', 'parameters'),
         ('D.parameters.bias', 'parameters'),
-        ('InputLayer.outputs.default', 'A.inputs.default'),
-        ('InputLayer.outputs.default', 'B.inputs.default')
+        ('Input.outputs.default', 'A.inputs.default'),
+        ('Input.outputs.default', 'B.inputs.default')
     ]
 
 
@@ -188,7 +188,7 @@ def test_create_layout_stub(layers):
             '@type': 'array',
             '@index': 0
         },
-        'InputLayer': {
+        'Input': {
             '@type': 'BufferView',
             '@index': 1,
             'inputs': {'@type': 'BufferView', '@index': 0},
@@ -371,7 +371,7 @@ def test_create_layout(layers):
             '@slice': (0, 230),
             '@shape': (230, ),
         },
-        'InputLayer': {
+        'Input': {
             '@type': 'BufferView',
             '@index': 1,
             'inputs': {'@type': 'BufferView', '@index': 0},

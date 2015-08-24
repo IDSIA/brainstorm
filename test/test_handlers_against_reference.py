@@ -10,8 +10,8 @@ from brainstorm.handlers import NumpyHandler, PyCudaHandler
 ref_dtype = np.float32
 ref = NumpyHandler(np.float32)
 handler = PyCudaHandler()
-some_2d_shapes = [[1, 1], (5, 5), [3, 4]]
-some_nd_shapes = [[1, 1, 4], [1, 1, 3, 3], [3, 4, 2, 1]]
+some_2d_shapes = ((1, 1), (4, 1), (1, 4), (5, 5), (3, 4), (4, 3))
+some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
 
 def operation_check(ref_op, op, ref_args, args):
@@ -22,12 +22,12 @@ def operation_check(ref_op, op, ref_args, args):
     for (ref_arg, arg) in zip(ref_args, args):
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
-            print("\narray ref:\n", ref_arg)
-            print("\narray arg:\n", arg)
+            print("\nReference (expected) array:\n", ref_arg)
+            print("\nObtained array:\n", arg_ref)
             check = np.allclose(ref_arg, arg_ref)
         else:
-            print("\nref:\n", ref_arg)
-            print("\narg:\n", arg)
+            print("\nReference (expected) array:\n", ref_arg)
+            print("\nObtained array:\n", arg)
             check = (ref_arg == arg)
     return check
 
@@ -79,7 +79,7 @@ def test_dot_mm():
                                get_args_from_ref_args(ref_args))
 
 
-def test_add_dot_mm():
+def test_dot_add_mm():
     list_a = get_random_arrays()
     list_b = get_random_arrays()
     list_b = [b.T.copy() for b in list_b]
@@ -88,7 +88,7 @@ def test_add_dot_mm():
         out = np.random.randn(a.shape[0], a.shape[0]).astype(np.float32)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.dot_mm, handler.dot_mm, ref_args,
+        assert operation_check(ref.dot_add_mm, handler.dot_add_mm, ref_args,
                                get_args_from_ref_args(ref_args))
 
 
@@ -245,12 +245,29 @@ def test_divide_mv():
 
 
 def test_mult_mv():
-    # Only checking with row vectors
     list_a = get_random_arrays()
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
+    print("======================================")
+    print("Testing mult_mv() for with row vectors")
+    print("======================================")
     for a, b in zip(list_a, list_b):
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.mult_mv, handler.mult_mv, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+    print("======================================")
+    print("Testing mult_mv() for with column vectors")
+    print("======================================")
+    list_b = get_random_arrays()
+    list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
+    for a, b in zip(list_a, list_b):
+        print('-'*40)
+        print("a:\n", a)
+        print("b:\n", b)
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 

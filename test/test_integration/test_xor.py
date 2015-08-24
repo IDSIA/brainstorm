@@ -30,7 +30,7 @@ def test_learn_xor_function():
     # set up the trainer
     tr = Trainer(SgdStep(learning_rate=4.0), verbose=False,
                  double_buffering=False)
-    tr.add_monitor(MaxEpochsSeen(300))
+    tr.add_hook(MaxEpochsSeen(300))
 
     # generate the data
     data = np.array([
