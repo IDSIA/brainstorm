@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 from brainstorm.handlers import NumpyHandler
 from brainstorm.randomness import global_rnd
-from brainstorm.structure.network import build_network_from_architecture
+from brainstorm.structure.network import Network
 from brainstorm.initializers import Gaussian
 from ..helpers import approx_fprime
 
@@ -22,20 +22,20 @@ def targets():
     return global_rnd.randn(7, 5, 2)
 
 architectures = [{
-    'InputLayer': {
-        '@type': 'InputLayer',
+    'Input': {
+        '@type': 'Input',
         'out_shapes': {'default': ('T', 'B', 3,)},
         '@outgoing_connections': {
             'default': ['OutputLayer'],
         }},
     'OutputLayer': {
-        '@type': 'FullyConnectedLayer',
+        '@type': 'FullyConnected',
         'size': 2,
         '@outgoing_connections': {
             'default': ['LossLayer']
         }},
     'LossLayer': {
-        '@type': 'LossLayer',
+        '@type': 'Loss',
         '@outgoing_connections': {}
     }}
 ]
@@ -43,7 +43,7 @@ architectures = [{
 
 @pytest.fixture(scope='module', params=architectures)
 def net(request):
-    n = build_network_from_architecture(request.param)
+    n = Network.from_architecture(request.param)
     n.set_memory_handler(NumpyHandler(dtype=np.float64))
     n.initialize(Gaussian(1), seed=235)
     return n
@@ -54,7 +54,7 @@ def test_deltas_finite_differences(net, input_data):
     net.provide_external_data({'default': input_data})
     net.forward_pass(training_pass=True)
     net.backward_pass()
-    delta_calc = net.buffer.backward.InputLayer.outputs.default.flatten()
+    delta_calc = net.buffer.backward.Input.outputs.default.flatten()
 
     # ######## estimate deltas ##########
     def f(x):

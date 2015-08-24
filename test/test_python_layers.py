@@ -8,7 +8,6 @@ import pytest
 from brainstorm.layers.base_layer import get_layer_class_from_typename
 from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
-from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
 from brainstorm.structure.architecture import Connection
 from brainstorm.utils import LayerValidationError

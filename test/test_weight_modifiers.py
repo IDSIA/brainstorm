@@ -2,7 +2,6 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
-import pytest
 from brainstorm.weight_modifiers import ConstrainL2Norm
 from brainstorm.handlers import PyCudaHandler, default_handler
 

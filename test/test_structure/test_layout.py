@@ -29,7 +29,7 @@ def test_get_order_raises_on_missing_index():
 
 
 def test_get_parameter_order(layers):
-    assert get_parameter_order('InputLayer', layers['InputLayer']) == ()
+    assert get_parameter_order('Input', layers['Input']) == ()
     assert get_parameter_order('A', layers['A']) == ('A.parameters.W',
                                                      'A.parameters.bias')
     assert get_parameter_order('B', layers['B']) == ('B.parameters.W',
@@ -209,7 +209,7 @@ def test_create_layout_stub(layers):
             '@index': 1,
             '@is_backward_only': True
         },
-        'InputLayer': {
+        'Input': {
             '@type': 'BufferView',
             '@index': 2,
             'inputs': {'@type': 'BufferView', '@index': 0},
@@ -506,7 +506,7 @@ def test_create_layout(layers):
             '@is_backward_only': True
         },
 
-        'InputLayer': {
+        'Input': {
             '@type': 'BufferView',
             '@index': 2,
             'inputs': {'@type': 'BufferView', '@index': 0},

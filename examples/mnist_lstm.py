@@ -9,6 +9,7 @@ import os
 import gzip
 import pickle
 import sys
+
 if sys.version_info < (3,):
     from urllib import urlretrieve
 else:
@@ -27,16 +28,16 @@ with gzip.open(mnist_file, 'rb') as f:
     else:
         ds = pickle.load(f, encoding='latin1')
 
-train_inputs = ds[0][0].T.flatten().reshape((784, 50000, 1))
-train_targets = np.zeros((784, 50000, 1))
-train_targets[-1, :, :] = ds[0][1].reshape((1, 50000, 1))
-train_mask = np.zeros((784, 50000, 1))
+train_inputs = ds[0][0].T.flatten().reshape((784, 50000, 1))[:, :500]
+train_targets = np.zeros((784, 500, 1))
+train_targets[-1, :, :] = ds[0][1].reshape((1, 50000, 1))[:, :500]
+train_mask = np.zeros((784, 500, 1))
 train_mask[-1, :, :] = 1
 
-valid_inputs = ds[1][0].T.flatten().reshape((784, 10000, 1))
-valid_targets = np.zeros((784, 10000, 1))
-valid_targets[-1, :, :] = ds[1][1].reshape((1, 10000, 1))
-valid_mask = np.zeros((784, 10000, 1))
+valid_inputs = ds[1][0].T.flatten().reshape((784, 10000, 1))[:, :100]
+valid_targets = np.zeros((784, 100, 1))
+valid_targets[-1, :, :] = ds[1][1].reshape((1, 10000, 1))[:, :100]
+valid_mask = np.zeros((784, 100, 1))
 valid_mask[-1, :, :] = 1
 
 test_inputs = ds[2][0].T.flatten().reshape((784, 10000, 1))
@@ -49,23 +50,23 @@ test_mask[-1, :, :] = 1
 
 train_getter = bs.Minibatches(batch_size=10, verbose=True, mask=train_mask,
                               default=train_inputs, targets=train_targets)
-valid_getter = bs.Minibatches(batch_size=10, verbose=True, mask=valid_mask,
+valid_getter = bs.Minibatches(batch_size=20, verbose=True, mask=valid_mask,
                               default=valid_inputs, targets=valid_targets)
-test_getter = bs.Minibatches(batch_size=10, verbose=True, mask=test_mask,
+test_getter = bs.Minibatches(batch_size=20, verbose=True, mask=test_mask,
                              default=test_inputs, targets=test_targets)
 
 # ----------------------------- Set up Network ------------------------------ #
-inp_layer = bs.InputLayer(out_shapes={'default': ('T', 'B', 1),
-                                      'targets': ('T', 'B', 1),
-                                      'mask': ('T', 'B', 1)})
-out_layer = bs.ClassificationLayer(10, name="out")
-mask_layer = bs.MaskLayer()
+inp_layer = bs.layers.Input(out_shapes={'default': ('T', 'B', 1),
+                                        'targets': ('T', 'B', 1),
+                                        'mask': ('T', 'B', 1)})
+out_layer = bs.layers.Classification(10, name="out")
+mask_layer = bs.layers.Mask()
 
 inp_layer >> \
-    bs.LstmLayer(100, name='lstm') >> \
+    bs.layers.Lstm(100, name='lstm') >> \
     out_layer - "loss" >> \
     mask_layer >> \
-    bs.LossLayer()
+    bs.layers.Loss()
 
 inp_layer - 'mask' >> 'mask' - mask_layer
 
@@ -77,17 +78,17 @@ network.initialize({"default": bs.Gaussian(0.01),
 # ----------------------------- Set up Trainer ------------------------------ #
 
 trainer = bs.Trainer(bs.SgdStep(learning_rate=0.1), double_buffering=False)
-trainer.add_monitor(bs.MaxEpochsSeen(500))
-trainer.add_monitor(bs.MonitorAccuracy("valid_getter",
-                                       output="out.output", mask_name="mask",
-                                       name="validation accuracy",
-                                       verbose=True))
-trainer.add_monitor(bs.SaveBestWeights("validation accuracy",
-                                       name="best weights",
-                                       criterion="max"))
+trainer.add_hook(bs.hooks.MaxEpochsSeen(500))
+trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter",
+                                          output="out.output", mask_name="mask",
+                                          name="validation accuracy",
+                                          verbose=True))
+trainer.add_hook(bs.hooks.SaveBestWeights("validation accuracy",
+                                          name="best weights",
+                                          criterion="max"))
 
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, train_getter, valid_getter=valid_getter)
 print("\nBest validation accuracy: ", max(trainer.logs["validation accuracy"]))
-network.buffer.forward.parameters = trainer.monitors["best weights"].weights
+network.buffer.forward.parameters = trainer.hooks["best weights"].weights

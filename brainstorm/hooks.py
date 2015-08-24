@@ -10,7 +10,7 @@ from brainstorm.training.trainer import run_network
 from brainstorm.utils import get_by_path
 
 
-class Monitor(Describable):
+class Hook(Describable):
     __undescribed__ = {
         '__name__',  # the name is saved in the trainer
         'run_verbosity'
@@ -39,7 +39,7 @@ class Monitor(Describable):
         pass
 
 
-class SaveWeights(Monitor):
+class SaveWeights(Hook):
     """
     Save the weights of the network to the given file on every call.
     Default is to save them once per epoch, but this can be configured using
@@ -58,7 +58,7 @@ class SaveWeights(Monitor):
         return np.load(self.filename)
 
 
-class SaveBestWeights(Monitor):
+class SaveBestWeights(Hook):
     """
     Check every epoch to see if the validation error (or training error if
     there is no validation error) is at it's minimum and if so, save the
@@ -99,7 +99,7 @@ class SaveBestWeights(Monitor):
             else self.weights
 
 
-class MonitorLayerProperties(Monitor):
+class MonitorLayerProperties(Hook):
     """
     Monitor some properties of a layer.
     """
@@ -124,7 +124,70 @@ class MonitorLayerProperties(Monitor):
         return log
 
 
-class MaxEpochsSeen(Monitor):
+class MonitorLayerGradients(Hook):
+    """
+    Monitor some statistics about all the gradients of a layer.
+    """
+    def __init__(self, layer_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        if name is None:
+            name = "Monitor{}Gradients".format(layer_name)
+        super(MonitorLayerGradients, self).__init__(name, timescale,
+                                                    interval, verbose)
+        self.layer_name = layer_name
+
+    def __call__(self, epoch, net, stepper, logs):
+        log = OrderedDict()
+        for key, v in net.buffer.backward[self.layer_name].parameters.items():
+            v = net.handler.get_numpy_copy(v)
+            log[key] = OrderedDict()
+            log[key]['min'] = v.min()
+            log[key]['avg'] = v.mean()
+            log[key]['max'] = v.max()
+        return log
+
+
+class MonitorLayerDeltas(Hook):
+    """
+    Monitor some statistics about all the deltas of a layer.
+    """
+    def __init__(self, layer_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        if name is None:
+            name = "Monitor{}Deltas".format(layer_name)
+        super(MonitorLayerDeltas, self).__init__(name, timescale,
+                                                    interval, verbose)
+        self.layer_name = layer_name
+
+    def __call__(self, epoch, net, stepper, logs):
+        log = OrderedDict()
+        for key, v in net.buffer.backward[self.layer_name].internals.items():
+            v = net.handler.get_numpy_copy(v)
+            log[key] = OrderedDict()
+            log[key]['min'] = v.min()
+            log[key]['avg'] = v.mean()
+            log[key]['max'] = v.max()
+
+        for key, v in net.buffer.backward[self.layer_name].outputs.items():
+            n = 'out_deltas.{}'.format(key)
+            log[n] = OrderedDict()
+            v = net.handler.get_numpy_copy(v)
+            log[n]['min'] = v.min()
+            log[n]['avg'] = v.mean()
+            log[n]['max'] = v.max()
+
+        for key, v in net.buffer.backward[self.layer_name].inputs.items():
+            n = 'in_deltas.{}'.format(key)
+            log[n] = OrderedDict()
+            v = net.handler.get_numpy_copy(v)
+            log[n]['min'] = v.min()
+            log[n]['avg'] = v.mean()
+            log[n]['max'] = v.max()
+
+        return log
+
+
+class MaxEpochsSeen(Hook):
     def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
                  verbose=None):
         super(MaxEpochsSeen, self).__init__(name, timescale, interval, verbose)
@@ -136,7 +199,7 @@ class MaxEpochsSeen(Monitor):
                                 .format(self.max_epochs))
 
 
-class ErrorRises(Monitor):
+class ErrorRises(Hook):
     __default_values__ = {'delay': 1}
 
     def __init__(self, error, delay=1, name=None):
@@ -154,7 +217,7 @@ class ErrorRises(Monitor):
                                 % self.delay)
 
 
-class StopOnNan(Monitor):
+class StopOnNan(Hook):
     """ Stop the training if infinite or NaN values are found in parameters.
 
     Can also check logs for invalid values.
@@ -178,7 +241,7 @@ class StopOnNan(Monitor):
                                     "parameters!")
 
 
-class InfoUpdater(Monitor):
+class InfoUpdater(Hook):
     """ Save the information from logs to the Sacred custom info dict"""
     def __init__(self, run, name=None):
         super(InfoUpdater, self).__init__(name, 'epoch', 1)
@@ -193,7 +256,7 @@ class InfoUpdater(Monitor):
             info['nr_parameters'] = net.buffer.forward.parameters.size
 
 
-class MonitorLoss(Monitor):
+class MonitorLoss(Hook):
     def __init__(self, iter_name, timescale='epoch', interval=1, name=None,
                  verbose=None):
         super(MonitorLoss, self).__init__(name, timescale, interval, verbose)
@@ -214,7 +277,7 @@ class MonitorLoss(Monitor):
         return np.mean(errors)
 
 
-class MonitorAccuracy(Monitor):
+class MonitorAccuracy(Hook):
     """
     Monitor the classification accuracy of a given layer wrt. to given targets
     using a given data iterator.
@@ -290,7 +353,7 @@ class MonitorAccuracy(Monitor):
             net.forward_pass()
             out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
                                     .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.forward.InputLayer
+            target = _h.get_numpy_copy(net.buffer.forward.Input
                                        .outputs[self.targets_name])
 
             out = out.reshape(out.shape[0], out.shape[1], -1)
@@ -305,7 +368,7 @@ class MonitorAccuracy(Monitor):
             assert out_class.shape == target_class.shape
 
             if self.masked:
-                mask = _h.get_numpy_copy(net.buffer.forward.InputLayer
+                mask = _h.get_numpy_copy(net.buffer.forward.Input
                                          .outputs[self.mask_name])[:, :, 0]
                 errors += np.sum((out_class != target_class) * mask)
                 totals += np.sum(mask)
@@ -316,7 +379,7 @@ class MonitorAccuracy(Monitor):
         return 1.0 - errors / totals
 
 
-class MonitorHammingScore(Monitor):
+class MonitorHammingScore(Hook):
     r"""
     Monitor the Hamming score of a given layer wrt. to given targets
     using a given data iterator.
@@ -334,7 +397,7 @@ class MonitorHammingScore(Monitor):
         LAYER_NAME[.OUTPUT_NAME]
         Where OUTPUT_NAME defaults to 'default'
     targets_name : str, optional
-        name of the targets (as specified in the InputLayer)
+        name of the targets (as specified in the Input)
         defaults to 'targets'
 
 
@@ -385,7 +448,7 @@ class MonitorHammingScore(Monitor):
             net.forward_pass()
             out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
                                     .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.forward.InputLayer
+            target = _h.get_numpy_copy(net.buffer.forward.Input
                                        .outputs[self.targets_name])
 
             out = out.reshape(out.shape[0], out.shape[1], -1)
