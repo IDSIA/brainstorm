@@ -43,6 +43,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         internals = OrderedDict()
         size = self.out_shapes['output'].feature_size
         internals['Ha'] = ShapeTemplate('T', 'B', size)
+        internals['dHa'] = ShapeTemplate('T', 'B', size, is_backward_only=True)
         return internals
 
     def get_parameter_structure(self):
@@ -54,15 +55,15 @@ class ClassificationLayerImpl(LayerBaseImpl):
         parameters['b'] = ShapeTemplate(out_size)
         return parameters
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        W, bias = forward_buffers.parameters
-        inputs = forward_buffers.inputs.default
-        targets = forward_buffers.inputs.targets
-        output = forward_buffers.outputs.output
-        loss = forward_buffers.outputs.loss
-        Ha = forward_buffers.internals.Ha
+        W, bias = buffers.parameters
+        inputs = buffers.inputs.default
+        targets = buffers.inputs.targets
+        output = buffers.outputs.output
+        loss = buffers.outputs.loss
+        Ha = buffers.internals.Ha
 
         # reshape
         t, b, f = inputs.shape
@@ -88,18 +89,18 @@ class ClassificationLayerImpl(LayerBaseImpl):
         _h.log_t(loss, loss)
         _h.mult_st(-1, loss, loss)
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
         # prepare
         _h = self.handler
-        W, bias = forward_buffers.parameters
-        inputs = forward_buffers.inputs.default
-        targets = forward_buffers.inputs.targets
-        output = forward_buffers.outputs.output
+        W, bias = buffers.parameters
+        inputs = buffers.inputs.default
+        targets = buffers.inputs.targets
+        output = buffers.outputs.output
 
-        dW, dbias = backward_buffers.parameters
-        dinput = backward_buffers.inputs.default
-        dloss = backward_buffers.outputs.loss
-        dHa = backward_buffers.internals.Ha
+        dW, dbias = buffers.gradients
+        dinput = buffers.input_deltas.default
+        dloss = buffers.output_deltas.loss
+        dHa = buffers.internals.dHa
 
         # reshape
         t, b, f_in = inputs.shape

@@ -25,7 +25,7 @@ __all__ = ['Network']
 # ################################ Network ####################################
 
 class Network(Seedable):
-    __undescribed__ = {'layers', 'loss_layers', 'buffer'}
+    __undescribed__ = {'layers', 'loss_layers', 'buffer', '_buffer_manager'}
 
     # -------------------------- Constructors ---------------------------------
     @classmethod
@@ -74,7 +74,8 @@ class Network(Seedable):
         super(Network, self).__init__(seed)
         self.layers = layers
         self.loss_layers = _get_loss_layers(layers)
-        self.buffer = buffer_manager
+        self._buffer_manager = buffer_manager
+        self.buffer = self._buffer_manager.views
         self.architecture = architecture
         self.handler = None
         self.set_memory_handler(handler)
@@ -154,7 +155,7 @@ class Network(Seedable):
         init_refs = _update_references_with_dict(default_or_init_dict, kwargs)
         self.initializers = get_description(init_refs)
         all_parameters = {k: v.parameters
-                          for k, v in self.buffer.forward.items()
+                          for k, v in self.buffer.items()
                           if isinstance(v, BufferView) and 'parameters' in v}
         _replace_lists_with_array_initializers(init_refs)
         initializers, fallback = resolve_references(all_parameters, init_refs)
@@ -208,7 +209,7 @@ class Network(Seedable):
         weight_mod_refs = _update_references_with_dict(default_or_mod_dict,
                                                        kwargs)
         all_parameters = {k: v.parameters
-                          for k, v in self.buffer.forward.items()
+                          for k, v in self.buffer.items()
                           if k != 'parameters' and 'parameters' in v}
         weight_mods, fallback = resolve_references(all_parameters,
                                                    weight_mod_refs)
@@ -242,9 +243,9 @@ class Network(Seedable):
         """
         gradient_mod_refs = _update_references_with_dict(default_or_mod_dict,
                                                          kwargs)
-        all_parameters = {k: v.parameters
-                          for k, v in self.buffer.forward.items()
-                          if 'parameters' in v}
+        all_parameters = {k: v.gradients
+                          for k, v in self.buffer.items()
+                          if 'gradients' in v}
         gradient_mods, fallback = resolve_references(all_parameters,
                                                      gradient_mod_refs)
 
@@ -255,7 +256,7 @@ class Network(Seedable):
 
     def set_memory_handler(self, new_handler):
         self.handler = new_handler
-        self.buffer.set_memory_handler(new_handler)
+        self._buffer_manager.set_memory_handler(new_handler)
         for layer in self.layers.values():
             layer.set_handler(new_handler)
 
@@ -263,35 +264,33 @@ class Network(Seedable):
 
     def provide_external_data(self, data):
         time_size, batch_size = data[next(iter(data))].shape[:2]
-        self.buffer.resize(time_size, batch_size)
+        self._buffer_manager.resize(time_size, batch_size)
         for name, val in data.items():
-            self.handler.copy_to(self.buffer.forward.InputLayer.outputs[name],
-                                 val)
+            self.handler.copy_to(self.buffer.Input.outputs[name], val)
 
     def forward_pass(self, training_pass=False, context=None):
         if context is None:
-            self.buffer.clear_context()
+            self._buffer_manager.clear_context()
         else:
-            self.buffer.apply_context(context)
+            self._buffer_manager.apply_context(context)
         for layer_name, layer in list(self.layers.items())[1:]:
-            layer.forward_pass(self.buffer.forward[layer_name], training_pass)
+            layer.forward_pass(self.buffer[layer_name], training_pass)
 
     def backward_pass(self):
-        self.buffer.clear_backward_buffers()
+        self._buffer_manager.clear_backward_buffers()
         for layer_name, layer in reversed(list(self.layers.items())[1:]):
-            layer.backward_pass(self.buffer.forward[layer_name],
-                                self.buffer.backward[layer_name])
+            layer.backward_pass(self.buffer[layer_name])
         self.apply_gradient_modifiers()
 
     def get_loss_value(self):
         loss = 0.
         for loss_layer_name in self.loss_layers:
             loss += float(self.handler.get_numpy_copy(
-                self.buffer.forward[loss_layer_name].outputs.loss))
+                self.buffer[loss_layer_name].outputs.loss))
         return loss
 
     def get_context(self):
-        return self.buffer.get_context()
+        return self._buffer_manager.get_context()
 
     def apply_weight_modifiers(self):
         for layer_name, views in self.weight_modifiers.items():
@@ -299,7 +298,7 @@ class Network(Seedable):
                 for wm in weight_mods:
                     wm.rnd.set_seed(self.rnd.generate_seed())
                     wm(self.handler,
-                       self.buffer.forward[layer_name].parameters[view_name])
+                       self.buffer[layer_name].parameters[view_name])
 
     def apply_gradient_modifiers(self):
         for layer_name, views in self.gradient_modifiers.items():
@@ -307,7 +306,7 @@ class Network(Seedable):
                 for gm in gradient_mods:
                     gm.rnd.set_seed(self.rnd.generate_seed())
                     gm(self.handler,
-                       self.buffer.backward[layer_name].parameters[view_name])
+                       self.buffer[layer_name].parameters[view_name])
 
 
 # ########################### Helper Methods ##################################

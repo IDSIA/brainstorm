@@ -45,19 +45,22 @@ class RnnLayerImpl(LayerBaseImpl):
     def get_internal_structure(self):
         internals = OrderedDict()
         internals['Ha'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Hb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['dHa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dHb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
         return internals
 
     def _get_output_shapes(self):
         return {'default': ShapeTemplate('T', 'B', self.size, context_size=1)}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        W, R, bias = forward_buffers.parameters
-        inputs = forward_buffers.inputs.default
-        outputs = forward_buffers.outputs.default
-        Ha = forward_buffers.internals.Ha
+        W, R, bias = buffers.parameters
+        inputs = buffers.inputs.default
+        outputs = buffers.outputs.default
+        Ha = buffers.internals.Ha
 
         t, b, f = inputs.shape
         i = t * b
@@ -71,18 +74,16 @@ class RnnLayerImpl(LayerBaseImpl):
             _h.dot_add_mm(outputs[t - 1], R, Ha[t])
             self.act_func(Ha[t], outputs[t])
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
         # prepare
         _h = self.handler
-        W, R, bias = forward_buffers.parameters
-        dW, dR, dbias = backward_buffers.parameters
-        inputs = forward_buffers.inputs.default
-        outputs = forward_buffers.outputs.default
-        dinputs = backward_buffers.inputs.default
-        doutputs = backward_buffers.outputs.default
-        Ha = forward_buffers.internals.Ha
-        dHa = backward_buffers.internals.Ha
-        dHb = backward_buffers.internals.Hb
+        W, R, bias = buffers.parameters
+        dW, dR, dbias = buffers.gradients
+        inputs = buffers.inputs.default
+        outputs = buffers.outputs.default
+        dinputs = buffers.input_deltas.default
+        doutputs = buffers.output_deltas.default
+        Ha, dHa, dHb = buffers.internals
 
         _h.copy_to(dHb, doutputs)
         T = inputs.shape[0] - 1

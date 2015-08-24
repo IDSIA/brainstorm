@@ -15,19 +15,19 @@ class MaskLayerImpl(LayerBaseImpl):
     def _get_output_shapes(self):
         return {'default': self.in_shapes['default']}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
-        time_size, batch_size = forward_buffers.inputs.default.shape[:2]
-        f_size = np.prod(forward_buffers.inputs.default.shape[2:])
-        inp = forward_buffers.inputs.default.reshape(time_size * batch_size, f_size)
-        self.handler.mult_mv(inp, forward_buffers.inputs.mask.reshape(time_size * batch_size, 1),
-                             forward_buffers.outputs.default.reshape(time_size * batch_size, f_size))
+    def forward_pass(self, buffers, training_pass=True):
+        time_size, batch_size = buffers.inputs.default.shape[:2]
+        f_size = np.prod(buffers.inputs.default.shape[2:])
+        inp = buffers.inputs.default.reshape(time_size * batch_size, f_size)
+        self.handler.mult_mv(inp, buffers.inputs.mask.reshape(time_size * batch_size, 1),
+                             buffers.outputs.default.reshape(time_size * batch_size, f_size))
 
-    def backward_pass(self, forward_buffers, backward_buffers):
-        time_size, batch_size = forward_buffers.inputs.default.shape[:2]
-        f_size = np.prod(forward_buffers.inputs.default.shape[2:])
+    def backward_pass(self, buffers):
+        time_size, batch_size = buffers.inputs.default.shape[:2]
+        f_size = np.prod(buffers.inputs.default.shape[2:])
         flat_shape = (time_size * batch_size, f_size)
-        out_deltas = backward_buffers.outputs.default.reshape(flat_shape)
+        out_deltas = buffers.output_deltas.default.reshape(flat_shape)
         tmp = self.handler.allocate(flat_shape)
-        self.handler.mult_mv(out_deltas, forward_buffers.inputs.mask.reshape(time_size * batch_size, 1),tmp)
-        in_deltas = backward_buffers.inputs.default.reshape(flat_shape)
+        self.handler.mult_mv(out_deltas, buffers.inputs.mask.reshape(time_size * batch_size, 1),tmp)
+        in_deltas = buffers.input_deltas.default.reshape(flat_shape)
         self.handler.add_tt(tmp, in_deltas, in_deltas)

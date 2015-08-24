@@ -45,18 +45,20 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
     def get_internal_structure(self):
         internals = OrderedDict()
         internals['H'] = ShapeTemplate('T', 'B', self.size)
+        internals['dH'] = ShapeTemplate('T', 'B', self.size,
+                                        is_backward_only=True)
         return internals
 
     def _get_output_shapes(self):
         return {'default': ShapeTemplate('T', 'B', self.size)}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        W, bias = forward_buffers.parameters
-        inputs = forward_buffers.inputs.default
-        outputs = forward_buffers.outputs.default
-        H = forward_buffers.internals.H
+        W, bias = buffers.parameters
+        inputs = buffers.inputs.default
+        outputs = buffers.outputs.default
+        H = buffers.internals.H
 
         # reshape
         t, b, f = inputs.shape
@@ -68,18 +70,16 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         _h.add_mv(flat_H, bias, flat_H)
         self.act_func(H, outputs)
 
-    def backward_pass(self, forward_buffers, backward_buffers):
-
+    def backward_pass(self, buffers):
         # prepare
         _h = self.handler
-        W, bias = forward_buffers.parameters
-        dW, dbias = backward_buffers.parameters
-        inputs = forward_buffers.inputs.default
-        outputs = forward_buffers.outputs.default
-        in_deltas = backward_buffers.inputs.default
-        out_deltas = backward_buffers.outputs.default
-        H = forward_buffers.internals.H
-        dH = backward_buffers.internals.H
+        W, bias = buffers.parameters
+        dW, dbias = buffers.gradients
+        inputs = buffers.inputs.default
+        outputs = buffers.outputs.default
+        in_deltas = buffers.input_deltas.default
+        out_deltas = buffers.output_deltas.default
+        H, dH = buffers.internals
 
         # reshape
         t, b, f = inputs.shape

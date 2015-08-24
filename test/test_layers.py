@@ -199,25 +199,25 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
     print("\n========= Testing Internal State Insensitivity for: {} ========="
           .format(layer.name))
-    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    layer_buffers = set_up_layer(layer, specs)
     time_steps = specs.get('time_steps', 3)
 
     eps = specs.get('eps', 1e-8)
-    layer.forward_pass(fwd_buffers)
+    layer.forward_pass(layer_buffers)
 
     # get outputs after normal forward pass
     outputs = {}
-    for key, value in fwd_buffers.outputs.items():
+    for key, value in layer_buffers.outputs.items():
         outputs[key] = HANDLER.get_numpy_copy(value)
 
     # randomize internal state
-    for internal, value in fwd_buffers.internals.items():
+    for internal, value in layer_buffers.internals.items():
         # but exclude context slice located at the end
         HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
 
         # compare new output
-        layer.forward_pass(fwd_buffers)
-        for key, value in fwd_buffers.outputs.items():
+        layer.forward_pass(layer_buffers)
+        for key, value in layer_buffers.outputs.items():
             assert np.allclose(outputs[key], value, rtol=eps, atol=eps), internal
 
 
@@ -225,32 +225,30 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
     print("\n========= Testing Internal State Insensitivity for: {} ========="
           .format(layer.name))
-    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    layer_buffers = set_up_layer(layer, specs)
     time_steps = specs.get('time_steps', 3)
     eps = specs.get('eps', 1e-8)
-    layer.forward_pass(fwd_buffers)
-    layer.backward_pass(fwd_buffers, bwd_buffers)
+    layer.forward_pass(layer_buffers)
+    layer.backward_pass(layer_buffers)
 
     # get deltas after normal backward pass
     deltas = {}
-    for key, value in bwd_buffers.inputs.items():
+    for key, value in layer_buffers.input_deltas.items():
         deltas[key] = HANDLER.get_numpy_copy(value)
 
     # randomize internal state
-    for key in fwd_buffers.internals.keys():
-        fwd_intern = fwd_buffers.internals[key]
-        bwd_intern = bwd_buffers.internals[key]
-        HANDLER.set_from_numpy(fwd_intern[:time_steps], np.random.randn(time_steps, *fwd_intern.shape[1:]))
-        HANDLER.set_from_numpy(bwd_intern[:time_steps], np.random.randn(time_steps, *bwd_intern.shape[1:]))
+    for key in layer_buffers.internals.keys():
+        intern = layer_buffers.internals[key]
+        HANDLER.set_from_numpy(intern[:time_steps], np.random.randn(time_steps, *intern.shape[1:]))
 
         # clear deltas
-        for k, v in bwd_buffers.inputs.items():
+        for k, v in layer_buffers.input_deltas.items():
             HANDLER.fill(v, 0.0)
 
         # compare new deltas
-        layer.forward_pass(fwd_buffers)
-        layer.backward_pass(fwd_buffers, bwd_buffers)
-        for key, value in bwd_buffers.inputs.items():
+        layer.forward_pass(layer_buffers)
+        layer.backward_pass(layer_buffers)
+        for key, value in layer_buffers.input_deltas.items():
             assert np.allclose(deltas[key], value, rtol=eps, atol=eps)
 
 
@@ -258,31 +256,31 @@ def test_layer_add_to_deltas(layer_specs):
     layer, specs = layer_specs
     print("\n----- Testing Internal State Insensitivity for: {} -----".format(
         layer.name))
-    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    layer_buffers = set_up_layer(layer, specs)
     eps = specs.get('eps', 1e-8)
-    for key in bwd_buffers.outputs.keys():
-        HANDLER.fill(bwd_buffers.outputs[key], 1.0)
+    for key in layer_buffers.output_deltas.keys():
+        HANDLER.fill(layer_buffers.output_deltas[key], 1.0)
 
-    layer.forward_pass(fwd_buffers)
-    layer.backward_pass(fwd_buffers, bwd_buffers)
+    layer.forward_pass(layer_buffers)
+    layer.backward_pass(layer_buffers)
 
     # get deltas
     deltas = {}
-    for key, value in bwd_buffers.inputs.items():
+    for key, value in layer_buffers.input_deltas.items():
         deltas[key] = HANDLER.get_numpy_copy(value)
 
     # clear all bwd buffers except inputs and outputs
-    for key, value in bwd_buffers.internals.items():
+    for key, value in layer_buffers.internals.items():
         HANDLER.fill(value, 0)
-    for key, value in bwd_buffers.parameters.items():
+    for key, value in layer_buffers.gradients.items():
         HANDLER.fill(value, 0)
     # set all bwd_buffer inputs to 1.0
-    for key, value in bwd_buffers.inputs.items():
+    for key, value in layer_buffers.input_deltas.items():
         HANDLER.fill(value, 1.0)
 
     # do a second backward pass
-    layer.backward_pass(fwd_buffers, bwd_buffers)
+    layer.backward_pass(layer_buffers)
 
     # assert all input deltas are 1.0 bigger
-    for key, value in bwd_buffers.inputs.items():
+    for key, value in layer_buffers.input_deltas.items():
         assert np.allclose(deltas[key] + 1.0, value, rtol=eps, atol=eps), key

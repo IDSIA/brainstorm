@@ -13,11 +13,11 @@ class NoOpLayerImpl(LayerBaseImpl):
     def _get_output_shapes(self):
         return self.in_shapes
 
-    def forward_pass(self, forward_buffers, training_pass=True):
-        self.handler.copy_to(forward_buffers.outputs.default,
-                             forward_buffers.inputs.default)
+    def forward_pass(self, buffers, training_pass=True):
+        self.handler.copy_to(buffers.outputs.default,
+                             buffers.inputs.default)
 
-    def backward_pass(self, forward_buffers, backward_buffers):
-        self.handler.add_tt(backward_buffers.outputs.default,
-                            backward_buffers.inputs.default,
-                            out=backward_buffers.inputs.default)
+    def backward_pass(self, buffers):
+        self.handler.add_tt(buffers.output_deltas.default,
+                            buffers.input_deltas.default,
+                            out=buffers.input_deltas.default)

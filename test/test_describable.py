@@ -358,4 +358,4 @@ def test_get_network_from_description():
     assert net2.layers.keys() == net.layers.keys()
     assert isinstance(net2.handler, NumpyHandler)
     assert net2.handler.dtype == np.float32
-    assert np.all(net2.buffer.forward.parameters == net.buffer.forward.parameters)
+    assert np.all(net2.buffer.parameters == net.buffer.parameters)
