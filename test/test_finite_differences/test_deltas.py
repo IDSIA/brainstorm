@@ -54,7 +54,7 @@ def test_deltas_finite_differences(net, input_data):
     net.provide_external_data({'default': input_data})
     net.forward_pass(training_pass=True)
     net.backward_pass()
-    delta_calc = net.buffer.backward.Input.outputs.default.flatten()
+    delta_calc = net.buffer.Input.output_deltas.default.flatten()
 
     # ######## estimate deltas ##########
     def f(x):
@@ -81,14 +81,14 @@ def test_gradient_finite_differences(net, input_data):
     net.provide_external_data({'default': input_data})
     net.forward_pass(training_pass=True)
     net.backward_pass()
-    gradient_calc = net.buffer.backward.parameters
+    gradient_calc = net.buffer.gradients
 
     # ######## estimate deltas ##########
     def f(x):
-        net.buffer.forward.parameters[:] = x
+        net.buffer.parameters[:] = x
         net.forward_pass()
         return net.get_loss_value()
-    initial_weigths = net.buffer.forward.parameters.copy()
+    initial_weigths = net.buffer.parameters.copy()
     gradient_approx = approx_fprime(initial_weigths, f, 1e-6)
 
     # ######## compare them #############

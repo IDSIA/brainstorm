@@ -264,7 +264,7 @@ class Network(Seedable):
 
     def provide_external_data(self, data):
         time_size, batch_size = data[next(iter(data))].shape[:2]
-        self._buffer_manager.resize(time_size, batch_size)
+        self.buffer = self._buffer_manager.resize(time_size, batch_size)
         for name, val in data.items():
             self.handler.copy_to(self.buffer.Input.outputs[name], val)
 

@@ -15,7 +15,7 @@ class BufferView(list):
             self.__dict__[n] = self[i]
 
     def adjust(self, buffer_names, buffers, full_buffer=None):
-        assert self._buffer_names == buffer_names
+        assert self._buffer_names == tuple(buffer_names)
         self._full_buffer = full_buffer
         for i, (n, b) in enumerate(zip(buffer_names, buffers)):
             self[i] = b

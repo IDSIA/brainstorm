@@ -81,7 +81,7 @@ class BufferManager(object):
 
     def resize(self, time_size, batch_size):
         if time_size == self.time_size and batch_size == self.batch_size:
-            return  # lazy
+            return self.views  # lazy
 
         N = len(self.hubs)
 
@@ -92,8 +92,7 @@ class BufferManager(object):
 
         if total_size > self.size:
             self.full_buffer = self.handler.allocate(total_size)
-
-        self.size = total_size
+            self.size = total_size
 
         self.buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
                         for i in range(N)]
@@ -108,6 +107,8 @@ class BufferManager(object):
 
         if parameters is not None:
             self.handler.set_from_numpy(self.views.parameters, parameters)
+
+        return self.views
 
     def set_memory_handler(self, new_handler):
         self.full_buffer = None

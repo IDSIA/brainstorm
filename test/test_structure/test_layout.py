@@ -79,10 +79,10 @@ def test_get_connections(layers):
         ('D.parameters.W', 'parameters'),
         ('D.parameters.bias', 'parameters'),
 
-        ('InputLayer.output_deltas.default', 'A.input_deltas.default'),
-        ('InputLayer.output_deltas.default', 'B.input_deltas.default'),
-        ('InputLayer.outputs.default', 'A.inputs.default'),
-        ('InputLayer.outputs.default', 'B.inputs.default')
+        ('Input.output_deltas.default', 'A.input_deltas.default'),
+        ('Input.output_deltas.default', 'B.input_deltas.default'),
+        ('Input.outputs.default', 'A.inputs.default'),
+        ('Input.outputs.default', 'B.inputs.default')
 
     ]
 
