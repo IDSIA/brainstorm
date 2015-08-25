@@ -99,15 +99,15 @@ class SaveBestWeights(Hook):
             else self.weights
 
 
-class MonitorLayerProperties(Hook):
+class MonitorLayerParameters(Hook):
     """
     Monitor some properties of a layer.
     """
     def __init__(self, layer_name, timescale='epoch',
                  interval=1, name=None, verbose=None):
         if name is None:
-            name = "MonitorProperties_{}".format(layer_name)
-        super(MonitorLayerProperties, self).__init__(name, timescale,
+            name = "MonitorParameters_{}".format(layer_name)
+        super(MonitorLayerParameters, self).__init__(name, timescale,
                                                      interval, verbose)
         self.layer_name = layer_name
 

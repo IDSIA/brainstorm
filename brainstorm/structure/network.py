@@ -221,7 +221,8 @@ class Network(Seedable):
                                                        kwargs)
         all_parameters = {k: v.parameters
                           for k, v in self.buffer.items()
-                          if k != 'parameters' and 'parameters' in v}
+                          if k not in ['parameters', 'gradients'] and
+                          'parameters' in v}
         weight_mods, fallback = resolve_references(all_parameters,
                                                    weight_mod_refs)
 
@@ -256,7 +257,8 @@ class Network(Seedable):
                                                          kwargs)
         all_parameters = {k: v.gradients
                           for k, v in self.buffer.items()
-                          if 'gradients' in v}
+                          if k not in ['parameters', 'gradients'] and
+                          'gradients' in v}
         gradient_mods, fallback = resolve_references(all_parameters,
                                                      gradient_mod_refs)
 
