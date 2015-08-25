@@ -99,12 +99,12 @@ def test_gradient_finite_differences(net, input_data):
         # Hijack the network gradient buffer for the view
         net.buffer.gradients[:] = diff
         for layer_name in net.layers:
-            if not net.buffer.backward[layer_name]:
+            if not net.buffer[layer_name]:
                 continue
             print("============= Layer: {} =============".format(layer_name))
-            for view_name in net.buffer.backward[layer_name].parameters.keys():
+            for view_name in net.buffer[layer_name].gradients.keys():
                 print("------------- {} -------------".format(view_name))
-                print(net.buffer.backward[layer_name].parameters[view_name])
+                print(net.buffer[layer_name].gradients[view_name])
 
     print(">> Checking Gradient = %0.4f" % mse)
     assert mse < 1e-4

@@ -51,7 +51,7 @@ class SaveWeights(Hook):
         self.filename = filename
 
     def __call__(self, epoch, net, stepper, logs):
-        params = net.handler.get_numpy_copy(net.buffer.forward.parameters)
+        params = net.handler.get_numpy_copy(net.buffer.parameters)
         np.save(self.filename, params)
 
     def load_weights(self):
@@ -82,7 +82,7 @@ class SaveBestWeights(Hook):
             e = e[en]
         best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
         if best_idx == len(e) - 1:
-            params = net.handler.get_numpy_copy(net.buffer.forward.parameters)
+            params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
                 if self.run_verbosity:
                     print(">> Saving weights to {0} ...".format(self.filename))
@@ -113,7 +113,7 @@ class MonitorLayerProperties(Hook):
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
-        for key, v in net.buffer.forward[self.layer_name].parameters.items():
+        for key, v in net.buffer[self.layer_name].parameters.items():
             v = net.handler.get_numpy_copy(v)
             log[key] = OrderedDict()
             log[key]['min'] = v.min()
@@ -138,7 +138,7 @@ class MonitorLayerGradients(Hook):
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
-        for key, v in net.buffer.backward[self.layer_name].parameters.items():
+        for key, v in net.buffer[self.layer_name].gradients.items():
             v = net.handler.get_numpy_copy(v)
             log[key] = OrderedDict()
             log[key]['min'] = v.min()
@@ -161,14 +161,14 @@ class MonitorLayerDeltas(Hook):
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
-        for key, v in net.buffer.backward[self.layer_name].internals.items():
+        for key, v in net.buffer[self.layer_name].internals.items():
             v = net.handler.get_numpy_copy(v)
             log[key] = OrderedDict()
             log[key]['min'] = v.min()
             log[key]['avg'] = v.mean()
             log[key]['max'] = v.max()
 
-        for key, v in net.buffer.backward[self.layer_name].outputs.items():
+        for key, v in net.buffer[self.layer_name].output_deltas.items():
             n = 'out_deltas.{}'.format(key)
             log[n] = OrderedDict()
             v = net.handler.get_numpy_copy(v)
@@ -176,7 +176,7 @@ class MonitorLayerDeltas(Hook):
             log[n]['avg'] = v.mean()
             log[n]['max'] = v.max()
 
-        for key, v in net.buffer.backward[self.layer_name].inputs.items():
+        for key, v in net.buffer[self.layer_name].input_deltas.items():
             n = 'in_deltas.{}'.format(key)
             log[n] = OrderedDict()
             v = net.handler.get_numpy_copy(v)
@@ -235,7 +235,7 @@ class StopOnNan(Hook):
                 raise StopIteration("NaN or infinite value detected in {}"
                                     .format(log_name))
         if self.check_parameters:
-            params = net.handler.get_numpy_copy(net.buffer.forward.parameters)
+            params = net.handler.get_numpy_copy(net.buffer.parameters)
             if not np.all(np.isfinite(params)):
                 raise StopIteration("Nan or infinite value detected in the "
                                     "parameters!")
@@ -253,7 +253,7 @@ class InfoUpdater(Hook):
         info['epoch'] = epoch
         info['monitor'] = logs
         if 'nr_parameters' not in info:
-            info['nr_parameters'] = net.buffer.forward.parameters.size
+            info['nr_parameters'] = net.buffer.parameters.size
 
 
 class MonitorLoss(Hook):
@@ -351,9 +351,9 @@ class MonitorAccuracy(Hook):
         totals = 0
         for _ in run_network(net, iterator):
             net.forward_pass()
-            out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
+            out = _h.get_numpy_copy(net.buffer[self.out_layer]
                                     .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.forward.Input
+            target = _h.get_numpy_copy(net.buffer.Input
                                        .outputs[self.targets_name])
 
             out = out.reshape(out.shape[0], out.shape[1], -1)
@@ -368,7 +368,7 @@ class MonitorAccuracy(Hook):
             assert out_class.shape == target_class.shape
 
             if self.masked:
-                mask = _h.get_numpy_copy(net.buffer.forward.Input
+                mask = _h.get_numpy_copy(net.buffer.Input
                                          .outputs[self.mask_name])[:, :, 0]
                 errors += np.sum((out_class != target_class) * mask)
                 totals += np.sum(mask)
@@ -446,9 +446,9 @@ class MonitorHammingScore(Hook):
         totals = 0
         for _ in run_network(net, iterator):
             net.forward_pass()
-            out = _h.get_numpy_copy(net.buffer.forward[self.out_layer]
+            out = _h.get_numpy_copy(net.buffer[self.out_layer]
                                     .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.forward.Input
+            target = _h.get_numpy_copy(net.buffer.Input
                                        .outputs[self.targets_name])
 
             out = out.reshape(out.shape[0], out.shape[1], -1)

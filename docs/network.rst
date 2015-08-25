@@ -15,11 +15,11 @@ Here ``net.buffer`` would be the BufferManager that keeps a ``forward`` and a
 
 .. code-block:: python
 
-    net.buffer.forward.A.outputs.default   # output of layer A
-    net.buffer.forward.B.parameters.W      # weight matrix of layer B
+    net.buffer.A.outputs.default   # output of layer A
+    net.buffer.B.parameters.W      # weight matrix of layer B
 
-    net.buffer.backward.A.outputs.default  # out-deltas of layer A
-    net.buffer.backward.B.parameters.W     # gradient matrix for layer B
+    net.buffer.A.output_deltas.default  # out-deltas of layer A
+    net.buffer.B.gradients.W     # gradient matrix for layer B
 
 Variant 2
 ---------

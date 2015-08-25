@@ -257,6 +257,7 @@ class Network(Seedable):
     def set_memory_handler(self, new_handler):
         self.handler = new_handler
         self._buffer_manager.set_memory_handler(new_handler)
+        self.buffer = self._buffer_manager.views
         for layer in self.layers.values():
             layer.set_handler(new_handler)
 
