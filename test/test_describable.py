@@ -359,3 +359,50 @@ def test_get_network_from_description():
     assert isinstance(net2.handler, NumpyHandler)
     assert net2.handler.dtype == np.float32
     assert np.all(net2.buffer.parameters == net.buffer.parameters)
+
+
+# ################# test describing a Trainer #################################
+
+def test_describe_trainer():
+    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
+                    verbose=False)
+    tr.add_hook(bs.hooks.MaxEpochsSeen(23))
+    tr.add_hook(bs.hooks.StopOnNan())
+
+    d = get_description(tr)
+    assert d == {
+        '@type': 'Trainer',
+        'double_buffering': False,
+        'verbose': False,
+        'hooks': {
+            'MaxEpochsSeen': {
+                '@type': 'MaxEpochsSeen',
+                'max_epochs': 23,
+                'priority': 0},
+            'StopOnNan': {
+                '@type': 'StopOnNan',
+                'check_parameters': True,
+                'logs_to_check': [],
+                'priority': 1}},
+        'stepper': {
+            '@type': 'SgdStep',
+            'learning_rate_schedule': 0.7}
+    }
+
+
+def test_recreate_trainer_from_description():
+    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
+                    verbose=False)
+    tr.add_hook(bs.hooks.MaxEpochsSeen(23))
+    tr.add_hook(bs.hooks.StopOnNan())
+
+    d = get_description(tr)
+
+    tr2 = create_from_description(d)
+    assert isinstance(tr2, bs.Trainer)
+    assert tr2.verbose is False
+    assert tr2.double_buffering is False
+    assert list(tr2.hooks.keys()) == ['MaxEpochsSeen', 'StopOnNan']
+    assert tr2.hooks['MaxEpochsSeen'].max_epochs == 23
+    assert isinstance(tr2.stepper, bs.SgdStep)
+    assert tr2.stepper.learning_rate_schedule.value == 0.7
