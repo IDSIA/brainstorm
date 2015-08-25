@@ -237,7 +237,66 @@ class PyCudaHandler(Handler):
     @staticmethod
     def conv2d_backward_batch(out_deltas, inputs, in_deltas, weights, bias,
                               weight_deltas, bias_deltas, pad, stride):
-        pass
+        upscalex, upscaley = 1, 1  # currently not exposed to API
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *inputs.shape)
+
+        id_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *in_deltas.shape)
+
+        od_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *out_deltas.shape)
+
+        w_desc = cudnn.cudnnCreateFilterDescriptor()
+        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
+            *weights.shape)
+
+        dw_desc = cudnn.cudnnCreateFilterDescriptor()
+        cudnn.cudnnSetFilter4dDescriptor(dw_desc, self.cudnn_data_type,
+            *weight_deltas.shape)
+
+        b_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, 1, bias.size, 1, 1)
+
+        db_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(db_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, 1, bias_deltas.size, 1, 1)
+
+        conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
+        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, pad, pad,
+            stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
+
+        alpha, beta = 1.0, 1.0
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        id_data = ctypes.c_void_p(int(in_deltas.gpudata))
+        od_data = ctypes.c_void_p(int(out_deltas.gpudata))
+        w_data = ctypes.c_void_p(int(weights.gpudata))
+        b_data = ctypes.c_void_p(int(bias.gpudata))
+        y_data = ctypes.c_void_p(int(outputs.gpudata))
+
+        cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
+            x_desc, x_data, id_desc, id_data, conv_desc, beta, dw_desc, dw_data)
+
+        cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
+            w_desc, w_data, id_desc, id_data, conv_desc, beta, od_desc, od_data)
+
+        cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
+            od_desc, od_data, beta, db_desc, db_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyTensorDescriptor(id_desc)
+        cudnn.cudnnDestroyTensorDescriptor(od_desc)
+        cudnn.cudnnDestroyFilterDescriptor(w_desc)
+        cudnn.cudnnDestroyFilterDescriptor(b_desc)
+        cudnn.cudnnDestroyFilterDescriptor(dw_desc)
+        cudnn.cudnnDestroyFilterDescriptor(db_desc)
+        cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
+
 
     # Activation functions
 
