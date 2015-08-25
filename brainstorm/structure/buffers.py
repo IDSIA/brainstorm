@@ -9,7 +9,7 @@ from brainstorm.structure.layout import validate_shape_template
 from brainstorm.utils import sort_by_index_key
 
 
-def create_buffer_views_from_layout(layout, buffers, hubs):
+def create_buffer_views_from_layout(layout, buffers, hubs, existing_view=None):
     if '@slice' in layout:
         buffer_nr = layout['@hub']
         start, stop = layout['@slice']
@@ -35,24 +35,39 @@ def create_buffer_views_from_layout(layout, buffers, hubs):
         full_buffer = None
 
     if layout['@type'] == 'BufferView':
-        children = [(n, create_buffer_views_from_layout(sub_node, buffers,
-                                                        hubs))
-                    for n, sub_node in sorted(layout.items(),
-                                              key=sort_by_index_key)
-                    if not n.startswith('@')]
-        if children:
-            names, child_buffers = zip(*children)
+        names, child_buffers = [], []
+        for n, sub_node in sorted(layout.items(), key=sort_by_index_key):
+            if n.startswith('@'):
+                continue
+            if existing_view:
+                assert n in existing_view
+                c = create_buffer_views_from_layout(
+                    sub_node, buffers, hubs, existing_view=existing_view[n])
+            else:
+                c = create_buffer_views_from_layout(sub_node, buffers, hubs)
+            names.append(n)
+            child_buffers.append(c)
+
+        if existing_view:
+            return existing_view.adjust(names, child_buffers, full_buffer)
         else:
-            names, child_buffers = [], []
-        return BufferView(names, child_buffers, full_buffer)
+            return BufferView(names, child_buffers, full_buffer)
     else:  # layout['@type'] == 'array':
         assert full_buffer is not None, layout
         return full_buffer
 
 
+def get_total_size_slices_and_shapes(hubs, time_size, batch_size):
+        shapes = [h.get_shape(time_size, batch_size) for h in hubs]
+        totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes])
+        size = int(totals[-1])
+        slices = [slice(int(i), int(j))
+                  for i, j in zip(totals[:-1], totals[1:])]
+        return size, slices, shapes
+
+
 class BufferManager(object):
-    def __init__(self, layout, hubs,
-                 handler=default_handler):
+    def __init__(self, layout, hubs, handler=default_handler):
         self.hubs = hubs
         self.handler = handler
         self.layout = layout
@@ -60,60 +75,40 @@ class BufferManager(object):
         self.batch_size = -1
         self.size = -1
         self.full_buffer = None
-        self.forward = None
-        self.backward = None
+        self.buffers = []
+        self.views = None
         self.resize(0, 0)
-        self.forward_buffers = []
-        self.backward_buffers = []
-
-    def get_hub_shape(self, hub):
-        full_shape = (self.time_size + hub.context_size,
-                      self.batch_size,
-                      hub.size)
-        return full_shape[2 - hub.btype:]
-
-    def get_total_size_slices_and_shapes(self):
-        shapes = [self.get_hub_shape(h) for h in self.hubs] * 2
-        totals = np.cumsum([0] + [int(np.prod(s)) for s in shapes])
-        size = int(totals[-1])
-        slices = [slice(int(i), int(j)) for i, j in zip(totals[:-1],
-                                                        totals[1:])]
-        return size, slices, shapes
 
     def resize(self, time_size, batch_size):
         if time_size == self.time_size and batch_size == self.batch_size:
-            return  # lazy
+            return self.views  # lazy
 
         N = len(self.hubs)
 
         self.time_size = time_size
         self.batch_size = batch_size
-        total_size, slices, shapes = self.get_total_size_slices_and_shapes()
+        total_size, slices, shapes = get_total_size_slices_and_shapes(
+            self.hubs, time_size, batch_size)
 
         if total_size > self.size:
             self.full_buffer = self.handler.allocate(total_size)
             self.size = total_size
 
-        self.forward_buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
-                                for i in range(N)]
+        self.buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
+                        for i in range(N)]
 
         parameters = None
-        if self.forward is not None:
+        if self.views is not None:
             # copy the parameters
-            parameters = self.handler.get_numpy_copy(self.forward.parameters)
+            parameters = self.handler.get_numpy_copy(self.views.parameters)
 
-        self.forward = create_buffer_views_from_layout(
-            self.layout, self.forward_buffers, self.hubs)
+        self.views = create_buffer_views_from_layout(
+            self.layout, self.buffers, self.hubs, existing_view=self.views)
 
         if parameters is not None:
-            self.handler.set_from_numpy(self.forward.parameters, parameters)
+            self.handler.set_from_numpy(self.views.parameters, parameters)
 
-        # TODO optimization: allocate the backward pass only if needed
-        self.backward_buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
-                                 for i in range(N, 2 * N)]
-
-        self.backward = create_buffer_views_from_layout(
-            self.layout, self.backward_buffers, self.hubs)
+        return self.views
 
     def set_memory_handler(self, new_handler):
         self.full_buffer = None
@@ -121,20 +116,20 @@ class BufferManager(object):
         self.time_size = -1
         self.batch_size = -1
         parameters = None
-        if self.forward is not None:
-            parameters = self.handler.get_numpy_copy(self.forward.parameters)
-        self.forward = None
+        if self.views is not None:
+            parameters = self.handler.get_numpy_copy(self.views.parameters)
+        self.views = None
         self.handler = new_handler
         self.resize(0, 0)
         if parameters is not None:
-            self.handler.set_from_numpy(self.forward.parameters, parameters)
+            self.handler.set_from_numpy(self.views.parameters, parameters)
 
     def get_context(self):
-        if self.forward_buffers is None:
+        if self.buffers is None:
             return None
         context = []
-        for hub, buf in zip(self.hubs, self.forward_buffers):
-            if hub.btype != 2 or not hub.context_size:
+        for hub, buf in zip(self.hubs, self.buffers):
+            if hub.btype != 2 or hub.context_size == 0:
                 context.append(None)
             else:
                 c = self.handler.zeros(
@@ -150,20 +145,21 @@ class BufferManager(object):
         return context
 
     def apply_context(self, context):
-        for c, buf in zip(context, self.forward_buffers):
+        for c, buf in zip(context, self.buffers):
             if c is None:
                 continue
-            self.handler.copy_to(buf[self.time_size - context.shape[0]:], c)
+            self.handler.copy_to(buf[(self.time_size - context.shape[0]):], c)
 
     def clear_context(self):
-        if self.forward_buffers is None:
+        if self.buffers is None:
             return None
-        for hub, buf in zip(self.hubs, self.forward_buffers):
+        for hub, buf in zip(self.hubs, self.buffers):
             if hub.btype != 2 or not hub.context_size:
                 continue
             self.handler.fill(
                 buf[self.time_size - hub.context_size:], 0.)
 
     def clear_backward_buffers(self):
-        for b in self.backward_buffers:
-            self.handler.fill(b, 0.)
+        for h, b in zip(self.hubs, self.buffers):
+            if h.is_backward_only:
+                self.handler.fill(b, 0.)

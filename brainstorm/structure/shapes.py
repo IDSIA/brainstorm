@@ -20,15 +20,17 @@ class ShapeTemplate(object):
         else:
             return ShapeTemplate(*shape)
 
-    # def __init__(self, *args, context_size=0):  # Not python2 compatible
-    def __init__(self, *args, **kwargs):  # Not python2 compatible
+    # def __init__(self, *args, context_size=0, backward_only=False):  # Not python2 compatible
+    def __init__(self, *args, **kwargs):
         self._shape = args
         self.context_size = kwargs.get('context_size', 0)
-        if kwargs and list(kwargs.keys()) != ['context_size']:
+        expected_kwargs = {'context_size', 'is_backward_only'}
+        if not set(kwargs.keys()) <= expected_kwargs:
             raise TypeError('Unexpected keyword argument {}'
-                            .format(list(kwargs.keys())))
+                            .format(set(kwargs.keys()) - expected_kwargs))
         self.shape_type = self.get_shape_type()
         self.first_feature_dim = self.get_first_feature_dim()
+        self.is_backward_only = kwargs.get('is_backward_only', False)
         self.validate()
 
     @property
@@ -152,6 +154,8 @@ class ShapeTemplate(object):
         }
         if self.context_size:
             descr['@context_size'] = self.context_size
+        if self.is_backward_only:
+            descr['@is_backward_only'] = True
         return descr
 
     def matches(self, shape):

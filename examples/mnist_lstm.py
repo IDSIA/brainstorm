@@ -91,4 +91,4 @@ trainer.add_hook(bs.hooks.SaveBestWeights("validation accuracy",
 
 trainer.train(network, train_getter, valid_getter=valid_getter)
 print("\nBest validation accuracy: ", max(trainer.logs["validation accuracy"]))
-network.buffer.forward.parameters = trainer.hooks["best weights"].weights
+network.buffer.parameters = trainer.hooks["best weights"].weights

@@ -69,6 +69,27 @@ class LstmLayerImpl(LayerBaseImpl):
         internals['Ca'] = ShapeTemplate('T', 'B', self.size, context_size=1)
         internals['Cb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
 
+        internals['dZa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dZb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dIa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dIb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dFa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dFb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dOa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dOb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dCa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dCb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+
         return internals
 
     def _get_output_shapes(self):
@@ -78,15 +99,16 @@ class LstmLayerImpl(LayerBaseImpl):
 
         return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
          Rz, Ri, Rf, Ro,
-         bz, bi, bf, bo) = forward_buffers.parameters
-        Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb = forward_buffers.internals
-        x = forward_buffers.inputs.default
-        y = forward_buffers.outputs.default
+         bz, bi, bf, bo) = buffers.parameters
+        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
+         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
+        x = buffers.inputs.default
+        y = buffers.outputs.default
 
         time_size, batch_size, in_size = x.shape
 
@@ -123,23 +145,23 @@ class LstmLayerImpl(LayerBaseImpl):
             self.act_func(Ca[t], Cb[t])
             _h.mult_tt(Ob[t], Cb[t], y[t])
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
          Rz, Ri, Rf, Ro,
-         bz, bi, bf, bo) = forward_buffers.parameters
+         bz, bi, bf, bo) = buffers.parameters
         (dWz, dWi, dWf, dWo,
          dRz, dRi, dRf, dRo,
-         dbz, dbi, dbf, dbo) = backward_buffers.parameters
+         dbz, dbi, dbf, dbo) = buffers.gradients
 
-        Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb = forward_buffers.internals
-        dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb = backward_buffers.internals
+        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
+         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
 
-        x = forward_buffers.inputs.default
-        dx = backward_buffers.inputs.default
-        y = forward_buffers.outputs.default
-        deltas = backward_buffers.outputs.default
+        x = buffers.inputs.default
+        dx = buffers.input_deltas.default
+        y = buffers.outputs.default
+        deltas = buffers.output_deltas.default
 
         dy = _h.allocate(y.shape)
 

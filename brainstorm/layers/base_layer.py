@@ -108,10 +108,10 @@ class LayerBaseImpl(object):
         raise NotImplementedError('LayerImplementations need to implement '
                                   'the _get_output_shapes method.')
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         pass
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
         pass
 
     def get_shape(self, path):

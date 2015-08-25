@@ -17,19 +17,19 @@ class LossLayerImpl(LayerBaseImpl):
     def _get_output_shapes(self):
         return {'loss': ShapeTemplate(1)}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # TODO: passing axis=None works with numpy an pycuda
         # TODO: but is this the intended interface?
-        time_size, batch_size = forward_buffers.inputs.default.shape[:2]
-        self.handler.sum_t(forward_buffers.inputs.default,
+        time_size, batch_size = buffers.inputs.default.shape[:2]
+        self.handler.sum_t(buffers.inputs.default,
                            None,
-                           forward_buffers.outputs.loss.reshape(tuple()))
+                           buffers.outputs.loss.reshape(tuple()))
         self.handler.mult_st(self.importance / batch_size,
-                             forward_buffers.outputs.loss,
-                             forward_buffers.outputs.loss)
+                             buffers.outputs.loss,
+                             buffers.outputs.loss)
 
-    def backward_pass(self, forward_buffers, backward_buffers):
-        time_size, batch_size = forward_buffers.inputs.default.shape[:2]
+    def backward_pass(self, buffers):
+        time_size, batch_size = buffers.inputs.default.shape[:2]
         self.handler.add_st(self.importance / batch_size,
-                            backward_buffers.inputs.default,
-                            backward_buffers.inputs.default)
+                            buffers.input_deltas.default,
+                            buffers.input_deltas.default)

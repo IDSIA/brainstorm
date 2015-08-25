@@ -54,7 +54,7 @@ def test_deltas_finite_differences(net, input_data):
     net.provide_external_data({'default': input_data})
     net.forward_pass(training_pass=True)
     net.backward_pass()
-    delta_calc = net.buffer.backward.Input.outputs.default.flatten()
+    delta_calc = net.buffer.Input.output_deltas.default.flatten()
 
     # ######## estimate deltas ##########
     def f(x):
@@ -81,14 +81,14 @@ def test_gradient_finite_differences(net, input_data):
     net.provide_external_data({'default': input_data})
     net.forward_pass(training_pass=True)
     net.backward_pass()
-    gradient_calc = net.buffer.backward.parameters
+    gradient_calc = net.buffer.gradients
 
     # ######## estimate deltas ##########
     def f(x):
-        net.buffer.forward.parameters[:] = x
+        net.buffer.parameters[:] = x
         net.forward_pass()
         return net.get_loss_value()
-    initial_weigths = net.buffer.forward.parameters.copy()
+    initial_weigths = net.buffer.parameters.copy()
     gradient_approx = approx_fprime(initial_weigths, f, 1e-6)
 
     # ######## compare them #############
@@ -99,12 +99,12 @@ def test_gradient_finite_differences(net, input_data):
         # Hijack the network gradient buffer for the view
         net.buffer.gradients[:] = diff
         for layer_name in net.layers:
-            if not net.buffer.backward[layer_name]:
+            if not net.buffer[layer_name]:
                 continue
             print("============= Layer: {} =============".format(layer_name))
-            for view_name in net.buffer.backward[layer_name].parameters.keys():
+            for view_name in net.buffer[layer_name].gradients.keys():
                 print("------------- {} -------------".format(view_name))
-                print(net.buffer.backward[layer_name].parameters[view_name])
+                print(net.buffer[layer_name].gradients[view_name])
 
     print(">> Checking Gradient = %0.4f" % mse)
     assert mse < 1e-4

@@ -20,7 +20,7 @@ def net():
 
 def test_initialize_default(net):
     net.initialize(7)
-    assert np.all(net.buffer.forward.parameters == 7)
+    assert np.all(net.buffer.parameters == 7)
 
 
 def test_initialze_layerwise_dict(net):
@@ -29,9 +29,9 @@ def test_initialze_layerwise_dict(net):
         'FullyConnected_2': 2,
         'OutputLayer': 3})
 
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.W == 1)
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.W == 2)
-    assert np.all(net.buffer.forward.OutputLayer.parameters.W == 3)
+    assert np.all(net.buffer.FullyConnected_1.parameters.W == 1)
+    assert np.all(net.buffer.FullyConnected_2.parameters.W == 2)
+    assert np.all(net.buffer.OutputLayer.parameters.W == 3)
 
 
 def test_initialize_layerwise_kwargs(net):
@@ -40,9 +40,9 @@ def test_initialize_layerwise_kwargs(net):
         FullyConnected_2=2,
         OutputLayer=3)
 
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.W == 1)
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.W == 2)
-    assert np.all(net.buffer.forward.OutputLayer.parameters.W == 3)
+    assert np.all(net.buffer.FullyConnected_1.parameters.W == 1)
+    assert np.all(net.buffer.FullyConnected_2.parameters.W == 2)
+    assert np.all(net.buffer.OutputLayer.parameters.W == 3)
 
 
 def test_initialize_layerwise_plus_default_kwargs(net):
@@ -50,9 +50,9 @@ def test_initialize_layerwise_plus_default_kwargs(net):
                    FullyConnected_1=1,
                    OutputLayer=3)
 
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.W == 1)
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.W == 7)
-    assert np.all(net.buffer.forward.OutputLayer.parameters.W == 3)
+    assert np.all(net.buffer.FullyConnected_1.parameters.W == 1)
+    assert np.all(net.buffer.FullyConnected_2.parameters.W == 7)
+    assert np.all(net.buffer.OutputLayer.parameters.W == 3)
 
 
 def test_initialize_weightwise(net):
@@ -60,12 +60,12 @@ def test_initialize_weightwise(net):
                    FullyConnected_1={'W': 1},
                    FullyConnected_2={'W': 2, 'default': 3},
                    OutputLayer={'bias': 4})
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.W == 1)
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.bias == 7)
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.W == 2)
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.bias == 3)
-    assert np.all(net.buffer.forward.OutputLayer.parameters.W == 7)
-    assert np.all(net.buffer.forward.OutputLayer.parameters.bias == 4)
+    assert np.all(net.buffer.FullyConnected_1.parameters.W == 1)
+    assert np.all(net.buffer.FullyConnected_1.parameters.bias == 7)
+    assert np.all(net.buffer.FullyConnected_2.parameters.W == 2)
+    assert np.all(net.buffer.FullyConnected_2.parameters.bias == 3)
+    assert np.all(net.buffer.OutputLayer.parameters.W == 7)
+    assert np.all(net.buffer.OutputLayer.parameters.bias == 4)
 
 
 def test_initialize_with_array(net):
@@ -77,15 +77,15 @@ def test_initialize_with_array(net):
                                                 [10, 11]]},
                    OutputLayer={'bias': [12]})
 
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.W == 0)
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.bias ==
+    assert np.all(net.buffer.FullyConnected_1.parameters.W == 0)
+    assert np.all(net.buffer.FullyConnected_1.parameters.bias ==
                   [1, 2])
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.bias ==
+    assert np.all(net.buffer.FullyConnected_2.parameters.bias ==
                   [3, 4, 5])
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.W ==
+    assert np.all(net.buffer.FullyConnected_2.parameters.W ==
                   [[6, 7], [8, 9], [10, 11]])
-    assert np.all(net.buffer.forward.OutputLayer.parameters.W == 0)
-    assert np.all(net.buffer.forward.OutputLayer.parameters.bias == 12)
+    assert np.all(net.buffer.OutputLayer.parameters.W == 0)
+    assert np.all(net.buffer.OutputLayer.parameters.bias == 12)
 
 
 def test_initialize_with_initializer(net):
@@ -96,9 +96,9 @@ def test_initialize_with_initializer(net):
         OutputLayer={'W': bs.Uniform(3, 4), 'bias': bs.Uniform(4, 5)}
     )
 
-    layer1 = net.buffer.forward.FullyConnected_1.parameters
-    layer2 = net.buffer.forward.FullyConnected_2.parameters
-    layer3 = net.buffer.forward.OutputLayer.parameters
+    layer1 = net.buffer.FullyConnected_1.parameters
+    layer2 = net.buffer.FullyConnected_2.parameters
+    layer3 = net.buffer.OutputLayer.parameters
 
     assert np.all(1 <= layer1.W) and np.all(layer1.W <= 2)
     assert np.all(1 <= layer1.bias) and np.all(layer1.bias <= 2)
@@ -111,9 +111,9 @@ def test_initialize_with_initializer(net):
 def test_initialize_with_layer_pattern(net):
     net.initialize({'default': 0, 'Fully*': 1})
 
-    assert np.all(net.buffer.forward.FullyConnected_1.parameters.W == 1)
-    assert np.all(net.buffer.forward.FullyConnected_2.parameters.W == 1)
-    assert np.all(net.buffer.forward.OutputLayer.parameters.W == 0)
+    assert np.all(net.buffer.FullyConnected_1.parameters.W == 1)
+    assert np.all(net.buffer.FullyConnected_2.parameters.W == 1)
+    assert np.all(net.buffer.OutputLayer.parameters.W == 0)
 
 
 def test_initialize_with_nonmatching_pattern_raises(net):

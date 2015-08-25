@@ -25,7 +25,7 @@ def test_learn_xor_function():
     net = Network.from_layer(inp - 'targets' >> 'targets' - error_func)
     # net.set_memory_handler(PyCudaHandler())
     net.initialize(Gaussian(1.0), seed=42)  # high weight-init needed
-    print(net.buffer.forward.parameters)
+    print(net.buffer.parameters)
 
     # set up the trainer
     tr = Trainer(SgdStep(learning_rate=4.0), verbose=False,
@@ -43,7 +43,7 @@ def test_learn_xor_function():
 
     tr.train(net, Undivided(default=data, targets=targets))
 
-    out = net.buffer.forward.OutLayer.outputs.default
+    out = net.buffer.OutLayer.outputs.default
     print('Network output:', out.flatten())
     print('Rounded output:', np.round(out.flatten()))
     print('Targets       :', targets.flatten())

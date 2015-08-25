@@ -15,7 +15,6 @@ from brainstorm.utils import (NetworkValidationError, flatten,
 
 
 class Hub(object):
-
     @staticmethod
     def create(source_set, sink_set, layout, connections):
         # get buffer type for hub and assert its uniform
@@ -32,6 +31,12 @@ class Hub(object):
         hub.sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
                      for s in hub.sources]
         hub.size = sum(hub.sizes)
+
+        is_backward_only = [get_by_path(s, layout).get('@is_backward_only',
+                                                       False)
+                            for s in hub.sources]
+        assert min(is_backward_only) == max(is_backward_only)
+        hub.is_backward_only = is_backward_only[0]
         return hub
 
     def __init__(self, sources, sinks, btype, context_size=0):
@@ -42,6 +47,12 @@ class Hub(object):
         self.connection_table = []
         self.sizes = []
         self.size = -1
+
+    def get_shape(self, time_size=1, batch_size=1):
+        full_shape = (time_size + self.context_size,
+                      batch_size,
+                      self.size)
+        return full_shape[2 - self.btype:]
 
     def setup(self, connections):
         self.set_up_connection_table(connections)
@@ -130,12 +141,19 @@ def create_layout(layers):
 
     # group into hubs and lay them out
     hubs = group_into_hubs(all_sources, forced_orders, connections, layout)
-    hubs = sorted(hubs, key=lambda x: x.btype)
+    hubs = sorted(hubs, key=lambda x: (x.is_backward_only, x.btype))
     layout_hubs(hubs, layout)
 
     # add shape to parameters
+    if '@slice' not in layout['parameters']:
+        layout['parameters']['@slice'] = (0, 0)
+        layout['parameters']['@hub'] = 0
+    if '@slice' not in layout['gradients']:
+        layout['gradients']['@slice'] = (0, 0)
+        layout['gradients']['@hub'] = 0
     param_slice = layout['parameters']['@slice']
     layout['parameters']['@shape'] = (param_slice[1] - param_slice[0],)
+    layout['gradients']['@shape'] = (param_slice[1] - param_slice[0],)
 
     return hubs, layout
 
@@ -154,10 +172,10 @@ def layout_hubs(hubs, layout):
 
 def get_all_sinks_and_sources(forced_orders, connections, layout):
     """Gather all sinks and sources while preserving order of the sources."""
-    all_sinks = sorted(list(zip(*connections))[1])
+    all_sinks = sorted(list(zip(*connections))[1]) if connections else []
     all_sources = list()
     for s in gather_array_nodes(layout):
-        if s in all_sinks:
+        if s in all_sinks + ['parameters', 'gradients']:
             continue
         for fo in forced_orders:
             if s in set(flatten(all_sources)):
@@ -167,11 +185,13 @@ def get_all_sinks_and_sources(forced_orders, connections, layout):
                 break
         else:
             all_sources.append(s)
+
     return all_sinks, all_sources
 
 
 def get_forced_orders(layers):
     forced_orders = [get_parameter_order(n, l) for n, l in layers.items()]
+    forced_orders += [get_gradient_order(n, l) for n, l in layers.items()]
     forced_orders = list(filter(None, forced_orders))
     # ensure no overlap
     for fo in forced_orders:
@@ -188,9 +208,13 @@ def create_layout_stub(layers):
     root = {'@type': 'BufferView',
             'parameters': {
                 '@type': 'array',
-                '@index': 0
-            }}
-    for i, (layer_name, layer) in enumerate(layers.items(), start=1):
+                '@index': 0},
+            'gradients': {
+                '@type': 'array',
+                '@index': 1,
+                '@is_backward_only': True}
+            }
+    for i, (layer_name, layer) in enumerate(layers.items(), start=2):
         root[layer_name] = get_layout_stub_for_layer(layer)
         root[layer_name]['@type'] = 'BufferView'
         root[layer_name]['@index'] = i
@@ -203,14 +227,14 @@ def get_layout_stub_for_layer(layer):
     layout['inputs'] = {
         k: convert_to_array_json(layer.in_shapes[k], i)
         for i, k in enumerate(sorted(layer.in_shapes))
-    }
+        }
     layout['inputs']['@type'] = 'BufferView'
     layout['inputs']['@index'] = 0
 
     layout['outputs'] = {
         k: convert_to_array_json(layer.out_shapes[k], i)
         for i, k in enumerate(sorted(layer.out_shapes))
-    }
+        }
     layout['outputs']['@type'] = 'BufferView'
     layout['outputs']['@index'] = 1
 
@@ -219,7 +243,7 @@ def get_layout_stub_for_layer(layer):
     layout['parameters'] = {
         k: convert_to_array_json(v, i)
         for i, (k, v) in enumerate(parameters.items())
-    }
+        }
     layout['parameters']['@type'] = 'BufferView'
     layout['parameters']['@index'] = 2
 
@@ -229,9 +253,36 @@ def get_layout_stub_for_layer(layer):
     layout['internals'] = {
         k: convert_to_array_json(v, i)
         for i, (k, v) in enumerate(internals.items())
-    }
+        }
     layout['internals']['@type'] = 'BufferView'
     layout['internals']['@index'] = 3
+
+    layout['input_deltas'] = {
+        k: convert_to_array_json(layer.in_shapes[k], i)
+        for i, k in enumerate(sorted(layer.in_shapes))
+        }
+    for k, v in layout['input_deltas'].items():
+        v['@is_backward_only'] = True
+    layout['input_deltas']['@type'] = 'BufferView'
+    layout['input_deltas']['@index'] = 4
+
+    layout['output_deltas'] = {
+        k: convert_to_array_json(layer.out_shapes[k], i)
+        for i, k in enumerate(sorted(layer.out_shapes))
+        }
+    for k, v in layout['output_deltas'].items():
+        v['@is_backward_only'] = True
+    layout['output_deltas']['@type'] = 'BufferView'
+    layout['output_deltas']['@index'] = 5
+
+    layout['gradients'] = {
+        k: convert_to_array_json(v, i)
+        for i, (k, v) in enumerate(parameters.items())
+        }
+    for k, v in layout['gradients'].items():
+        v['@is_backward_only'] = True
+    layout['gradients']['@type'] = 'BufferView'
+    layout['gradients']['@index'] = 6
 
     return layout
 
@@ -275,11 +326,21 @@ def get_connections(layers):
             end = get_normalized_path(con.end_layer, 'inputs', con.input_name)
             connections.append((start, end))
 
-    # add connections to implicit 'parameters'-layer
+            start = get_normalized_path(con.start_layer, 'output_deltas',
+                                        con.output_name)
+            end = get_normalized_path(con.end_layer, 'input_deltas',
+                                      con.input_name)
+            connections.append((start, end))
+
+    # add connections to implicit 'parameters', and 'gradients'-layer
     for layer_name, layer in layers.items():
         for param_name in layer.get_parameter_structure():
             start = get_normalized_path(layer_name, 'parameters', param_name)
             end = 'parameters'
+            connections.append((start, end))
+
+            start = get_normalized_path(layer_name, 'gradients', param_name)
+            end = 'gradients'
             connections.append((start, end))
 
     return sorted(connections)
@@ -294,9 +355,9 @@ def get_parameter_order(layer_name, layer):
                   for o in layer.get_parameter_structure()])
 
 
-def get_internal_order(layer_name, layer):
-    return tuple([get_normalized_path(layer_name, 'internals', o)
-                  for o in layer.get_internal_structure()])
+def get_gradient_order(layer_name, layer):
+    return tuple([get_normalized_path(layer_name, 'gradients', o)
+                  for o in layer.get_parameter_structure()])
 
 
 def merge_connections(connections, forced_orders):
@@ -355,12 +416,9 @@ def get_forward_closure(node, connections):
                           if end in sink_set}
         new_sink_set = {end for start, end in connections
                         if start in source_set}
-        if len(new_source_set) > len(source_set) or\
-                len(new_sink_set) > len(sink_set):
+        if len(new_source_set) > len(source_set) or \
+                        len(new_sink_set) > len(sink_set):
             growing = True
             source_set = new_source_set
             sink_set = new_sink_set
     return source_set, sink_set
-
-
-

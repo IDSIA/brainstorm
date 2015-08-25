@@ -5,6 +5,9 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.handlers import NumpyHandler
 import numpy as np
+from brainstorm.structure.buffers import get_total_size_slices_and_shapes, \
+    create_buffer_views_from_layout
+from brainstorm.structure.layout import create_layout
 
 np.random.seed(1234)
 HANDLER = NumpyHandler(np.float64)
@@ -33,154 +36,39 @@ def approx_fprime(x0, f, epsilon, *args):
     return grad
 
 
-def get_output_error(_h, forward_buffers, skip_outputs=()):
-    error = 0.0
-    for key in forward_buffers.outputs.keys():
-        if key in skip_outputs:
-            continue
-        value = _h.get_numpy_copy(forward_buffers.outputs[key])
-        error += value.sum()
-    return error
-
-
-def buffer_shape_from_in_out_shape(time_steps, batch_size, shape):
-    """
-    Computes the size of the buffers for inputs and outputs given the shape
-    representation by the layer such as ('T', 'B', 3).
-
-    :param shape: A shape tuple, whose first entry might be 'T' and second
-    entry might be 'B', but rest must be positive integers.
-    :return: A shape tuple of same length as inputs, but consisting of
-    positive integers.
-    """
-    return (time_steps, batch_size) + shape[2:]
-
-
-def setup_buffers(time_steps, batch_size, layer):
-    """
-    Sets up the required forward and backward buffers for gradient checking.
-
-    This function will also randomly initialize the parameters and inputs.
-
-    :param time_steps: Number of time-steps in each sequence.
-    :param batch_size: Number of sequences.
-    :param layer: A $Layer$ object.
-    :return: BufferViews for forward and backward buffers
-    """
-    _h = layer.handler
-    forward_buffer_names = []
-    forward_buffer_views = []
-    backward_buffer_names = []
-    backward_buffer_views = []
-
-    # setup inputs
-    input_names = layer.inputs
-    forward_input_buffers = []
-    backward_input_buffers = []
-
-    assert set(input_names) == set(layer.in_shapes.keys())
-    for name in input_names:
-        shape = layer.in_shapes[name].get_shape(time_steps, batch_size)
-        data = _h.zeros(shape)
-        _h.set_from_numpy(data, np.random.randn(*shape))
-        forward_input_buffers.append(data)
-        backward_input_buffers.append(_h.zeros(shape))
-
-    forward_buffer_names.append('inputs')
-    forward_buffer_views.append(BufferView(input_names, forward_input_buffers))
-    backward_buffer_names.append('inputs')
-    backward_buffer_views.append(BufferView(input_names,
-                                            backward_input_buffers))
-
-    # setup outputs
-    output_names = layer.outputs
-    forward_output_buffers = []
-    backward_output_buffers = []
-
-    assert set(output_names) == set(layer.out_shapes.keys())
-    for name in output_names:
-        shape = layer.out_shapes[name].get_shape(time_steps, batch_size)
-        forward_output_buffers.append(_h.zeros(shape))
-        backward_output_buffers.append(_h.zeros(shape))
-
-    forward_buffer_names.append('outputs')
-    forward_buffer_views.append(BufferView(output_names,
-                                           forward_output_buffers))
-    backward_buffer_names.append('outputs')
-    backward_buffer_views.append(BufferView(output_names,
-                                            backward_output_buffers))
-
-    # setup parameters
-    param_names = []
-    forward_param_buffers = []
-    backward_param_buffers = []
-
-    param_structure = layer.get_parameter_structure()
-    for name, shape_template in param_structure.items():
-        param_names.append(name)
-        shape = shape_template.get_shape(1, 1)
-        data = _h.zeros(shape)
-        _h.set_from_numpy(data, np.random.randn(*shape))
-        forward_param_buffers.append(data)
-        backward_param_buffers.append(_h.zeros(shape))
-
-    forward_buffer_names.append('parameters')
-    forward_buffer_views.append(BufferView(param_names, forward_param_buffers))
-    backward_buffer_names.append('parameters')
-    backward_buffer_views.append(BufferView(param_names,
-                                            backward_param_buffers))
-
-    # setup internals
-    internal_names = []
-    forward_internal_buffers = []
-    backward_internal_buffers = []
-
-    internal_structure = layer.get_internal_structure()
-    for name, shape_template in internal_structure.items():
-        internal_names.append(name)
-        shape = shape_template.get_shape(time_steps, batch_size)
-        forward_internal_buffers.append(_h.zeros(shape))
-        backward_internal_buffers.append(_h.zeros(shape))
-
-    forward_buffer_names.append('internals')
-    forward_buffer_views.append(BufferView(internal_names,
-                                           forward_internal_buffers))
-    backward_buffer_names.append('internals')
-    backward_buffer_views.append(BufferView(internal_names,
-                                            backward_internal_buffers))
-
-    # Finally, setup forward and backward buffers
-    forward_buffers = BufferView(forward_buffer_names, forward_buffer_views)
-    backward_buffers = BufferView(backward_buffer_names, backward_buffer_views)
-    return forward_buffers, backward_buffers
-
-
 def set_up_layer(layer, specs):
     layer.set_handler(HANDLER)
     time_steps = specs.get('time_steps', 3)
     batch_size = specs.get('batch_size', 2)
+    hubs, layout = create_layout({'test_layer': layer})
+    total_size, slices, shapes = get_total_size_slices_and_shapes(
+        hubs, time_steps, batch_size)
+    full_buffer = HANDLER.allocate(total_size)
+    buffers = [full_buffer[slice_].reshape(shape)
+               for slice_, shape in zip(slices, shapes)]
+    view = create_buffer_views_from_layout(layout, buffers, hubs)
 
-    fwd_buffers, bwd_buffers = setup_buffers(time_steps, batch_size, layer)
+    layer_buffers = view.test_layer
 
-    for key, value in fwd_buffers.inputs.items():
+    for key, value in view.test_layer.inputs.items():
         if key in specs:
             # print("Using special input:", key)
-            HANDLER.set_from_numpy(fwd_buffers.inputs[key], specs[key])
+            HANDLER.set_from_numpy(layer_buffers.inputs[key], specs[key])
 
-    return fwd_buffers, bwd_buffers
+    return layer_buffers
 
 
 def run_deltas_test(layer, specs, inputs_name, outputs_name):
     eps = specs.get('eps', 1e-5)
     print("Checking input '{}' ...".format(inputs_name))
-    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    layer_buffers = set_up_layer(layer, specs)
     # First do a forward and backward pass to calculate gradients
-    layer.forward_pass(fwd_buffers)
-    HANDLER.fill(bwd_buffers.outputs[outputs_name], 1.0)
-    layer.backward_pass(fwd_buffers, bwd_buffers)
-    delta_calc = bwd_buffers.inputs[inputs_name]
+    layer.forward_pass(layer_buffers)
+    HANDLER.fill(layer_buffers.output_deltas[outputs_name], 1.0)
+    layer.backward_pass(layer_buffers)
+    delta_calc = layer_buffers.input_deltas[inputs_name]
     delta_approx = get_approx_deltas(layer, inputs_name,
-                                     outputs_name, fwd_buffers,
+                                     outputs_name, layer_buffers,
                                      eps).reshape(delta_calc.shape)
     if np.allclose(delta_approx, delta_calc, rtol=1e-4, atol=1e-4):
         return True
@@ -202,32 +90,32 @@ def run_deltas_test(layer, specs, inputs_name, outputs_name):
     return False
 
 
-def get_approx_deltas(layer, inputs_name, outputs_name, forward_buffers, eps):
+def get_approx_deltas(layer, inputs_name, outputs_name, layer_buffers, eps):
     """
     Approximates the derivative of one layer input with respect to some outputs
 
     :param layer: The layer whose derivative should be approximated
     :param inputs_name: The input for which to approximate the derivative
     :param outputs_name: The output wrt. to which to approximate the derivative
-    :param forward_buffers: Forward buffers view for the layer
+    :param layer_buffers: Buffers view for the layer
     :param eps: Size of perturbation for numerical gradient computation
     """
     _h = layer.handler
 
-    view = forward_buffers.inputs[inputs_name]
+    view = layer_buffers.inputs[inputs_name]
     size = _h.size(view)
     x0 = _h.get_numpy_copy(view).reshape((size,))
 
     def f(x):
         flat_view = _h.reshape(view, (size,))
         _h.set_from_numpy(flat_view, x)  # set to new value
-        layer.forward_pass(forward_buffers)
-        return _h.get_numpy_copy(forward_buffers.outputs[outputs_name]).sum()
+        layer.forward_pass(layer_buffers)
+        return _h.get_numpy_copy(layer_buffers.outputs[outputs_name]).sum()
 
     return approx_fprime(x0, f, eps)
 
 
-def get_approx_gradients(layer, parameter_name, outputs_name, forward_buffers,
+def get_approx_gradients(layer, parameter_name, outputs_name, layer_buffers,
                          eps):
     """
     Approximates the derivative of one layer parameter with respect to
@@ -237,20 +125,20 @@ def get_approx_gradients(layer, parameter_name, outputs_name, forward_buffers,
     :param parameter_name: The parameters for which to approximate the
                            derivative
     :param outputs_name: The output wrt. to which to approximate the derivative
-    :param forward_buffers: Forward buffers view for the layer
+    :param layer_buffers: Forward buffers view for the layer
     :param eps: Size of perturbation for numerical gradient computation
     """
     _h = layer.handler
 
-    view = forward_buffers.parameters[parameter_name]
+    view = layer_buffers.parameters[parameter_name]
     size = _h.size(view)
     x0 = _h.get_numpy_copy(view).reshape((size,))
 
     def f(x):
         flat_view = _h.reshape(view, (size,))
         _h.set_from_numpy(flat_view, x)  # set to new value
-        layer.forward_pass(forward_buffers)
-        return _h.get_numpy_copy(forward_buffers.outputs[outputs_name]).sum()
+        layer.forward_pass(layer_buffers)
+        return _h.get_numpy_copy(layer_buffers.outputs[outputs_name]).sum()
 
     return approx_fprime(x0, f, eps)
 
@@ -258,16 +146,16 @@ def get_approx_gradients(layer, parameter_name, outputs_name, forward_buffers,
 def run_gradients_test(layer, specs, parameter_name, outputs_name):
     eps = specs.get('eps', 1e-5)
     print("Checking parameter '{}' ...".format(parameter_name))
-    fwd_buffers, bwd_buffers = set_up_layer(layer, specs)
+    layer_buffers = set_up_layer(layer, specs)
     print("Shape of parameter is {}".
-          format(fwd_buffers.parameters[parameter_name].shape))
+          format(layer_buffers.parameters[parameter_name].shape))
     # First do a forward and backward pass to calculate gradients
-    layer.forward_pass(fwd_buffers)
-    HANDLER.fill(bwd_buffers.outputs[outputs_name], 1.0)
-    layer.backward_pass(fwd_buffers, bwd_buffers)
-    grad_calc = bwd_buffers.parameters[parameter_name]
+    layer.forward_pass(layer_buffers)
+    HANDLER.fill(layer_buffers.output_deltas[outputs_name], 1.0)
+    layer.backward_pass(layer_buffers)
+    grad_calc = layer_buffers.gradients[parameter_name]
     grad_approx = get_approx_gradients(layer, parameter_name,
-                                       outputs_name, fwd_buffers,
+                                       outputs_name, layer_buffers,
                                        eps).reshape(grad_calc.shape)
     if np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4):
         return True
