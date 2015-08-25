@@ -2,11 +2,14 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import numpy as np
+import h5py
+import json
 
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.structure.buffers import BufferManager
+from brainstorm.structure.buffers import BufferManager, \
+    create_buffer_views_from_layout
 from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import (resolve_references,
                                                   prune_view_references,
@@ -67,6 +70,14 @@ class Network(Seedable):
             create_from_description(description['gradient_modifiers']))
         net.set_weight_modifiers(
             create_from_description(description['weight_modifiers']))
+        return net
+
+    @classmethod
+    def from_hdf5(cls, filename):
+        with h5py.File(filename, 'r') as f:
+            description = json.loads(f['description'].value.decode())
+            net = create_from_description(description)
+            net.handler.set_from_numpy(net.buffer.parameters, f['parameters'].value)
         return net
 
     def __init__(self, layers, buffer_manager, architecture, seed=None,
@@ -308,6 +319,17 @@ class Network(Seedable):
                     gm.rnd.set_seed(self.rnd.generate_seed())
                     gm(self.handler,
                        self.buffer[layer_name].parameters[view_name])
+
+    # -------------------------- Serialization --------------------------------
+
+    def save_as_hdf5(self, filename):
+        with h5py.File(filename, 'w') as f:
+            description = get_description(self)
+            f['description'] = json.dumps(description).encode()
+            f.create_dataset(
+                'parameters', compression='gzip',
+                data=self.handler.get_numpy_copy(self.buffer.parameters))
+
 
 
 # ########################### Helper Methods ##################################
