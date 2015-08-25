@@ -38,8 +38,10 @@ class PyCudaHandler(Handler):
                 'CUDNN_DATA_FLOAT']
             self.cudnn_convmode = cudnn.cudnnConvolutionMode[
                 'CUDNN_CROSS_CORRELATION']
+            # TODO we should use use PREFER_FASTEST eventually!
             self.cudnn_convpref = cudnn.cudnnConvolutionFwdPreference[
-                'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
+                #'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
+                'CUDNN_CONVOLUTION_FWD_NO_WORKSPACE']
             self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
 
     array_type = pycuda.gpuarray.GPUArray
@@ -184,11 +186,10 @@ class PyCudaHandler(Handler):
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *inputs.shape)
+                                         self.cudnn_data_type, *inputs.shape)
 
         w_desc = cudnn.cudnnCreateFilterDescriptor()
-        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
-            *weights.shape)
+        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type, *weights.shape)
 
         b_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
@@ -222,15 +223,13 @@ class PyCudaHandler(Handler):
         cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
             x_data, w_desc, w_data, conv_desc, algo, None, 0, beta, y_desc,
             y_data)
-        print(cudnn.cudnnGetTensor4dDescriptor(b_desc))
-        print(cudnn.cudnnGetTensor4dDescriptor(y_desc))
         cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
             b_desc, b_data, beta, y_desc, y_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyTensorDescriptor(y_desc)
         cudnn.cudnnDestroyFilterDescriptor(w_desc)
-        cudnn.cudnnDestroyFilterDescriptor(b_desc)
+        cudnn.cudnnDestroyTensorDescriptor(b_desc)
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
         #cudnn.cudnnDestroy(cudnn_context)
 
