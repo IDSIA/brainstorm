@@ -3,7 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.utils import LayerValidationError
+from brainstorm.utils import LayerValidationError, flatten_time, \
+    flatten_time_and_features
 from brainstorm.structure.shapes import ShapeTemplate
 
 
@@ -59,31 +60,16 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         diff = buffers.internals.squared_diff
         diff_sum = buffers.outputs.default
 
-        t, b = inputs_1.shape[0], inputs_1.shape[1]
-        f = _h.size(inputs_1) / (t * b)
-        flat_inputs_1 = _h.reshape(inputs_1, ((t * b), f))
-        flat_inputs_2 = _h.reshape(inputs_2, ((t * b), f))
-        flat_diff = _h.reshape(diff, ((t * b), f))
-        flat_diff_sum = _h.reshape(diff_sum, ((t * b), 1))
+        flat_inputs_1 = flatten_time_and_features(_h, inputs_1)
+        flat_inputs_2 = flatten_time_and_features(_h, inputs_2)
+        flat_diff = flatten_time_and_features(_h, diff)
+        flat_diff_sum = flatten_time(_h, diff_sum)
 
         # calculate
         _h.subtract_tt(flat_inputs_1, flat_inputs_2, out=flat_diff)
         _h.mult_tt(flat_diff, flat_diff, out=flat_diff)
         _h.sum_t(flat_diff, axis=1, out=flat_diff_sum)
         _h.mult_st(0.5, flat_diff_sum, out=flat_diff_sum)
-
-
-        # # calculate
-        # _h.subtract_tt(inputs_1, inputs_2, out=diff)
-        # _h.mult_tt(diff, diff, out=diff)
-        #
-        # # reshape for summation
-        # t, b = diff.shape[0], diff.shape[1]
-        # f = _h.size(diff) / (t * b)
-        # diff = _h.reshape(diff, (t, b, f))
-        #
-        # _h.sum_t(diff, axis=2, out=diff_sum)
-        # _h.mult_st(0.5, diff_sum, out=diff_sum)
 
     def backward_pass(self, buffers):
         # prepare

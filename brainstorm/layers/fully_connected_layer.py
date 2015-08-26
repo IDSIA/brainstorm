@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
-from brainstorm.utils import LayerValidationError
+from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
@@ -61,9 +61,8 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         H = buffers.internals.H
 
         # reshape
-        t, b, f = inputs.shape
-        flat_input = _h.reshape(inputs, (t * b, f))
-        flat_H = _h.reshape(H, (t * b, self.out_shapes['default'][2]))
+        flat_input = flatten_time(_h, inputs)
+        flat_H = flatten_time(_h, H)
 
         # calculate outputs
         _h.dot_mm(flat_input, W, flat_H, transb='T')
@@ -82,10 +81,9 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         H, dH = buffers.internals
 
         # reshape
-        t, b, f = inputs.shape
-        flat_input = _h.reshape(inputs, (t * b, f))
-        flat_dH = _h.reshape(dH, (t * b, self.out_shapes['default'][2]))
-        flat_in_delta_buffer = _h.reshape(in_deltas, (t * b, f))
+        flat_input = flatten_time(_h, inputs)
+        flat_dH = flatten_time(_h, dH)
+        flat_in_delta_buffer = flatten_time(_h, in_deltas)
 
         # calculate in_deltas and gradients
         self.act_func_deriv(H, outputs, out_deltas, dH)

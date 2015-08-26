@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.utils import flatten_time
 
 
 class ConvolutionLayer2DImpl(LayerBaseImpl):
@@ -91,9 +92,8 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         H = buffers.internals.H
 
         # reshape
-        t, b, c, h, w = inputs.shape
-        flat_inputs = _h.reshape(inputs, (t * b, c, h, w))
-        flat_H = _h.reshape(H, (t * b,) + self.out_shapes['default'][2:])
+        flat_inputs = flatten_time(_h, inputs)
+        flat_H = flatten_time(_h, H)
 
         # calculate outputs
         _h.conv2d_forward_batch(flat_inputs, W, bias, flat_H,
@@ -112,10 +112,9 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
         H, dH = buffers.internals
 
         # reshape
-        t, b, c, h, w = inputs.shape
-        flat_inputs = _h.reshape(inputs, (t * b, c, h, w))
-        flat_in_deltas = _h.reshape(in_deltas, (t * b, c, h, w))
-        flat_dH = _h.reshape(dH, (t * b,) + self.out_shapes['default'][2:])
+        flat_inputs = flatten_time(_h, inputs)
+        flat_in_deltas = flatten_time(_h, in_deltas)
+        flat_dH = flatten_time(_h, dH)
 
         # calculate in_deltas and gradients
         self.act_func_deriv(H, outputs, out_deltas, dH)

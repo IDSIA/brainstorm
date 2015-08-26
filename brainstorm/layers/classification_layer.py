@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.utils import LayerValidationError
+from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.structure.shapes import ShapeTemplate
 
 
@@ -61,18 +61,16 @@ class ClassificationLayerImpl(LayerBaseImpl):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         targets = buffers.inputs.targets
-        output = buffers.outputs.output
+        outputs = buffers.outputs.output
         loss = buffers.outputs.loss
         Ha = buffers.internals.Ha
 
         # reshape
-        t, b, f = inputs.shape
-        i = t * b
-        flat_input = inputs.reshape((i, f))
-        flat_output = output.reshape((i, self.out_shapes['output'][2]))
-        flat_Ha = Ha.reshape((i, self.out_shapes['output'][2]))
-        flat_loss = loss.reshape((i, 1))
-        flat_targets = targets.reshape(i, 1)
+        flat_input = flatten_time(_h, inputs)
+        flat_output = flatten_time(_h, outputs)
+        flat_Ha = flatten_time(_h, Ha)
+        flat_loss = flatten_time(_h, loss)
+        flat_targets = flatten_time(_h, targets)
 
         # calculate activation
         _h.dot_mm(flat_input, W, flat_Ha, transb='T')
@@ -95,32 +93,29 @@ class ClassificationLayerImpl(LayerBaseImpl):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         targets = buffers.inputs.targets
-        output = buffers.outputs.output
+        outputs = buffers.outputs.output
 
         dW, dbias = buffers.gradients
-        dinput = buffers.input_deltas.default
+        dinputs = buffers.input_deltas.default
         dloss = buffers.output_deltas.loss
         dHa = buffers.internals.dHa
 
         # reshape
-        t, b, f_in = inputs.shape
-        f_out = output.shape[2]
-        i = t * b
-        flat_input = inputs.reshape((i, f_in))
-        flat_output = output.reshape((i, f_out))
-        flat_targets = targets.reshape(i, 1)
-        flat_dHa = dHa.reshape((i, self.out_shapes['output'][2]))
-        flat_dloss = dloss.reshape((i, 1))
-        flat_dinput = dinput.reshape((i, f_in))
+        flat_inputs = flatten_time(_h, inputs)
+        flat_outputs = flatten_time(_h, outputs)
+        flat_targets = flatten_time(_h, targets)
+        flat_dHa = flatten_time(_h, dHa)
+        flat_dloss = flatten_time(_h, dloss)
+        flat_dinputs = flatten_time(_h, dinputs)
 
         # derivative of multinomial cross-entropy error wrt softmax:
         # y - t
         _h.binarize_v(flat_targets, flat_dHa)
         _h.mult_st(-1, flat_dHa, flat_dHa)
-        _h.add_tt(flat_dHa, flat_output, flat_dHa)
+        _h.add_tt(flat_dHa, flat_outputs, flat_dHa)
         _h.mult_mv(flat_dHa, flat_dloss, flat_dHa)
 
         # calculate in_deltas and gradients
-        _h.dot_add_mm(flat_dHa, W, out=flat_dinput)
-        _h.dot_mm(flat_dHa, flat_input, dW, transa='T')
+        _h.dot_add_mm(flat_dHa, W, out=flat_dinputs)
+        _h.dot_mm(flat_dHa, flat_inputs, dW, transa='T')
         _h.sum_t(flat_dHa, axis=0, out=dbias)

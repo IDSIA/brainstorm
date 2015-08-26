@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.utils import flatten_time_and_features, flatten_time
 
 
 class MaskLayerImpl(LayerBaseImpl):
@@ -16,26 +17,23 @@ class MaskLayerImpl(LayerBaseImpl):
         return {'default': self.in_shapes['default']}
 
     def forward_pass(self, buffers, training_pass=True):
-        time_size, batch_size = buffers.inputs.default.shape[:2]
-        flat_size = time_size * batch_size
-        feat_size = np.prod(buffers.inputs.default.shape[2:])
+        _h = self.handler
 
-        flat_inp = buffers.inputs.default.reshape(flat_size, feat_size)
-        flat_mask = buffers.inputs.mask.reshape(flat_size, 1)
-        flat_out = buffers.outputs.default.reshape(flat_size, feat_size)
+        flat_inp = flatten_time_and_features(_h, buffers.inputs.default)
+        flat_mask = flatten_time(_h, buffers.inputs.mask)
+        flat_out = flatten_time_and_features(_h, buffers.outputs.default)
 
         self.handler.mult_mv(flat_inp, flat_mask, out=flat_out)
 
     def backward_pass(self, buffers):
-        time_size, batch_size = buffers.inputs.default.shape[:2]
-        feat_size = np.prod(buffers.inputs.default.shape[2:])
-        flat_size = time_size * batch_size
+        _h = self.handler
 
-        flat_shape = (time_size * batch_size, feat_size)
-        flat_out_deltas = buffers.output_deltas.default.reshape(flat_shape)
-        tmp = self.handler.allocate(flat_shape)
-        flat_mask = buffers.inputs.mask.reshape(flat_size, 1)
-        flat_in_deltas = buffers.input_deltas.default.reshape(flat_shape)
+        flat_out_deltas = flatten_time_and_features(
+            _h, buffers.output_deltas.default)
+        tmp = self.handler.allocate(flat_out_deltas.shape)
+        flat_mask = flatten_time(_h, buffers.inputs.mask)
+        flat_in_deltas = flatten_time_and_features(
+            _h, buffers.input_deltas.default)
 
         self.handler.mult_mv(flat_out_deltas, flat_mask, tmp)
         self.handler.add_tt(tmp, flat_in_deltas, flat_in_deltas)

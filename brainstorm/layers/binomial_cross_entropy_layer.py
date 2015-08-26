@@ -5,7 +5,8 @@ from __future__ import division, print_function, unicode_literals
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.utils import LayerValidationError
+from brainstorm.utils import LayerValidationError, flatten_time_and_features, \
+    flatten_time
 from brainstorm.structure.shapes import ShapeTemplate
 
 
@@ -74,10 +75,8 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
 
         # reshape for summation
-        t, b = cee.shape[:2]
-        f = int(_h.size(cee) / (t * b))
-        cee = cee.reshape((t * b, f))
-        cee_sum = cee_sum.reshape((t * b, 1))
+        cee = flatten_time_and_features(_h, cee)
+        cee_sum = flatten_time(_h, cee_sum)
         _h.sum_t(cee, axis=1, out=cee_sum)
         _h.mult_st(-1, cee_sum, cee_sum)  # * -1
 

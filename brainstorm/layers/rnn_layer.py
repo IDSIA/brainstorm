@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
-from brainstorm.utils import LayerValidationError
+from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
@@ -62,10 +62,8 @@ class RnnLayerImpl(LayerBaseImpl):
         outputs = buffers.outputs.default
         Ha = buffers.internals.Ha
 
-        t, b, f = inputs.shape
-        i = t * b
-        flat_inputs = inputs.reshape((i, f))
-        flat_H = Ha[:-1].reshape((i, Ha.shape[2]))
+        flat_inputs = flatten_time(_h, inputs)
+        flat_H = flatten_time(_h, Ha[:-1])
 
         _h.dot_mm(flat_inputs, W, flat_H, transb='T')
         _h.add_mv(flat_H, bias, flat_H)
@@ -93,11 +91,9 @@ class RnnLayerImpl(LayerBaseImpl):
             self.act_func_deriv(Ha[t], outputs[t],
                                 dHb[t], dHa[t])
 
-        t, b, f = inputs.shape
-        i = t * b
-        flat_inputs = inputs.reshape((i, f))
-        flat_dinputs = dinputs.reshape((i, f))
-        flat_dHa = dHa[:-1].reshape((i, dHa.shape[2]))
+        flat_inputs = flatten_time(_h, inputs)
+        flat_dinputs = flatten_time(_h, dinputs)
+        flat_dHa = flatten_time(_h, dHa[:-1])
 
         # calculate in_deltas and gradients
         _h.dot_add_mm(flat_dHa, W, flat_dinputs)
@@ -106,8 +102,7 @@ class RnnLayerImpl(LayerBaseImpl):
         _h.sum_t(flat_dHa, axis=0, out=dbias_tmp)
         _h.add_tt(dbias, dbias_tmp, dbias)
 
-        i = (t - 1) * b
-        flat_outputs = outputs[:-2].reshape((i, outputs.shape[2]))
-        flat_dHa = dHa[1:-1].reshape((i, dHa.shape[2]))
+        flat_outputs = flatten_time(_h, outputs[:-2])
+        flat_dHa = flatten_time(_h, dHa[1:-1])
         _h.dot_add_mm(flat_outputs, flat_dHa, dR, transa='T')
         _h.dot_add_mm(outputs[-1], dHa[0], dR, transa='T')
