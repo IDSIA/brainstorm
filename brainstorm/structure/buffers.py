@@ -148,7 +148,7 @@ class BufferManager(object):
         for c, buf in zip(context, self.buffers):
             if c is None:
                 continue
-            self.handler.copy_to(buf[(self.time_size - context.shape[0]):], c)
+            self.handler.copy_to(buf[(self.time_size - c.shape[0]):], c)
 
     def clear_context(self):
         if self.buffers is None:

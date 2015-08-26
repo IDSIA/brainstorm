@@ -13,7 +13,7 @@ from brainstorm.hooks import StopAfterEpoch
 def test_learn_xor_function():
     # set up the network
     inp = Input(out_shapes={'default': ('T', 'B', 2),
-                                 'targets': ('T', 'B', 1)})
+                            'targets': ('T', 'B', 1)})
     error_func = BinomialCrossEntropy()
 
     (inp >>
