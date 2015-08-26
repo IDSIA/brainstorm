@@ -219,10 +219,10 @@ def test_gradients_for_layer(layer_specs):
             continue
         print("----------- WRT Output: '{}' ----------- ".format(outputs_name))
 
-        for inputs_name in layer.get_parameter_structure():
-            if inputs_name in skip_parameters:
+        for param_name in layer.get_parameter_structure():
+            if param_name in skip_parameters:
                 continue
-            successful &= run_gradients_test(layer, specs, inputs_name,
+            successful &= run_gradients_test(layer, specs, param_name,
                                              outputs_name)
 
         assert successful, "Gradients check failed for {}".format(layer.name)
@@ -319,12 +319,19 @@ def test_layer_add_to_deltas(layer_specs):
     for key, value in layer_buffers.input_deltas.items():
         HANDLER.fill(value, 1.0)
 
-    # do a second backward pass
+    # do a second forward/backward pass
+    layer.forward_pass(layer_buffers)
     layer.backward_pass(layer_buffers)
 
     # assert all input deltas are 1.0 bigger
     for key, value in layer_buffers.input_deltas.items():
-        assert np.allclose(deltas[key] + 1.0, value, rtol=eps, atol=eps), key
+        passed = np.allclose(deltas[key] + 1.0, value, rtol=eps, atol=eps)
+        if not passed:
+            print("Adding deltas test failed for {}!".format(key))
+            print("Calculated Deltas:\n", value)
+            print("Expected Deltas:\n", deltas[key] + 1.0)
+            print("Difference:\n",deltas[key] + 1.0 - value)
+        assert passed, key
 
 
 def test_elementwise_act_func_gradients():

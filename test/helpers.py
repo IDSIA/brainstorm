@@ -49,10 +49,18 @@ def set_up_layer(layer, specs):
 
     layer_buffers = view.test_layer
 
+    # init parameters randomly
+    HANDLER.set_from_numpy(view.parameters,
+                           np.random.randn(len(view.parameters)) * 0.1)
+
     for key, value in view.test_layer.inputs.items():
-        if key in specs:
+        if key in specs:  # if a special input is given use that
             # print("Using special input:", key)
             HANDLER.set_from_numpy(layer_buffers.inputs[key], specs[key])
+        else:  # otherwise randomize the input
+            HANDLER.set_from_numpy(
+                layer_buffers.inputs[key],
+                np.random.randn(*layer_buffers.inputs[key].shape))
 
     return layer_buffers
 
