@@ -6,7 +6,6 @@ from brainstorm.structure.shapes import ShapeTemplate
 
 
 class LossLayerImpl(LayerBaseImpl):
-    # TODO: handle masks
     inputs = {'default': ShapeTemplate('...')}
     outputs = {'loss': ShapeTemplate(1)}
     expected_kwargs = {'importance'}
@@ -18,8 +17,6 @@ class LossLayerImpl(LayerBaseImpl):
         return {'loss': ShapeTemplate(1)}
 
     def forward_pass(self, buffers, training_pass=True):
-        # TODO: passing axis=None works with numpy an pycuda
-        # TODO: but is this the intended interface?
         time_size, batch_size = buffers.inputs.default.shape[:2]
         self.handler.sum_t(buffers.inputs.default,
                            None,

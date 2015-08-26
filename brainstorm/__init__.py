@@ -9,6 +9,7 @@ from brainstorm.training import *
 from brainstorm.data_iterators import Online, Undivided, Minibatches
 from brainstorm.weight_modifiers import (
     ClipWeights, MaskWeights, FreezeWeights, ConstrainL2Norm)
+from brainstorm.tools import *
 
 from brainstorm import hooks
 from brainstorm import layers
