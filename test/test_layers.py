@@ -26,40 +26,40 @@ np.random.seed(1234)
 NO_CON = set()
 
 
-def noop_layer():
+def noop_layer(spec):
     in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
     layer = NoOpLayerImpl('NoOpLayer', in_shapes, NO_CON, NO_CON)
-    return layer, {}
+    return layer, spec
 
 
-def loss_layer():
+def loss_layer(spec):
     in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
     layer = LossLayerImpl('LossLayer', in_shapes, NO_CON, NO_CON)
-    return layer, {}
+    return layer, spec
 
 
-def fully_connected_layer():
+def fully_connected_layer(spec):
     in_shapes = {'default': ShapeTemplate('T', 'B', 5)}
     layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
                                     NO_CON, NO_CON,
                                     size=4,
-                                    activation_function='sigmoid')
-    return layer, {}
+                                    activation_function=spec['act_func'])
+    return layer, spec
 
 
-def squared_difference_layer():
+def squared_difference_layer(spec):
     in_shapes = {'inputs_1': ShapeTemplate('T', 'B', 3, 2),
                  'inputs_2': ShapeTemplate('T', 'B', 3, 2)
                  }
 
     layer = SquaredDifferenceLayerImpl('SquaredDifferenceLayer',
                                        in_shapes, NO_CON, NO_CON)
-    return layer, {}
+    return layer, spec
 
 
-def binomial_crossentropy_layer():
-    time_steps = 3
-    batch_size = 2
+def binomial_crossentropy_layer(spec):
+    time_steps = spec.get('time_steps', 3)
+    batch_size = spec.get('batch_size', 2)
     size = 5
     shape = (time_steps, batch_size, size)
     default = np.random.rand(*shape)
@@ -69,18 +69,16 @@ def binomial_crossentropy_layer():
 
     layer = BinomialCrossEntropyLayerImpl('BinomialCrossEntropyError',
                                           in_shapes, NO_CON, NO_CON)
-    return layer, {
-        'time_steps': time_steps,
-        'batch_size': batch_size,
-        'default': default,
-        'targets': targets,
-        'skip_inputs': ['targets']
-    }
+
+    spec['default'] = default
+    spec['targets'] = targets
+    spec['skip_inputs'] = ['targets']
+    return layer, spec
 
 
-def classification_layer():
-    time_steps = 3
-    batch_size = 2
+def classification_layer(spec):
+    time_steps = spec.get('time_steps', 3)
+    batch_size = spec.get('batch_size', 2)
     feature_dim = 5
     shape = (time_steps, batch_size, 1)
     targets = np.random.randint(0, feature_dim, shape)
@@ -89,46 +87,49 @@ def classification_layer():
 
     layer = ClassificationLayerImpl('ClassificationLayer', in_shapes, NO_CON,
                                     NO_CON, size=feature_dim)
-    return layer, {
-        'time_steps': time_steps,
-        'batch_size': batch_size,
-        'skip_inputs': ['targets'],
-        'skip_output': ['output'],
-        'targets': targets
-    }
+
+    spec['skip_inputs'] = ['targets']
+    spec['skip_outputs'] = ['output']
+    spec['target'] = targets
+    return layer, spec
 
 
-def rnn_layer():
+def rnn_layer(spec):
     layer = RnnLayerImpl('RnnLayer',
                          {'default': ShapeTemplate('T', 'B', 5)},
                          NO_CON, NO_CON,
-                         size=7)
-    return layer, {}
+                         size=7,
+                         activation_function=spec['act_func'])
+    return layer, spec
 
 
-def lstm_layer():
+def lstm_layer(spec):
     layer = LstmLayerImpl('LstmLayer',
                           {'default': ShapeTemplate('T', 'B', 5)},
                           NO_CON, NO_CON,
-                          size=7)
-    return layer, {}
+                          size=7,
+                          activation_function=spec['act_func'])
+    return layer, spec
 
 
-def mask_layer():
+def mask_layer(spec):
     layer = MaskLayerImpl('MaskLayer',
                           {'default': ShapeTemplate('T', 'B', 3, 2),
                            'mask': ShapeTemplate('T', 'B', 1)},
                           NO_CON, NO_CON)
-    return layer, {'skip_inputs': ['mask']}
+    spec['skip_inputs'] = ['mask']
+    return layer, spec
 
-def convolution_layer_2d():
+
+def convolution_layer_2d(spec):
     y = ShapeTemplate('T', 'B', 3, 5, 4)
     layer = ConvolutionLayer2DImpl('ConvolutionLayer2D',
                                    {'default':
                                     ShapeTemplate('T', 'B', 1, 4, 4)},
                                    NO_CON, NO_CON, num_filters=1,
-                                   kernel_size=(2, 2), stride=(1, 1))
-    return layer, {}
+                                   kernel_size=(2, 2), stride=(1, 1),
+                                   activation_function=spec['act_func'])
+    return layer, spec
 
 
 layers_to_test = [
@@ -146,10 +147,28 @@ layers_to_test = [
 
 ids = [f.__name__ for f in layers_to_test]
 
+spec_list = [
+    (1, 1, 'tanh'),
+    (3, 2, 'tanh'),
+    (2, 3, 'sigmoid'),
+    (5, 5, 'rel'),
+    (1, 7, 'linear')]
+spec_ids = ['{}{}{}'.format(*p) for p in spec_list]
+
+
+@pytest.fixture(params=spec_list, ids=spec_ids)
+def spec(request):
+    time_steps, batch_size, act_func = request.param
+    return {
+        'time_steps': time_steps,
+        'batch_size': batch_size,
+        'act_func': act_func
+    }
+
 
 @pytest.fixture(params=layers_to_test, ids=ids)
-def layer_specs(request):
-    layer, specs = request.param()
+def layer_specs(request, spec):
+    layer, specs = request.param(spec)
     return layer, specs
 
 
@@ -211,9 +230,13 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
         outputs[key] = HANDLER.get_numpy_copy(value)
 
     # randomize internal state
-    for internal, value in layer_buffers.internals.items():
-        # but exclude context slice located at the end
-        HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
+    for internal, shape_template in layer.get_internal_structure().items():
+        value = layer_buffers.internals[internal]
+        if shape_template.scales_with_time:
+            # exclude context slice
+            HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
+        else:
+            HANDLER.set_from_numpy(value, np.random.randn(*value.shape))
 
         # compare new output
         layer.forward_pass(layer_buffers)
@@ -237,9 +260,13 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         deltas[key] = HANDLER.get_numpy_copy(value)
 
     # randomize internal state
-    for key in layer_buffers.internals.keys():
-        intern = layer_buffers.internals[key]
-        HANDLER.set_from_numpy(intern[:time_steps], np.random.randn(time_steps, *intern.shape[1:]))
+    for internal, shape_template in layer.get_internal_structure().items():
+        value = layer_buffers.internals[internal]
+        if shape_template.scales_with_time:
+            # exclude context slice
+            HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
+        else:
+            HANDLER.set_from_numpy(value, np.random.randn(*value.shape))
 
         # clear deltas
         for k, v in layer_buffers.input_deltas.items():
