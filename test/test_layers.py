@@ -121,16 +121,27 @@ def mask_layer(spec):
     return layer, spec
 
 
-def convolution_layer_2d(spec):
+def convolution_layer_2d(spec, filters=1):
     y = ShapeTemplate('T', 'B', 3, 5, 4)
     layer = ConvolutionLayer2DImpl('ConvolutionLayer2D',
                                    {'default':
                                     ShapeTemplate('T', 'B', 1, 4, 4)},
-                                   NO_CON, NO_CON, num_filters=1,
+                                   NO_CON, NO_CON, num_filters=filters,
                                    kernel_size=(2, 2), stride=(1, 1),
                                    activation_function=spec['act_func'])
     return layer, spec
 
+
+def convolution_layer_2d_a(spec):
+    return convolution_layer_2d(spec, 1)
+
+
+def convolution_layer_2d_b(spec):
+    return convolution_layer_2d(spec, 2)
+
+
+def convolution_layer_2d_c(spec):
+    return convolution_layer_2d(spec, 4)
 
 layers_to_test = [
     noop_layer,
@@ -142,7 +153,9 @@ layers_to_test = [
     squared_difference_layer,
     lstm_layer,
     mask_layer,
-    convolution_layer_2d
+    convolution_layer_2d_a,
+    convolution_layer_2d_b,
+    convolution_layer_2d_c
 ]
 
 ids = [f.__name__ for f in layers_to_test]
