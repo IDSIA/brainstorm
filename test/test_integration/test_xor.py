@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from brainstorm import (Network, Gaussian, Trainer, SgdStep, Undivided)
 from brainstorm.layers import *
-from brainstorm.hooks import MaxEpochsSeen
+from brainstorm.hooks import StopAfterEpoch
 # from brainstorm.handlers.pycuda_handler import PyCudaHandler
 
 
@@ -30,7 +30,7 @@ def test_learn_xor_function():
     # set up the trainer
     tr = Trainer(SgdStep(learning_rate=4.0), verbose=False,
                  double_buffering=False)
-    tr.add_hook(MaxEpochsSeen(300))
+    tr.add_hook(StopAfterEpoch(300))
 
     # generate the data
     data = np.array([

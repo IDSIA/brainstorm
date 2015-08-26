@@ -366,7 +366,7 @@ def test_get_network_from_description():
 def test_describe_trainer():
     tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
                     verbose=False)
-    tr.add_hook(bs.hooks.MaxEpochsSeen(23))
+    tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
     d = get_description(tr)
@@ -375,8 +375,8 @@ def test_describe_trainer():
         'double_buffering': False,
         'verbose': False,
         'hooks': {
-            'MaxEpochsSeen': {
-                '@type': 'MaxEpochsSeen',
+            'StopAfterEpoch': {
+                '@type': 'StopAfterEpoch',
                 'max_epochs': 23,
                 'priority': 0},
             'StopOnNan': {
@@ -393,7 +393,7 @@ def test_describe_trainer():
 def test_recreate_trainer_from_description():
     tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
                     verbose=False)
-    tr.add_hook(bs.hooks.MaxEpochsSeen(23))
+    tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
     d = get_description(tr)
@@ -402,7 +402,7 @@ def test_recreate_trainer_from_description():
     assert isinstance(tr2, bs.Trainer)
     assert tr2.verbose is False
     assert tr2.double_buffering is False
-    assert list(tr2.hooks.keys()) == ['MaxEpochsSeen', 'StopOnNan']
-    assert tr2.hooks['MaxEpochsSeen'].max_epochs == 23
+    assert list(tr2.hooks.keys()) == ['StopAfterEpoch', 'StopOnNan']
+    assert tr2.hooks['StopAfterEpoch'].max_epochs == 23
     assert isinstance(tr2.stepper, bs.SgdStep)
     assert tr2.stepper.learning_rate_schedule.value == 0.7

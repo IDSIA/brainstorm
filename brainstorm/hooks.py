@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from brainstorm.structure.network import Network
 import numpy as np
 from six import string_types
 
@@ -39,7 +40,7 @@ class Hook(Describable):
         pass
 
 
-class SaveWeights(Hook):
+class SaveNetwork(Hook):
     """
     Save the weights of the network to the given file on every call.
     Default is to save them once per epoch, but this can be configured using
@@ -47,32 +48,31 @@ class SaveWeights(Hook):
     """
 
     def __init__(self, filename, name=None, timescale='epoch', interval=1):
-        super(SaveWeights, self).__init__(name, timescale, interval)
+        super(SaveNetwork, self).__init__(name, timescale, interval)
         self.filename = filename
 
     def __call__(self, epoch, net, stepper, logs):
         params = net.handler.get_numpy_copy(net.buffer.parameters)
-        np.save(self.filename, params)
+        net.save_as_hdf5(self.filename)
 
-    def load_weights(self):
-        return np.load(self.filename)
+    def load_network(self):
+        return Network.from_hdf5(self.filename)
 
 
-class SaveBestWeights(Hook):
+class SaveBestNetwork(Hook):
     """
-    Check every epoch to see if the validation error (or training error if
-    there is no validation error) is at it's minimum and if so, save the
-    weights to the specified file.
+    Check every epoch to see if the given objective is at it's best value and
+    if so, save the network to the specified file.
     """
-    __undescribed__ = {'weights': None}
+    __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
 
     def __init__(self, error_log_name, filename=None, name=None,
                  criterion='max', verbose=None):
-        super(SaveBestWeights, self).__init__(name, 'epoch', 1, verbose)
+        super(SaveBestNetwork, self).__init__(name, 'epoch', 1, verbose)
         self.error_log_name = error_log_name.split('.')
         self.filename = filename
-        self.weights = None
+        self.parameters = None
         assert criterion == 'min' or criterion == 'max'
         self.criterion = criterion
 
@@ -85,18 +85,18 @@ class SaveBestWeights(Hook):
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
                 if self.run_verbosity:
-                    print(">> Saving weights to {0} ...".format(self.filename))
-                np.save(self.filename, params)
+                    print(">> Saving network to {0} ...".format(self.filename))
+                net.save_as_hdf5(self.filename)
             else:
                 if self.run_verbosity:
-                    print(">> Caching weights on improvement ...")
-                self.weights = params
+                    print(">> Caching parameters ...")
+                self.parameters = params
         elif self.run_verbosity:
-            print(">> Last saved weights after epoch {}".format(best_idx))
+            print(">> Last saved parameters after epoch {}".format(best_idx))
 
-    def load_weights(self):
+    def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
-            else self.weights
+            else self.parameters
 
 
 class MonitorLayerParameters(Hook):
@@ -191,10 +191,10 @@ class MonitorLayerDeltas(Hook):
         return log
 
 
-class MaxEpochsSeen(Hook):
+class StopAfterEpoch(Hook):
     def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
                  verbose=None):
-        super(MaxEpochsSeen, self).__init__(name, timescale, interval, verbose)
+        super(StopAfterEpoch, self).__init__(name, timescale, interval, verbose)
         self.max_epochs = max_epochs
 
     def __call__(self, epoch, net, stepper, logs):
@@ -203,22 +203,22 @@ class MaxEpochsSeen(Hook):
                                 .format(self.max_epochs))
 
 
-class ErrorRises(Hook):
-    __default_values__ = {'delay': 1}
+class EarlyStopper(Hook):
+    __default_values__ = {'patience': 1}
 
-    def __init__(self, error, delay=1, name=None):
-        super(ErrorRises, self).__init__(name, 'epoch', 1)
-        self.error = error.split('.')
-        self.delay = delay
+    def __init__(self, error_log_name, patience=1, name=None):
+        super(EarlyStopper, self).__init__(name, 'epoch', 1)
+        self.error = error_log_name.split('.')
+        self.patience = patience
 
     def __call__(self, epoch, net, stepper, logs):
         errors = logs
         for en in self.error:
             errors = errors[en]
         best_error_idx = np.argmin(errors)
-        if len(errors) > best_error_idx + self.delay:
+        if len(errors) > best_error_idx + self.patience:
             raise StopIteration("Error did not fall for %d epochs! Stopping."
-                                % self.delay)
+                                % self.patience)
 
 
 class StopOnNan(Hook):

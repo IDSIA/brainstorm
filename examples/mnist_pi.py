@@ -61,11 +61,11 @@ network.set_weight_modifiers({"out": bs.ConstrainL2Norm(1)})
 # ----------------------------- Set up Trainer ------------------------------ #
 
 trainer = bs.Trainer(bs.SgdStep(learning_rate=0.1), double_buffering=False)
-trainer.add_hook(bs.hooks.MaxEpochsSeen(100))
+trainer.add_hook(bs.hooks.StopAfterEpoch(100))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "out.output",
                                           name="validation accuracy",
                                           verbose=True))
-trainer.add_hook(bs.hooks.SaveBestWeights("validation accuracy",
+trainer.add_hook(bs.hooks.SaveBestNetwork("validation accuracy",
                                           name="best weights",
                                           criterion="max"))
 
