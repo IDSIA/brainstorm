@@ -9,7 +9,8 @@ from brainstorm.layers.squared_difference_layer import \
 from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
 
-from .helpers import run_gradients_test, run_deltas_test, set_up_layer, HANDLER
+from .helpers import run_gradients_test, run_deltas_test, set_up_layer, \
+    HANDLER, approx_fprime
 import numpy as np
 from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.layers.rnn_layer import RnnLayerImpl
@@ -121,27 +122,27 @@ def mask_layer(spec):
     return layer, spec
 
 
-def convolution_layer_2d(spec, filters=1):
-    y = ShapeTemplate('T', 'B', 3, 5, 4)
-    layer = ConvolutionLayer2DImpl('ConvolutionLayer2D',
-                                   {'default':
-                                    ShapeTemplate('T', 'B', 1, 4, 4)},
-                                   NO_CON, NO_CON, num_filters=filters,
-                                   kernel_size=(2, 2), stride=(1, 1),
+def convolution_layer_2d(spec, input_shape=(1, 4, 4),
+                         num_filters=1, kernel_size=(2, 2), stride=(1, 1)):
+    x = ShapeTemplate('T', 'B', *input_shape)
+    layer = ConvolutionLayer2DImpl('ConvolutionLayer2D', {'default': x},
+                                   NO_CON, NO_CON, num_filters=num_filters,
+                                   kernel_size=kernel_size, stride=stride,
                                    activation_function=spec['act_func'])
     return layer, spec
 
 
 def convolution_layer_2d_a(spec):
-    return convolution_layer_2d(spec, 1)
+    return convolution_layer_2d(spec, input_shape=(2, 3, 4))
 
 
 def convolution_layer_2d_b(spec):
-    return convolution_layer_2d(spec, 2)
+    return convolution_layer_2d(spec, input_shape=(2, 3, 4), num_filters=2)
 
 
 def convolution_layer_2d_c(spec):
-    return convolution_layer_2d(spec, 4)
+    return convolution_layer_2d(spec, input_shape=(2, 3, 4), num_filters=2,
+                                kernel_size=(2, 3))
 
 layers_to_test = [
     noop_layer,
@@ -165,7 +166,7 @@ spec_list = [
     (3, 2, 'tanh'),
     (2, 3, 'sigmoid'),
     (5, 5, 'rel'),
-    (1, 7, 'linear')]
+    (1, 4, 'linear')]
 spec_ids = ['{}{}{}'.format(*p) for p in spec_list]
 
 
@@ -324,3 +325,34 @@ def test_layer_add_to_deltas(layer_specs):
     # assert all input deltas are 1.0 bigger
     for key, value in layer_buffers.input_deltas.items():
         assert np.allclose(deltas[key] + 1.0, value, rtol=eps, atol=eps), key
+
+
+def test_elementwise_act_func_gradients():
+    pairs_to_test = [(HANDLER.sigmoid, HANDLER.sigmoid_deriv),
+                     (HANDLER.tanh, HANDLER.tanh_deriv),
+                     (HANDLER.rel, HANDLER.rel_deriv)]
+
+    for fwd, bwd in pairs_to_test:
+        print("------------------")
+        print("Testing", fwd.__name__)
+        inputs = HANDLER.create_from_numpy(np.random.randn(3, 2, 4))
+        outputs = HANDLER.create_from_numpy(np.zeros_like(inputs))
+        doutputs = HANDLER.create_from_numpy(np.ones_like(inputs))
+        dinputs = HANDLER.create_from_numpy(np.zeros_like(inputs))
+        fwd(inputs, outputs)
+        bwd(inputs, outputs, doutputs, dinputs)
+        grad_calc = HANDLER.get_numpy_copy(dinputs)
+
+        size = HANDLER.size(inputs)
+        x0 = HANDLER.get_numpy_copy(inputs).reshape((size,))
+
+        def f(x):
+            flat_inputs = HANDLER.reshape(inputs, (size,))
+            HANDLER.set_from_numpy(flat_inputs, x)
+            HANDLER.fill(outputs, 0.)
+            fwd(inputs, outputs)
+            return HANDLER.get_numpy_copy(outputs).sum()
+
+        grad_approx = approx_fprime(x0, f, 1e-5).reshape(grad_calc.shape)
+
+        assert np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)

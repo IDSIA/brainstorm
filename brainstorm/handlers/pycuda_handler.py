@@ -40,7 +40,9 @@ class PyCudaHandler(Handler):
         mem.fill(val)
 
     def set_from_numpy(self, mem, arr):
-        assert mem.shape == arr.shape, "{} != {}".format(mem.shape, arr.shape)
+        assert mem.shape == arr.shape, "Shape of destination ({}) != Shape " \
+                                       "of source ({})".format(mem.shape,
+                                                               arr.shape)
         mem.set(arr.astype(self.dtype))
 
     def get_numpy_copy(self, mem):
