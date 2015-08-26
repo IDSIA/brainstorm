@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm import layers
 
-__all__ = ['get_input_output_for_classification']
+__all__ = ['get_in_out_layers_for_classification']
 
 
 def get_in_out_layers_for_classification(in_shape, nr_classes,
