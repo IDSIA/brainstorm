@@ -375,7 +375,7 @@ def test_conv2d_forward():
 
 def test_conv2d_backward():
     img_shapes = [(1, 1, 3, 3), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 3, 4)]
-    w_shapes = [(1, 1, 1), (3, 3, 3), (6, 4, 5), (2, 5, 3)]
+    w_shapes = [(3, 3, 3), (6, 4, 5), (2, 5, 3)]
 
     list_x = get_random_arrays(img_shapes)
     stride = (1, 1)
@@ -385,7 +385,6 @@ def test_conv2d_backward():
         for x in list_x:
             w_shape = (ws[0], x.shape[1], ws[1], ws[2])
             w = np.random.uniform(size=w_shape).astype(ref_dtype)
-            print("w shape:", w.shape, "  input shape:", x.shape)
             b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
             oh = (x.shape[2] + 2 * pad - w.shape[2]) / stride[0] + 1
             ow = (x.shape[3] + 2 * pad - w.shape[3]) / stride[1] + 1
@@ -394,8 +393,6 @@ def test_conv2d_backward():
             i_deltas = np.zeros_like(x, dtype=ref_dtype)
             w_deltas = np.zeros_like(w, dtype=ref_dtype)
             b_deltas = np.zeros_like(b, dtype=ref_dtype)
-
-            print(o_deltas.shape, out_deltas_shape)
 
             ref_args = (x, w, pad, stride, i_deltas,
                         o_deltas, w_deltas, b_deltas)
