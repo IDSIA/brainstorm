@@ -25,7 +25,7 @@ class PyCudaHandler(Handler):
 
     __undescribed__ = {'context', 'dtype', 'EMPTY'}
 
-    def __init__(self, init_cudnn=False):
+    def __init__(self, init_cudnn=True):
         self.context = cumisc._global_cublas_handle
         self.dtype = np.float32
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
@@ -233,9 +233,10 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
         #cudnn.cudnnDestroy(cudnn_context)
 
-    @staticmethod
-    def conv2d_backward_batch(out_deltas, inputs, in_deltas, weights, bias,
-                              weight_deltas, bias_deltas, pad, stride):
+
+    @classmethod
+    def conv2d_backward_batch(self, inputs, weights, pad, stride, in_deltas,
+                              out_deltas, weight_deltas, bias_deltas):
         upscalex, upscaley = 1, 1  # currently not exposed to API
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
@@ -282,7 +283,7 @@ class PyCudaHandler(Handler):
             x_desc, x_data, id_desc, id_data, conv_desc, beta, dw_desc, dw_data)
 
         cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
-            w_desc, w_data, id_desc, id_data, conv_desc, beta, od_desc, od_data)
+            w_desc, w_data, od_desc, od_data, conv_desc, beta, id_desc, id_data)
 
         cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
             od_desc, od_data, beta, db_desc, db_data)

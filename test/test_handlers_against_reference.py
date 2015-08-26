@@ -22,13 +22,15 @@ def operation_check(ref_op, op, ref_args, args):
     for (ref_arg, arg) in zip(ref_args, args):
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
-            print("\nReference (expected) array:\n", ref_arg)
-            print("\nObtained array:\n", arg_ref)
             check = np.allclose(ref_arg, arg_ref)
+            if not check:
+                print("\nReference (expected) array:\n", ref_arg)
+                print("\nObtained array:\n", arg_ref)
         else:
-            print("\nReference (expected) array:\n", ref_arg)
-            print("\nObtained array:\n", arg)
             check = (ref_arg == arg)
+            if not check:
+                print("\nReference (expected) array:\n", ref_arg)
+                print("\nObtained array:\n", arg)
     return check
 
 
@@ -347,3 +349,56 @@ def test_rel_deriv():
         ref_args = (x, y, dy, dx)
         assert operation_check(ref.rel_deriv, handler.rel_deriv,
                                ref_args, get_args_from_ref_args(ref_args))
+
+
+def test_conv2d_forward():
+    img_shapes = [(1, 1, 3, 3), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 3, 4)]
+    w_shapes = [(1, 1, 1), (3, 3, 3), (6, 4, 5), (2, 5, 3)]
+
+    list_x = get_random_arrays(img_shapes)
+    stride = (1, 1)
+    pad = 1
+
+    for ws in w_shapes:
+        for x in list_x:
+            w_shape = (ws[0], x.shape[1], ws[1], ws[2])
+            w = np.random.uniform(size=w_shape).astype(ref_dtype)
+            b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
+            oh = (x.shape[2] + 2 * pad - w.shape[2]) / stride[0] + 1
+            ow = (x.shape[3] + 2 * pad - w.shape[3]) / stride[1] + 1
+            out = np.zeros((x.shape[0], w.shape[0])+ (oh, ow), dtype=ref_dtype)
+            ref_args = (x, w, b, out, pad, stride)
+            assert operation_check(ref.conv2d_forward_batch,
+                                   handler.conv2d_forward_batch,
+                                   ref_args, get_args_from_ref_args(ref_args))
+
+
+def test_conv2d_backward():
+    img_shapes = [(1, 1, 3, 3), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 3, 4)]
+    w_shapes = [(1, 1, 1), (3, 3, 3), (6, 4, 5), (2, 5, 3)]
+
+    list_x = get_random_arrays(img_shapes)
+    stride = (1, 1)
+    pad = 1
+
+    for ws in w_shapes:
+        for x in list_x:
+            w_shape = (ws[0], x.shape[1], ws[1], ws[2])
+            w = np.random.uniform(size=w_shape).astype(ref_dtype)
+            print("w shape:", w.shape, "  input shape:", x.shape)
+            b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
+            oh = (x.shape[2] + 2 * pad - w.shape[2]) / stride[0] + 1
+            ow = (x.shape[3] + 2 * pad - w.shape[3]) / stride[1] + 1
+            out_shape = (x.shape[0], w.shape[0])+ (oh, ow)
+            o_deltas = np.random.uniform(size=out_shape).astype(ref_dtype)
+            i_deltas = np.zeros_like(x, dtype=ref_dtype)
+            w_deltas = np.zeros_like(w, dtype=ref_dtype)
+            b_deltas = np.zeros_like(b, dtype=ref_dtype)
+
+            print(o_deltas.shape, out_deltas_shape)
+
+            ref_args = (x, w, pad, stride, i_deltas,
+                        o_deltas, w_deltas, b_deltas)
+            assert operation_check(ref.conv2d_backward_batch,
+                                   handler.conv2d_backward_batch,
+                                   ref_args, get_args_from_ref_args(ref_args))
