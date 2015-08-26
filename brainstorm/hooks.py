@@ -85,11 +85,13 @@ class SaveBestNetwork(Hook):
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
                 if self.run_verbosity:
-                    print(">> Saving network to {0} ...".format(self.filename))
+                    print(">> {} improved. Saving network to {} ...".format(
+                          ".".join(self.error_log_name), self.filename))
                 net.save_as_hdf5(self.filename)
             else:
                 if self.run_verbosity:
-                    print(">> Caching parameters ...")
+                    print(">> {} improved. Caching parameters ...".format(
+                          ".".join(self.error_log_name)))
                 self.parameters = params
         elif self.run_verbosity:
             print(">> Last saved parameters after epoch {}".format(best_idx))

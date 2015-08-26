@@ -1,5 +1,6 @@
 # Created by https://www.gitignore.io
 
+*.hdf5
 *.gz
 *.npy
 

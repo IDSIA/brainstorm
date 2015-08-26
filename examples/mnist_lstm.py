@@ -21,23 +21,26 @@ url = 'http://deeplearning.net/data/mnist/mnist.pkl.gz'
 mnist_file = 'mnist.pkl.gz'
 
 if not os.path.exists(mnist_file):
+    print("Downloading MNIST data ...")
     urlretrieve(url, mnist_file)
+print("Extracting data ...")
 with gzip.open(mnist_file, 'rb') as f:
     if sys.version_info < (3,):
         ds = pickle.load(f)
     else:
         ds = pickle.load(f, encoding='latin1')
+print("Done.")
 
-train_inputs = ds[0][0].T.flatten().reshape((784, 50000, 1))[:, :500]
-train_targets = np.zeros((784, 500, 1))
-train_targets[-1, :, :] = ds[0][1].reshape((1, 50000, 1))[:, :500]
-train_mask = np.zeros((784, 500, 1))
+train_inputs = ds[0][0].T.flatten().reshape((784, 50000, 1))
+train_targets = np.zeros((784, 50000, 1))
+train_targets[-1, :, :] = ds[0][1].reshape((1, 50000, 1))
+train_mask = np.zeros((784, 50000, 1))
 train_mask[-1, :, :] = 1
 
-valid_inputs = ds[1][0].T.flatten().reshape((784, 10000, 1))[:, :100]
-valid_targets = np.zeros((784, 100, 1))
-valid_targets[-1, :, :] = ds[1][1].reshape((1, 10000, 1))[:, :100]
-valid_mask = np.zeros((784, 100, 1))
+valid_inputs = ds[1][0].T.flatten().reshape((784, 10000, 1))
+valid_targets = np.zeros((784, 10000, 1))
+valid_targets[-1, :, :] = ds[1][1].reshape((1, 10000, 1))
+valid_mask = np.zeros((784, 10000, 1))
 valid_mask[-1, :, :] = 1
 
 test_inputs = ds[2][0].T.flatten().reshape((784, 10000, 1))
@@ -46,49 +49,45 @@ test_targets[-1, :, :] = ds[2][1].reshape((1, 10000, 1))
 test_mask = np.zeros((784, 10000, 1))
 test_mask[-1, :, :] = 1
 
-# ---------------------------- Set up Iterators ----------------------------- #
-
-train_getter = bs.Minibatches(batch_size=10, verbose=True, mask=train_mask,
-                              default=train_inputs, targets=train_targets)
-valid_getter = bs.Minibatches(batch_size=20, verbose=True, mask=valid_mask,
-                              default=valid_inputs, targets=valid_targets)
-test_getter = bs.Minibatches(batch_size=20, verbose=True, mask=test_mask,
-                             default=test_inputs, targets=test_targets)
-
 # ----------------------------- Set up Network ------------------------------ #
-inp_layer = bs.layers.Input(out_shapes={'default': ('T', 'B', 1),
-                                        'targets': ('T', 'B', 1),
-                                        'mask': ('T', 'B', 1)})
-out_layer = bs.layers.Classification(10, name="out")
-mask_layer = bs.layers.Mask()
 
-inp_layer >> \
-    bs.layers.Lstm(100, name='lstm') >> \
-    out_layer - "loss" >> \
-    mask_layer >> \
-    bs.layers.Loss()
+inp, out = bs.get_in_out_layers_for_classification(1, 10, outlayer_name='out',
+                                                   mask_name='mask')
+inp >> bs.layers.Lstm(100, name='lstm') >> out
+network = bs.Network.from_layer(out)
 
-inp_layer - 'mask' >> 'mask' - mask_layer
-
-network = bs.Network.from_layer(inp_layer - 'targets' >> 'targets' - out_layer)
 network.set_memory_handler(PyCudaHandler())
 network.initialize({"default": bs.Gaussian(0.01),
-                    "lstm": {'bf': 1}}, seed=42)
+                    "lstm": {'bf': 4, 'bi': 4, 'bo': 4}}, seed=42)
+network.set_gradient_modifiers({"lstm": bs.ClipWeights(low=-1., high=1)})
+
+# ---------------------------- Set up Iterators ----------------------------- #
+
+train_getter = bs.Minibatches(batch_size=100, verbose=True, mask=train_mask,
+                              default=train_inputs, targets=train_targets,
+                              seed=45252)
+valid_getter = bs.Minibatches(batch_size=200, verbose=True, mask=valid_mask,
+                              default=valid_inputs, targets=valid_targets)
+test_getter = bs.Minibatches(batch_size=200, verbose=True, mask=test_mask,
+                             default=test_inputs, targets=test_targets)
 
 # ----------------------------- Set up Trainer ------------------------------ #
 
 trainer = bs.Trainer(bs.SgdStep(learning_rate=0.1), double_buffering=False)
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter",
-                                          output="out.output", mask_name="mask",
+                                          output="out.output",
+                                          mask_name="mask",
                                           name="validation accuracy",
                                           verbose=True))
 trainer.add_hook(bs.hooks.SaveBestNetwork("validation accuracy",
+                                          filename='mnist_lstm_best.hdf5',
                                           name="best weights",
                                           criterion="max"))
+trainer.add_hook(bs.hooks.MonitorLayerParameters('lstm'))
+trainer.add_hook(bs.hooks.MonitorLayerGradients('lstm', timescale='update'))
 
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, train_getter, valid_getter=valid_getter)
 print("\nBest validation accuracy: ", max(trainer.logs["validation accuracy"]))
-network.buffer.parameters = trainer.hooks["best weights"].weights
