@@ -317,7 +317,7 @@ def gather_array_nodes(layout):
             yield k
 
 
-def get_backward_connection(start, stop):
+def get_backward_connection(start, stop, layer):
     start_layer, start_category, start_buffer = start.split('.', 2)
     stop_layer, stop_category, stop_buffer = stop.split('.', 2)
     back_buffer_name = {'parameters': 'gradients',
@@ -327,15 +327,14 @@ def get_backward_connection(start, stop):
                         stop_buffer])
 
     if start_category == 'internals':
-        new_start = '.'.join([start_layer, 'internals', 'd' + start_buffer])
-        return new_start, new_end
-
-    if start_category not in back_buffer_name or \
-            stop_category not in back_buffer_name:
-        return None
-
-    new_start = '.'.join([start_layer, back_buffer_name[start_category],
-                          start_buffer])
+        dstart_buffer = 'd' + start_buffer
+        if dstart_buffer not in layer.get_internal_structure():
+            raise KeyError('Missing delta buffer {} for the internal buffer {}'
+                           '.'.format(dstart_buffer, start_buffer))
+        new_start = '.'.join([start_layer, 'internals', dstart_buffer])
+    else:
+        new_start = '.'.join([start_layer, back_buffer_name[start_category],
+                              start_buffer])
 
     return new_start, new_end
 
@@ -349,7 +348,7 @@ def get_connections(layers):
             end = get_normalized_path(con.end_layer, 'inputs', con.input_name)
             connections.append((start, end))
 
-            bwd_con = get_backward_connection(start, end)
+            bwd_con = get_backward_connection(start, end, layer)
 
             if bwd_con:
                 connections.append(bwd_con)
