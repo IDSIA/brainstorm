@@ -43,6 +43,8 @@ class PyCudaHandler(Handler):
                 #'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
                 'CUDNN_CONVOLUTION_FWD_NO_WORKSPACE']
             self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
+            self.cudnn_pooling_mode = cudnn.cudnnPoolingMode[
+                'CUDNN_POOLING_MAX']
 
     array_type = pycuda.gpuarray.GPUArray
     size = staticmethod(lambda x: x.size)
@@ -283,6 +285,66 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyFilterDescriptor(db_desc)
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
 
+
+    def pool2d_forward_batch(self, inputs, window, outputs, pad, stride, argmax):
+        pool_desc = cudnn.cudnnCreatePoolingDescriptor()
+        cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
+            window[0], window[1], pad, pad, stride[0], stride[1])
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *inputs.shape)
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *outputs.shape)
+
+        # TODO: remove this sanity check once implementation works
+        #outshape = cudnn.cudnnGetPooling2dForwardOutputDim(
+        #    conv_desc, x_desc)
+        #assert(outshape == outputs.shape)
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        y_data = ctypes.c_void_p(int(outputs.gpudata))
+        alpha, beta = 1.0, 1.0
+        cudnn.cudnnPoolingForward(self.cudnn_context, pool_desc, alpha,
+            x_desc, x_data, beta, y_desc, y_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyTensorDescriptor(y_desc)
+        cudnn.cudnnDestroyPoolingDescriptor(pool_desc)
+
+
+    def pool2d_backward_batch(self, inputs, window, outputs, pad, stride,
+                             argmax, in_deltas, out_deltas):
+        pool_desc = cudnn.cudnnCreatePoolingDescriptor()
+        cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
+            window[0], window[1], pad, pad, stride[0], stride[1])
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *inputs.shape)
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+        self.cudnn_data_type, *outputs.shape)
+        id_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *in_deltas.shape)
+        od_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *out_deltas.shape)
+
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        y_data = ctypes.c_void_p(int(outputs.gpudata))
+        id_data = ctypes.c_void_p(int(in_deltas.gpudata))
+        od_data = ctypes.c_void_p(int(out_deltas.gpudata))
+        alpha, beta = 1.0, 1.0
+        cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
+            x_desc, x_data, id_desc, id_data, y_desc, y_data, beta, od_desc, od_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyTensorDescriptor(y_desc)
+        cudnn.cudnnDestroyTensorDescriptor(id_desc)
+        cudnn.cudnnDestroyTensorDescriptor(od_desc)
+        cudnn.cudnnDestroyPoolingDescriptor(pool_desc)
 
     # Activation functions
 

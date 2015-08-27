@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers.base_handler import Handler
+from brainstorm.handlers import _cpuop
 
 
 # noinspection PyMethodOverriding
@@ -319,6 +320,19 @@ class NumpyHandler(Handler):
                 in_deltas[i] += temp
             else:
                 in_deltas[i] += temp[:, pad: -pad, pad: -pad]
+
+
+    def pool2d_forward_batch(self, inputs, window, outputs, pad, stride, argmax):
+        _cpuop.maxpool_forward(inputs, window, outputs, pad, stride, argmax)
+
+
+
+
+    def pool2d_backward_batch(self, inputs, window, outputs, pad, stride,
+                              argmax, in_deltas, out_deltas):
+        _cpuop.maxpool_backward(inputs, window, outputs, pad, stride, argmax,
+                                in_deltas, out_deltas)
+
 
     # ---------------- Activation functions -----------------------------------
 

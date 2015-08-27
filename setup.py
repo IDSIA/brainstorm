@@ -5,6 +5,8 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
+from setuptools import Extension
+from Cython.Build import cythonize
 
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
@@ -63,4 +65,8 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
     ],
+
+    ext_modules = cythonize([Extension("brainstorm.handlers._cpuop",
+        ["brainstorm/handlers/_cpuop.pyx"])
+    ]),
 )
