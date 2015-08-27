@@ -68,7 +68,7 @@ class Hub(object):
         flat_sources = list(flatten(self.sources))
         self.connection_table = np.zeros((len(flat_sources), len(self.sinks)))
         for start, stop in connections:
-            if start in self.sources and stop in self.sinks:
+            if start in flat_sources and stop in self.sinks:
                 start_idx = flat_sources.index(start)
                 stop_idx = self.sinks.index(stop)
                 self.connection_table[start_idx, stop_idx] = 1
@@ -317,6 +317,29 @@ def gather_array_nodes(layout):
             yield k
 
 
+def get_backward_connection(start, stop):
+    start_layer, start_category, start_buffer = start.split('.', maxsplit=2)
+    stop_layer, stop_category, stop_buffer = stop.split('.', maxsplit=2)
+    back_buffer_name = {'parameters': 'gradients',
+                        'inputs': 'input_deltas',
+                        'outputs': 'output_deltas'}
+    new_end = '.'.join([stop_layer, back_buffer_name[stop_category],
+                        stop_buffer])
+
+    if start_category == 'internals':
+        new_start = '.'.join([start_layer, 'internals', 'd' + start_buffer])
+        return new_start, new_end
+
+    if start_category not in back_buffer_name or \
+            stop_category not in back_buffer_name:
+        return None
+
+    new_start = '.'.join([start_layer, back_buffer_name[start_category],
+                          start_buffer])
+
+    return new_start, new_end
+
+
 def get_connections(layers):
     connections = []
     for layer_name, layer in layers.items():
@@ -326,11 +349,10 @@ def get_connections(layers):
             end = get_normalized_path(con.end_layer, 'inputs', con.input_name)
             connections.append((start, end))
 
-            start = get_normalized_path(con.start_layer, 'output_deltas',
-                                        con.output_name)
-            end = get_normalized_path(con.end_layer, 'input_deltas',
-                                      con.input_name)
-            connections.append((start, end))
+            bwd_con = get_backward_connection(start, end)
+
+            if bwd_con:
+                connections.append(bwd_con)
 
     # add connections to implicit 'parameters', and 'gradients'-layer
     for layer_name, layer in layers.items():
