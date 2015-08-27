@@ -2,12 +2,14 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
-from brainstorm.utils import LayerValidationError, flatten_time
+from brainstorm.utils import LayerValidationError, flatten_time, \
+                             flatten_time_and_features
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
 
 class FullyConnectedLayerImpl(LayerBaseImpl):
+    inputs = {'default': ShapeTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation_function'}
 
     def _setup_hyperparameters(self):
@@ -61,7 +63,7 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         H = buffers.internals.H
 
         # reshape
-        flat_input = flatten_time(_h, inputs)
+        flat_input = flatten_time_and_features(_h, inputs)
         flat_H = flatten_time(_h, H)
 
         # calculate outputs
