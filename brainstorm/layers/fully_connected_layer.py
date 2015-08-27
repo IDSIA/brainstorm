@@ -83,9 +83,9 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         H, dH = buffers.internals
 
         # reshape
-        flat_input = flatten_time(_h, inputs)
+        flat_input = flatten_time_and_features(_h, inputs)
         flat_dH = flatten_time(_h, dH)
-        flat_in_delta_buffer = flatten_time(_h, in_deltas)
+        flat_in_delta_buffer = flatten_time_and_features(_h, in_deltas)
 
         # calculate in_deltas and gradients
         self.act_func_deriv(H, outputs, out_deltas, dH)
