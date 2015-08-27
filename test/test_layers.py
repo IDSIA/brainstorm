@@ -23,7 +23,7 @@ from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
 from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.convolution_layer_2d import ConvolutionLayer2DImpl
-from brainstorm.layers.lstm_layer_opt import LstmOptLayerImpl
+from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 
 import pytest
 
@@ -117,6 +117,15 @@ def lstm_layer(spec):
     return layer, {}
 
 
+def lstm_opt_layer(spec):
+    layer = LstmOptLayerImpl('LstmOptLayer',
+                          {'default': ShapeTemplate('T', 'B', 5)},
+                          NO_CON, NO_CON,
+                          size=7,
+                          activation_function=spec['act_func'])
+    return layer, spec
+
+
 def mask_layer(spec):
     layer = MaskLayerImpl('MaskLayer',
                           {'default': ShapeTemplate('T', 'B', 3, 2),
@@ -148,13 +157,6 @@ def convolution_layer_2d_c(spec):
     return convolution_layer_2d(spec, input_shape=(2, 3, 4), num_filters=2,
                                 kernel_size=(2, 3))
 
-def lstm_opt_layer(spec):
-    layer = LstmOptLayerImpl('LstmOptLayer',
-                          {'default': ShapeTemplate('T', 'B', 5)},
-                          NO_CON, NO_CON,
-                          size=7,
-                          activation_function=spec['act_func'])
-    return layer, spec
 
 layers_to_test = [
     noop_layer,
@@ -164,7 +166,12 @@ layers_to_test = [
     classification_layer,
     rnn_layer,
     squared_difference_layer,
-    lstm_layer
+    lstm_layer,
+    lstm_opt_layer,
+    mask_layer,
+    convolution_layer_2d_a,
+    convolution_layer_2d_b,
+    convolution_layer_2d_c,
 ]
 
 ids = [f.__name__ for f in layers_to_test]

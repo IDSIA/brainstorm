@@ -7,6 +7,7 @@ from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
 
+# noinspection PyPep8Naming
 class LstmOptLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size', 'activation_function'}
 
@@ -39,9 +40,9 @@ class LstmOptLayerImpl(LayerBaseImpl):
         out_size = self.out_shapes['default'].feature_size
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(in_size, out_size*4)
-        parameters['R'] = ShapeTemplate(out_size, out_size*4)
-        parameters['b'] = ShapeTemplate(out_size*4)
+        parameters['W'] = ShapeTemplate(in_size, out_size * 4)
+        parameters['R'] = ShapeTemplate(out_size, out_size * 4)
+        parameters['b'] = ShapeTemplate(out_size * 4)
 
         return parameters
 
@@ -49,9 +50,15 @@ class LstmOptLayerImpl(LayerBaseImpl):
         out_size = self.out_shapes['default'].feature_size
         internals = OrderedDict()
 
-        internals['S'] = ShapeTemplate('T', 'B', out_size*4, context_size=1)
+        internals['S'] = ShapeTemplate('T', 'B', out_size * 4, context_size=1)
         internals['Ca'] = ShapeTemplate('T', 'B', out_size, context_size=1)
         internals['Cb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
+        internals['dS'] = ShapeTemplate('T', 'B', out_size * 4, context_size=1,
+                                        is_backward_only=True)
+        internals['dCa'] = ShapeTemplate('T', 'B', out_size, context_size=1,
+                                         is_backward_only=True)
+        internals['dCb'] = ShapeTemplate('T', 'B', out_size, context_size=1,
+                                         is_backward_only=True)
 
         return internals
 
@@ -62,13 +69,13 @@ class LstmOptLayerImpl(LayerBaseImpl):
 
         return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        W, R, b = forward_buffers.parameters
-        S, Ca, Cb = forward_buffers.internals
-        x = forward_buffers.inputs.default
-        y = forward_buffers.outputs.default
+        W, R, b = buffers.parameters
+        S, Ca, Cb, dS, dCa, dCb = buffers.internals
+        x = buffers.inputs.default
+        y = buffers.outputs.default
 
         time_size, batch_size, in_size = x.shape
         out_size = y.shape[2]
@@ -79,9 +86,9 @@ class LstmOptLayerImpl(LayerBaseImpl):
 
         Z = S[:, :, :out_size]
         gates = S[:, :, out_size:]
-        I = S[:, :, out_size:2*out_size]
-        F = S[:, :, out_size*2:out_size*3]
-        O = S[:, :, out_size*3:]
+        I = S[:, :, out_size:2 * out_size]
+        F = S[:, :, out_size * 2:out_size * 3]
+        O = S[:, :, out_size * 3:]
 
         _h.dot_mm(flat_x, W, flat_S)  # all inputs times weights
         _h.add_mv(flat_S, b, flat_S)  # all biases
@@ -102,19 +109,18 @@ class LstmOptLayerImpl(LayerBaseImpl):
             self.act_func(Ca[t], Cb[t])
             _h.mult_tt(O[t], Cb[t], y[t])
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
         # prepare
         _h = self.handler
-        W, R, b = forward_buffers.parameters
-        dW, dR, db = backward_buffers.parameters
+        W, R, b = buffers.parameters
+        dW, dR, db = buffers.gradients
 
-        S, Ca, Cb = forward_buffers.internals
-        dS, dCa, dCb = backward_buffers.internals
+        S, Ca, Cb, dS, dCa, dCb = buffers.internals
 
-        x = forward_buffers.inputs.default
-        dx = backward_buffers.inputs.default
-        y = forward_buffers.outputs.default
-        deltas = backward_buffers.outputs.default
+        x = buffers.inputs.default
+        dx = buffers.input_deltas.default
+        y = buffers.outputs.default
+        deltas = buffers.output_deltas.default
 
         dy = _h.allocate(y.shape)
 
@@ -127,15 +133,15 @@ class LstmOptLayerImpl(LayerBaseImpl):
 
         gates = S[:, :, out_size:]
         Z = S[:, :, :out_size]
-        I = S[:, :, out_size:2*out_size]
-        F = S[:, :, out_size*2:out_size*3]
-        O = S[:, :, out_size*3:]
+        I = S[:, :, out_size:2 * out_size]
+        F = S[:, :, out_size * 2:out_size * 3]
+        O = S[:, :, out_size * 3:]
 
         dgates = dS[:, :, out_size:]
         dZ = dS[:, :, :out_size]
-        dI = dS[:, :, out_size:2*out_size]
-        dF = dS[:, :, out_size*2:out_size*3]
-        dO = dS[:, :, out_size*3:]
+        dI = dS[:, :, out_size:2 * out_size]
+        dF = dS[:, :, out_size * 2:out_size * 3]
+        dO = dS[:, :, out_size * 3:]
 
         _h.copy_to(dy, deltas)
 

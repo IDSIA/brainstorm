@@ -52,6 +52,13 @@ def Lstm(size, activation_function='tanh', name=None):
                                       activation_function=activation_function)
 
 
+def LstmOpt(size, activation_function='tanh', name=None):
+    return ConstructionWrapper.create('LstmOpt',
+                                      size=size,
+                                      name=name,
+                                      activation_function=activation_function)
+
+
 def BinomialCrossEntropy(name=None):
     return ConstructionWrapper.create('BinomialCrossEntropy',
                                       name=name)
