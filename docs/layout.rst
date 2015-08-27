@@ -140,8 +140,8 @@ We use the following network as an example here:
 .. code-block:: python
 
     mse = MseLayer(10)
-    inputs = InputLayer(out_shapes={'input_data': (4,), 'targets':(10,)})
-    inputs - 'input_data' >> RnnLayer(5) >> FullyConnectedLayer(10, name='OutLayer') >> 'net_out' - mse
+    inputs = Input(out_shapes={'input_data': (4,), 'targets':(10,)})
+    inputs - 'input_data' >> Rnn(5) >> FullyConnected(10, name='OutLayer') >> 'net_out' - mse
     inputs - 'targets' >> 'targets' - mse
     net = build_net(mse)
 
@@ -150,7 +150,7 @@ We use the following network as an example here:
 .. code-block:: python
 
     joint_layout = {
-        'InputLayer': {
+        'Input': {
             '@type': 'BufferView',
             '@index': 0,
             'inputs': {'@type': 'BufferView', '@index': 0},
@@ -164,7 +164,7 @@ We use the following network as an example here:
             'parameters': {'@type': 'BufferView', '@index': 2},
             'internals': {'@type': 'BufferView', '@index': 3},
         },
-        'RnnLayer': {
+        'Rnn': {
             '@type': 'BufferView',
             '@index': 1,
             'inputs': {
@@ -194,7 +194,7 @@ We use the following network as an example here:
                 'Ha': {'@type': 'array', '@index': 0, '@slice': (30, 35), '@shape': ('T', 'B', 5), '@context_size':1}
             },
         },
-        'OutLayer': {
+        'Out': {
             '@type': 'BufferView',
             '@index': 2,
             'inputs': {
@@ -223,7 +223,7 @@ We use the following network as an example here:
                 'Ha': {'@type': 'array', '@index': 0, '@slice': (35, 55), '@shape': ('T', 'B', 10)}
             }
         },
-        'MseLayer': {
+        'Mse': {
             '@type': 'BufferView',
             '@index': 3,
             'inputs': {

@@ -7,23 +7,30 @@ import pycuda.driver as drv
 import pycuda.autoinit
 from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
-import scikits.cuda.linalg as culinalg
-import scikits.cuda.misc as cumisc
+import skcuda.linalg as culinalg
+import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 culinalg.init()
 
 
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
+
+    __undescribed__ = {'context', 'dtype', 'EMPTY'}
+
     def __init__(self):
-        self.array_type = pycuda.gpuarray.GPUArray
-        self.dtype = np.float32
-        self.size = lambda x: x.size
-        self.shape = lambda x: x.shape
-        self.reshape = lambda x, s: x.reshape(s)
-        self.slice = lambda x, s: x[s]
         self.context = cumisc._global_cublas_handle
+        self.dtype = np.float32
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
+
+    array_type = pycuda.gpuarray.GPUArray
+    size = staticmethod(lambda x: x.size)
+    shape = staticmethod(lambda x: x.shape)
+    reshape = staticmethod(lambda x, s: x.reshape(s))
+    slice = staticmethod(lambda x, s: x[s])
+
+    def __init_from_description__(self, description):
+        self.__init__()
 
     def allocate(self, size):
         return gpuarray.zeros(size, dtype=self.dtype)
@@ -33,12 +40,17 @@ class PyCudaHandler(Handler):
         mem.fill(val)
 
     def set_from_numpy(self, mem, arr):
-        assert mem.shape == arr.shape, "{} != {}".format(mem.shape, arr.shape)
+        assert mem.shape == arr.shape, "Shape of destination ({}) != Shape " \
+                                       "of source ({})".format(mem.shape,
+                                                               arr.shape)
         mem.set(arr.astype(self.dtype))
 
     def get_numpy_copy(self, mem):
         assert type(mem) == self.array_type
         return mem.get()
+
+    def create_from_numpy(self, arr):
+        return gpuarray.to_gpu(arr.astype(self.dtype))
 
     @staticmethod
     def copy_to(dest, src):
@@ -49,13 +61,19 @@ class PyCudaHandler(Handler):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
 
     def ones(self, shape):
-        return gpuarray.ones(shape=shape, dtype=self.dtype)
+        a = self.zeros(shape)
+        self.fill(a, 1.0)
+        return a
 
     # ---------------- Mathematical Operations ---------------- #
 
-    @staticmethod
-    def sum_t(a, axis, out):
-        cumisc.sum(a, axis, out)
+    def sum_t(self, a, axis, out):
+        if len(a.shape) < 3 and (axis == 0 or axis == 1):
+            cumisc.sum(a, axis, out)
+        elif axis is None:
+            self.copy_to(out, cumisc.sum(a))
+        else:
+            raise NotImplementedError
 
     @staticmethod
     def dot_mm(a, b, out, transa='N', transb='N'):
@@ -90,16 +108,16 @@ class PyCudaHandler(Handler):
         subtract_mm_kernel(a, b, out)
 
     @staticmethod
-    def add_mv(a, b, out):
-        cumisc.add_matvec(a, b, out=out)
+    def add_mv(m, v, out):
+        cumisc.add_matvec(m, v, out=out)
 
     @staticmethod
     def broadcast_features_t(a, out):
         assert len(a.shape) == 3
         assert a.shape[2] == 1
         assert len(out.shape) > 2
-        a_flat = a.reshape(-1)
-        out_flat = out.reshape(-1)
+        a_flat = a.reshape(a.size)
+        out_flat = out.reshape(out.size)
         broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
 
     @staticmethod
@@ -121,13 +139,16 @@ class PyCudaHandler(Handler):
         """
         cumisc.div_matvec(m, v, out=out)
 
-    @staticmethod
-    def mult_mv(m, v, out):
+    @classmethod
+    def mult_mv(cls, m, v, out):
         """
         Multiply (M, N) matrix elementwise by a (1, N) vector using
         broadcasting.
         """
-        cumisc.mutl_matvec(m, v, out=out)
+        if m.shape == v.shape:
+            cls.mult_tt(m, v, out=out)
+        else:
+            cumisc.mult_matvec(m, v, out=out)
 
     @staticmethod
     def binarize_v(v, out):
@@ -149,7 +170,7 @@ class PyCudaHandler(Handler):
 
     @staticmethod
     def tanh(x, y):
-        cumath.tanh(x, out=y)
+        tanh_kernel(x, y)
 
     @staticmethod
     def tanh_deriv(x, y, dy, dx):
@@ -168,8 +189,8 @@ class PyCudaHandler(Handler):
         """Applies softmax to matrix over last dimension"""
         n, k = m.shape
         tmp = gpuarray.empty((1, n), dtype=m.dtype)
-        _softmax_impl(m.gpudata, tmp.gpudata, out.gpudata, np.int32(n),
-            np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
+        _softmax_impl(m, tmp.gpudata, out, np.int32(n),
+                      np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
         return out
 
 
@@ -219,6 +240,12 @@ sigmoid_deriv_kernel = ElementwiseKernel(
     "float* x, float* y, float* dy, float* dx",
     "dx[i] = dy[i] * y[i] * (1.0 - y[i])",
     "sigmoid_deriv_kernel"
+)
+
+tanh_kernel = ElementwiseKernel(
+    "float* x, float* y",
+    "y[i] = tanh(x[i])",
+    "tanh_kernel"
 )
 
 tanh_deriv_kernel = ElementwiseKernel(

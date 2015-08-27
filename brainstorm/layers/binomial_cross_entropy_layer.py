@@ -5,7 +5,8 @@ from __future__ import division, print_function, unicode_literals
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.utils import LayerValidationError
+from brainstorm.utils import LayerValidationError, flatten_time_and_features, \
+    flatten_time
 from brainstorm.structure.shapes import ShapeTemplate
 
 
@@ -36,6 +37,8 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         feature_shape = self.in_shapes['default'].feature_shape
         internals = OrderedDict()
         internals['cee'] = ShapeTemplate('T', 'B', *feature_shape)
+        internals['ceed'] = ShapeTemplate('T', 'B', *feature_shape,
+                                          is_backward_only=True)
         return internals
 
     def _validate_in_shapes(self):
@@ -48,13 +51,13 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
                                                self.in_shapes['default'],
                                                self.in_shapes['targets']))
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        y = forward_buffers.inputs.default
-        t = forward_buffers.inputs.targets
-        cee = forward_buffers.internals.cee
-        cee_sum = forward_buffers.outputs.default
+        y = buffers.inputs.default
+        t = buffers.inputs.targets
+        cee = buffers.internals.cee
+        cee_sum = buffers.outputs.default
 
         # the binomial cross entropy error is given by
         # - t * ln(y) - (1-t) * ln(1-y)
@@ -72,24 +75,22 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
 
         # reshape for summation
-        t, b = cee.shape[:2]
-        f = _h.size(cee) / (t * b)
-        cee = cee.reshape((t, b, f))
-
-        _h.sum_t(cee, axis=2, out=cee_sum)
+        cee = flatten_time_and_features(_h, cee)
+        cee_sum = flatten_time(_h, cee_sum)
+        _h.sum_t(cee, axis=1, out=cee_sum)
         _h.mult_st(-1, cee_sum, cee_sum)  # * -1
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
         # prepare
         _h = self.handler
-        ceed_sum = backward_buffers.outputs.default
-        ceed = backward_buffers.internals.cee
+        ceed_sum = buffers.output_deltas.default
+        ceed = buffers.internals.ceed
         tmp = _h.allocate(ceed.shape)
 
-        y = forward_buffers.inputs.default
-        t = forward_buffers.inputs.targets
+        y = buffers.inputs.default
+        t = buffers.inputs.targets
 
-        yd = backward_buffers.inputs.default
+        yd = buffers.input_deltas.default
 
         # the derivative of the binomial cross entropy error is given by
         # (y - t) / (y - y²)

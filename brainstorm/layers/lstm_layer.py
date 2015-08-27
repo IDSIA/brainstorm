@@ -10,14 +10,14 @@ from brainstorm.structure.shapes import ShapeTemplate
 class LstmLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size', 'activation_function'}
 
-    def __init__(self, name, in_shapes, incoming_connections,
-                 outgoing_connections, **kwargs):
-        super(LstmLayerImpl, self).__init__(
-            name, in_shapes, incoming_connections, outgoing_connections,
-            **kwargs)
+    def _setup_hyperparameters(self):
         self.act_func = lambda x, y: None
         self.act_func_deriv = lambda x, y, dy, dx: None
-        self.kwargs = kwargs
+        self.size = self.kwargs.get('size',
+                                    self.in_shapes['default'].feature_size)
+        if not isinstance(self.size, int):
+            raise LayerValidationError('size must be int but was {}'.
+                                       format(self.size))
 
     def set_handler(self, new_handler):
         super(LstmLayerImpl, self).set_handler(new_handler)
@@ -36,40 +36,59 @@ class LstmLayerImpl(LayerBaseImpl):
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['default'].feature_size
-
+        
         parameters = OrderedDict()
-        parameters['Wz'] = ShapeTemplate(in_size, out_size)
-        parameters['Wi'] = ShapeTemplate(in_size, out_size)
-        parameters['Wf'] = ShapeTemplate(in_size, out_size)
-        parameters['Wo'] = ShapeTemplate(in_size, out_size)
+        parameters['Wz'] = ShapeTemplate(self.size, in_size)
+        parameters['Wi'] = ShapeTemplate(self.size, in_size)
+        parameters['Wf'] = ShapeTemplate(self.size, in_size)
+        parameters['Wo'] = ShapeTemplate(self.size, in_size)
 
-        parameters['Rz'] = ShapeTemplate(out_size, out_size)
-        parameters['Ri'] = ShapeTemplate(out_size, out_size)
-        parameters['Rf'] = ShapeTemplate(out_size, out_size)
-        parameters['Ro'] = ShapeTemplate(out_size, out_size)
+        parameters['Rz'] = ShapeTemplate(self.size, self.size)
+        parameters['Ri'] = ShapeTemplate(self.size, self.size)
+        parameters['Rf'] = ShapeTemplate(self.size, self.size)
+        parameters['Ro'] = ShapeTemplate(self.size, self.size)
 
-        parameters['bz'] = ShapeTemplate(out_size)
-        parameters['bi'] = ShapeTemplate(out_size)
-        parameters['bf'] = ShapeTemplate(out_size)
-        parameters['bo'] = ShapeTemplate(out_size)
+        parameters['bz'] = ShapeTemplate(self.size)
+        parameters['bi'] = ShapeTemplate(self.size)
+        parameters['bf'] = ShapeTemplate(self.size)
+        parameters['bo'] = ShapeTemplate(self.size)
 
         return parameters
 
     def get_internal_structure(self):
-        out_size = self.out_shapes['default'].feature_size
         internals = OrderedDict()
 
-        internals['Za'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Zb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ia'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ib'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Fa'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Fb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Oa'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ob'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Ca'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Cb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
+        internals['Za'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Zb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ia'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ib'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Fa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Fb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Oa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ob'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Ca'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+        internals['Cb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
+
+        internals['dZa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dZb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dIa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dIb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dFa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dFb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dOa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dOb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dCa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dCb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
 
         return internals
 
@@ -80,33 +99,34 @@ class LstmLayerImpl(LayerBaseImpl):
 
         return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
          Rz, Ri, Rf, Ro,
-         bz, bi, bf, bo) = forward_buffers.parameters
-        Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb = forward_buffers.internals
-        x = forward_buffers.inputs.default
-        y = forward_buffers.outputs.default
+         bz, bi, bf, bo) = buffers.parameters
+        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
+         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
+        x = buffers.inputs.default
+        y = buffers.outputs.default
 
         time_size, batch_size, in_size = x.shape
 
         for t in range(time_size):
             # Block input
-            _h.dot_mm(x[t], Wz, Za[t])
+            _h.dot_mm(x[t], Wz, Za[t], transb='T')
             _h.dot_add_mm(y[t - 1], Rz, Za[t])
             _h.add_mv(Za[t], bz, Za[t])
             self.act_func(Za[t], Zb[t])
 
             # Input Gate
-            _h.dot_mm(x[t], Wi, Ia[t])
+            _h.dot_mm(x[t], Wi, Ia[t], transb='T')
             _h.dot_add_mm(y[t - 1], Ri, Ia[t])
             _h.add_mv(Ia[t], bi, Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
-            _h.dot_mm(x[t], Wf, Fa[t])
+            _h.dot_mm(x[t], Wf, Fa[t], transb='T')
             _h.dot_add_mm(y[t - 1], Rf, Fa[t])
             _h.add_mv(Fa[t], bf, Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
@@ -116,7 +136,7 @@ class LstmLayerImpl(LayerBaseImpl):
             _h.mult_add_tt(Fb[t], Ca[t - 1], Ca[t])
 
             # Output Gate
-            _h.dot_mm(x[t], Wo, Oa[t])
+            _h.dot_mm(x[t], Wo, Oa[t], transb='T')
             _h.dot_add_mm(y[t - 1], Ro, Oa[t])
             _h.add_mv(Oa[t], bo, Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
@@ -125,23 +145,23 @@ class LstmLayerImpl(LayerBaseImpl):
             self.act_func(Ca[t], Cb[t])
             _h.mult_tt(Ob[t], Cb[t], y[t])
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
          Rz, Ri, Rf, Ro,
-         bz, bi, bf, bo) = forward_buffers.parameters
+         bz, bi, bf, bo) = buffers.parameters
         (dWz, dWi, dWf, dWo,
          dRz, dRi, dRf, dRo,
-         dbz, dbi, dbf, dbo) = backward_buffers.parameters
+         dbz, dbi, dbf, dbo) = buffers.gradients
 
-        Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb = forward_buffers.internals
-        dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb = backward_buffers.internals
+        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
+         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
 
-        x = forward_buffers.inputs.default
-        dx = backward_buffers.inputs.default
-        y = forward_buffers.outputs.default
-        deltas = backward_buffers.outputs.default
+        x = buffers.inputs.default
+        dx = buffers.input_deltas.default
+        y = buffers.outputs.default
+        deltas = buffers.output_deltas.default
 
         dy = _h.allocate(y.shape)
 
@@ -176,16 +196,16 @@ class LstmLayerImpl(LayerBaseImpl):
             self.act_func_deriv(Za[t], Zb[t], dZb[t], dZa[t])
 
             # Input Deltas
-            _h.dot_add_mm(dIa[t], Wi, dx[t], transb='T')
-            _h.dot_add_mm(dFa[t], Wf, dx[t], transb='T')
-            _h.dot_add_mm(dOa[t], Wo, dx[t], transb='T')
-            _h.dot_add_mm(dZa[t], Wz, dx[t], transb='T')
+            _h.dot_add_mm(dIa[t], Wi, dx[t])
+            _h.dot_add_mm(dFa[t], Wf, dx[t])
+            _h.dot_add_mm(dOa[t], Wo, dx[t])
+            _h.dot_add_mm(dZa[t], Wz, dx[t])
 
             # Gradients for the input weights
-            _h.dot_add_mm(x[t], dIa[t], dWi, transa='T')
-            _h.dot_add_mm(x[t], dFa[t], dWf, transa='T')
-            _h.dot_add_mm(x[t], dOa[t], dWo, transa='T')
-            _h.dot_add_mm(x[t], dZa[t], dWz, transa='T')
+            _h.dot_add_mm(dIa[t], x[t], dWi, transa='T')
+            _h.dot_add_mm(dFa[t], x[t], dWf, transa='T')
+            _h.dot_add_mm(dOa[t], x[t], dWo, transa='T')
+            _h.dot_add_mm(dZa[t], x[t], dWz, transa='T')
 
             # Gradient for the recurrent weights
             _h.dot_add_mm(y[t], dIa[t + 1], dRi, transa='T')

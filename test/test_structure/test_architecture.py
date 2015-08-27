@@ -44,8 +44,8 @@ def test_combine_input_sizes_mismatch(sizes):
 
 def test_validate_architecture_minimal():
     assert validate_architecture({
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'Input': {
+            '@type': 'Input',
             '@outgoing_connections': []
         }})
 
@@ -73,7 +73,7 @@ def test_validate_architecture_raises_on_invalid_name():
     with pytest.raises(NetworkValidationError):
         validate_architecture({
             '$invalid name': {
-                '@type': 'InputLayer',
+                '@type': 'Input',
                 '@outgoing_connections': []
             }
         })
@@ -82,8 +82,8 @@ def test_validate_architecture_raises_on_invalid_name():
 def test_validate_architecture_raises_on_nonexisting_outgoing():
     with pytest.raises(NetworkValidationError):
         validate_architecture({
-            'InputLayer': {
-                '@type': 'InputLayer',
+            'Input': {
+                '@type': 'Input',
                 '@outgoing_connections': ['missing_layer']
             }
         })
@@ -93,7 +93,7 @@ def test_validate_architecture_raises_on_no_data_layer():
     with pytest.raises(NetworkValidationError):
         validate_architecture({
             'fwd1': {
-                '@type': 'FullyConnectedLayer',
+                '@type': 'FullyConnected',
                 '@outgoing_connections': []
             }})
 
@@ -101,30 +101,30 @@ def test_validate_architecture_raises_on_no_data_layer():
 def test_validate_architecture_raises_inputs_to_data_layer():
     with pytest.raises(NetworkValidationError):
         validate_architecture({
-            'InputLayer': {
-                '@type': 'InputLayer',
+            'Input': {
+                '@type': 'Input',
                 '@outgoing_connections': []
             },
             'fwd1': {
-                '@type': 'FullyConnectedLayer',
-                '@outgoing_connections': ['InputLayer']
+                '@type': 'FullyConnected',
+                '@outgoing_connections': ['Input']
             }})
 
 
 def test_validate_architecture_full_network():
     assert validate_architecture({
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'Input': {
+            '@type': 'Input',
             'out_shapes': {'default': 784},
             '@outgoing_connections': ['HiddenLayer']
         },
         'HiddenLayer': {
-            '@type': 'FullyConnectedLayer',
+            '@type': 'FullyConnected',
             'shape': 1000,
             '@outgoing_connections': ['OutputLayer']
         },
         'OutputLayer': {
-            '@type': 'FullyConnectedLayer',
+            '@type': 'FullyConnected',
             'shape': 10,
             'activation_function': 'softmax',
             '@outgoing_connections': []
@@ -134,13 +134,13 @@ def test_validate_architecture_full_network():
 
 def test_validate_architecture_with_named_sinks():
     assert validate_architecture({
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'Input': {
+            '@type': 'Input',
             'out_shapes': {'default': 10},
             '@outgoing_connections': ['HiddenLayer', 'OutputLayer.A']
         },
         'HiddenLayer': {
-            '@type': 'FullyConnectedLayer',
+            '@type': 'FullyConnected',
             'shape': 10,
             '@outgoing_connections': ['OutputLayer.B']
         },
@@ -153,13 +153,13 @@ def test_validate_architecture_with_named_sinks():
 
 def test_validate_architecture_with_named_sources():
     assert validate_architecture({
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'Input': {
+            '@type': 'Input',
             'shape': {'default': 10},
             '@outgoing_connections': ['SplitLayer']
         },
         'SplitLayer': {
-            '@type': 'SplitLayer',
+            '@type': 'Split',
             'split_at': 5,
             '@outgoing_connections': {
                 'left': ['OutputLayer.A'],
@@ -176,7 +176,7 @@ def test_validate_architecture_with_named_sources():
 def test_get_canonical_architecture_order():
     arch = {
         'A': {
-            '@type': 'InputLayer',
+            '@type': 'Input',
             '@outgoing_connections': {'B1', 'C'}
         },
         'B1': {
@@ -202,7 +202,7 @@ def test_get_canonical_architecture_order():
 def test_get_canonical_architecture_order_with_named_sinks():
     arch = {
         'A': {
-            '@type': 'InputLayer',
+            '@type': 'Input',
             '@outgoing_connections': {'B1', 'C'}
         },
         'B1': {
@@ -228,7 +228,7 @@ def test_get_canonical_architecture_order_with_named_sinks():
 def test_get_canonical_architecture_order_with_named_sources():
     arch = {
         'A': {
-            '@type': 'InputLayer',
+            '@type': 'Input',
             '@outgoing_connections': {'out1': ['B1'],
                                       'out2': ['C']}
         },

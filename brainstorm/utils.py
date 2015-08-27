@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+import numpy as np
 import re
 
 
@@ -126,3 +127,16 @@ def get_normalized_path(*args):
             p = p[1:]
         normalized_parts.append(p)
     return ".".join(normalized_parts)
+
+
+def flatten_time(handler, array):
+    assert handler.shape(array) >= 3, "Time can be flattened only for arrays "\
+                                      "with at least 3 dimensions."
+    t, b, f = array.shape[0], array.shape[1], array.shape[2:]
+    return handler.reshape(array, (t * b,) + f)
+
+def flatten_time_and_features(handler, array):
+    assert handler.shape(array) >= 3, "Time & features can be flattened only "\
+                                      "for arrays with at least 3 dimensions."
+    t, b, f = array.shape[0], array.shape[1], array.shape[2:]
+    return handler.reshape(array, (t * b, np.product(f)))

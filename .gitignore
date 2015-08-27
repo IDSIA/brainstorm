@@ -1,5 +1,9 @@
 # Created by https://www.gitignore.io
 
+*.hdf5
+*.gz
+*.npy
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

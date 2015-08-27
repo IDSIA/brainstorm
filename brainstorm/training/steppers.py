@@ -62,7 +62,7 @@ class SgdStep(TrainingStep):
 
     def start(self, net):
         super(SgdStep, self).start(net)
-        self.update = net.handler.zeros(net.buffer.forward.parameters.shape)
+        self.update = net.handler.zeros(net.buffer.parameters.shape)
 
     def run(self):
         learning_rate = self.learning_rate_schedule()
@@ -70,11 +70,11 @@ class SgdStep(TrainingStep):
         loss = self.net.get_loss_value()
         self.net.backward_pass()
         self.net.handler.mult_st(-learning_rate,
-                                      self.net.buffer.backward.parameters,
-                                      out=self.update)
+                                 self.net.buffer.gradients,
+                                 out=self.update)
         self.net.handler.add_tt(self.update,
-                                self.net.buffer.forward.parameters,
-                                out=self.net.buffer.forward.parameters)
+                                self.net.buffer.parameters,
+                                out=self.net.buffer.parameters)
         return loss
 
     def __init_from_description__(self, description):

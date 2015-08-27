@@ -5,9 +5,13 @@ import numpy as np
 import pytest
 from brainstorm.describable import (Describable, get_description,
                                     create_from_description)
+from brainstorm.handlers.pycuda_handler import PyCudaHandler
+from brainstorm.handlers.numpy_handler import NumpyHandler
 
 
 # ######################### get_all_undescribed ###############################
+from brainstorm.structure.architecture import generate_architecture
+
 
 def test_get_all_undescribed_on_empty_describable():
     class Foo1(Describable):
@@ -302,3 +306,103 @@ def test_create_from_description_with_invalid_description_raises():
         create_from_description(pytest)
 
     assert excinfo.value.args[0].find('module') > -1
+
+
+# ################# test describing handler ###################################
+
+def test_describe_pycuda_handler():
+    pch = PyCudaHandler()
+    d = get_description(pch)
+    assert d == {'@type': 'PyCudaHandler'}
+    pch2 = create_from_description(d)
+    assert isinstance(pch2, PyCudaHandler)
+
+
+def test_describe_numpy_handler():
+    nh = NumpyHandler(np.float32)
+    d = get_description(nh)
+    assert d == {'@type': 'NumpyHandler', 'dtype': 'float32'}
+    nh2 = create_from_description(d)
+    assert isinstance(nh2, NumpyHandler)
+    assert nh2.dtype == np.float32
+
+# ################# test describing a Network #################################
+import brainstorm as bs
+import json
+
+arch = generate_architecture(
+    bs.layers.Input(out_shapes={'default': ('T', 'B', 7)}) >>
+    bs.layers.FullyConnected(3) >>
+    bs.layers.Loss())
+
+
+def test_describe_network():
+    net = bs.Network.from_architecture(arch)
+    net.initialize(1)
+    assert get_description(net) == {
+        '@type': 'Network',
+        'architecture': json.loads(json.dumps(arch)),
+        'handler': {'@type': 'NumpyHandler', 'dtype': 'float32'},
+        'initializers': {'default': 1},
+        'weight_modifiers': {},
+        'gradient_modifiers': {}
+    }
+
+
+def test_get_network_from_description():
+    net = bs.Network.from_architecture(arch)
+    net.initialize(1)
+    d = get_description(net)
+    net2 = create_from_description(d)
+    assert isinstance(net2, bs.Network)
+    assert net2.layers.keys() == net.layers.keys()
+    assert isinstance(net2.handler, NumpyHandler)
+    assert net2.handler.dtype == np.float32
+    assert np.all(net2.buffer.parameters == net.buffer.parameters)
+
+
+# ################# test describing a Trainer #################################
+
+def test_describe_trainer():
+    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
+                    verbose=False)
+    tr.add_hook(bs.hooks.StopAfterEpoch(23))
+    tr.add_hook(bs.hooks.StopOnNan())
+
+    d = get_description(tr)
+    assert d == {
+        '@type': 'Trainer',
+        'double_buffering': False,
+        'verbose': False,
+        'hooks': {
+            'StopAfterEpoch': {
+                '@type': 'StopAfterEpoch',
+                'max_epochs': 23,
+                'priority': 0},
+            'StopOnNan': {
+                '@type': 'StopOnNan',
+                'check_parameters': True,
+                'logs_to_check': [],
+                'priority': 1}},
+        'stepper': {
+            '@type': 'SgdStep',
+            'learning_rate_schedule': 0.7}
+    }
+
+
+def test_recreate_trainer_from_description():
+    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
+                    verbose=False)
+    tr.add_hook(bs.hooks.StopAfterEpoch(23))
+    tr.add_hook(bs.hooks.StopOnNan())
+
+    d = get_description(tr)
+
+    tr2 = create_from_description(d)
+    assert isinstance(tr2, bs.Trainer)
+    assert tr2.verbose is False
+    assert tr2.double_buffering is False
+    assert list(tr2.hooks.keys()) == ['StopAfterEpoch', 'StopOnNan']
+    assert tr2.hooks['StopAfterEpoch'].max_epochs == 23
+    assert isinstance(tr2.stepper, bs.SgdStep)
+    assert tr2.stepper.learning_rate_schedule.value == 0.7

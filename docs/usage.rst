@@ -1,6 +1,6 @@
-========
+=====
 Usage
-========
+=====
 
 To use brainstorm in a project::
 

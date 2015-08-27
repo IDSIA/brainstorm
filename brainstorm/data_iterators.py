@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from datetime import datetime
 import math
 import numpy as np
+import sys
 from brainstorm.randomness import Seedable
 from brainstorm.utils import IteratorValidationError
 
@@ -86,6 +87,7 @@ class Online(DataIterator, Seedable):
             arr = handler.allocate(self.sample_size)
 
         print(next(p_bar), end='')
+        sys.stdout.flush()
         indices = np.arange(self.nr_sequences)
         if self.shuffle:
             self.rnd.shuffle(indices)
@@ -103,6 +105,7 @@ class Online(DataIterator, Seedable):
                                for k, v in self.data.items()}
             yield device_data
             print(p_bar.send(i + 1), end='')
+            sys.stdout.flush()
 
 
 class Minibatches(DataIterator, Seedable):
@@ -135,11 +138,13 @@ class Minibatches(DataIterator, Seedable):
             arr = handler.allocate(self.sample_size)
 
         print(next(p_bar), end='')
+        sys.stdout.flush()
         indices = np.arange(int(math.ceil(self.nr_sequences / self.batch_size)))
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
-            chunk = (slice(None), slice(idx*self.batch_size, (idx+1) * self.batch_size))
+            chunk = (slice(None),
+                     slice(idx * self.batch_size, (idx + 1) * self.batch_size))
 
             if need_copy:
                 device_data = {}
@@ -154,6 +159,7 @@ class Minibatches(DataIterator, Seedable):
                                for k, v in self.data.items()}
             yield device_data
             print(p_bar.send((i + 1) * self.batch_size), end='')
+            sys.stdout.flush()
 
 
 def _assert_correct_data_format(named_data):
