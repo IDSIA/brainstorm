@@ -122,10 +122,10 @@ class LayerBaseImpl(object):
                              "are {}".format(category, path, categories))
         if category == 'parameters':
             parameters = self.get_parameter_structure()
-            return get_by_path(parameters, subpath)['@shape']
+            return get_by_path(parameters, subpath)
         if category == 'internals':
             internals = self.get_internal_structure()
-            return get_by_path(internals, subpath)['@shape']
+            return get_by_path(internals, subpath)
         if category == 'inputs':
             return get_by_path(self.in_shapes, subpath)
         if category == 'outputs':
