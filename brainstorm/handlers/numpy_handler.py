@@ -344,7 +344,7 @@ class NumpyHandler(Handler):
 
     @staticmethod
     def rel_deriv(x, y, dy, dx):
-        dx[:] = dy * (x > 0)
+        dx[:] = dy * (y > 0)
 
     @staticmethod
     def softmax_m(m, out):

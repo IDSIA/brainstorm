@@ -262,7 +262,7 @@ rel_kernel = ElementwiseKernel(
 
 rel_deriv_kernel = ElementwiseKernel(
     "float* x, float* y, float* dy, float* dx",
-    "if (x[i]>0) dx[i] = dy[i]; else dx[i]=0.0;",
+    "if (y[i]>0) dx[i] = dy[i]; else dx[i]=0.0;",
     "rel_deriv_kernel"
 )
 
