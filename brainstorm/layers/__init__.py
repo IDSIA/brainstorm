@@ -42,8 +42,8 @@ def FullyConnected(size, activation_function='linear', name=None):
                                       activation_function=activation_function)
 
 
-def Loss(name=None):
-    return ConstructionWrapper.create('Loss', name=name)
+def Loss(importance=1.0, name=None):
+    return ConstructionWrapper.create('Loss', importance=importance, name=name)
 
 
 def Lstm(size, activation_function='tanh', name=None):
