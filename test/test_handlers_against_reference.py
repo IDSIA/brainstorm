@@ -417,7 +417,7 @@ def test_pool2d_forward():
                         (x.shape[2] + 2*pad - window[0]) // strides[0] + 1,
                         (x.shape[3] + 2*pad - window[1]) // strides[1] + 1)
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
-                    argmax = np.zeros(out_shape + (2, ), dtype=np.int32)
+                    argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
                     ref_args = (x, window, outputs, pad, strides, argmax)
 
                     assert operation_check(ref.pool2d_forward_batch,
@@ -443,7 +443,7 @@ def test_pool2d_backward():
                     o_deltas = np.random.normal(size=out_shape)
                     o_deltas = o_deltas.astype(ref_dtype)
                     i_deltas = np.zeros_like(x, dtype=ref_dtype)
-                    argmax = np.zeros(out_shape + (2, ), dtype=np.int32)
+                    argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
 
                     # initialize argmax
                     ref.pool2d_forward_batch(x, window, outputs, pad,

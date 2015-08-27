@@ -24,6 +24,7 @@ from brainstorm.layers.lstm_layer import LstmLayerImpl
 from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.convolution_layer_2d import ConvolutionLayer2DImpl
 from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
+from brainstorm.layers.pooling_layer_2d import PoolingLayer2DImpl
 
 import pytest
 
@@ -157,6 +158,15 @@ def convolution_layer_2d_c(spec):
     return convolution_layer_2d(spec, input_shape=(2, 3, 4), num_filters=2,
                                 kernel_size=(2, 3))
 
+def pooling_layer_2d():
+    y = ShapeTemplate('T', 'B', 3, 5, 4)
+    layer = PoolingLayer2DImpl('PoolingLayer2D',
+                                   {'default':
+                                    ShapeTemplate('T', 'B', 1, 4, 4)},
+                                   NO_CON, NO_CON, num_filters=1,
+                                   window_size=(2, 2), stride=(1, 1))
+    return layer, {}
+
 
 layers_to_test = [
     noop_layer,
@@ -172,6 +182,8 @@ layers_to_test = [
     convolution_layer_2d_a,
     convolution_layer_2d_b,
     convolution_layer_2d_c,
+    convolution_layer_2d,
+    pooling_layer_2d
 ]
 
 ids = [f.__name__ for f in layers_to_test]
