@@ -318,8 +318,8 @@ def gather_array_nodes(layout):
 
 
 def get_backward_connection(start, stop):
-    start_layer, start_category, start_buffer = start.split('.', maxsplit=2)
-    stop_layer, stop_category, stop_buffer = stop.split('.', maxsplit=2)
+    start_layer, start_category, start_buffer = start.split('.', 2)
+    stop_layer, stop_category, stop_buffer = stop.split('.', 2)
     back_buffer_name = {'parameters': 'gradients',
                         'inputs': 'input_deltas',
                         'outputs': 'output_deltas'}
