@@ -7,7 +7,7 @@ from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.utils import flatten_time
 
 
-class ConvolutionLayer2DImpl(LayerBaseImpl):
+class Convolution2DLayerImpl(LayerBaseImpl):
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'pad',
                        'activation_function'}
     inputs = {'default': ShapeTemplate('T', 'B', '...')}
@@ -30,7 +30,7 @@ class ConvolutionLayer2DImpl(LayerBaseImpl):
             self.stride[1] >= 0
 
     def set_handler(self, new_handler):
-        super(ConvolutionLayer2DImpl, self).set_handler(new_handler)
+        super(Convolution2DLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
         activation_functions = {

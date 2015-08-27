@@ -6,7 +6,7 @@ from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 
 
-class PoolingLayer2DImpl(LayerBaseImpl):
+class Pooling2DLayerImpl(LayerBaseImpl):
     expected_kwargs = {'num_filters', 'window_size', 'stride', 'pad',
                        'activation_function'}
     inputs = {'default': ShapeTemplate('T', 'B', '...')}
