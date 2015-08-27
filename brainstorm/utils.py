@@ -130,13 +130,14 @@ def get_normalized_path(*args):
 
 
 def flatten_time(handler, array):
-    assert handler.shape(array) >= 3, "Time can be flattened only for arrays "\
-                                      "with at least 3 dimensions."
+    assert len(handler.shape(array)) >= 3, "Time can be flattened only for arrays "\
+                                           "with at least 3 dimensions."
     t, b, f = array.shape[0], array.shape[1], array.shape[2:]
     return handler.reshape(array, (t * b,) + f)
 
+
 def flatten_time_and_features(handler, array):
-    assert handler.shape(array) >= 3, "Time & features can be flattened only "\
-                                      "for arrays with at least 3 dimensions."
-    t, b, f = array.shape[0], array.shape[1], array.shape[2:]
+    assert len(handler.shape(array)) >= 3, "Time & features can be flattened only "\
+                                           "for arrays with at least 3 dimensions."
+    t, b, f = array.shape[0],  array.shape[1], array.shape[2:]
     return handler.reshape(array, (t * b, np.product(f)))
