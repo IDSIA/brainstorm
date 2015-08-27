@@ -9,6 +9,8 @@ from brainstorm.structure.shapes import ShapeTemplate
 
 # noinspection PyPep8Naming
 class LstmOptLayerImpl(LayerBaseImpl):
+    # TODO: Ensure that this layer conforms to the weight matrix conventions
+
     expected_kwargs = {'size', 'activation_function'}
 
     def __init__(self, name, in_shapes, incoming_connections,

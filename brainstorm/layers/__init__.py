@@ -19,6 +19,7 @@ from brainstorm.layers.classification_layer import ClassificationLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
+from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.rnn_layer import RnnLayerImpl
 
 

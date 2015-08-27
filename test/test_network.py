@@ -31,6 +31,7 @@ layers_to_test_with_context = [
 
 ids = [f.__name__ for f in layers_to_test_with_context]
 
+
 @pytest.fixture(params=layers_to_test_with_context, ids=ids)
 def net_with_context(request):
     net = request.param()

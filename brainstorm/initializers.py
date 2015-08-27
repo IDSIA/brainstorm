@@ -9,7 +9,7 @@ from brainstorm.utils import InitializationError
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in [
     'Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
-    'SparseInputs', 'SparseOutputs', 'EchoState']]
+    'SparseInputs', 'SparseOutputs', 'EchoState', 'LstmOptBias']]
 
 
 # ########################### Support Classes #################################
@@ -214,6 +214,40 @@ class EchoState(Initializer):
         # normalizing and setting spectral radius (correct, slow):
         rho_weights = max(abs(np.linalg.eig(weights)[0]))
         return weights * (self.spectral_radius / rho_weights)
+
+
+class LstmOptBias(Initializer):
+    """
+    Used to initialize the biases of an LstmOpt layer.
+    This is useful because in an LstmOpt layer all the biases are concatenated.
+
+    The parameters (input_block_bias, input_gate_bias, forget_gate_bias, and
+    output_gate_bias) can be scalars or Initializers themselves.
+    """
+    def __init__(self, input_block_bias=0.0, input_gate_bias=0.0,
+                 forget_gate_bias=1.0, output_gate_bias=0.0):
+        super(LstmOptBias, self).__init__()
+        self.z_bias = input_block_bias
+        self.i_bias = input_gate_bias
+        self.f_bias = forget_gate_bias
+        self.o_bias = output_gate_bias
+
+    def __call__(self, shape):
+        if len(shape) != 1 or (shape[0] % 4 != 0):
+            raise InitializationError("LstmOpt bias needs to be 1D and its "
+                                      "length must be divisible by 4. "
+                                      "But shape was {}".format(shape))
+        bias = np.zeros(*shape)
+        n = shape[0] // 4
+        bias[:n] = evaluate_initializer(self.z_bias, (n,),
+                                        seed=self.rnd.generate_seed())
+        bias[n:2 * n] = evaluate_initializer(self.i_bias, (n,),
+                                             seed=self.rnd.generate_seed())
+        bias[2 * n:3 * n] = evaluate_initializer(self.f_bias, (n,),
+                                                 seed=self.rnd.generate_seed())
+        bias[3 * n:] = evaluate_initializer(self.o_bias, (n,),
+                                            seed=self.rnd.generate_seed())
+        return bias
 
 
 # ########################### helper methods ##################################
