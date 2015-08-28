@@ -64,7 +64,7 @@ trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "out.output",
                                           name="validation accuracy",
                                           verbose=True))
 trainer.add_hook(bs.hooks.SaveBestNetwork("validation accuracy",
-                                          filename='mnist_lstm_best.hdf5',
+                                          filename='mnist_pi_best.hdf5',
                                           name="best weights",
                                           criterion="max"))
 

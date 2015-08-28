@@ -346,7 +346,10 @@ class MonitorAccuracy(Hook):
     def start(self, net, stepper, verbose, monitor_kwargs):
         super(MonitorAccuracy, self).start(net, stepper, verbose,
                                            monitor_kwargs)
-        assert self.iter_name in monitor_kwargs
+        assert self.iter_name in monitor_kwargs, \
+            "{} is not present in monitor_kwargs for {}. Remember to pass it " \
+            "as kwarg to Trainer.train().".format(self.iter_name,
+                                                  self.__name__)
         assert self.out_layer in net.layers
         self.iter = monitor_kwargs[self.iter_name]
         self.masked = self.mask_name in self.iter.data.keys()
