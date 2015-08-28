@@ -48,12 +48,12 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         output_shape = (num_filters, output_height, output_width)
         return {'default': ShapeTemplate('T', 'B', *output_shape)}
 
-    def forward_pass(self, forward_buffers, training_pass=True):
+    def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        inputs = forward_buffers.inputs.default
-        outputs = forward_buffers.outputs.default
-        argmax = forward_buffers.internals.argmax
+        inputs = buffers.inputs.default
+        outputs = buffers.outputs.default
+        argmax = buffers.internals.argmax
 
         # reshape
         t, b, c, h, w = inputs.shape
@@ -65,15 +65,15 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         _h.pool2d_forward_batch(flat_inputs, self.kernel_size, flat_outputs,
                                 self.padding, self.stride, flat_argmax)
 
-    def backward_pass(self, forward_buffers, backward_buffers):
+    def backward_pass(self, buffers):
 
         # prepare
         _h = self.handler
-        argmax = forward_buffers.internals.argmax
-        inputs = forward_buffers.inputs.default
-        outputs = forward_buffers.outputs.default
-        in_deltas = backward_buffers.inputs.default
-        out_deltas = backward_buffers.outputs.default
+        argmax = buffers.internals.argmax
+        inputs = buffers.inputs.default
+        outputs = buffers.outputs.default
+        in_deltas = buffers.input_deltas.default
+        out_deltas = buffers.output_deltas.default
 
         # reshape
         t, b, c, h, w = inputs.shape
