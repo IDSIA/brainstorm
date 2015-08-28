@@ -18,9 +18,6 @@ cdef inline int int_max(int a, int b) nogil: return a if a >= b else b
 cdef inline int int_min(int a, int b) nogil: return a if a <= b else b
 
 
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
 def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
             tuple window not None,
             DTYPE_t[:, :, :, ::1] outputs not None,
@@ -30,13 +27,13 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int pool_h = window[0]
     cdef int pool_w = window[1]
     cdef int stride_x = strides[1]
-    cdef int stride_y = strides[1]
+    cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
     cdef int n_filters = inputs.shape[1]
     cdef int in_h = inputs.shape[2]
     cdef int in_w = inputs.shape[3]
-    cdef int out_w = outputs.shape[2]
-    cdef int out_h = outputs.shape[3]
+    cdef int out_h = outputs.shape[2]
+    cdef int out_w = outputs.shape[3]
     cdef int i, c, y, x, y_out, x_out
     cdef int y_min, y_max, x_min, x_max
     cdef int in_y, in_x,
@@ -66,6 +63,7 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
                         argmax[i, c, y_out, x_out, 0] = <DTYPE_t>(in_y_max)
                         argmax[i, c, y_out, x_out, 1] = <DTYPE_t>(in_x_max)
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
@@ -79,13 +77,13 @@ def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int pool_h = window[0]
     cdef int pool_w = window[1]
     cdef int stride_x = strides[1]
-    cdef int stride_y = strides[1]
+    cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
     cdef int n_filters = inputs.shape[1]
     cdef int in_h = inputs.shape[2]
     cdef int in_w = inputs.shape[3]
-    cdef int out_w = outputs.shape[2]
-    cdef int out_h = outputs.shape[3]
+    cdef int out_h = outputs.shape[2]
+    cdef int out_w = outputs.shape[3]
     cdef int i, c, y, x, in_y, in_x
     with nogil:
         for i in range(n_inputs):
