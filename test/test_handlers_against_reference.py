@@ -15,25 +15,35 @@ some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
 
 def operation_check(ref_op, op, ref_args, args, ignored_args=[]):
-    print("--" * 80)
+    print("-" * 40)
     ref_op(*ref_args)
     op(*args)
-    check = True
+    check_list = []
     for i, (ref_arg, arg) in enumerate(zip(ref_args, args)):
         if i in ignored_args:
+            print(i, "was ignored")
             continue
+        print("Checking argument number", i)
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
             check = np.allclose(ref_arg, arg_ref)
+            check_list.append(check)
             if not check:
-                print("\nReference (expected) array:\n", ref_arg)
-                print("\nObtained array:\n", arg_ref)
+                print("\nReference (expected) array {}:\n{}".format(
+                    ref_arg.shape,ref_arg))
+                print("\nObtained array {}:\n{}".format(arg_ref.shape,
+                                                        arg_ref))
         else:
             check = (ref_arg == arg)
+            check_list.append(check)
             if not check:
                 print("\nReference (expected) array:\n", ref_arg)
                 print("\nObtained array:\n", arg)
-    return check
+        print("Check was ", check)
+    if False in check_list:
+        return False
+    else:
+        return True
 
 
 def get_args_from_ref_args(ref_args):
@@ -354,8 +364,8 @@ def test_rel_deriv():
 
 
 def test_conv2d_forward():
-    img_shapes = [(1, 1, 3, 3), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 3, 4)]
-    w_shapes = [(1, 1, 1), (3, 3, 3), (6, 4, 5), (2, 5, 3)]
+    img_shapes = [(1, 1, 3, 3), (3, 1, 32, 32), (2, 3, 6, 4), (1, 2, 3, 4)]
+    w_shapes = [(1, 1, 1), (3, 3, 3), (6, 2, 2), (2, 1, 3)]
 
     list_x = get_random_arrays(img_shapes)
     stride = (1, 1)
@@ -370,6 +380,7 @@ def test_conv2d_forward():
             ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
             out = np.zeros((x.shape[0], w.shape[0])+ (oh, ow), dtype=ref_dtype)
             ref_args = (x, w, b, out, padding, stride)
+            print(x.shape, w.shape)
             assert operation_check(ref.conv2d_forward_batch,
                                    handler.conv2d_forward_batch,
                                    ref_args, get_args_from_ref_args(ref_args))
