@@ -183,7 +183,8 @@ class PyCudaHandler(Handler):
         index_m_by_v_kernel(out, v, m, m.shape[0], m.shape[1])
 
 
-    def conv2d_forward_batch(self, inputs, weights, bias, outputs, pad, stride):
+    def conv2d_forward_batch(self, inputs, weights, bias, outputs,
+                             padding, stride):
         upscalex, upscaley = 1, 1  # currently not exposed to API
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
@@ -191,14 +192,15 @@ class PyCudaHandler(Handler):
                                          self.cudnn_data_type, *inputs.shape)
 
         w_desc = cudnn.cudnnCreateFilterDescriptor()
-        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type, *weights.shape)
+        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
+                                         *weights.shape)
 
         b_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
             self.cudnn_data_type, 1, bias.size, 1, 1)
 
         conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
-        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, pad, pad,
+        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
             stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
 
         # TODO: remove this sanity check once implementation works
@@ -236,8 +238,9 @@ class PyCudaHandler(Handler):
         #cudnn.cudnnDestroy(cudnn_context)
 
 
-    def conv2d_backward_batch(self, inputs, weights, pad, stride, in_deltas,
-                              out_deltas, weight_deltas, bias_deltas):
+    def conv2d_backward_batch(self, inputs, weights, padding, stride,
+                              in_deltas, out_deltas, weight_deltas,
+                              bias_deltas):
         upscalex, upscaley = 1, 1  # currently not exposed to API
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
@@ -259,7 +262,7 @@ class PyCudaHandler(Handler):
         cudnn.cudnnSetTensor4dDescriptor(db_desc, self.cudnn_tensor_format,
             self.cudnn_data_type, 1, bias_deltas.size, 1, 1)
         conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
-        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, pad, pad,
+        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
             stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
 
         alpha, beta = 1.0, 1.0
@@ -271,9 +274,11 @@ class PyCudaHandler(Handler):
         db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
 
         cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
-            x_desc, x_data, id_desc, id_data, conv_desc, beta, dw_desc, dw_data)
+            x_desc, x_data, id_desc, id_data, conv_desc, beta,
+            dw_desc, dw_data)
         cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
-            w_desc, w_data, od_desc, od_data, conv_desc, beta, id_desc, id_data)
+            w_desc, w_data, od_desc, od_data, conv_desc, beta,
+            id_desc, id_data)
         cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
             od_desc, od_data, beta, db_desc, db_data)
 
@@ -286,10 +291,11 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
 
 
-    def pool2d_forward_batch(self, inputs, window, outputs, pad, stride, argmax):
+    def pool2d_forward_batch(self, inputs, window, outputs, padding,
+                             stride, argmax):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
         cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
-            window[0], window[1], pad, pad, stride[0], stride[1])
+            window[0], window[1], padding, padding, stride[0], stride[1])
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
@@ -313,11 +319,11 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyPoolingDescriptor(pool_desc)
 
 
-    def pool2d_backward_batch(self, inputs, window, outputs, pad, stride,
+    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
                              argmax, in_deltas, out_deltas):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
         cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
-            window[0], window[1], pad, pad, stride[0], stride[1])
+            window[0], window[1], padding, padding, stride[0], stride[1])
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
@@ -338,7 +344,8 @@ class PyCudaHandler(Handler):
         od_data = ctypes.c_void_p(int(out_deltas.gpudata))
         alpha, beta = 1.0, 1.0
         cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
-            x_desc, x_data, id_desc, id_data, y_desc, y_data, beta, od_desc, od_data)
+            x_desc, x_data, id_desc, id_data, y_desc, y_data, beta,
+            od_desc, od_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyTensorDescriptor(y_desc)

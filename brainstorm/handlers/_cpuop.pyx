@@ -19,13 +19,13 @@ cdef inline int int_min(int a, int b) nogil: return a if a <= b else b
 
 
 def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
-            tuple window not None,
+            tuple kernel not None,
             DTYPE_t[:, :, :, ::1] outputs not None,
-            int pad,
+            int padding,
             tuple strides not None,
             DTYPE_t[:, :, :, :, ::1] argmax not None):
-    cdef int pool_h = window[0]
-    cdef int pool_w = window[1]
+    cdef int pool_h = kernel[0]
+    cdef int pool_w = kernel[1]
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
@@ -44,11 +44,11 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
         for i in range(n_inputs):
             for c in range(n_filters):
                 for y_out in range(out_h):
-                    y = y_out*stride_y-pad
+                    y = y_out*stride_y-padding
                     y_min = int_max(y, 0)
                     y_max = int_min(y+pool_h, in_h)
                     for x_out in range(out_w):
-                        x = x_out*stride_x-pad
+                        x = x_out*stride_x-padding
                         x_min = int_max(x, 0)
                         x_max = int_min(x+pool_w, in_w)
                         value = -1e38
@@ -67,15 +67,15 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
-                     tuple window not None,
+                     tuple kernel not None,
                      DTYPE_t[:, :, :, ::1] outputs not None,
-                     const int pad,
+                     const int padding,
                      tuple strides not None,
                      DTYPE_t[:, :, :, :, ::1] argmax not None,
                      DTYPE_t[:, :, :, ::1] in_deltas not None,
                      DTYPE_t[:, :, :, ::1] out_deltas not None):
-    cdef int pool_h = window[0]
-    cdef int pool_w = window[1]
+    cdef int pool_h = kernel[0]
+    cdef int pool_w = kernel[1]
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]

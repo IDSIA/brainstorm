@@ -9,7 +9,7 @@ np.random.seed(1234)
 
 NO_CON = set()
 
-def _conv2d_forward_batch(inputs, weights, bias, outputs, pad, stride):
+def _conv2d_forward_batch(inputs, weights, bias, outputs, padding, stride):
     """
     Loop-based implementation of 2D convolution to check against.
     """
@@ -18,13 +18,13 @@ def _conv2d_forward_batch(inputs, weights, bias, outputs, pad, stride):
     num_images, num_input_maps, input_height, input_width = inputs.shape
     kernel_size = (weights.shape[2], weights.shape[3])
 
-    if pad > 0:
+    if padding > 0:
         im = np.zeros((inputs.shape[0], inputs.shape[1],
-                       inputs.shape[2] + 2 * pad,
-                       inputs.shape[3] + 2 * pad))
-        im[:, :, pad: -pad, pad: -pad] = inputs
-        input_height += 2 * pad
-        input_width += 2 * pad
+                       inputs.shape[2] + 2 * padding,
+                       inputs.shape[3] + 2 * padding))
+        im[:, :, padding: -padding, padding: -padding] = inputs
+        input_height += 2 * padding
+        input_width += 2 * padding
     else:
         im = inputs
     for i in range(num_images):
@@ -61,12 +61,12 @@ def test_conv2d_forward_batch_numpy():
                 for num_filters in (1, 3):
                     for kernel_shape in ((1, 1), (2, 2), (3, 2)):
                         for stride in ((1, 1), (2, 2), (1, 2)):
-                            for pad in (0, 1):
+                            for padding in (0, 1):
                                 print("Checking Inputs:", (num_images,
                                       num_input_maps) + input_shape)
                                 print("Filters:", (num_filters, num_input_maps)
                                       + kernel_shape)
-                                print("Stride: ", stride, "Pad: ", pad)
+                                print("Stride: ", stride, "padding: ", padding)
                                 inputs = np.random.rand(num_images,
                                                         num_input_maps,
                                                         *input_shape)
@@ -76,10 +76,10 @@ def test_conv2d_forward_batch_numpy():
                                 bias = np.zeros(num_filters)
 
                                 output_height = \
-                                    (input_shape[0] + 2 * pad -
+                                    (input_shape[0] + 2 * padding -
                                      kernel_shape[0]) / stride[0] + 1
                                 output_width = \
-                                    (input_shape[1] + 2 * pad -
+                                    (input_shape[1] + 2 * padding -
                                      kernel_shape[1]) / stride[1] + 1
 
                                 outputs = np.zeros((num_images, num_filters) +
@@ -91,10 +91,12 @@ def test_conv2d_forward_batch_numpy():
                                                            output_width))
 
                                 _h.conv2d_forward_batch(inputs, weights, bias,
-                                                        outputs, pad, stride)
+                                                        outputs, padding,
+                                                        stride)
 
                                 _conv2d_forward_batch(inputs, weights, bias,
-                                                      true_outputs, pad, stride)
+                                                      true_outputs, padding,
+                                                      stride)
 
                                 assert np.allclose(outputs, true_outputs)
 
@@ -108,12 +110,12 @@ def test_conv2d_forward_batch_pycuda():
                 for num_filters in (1, 3):
                     for kernel_shape in ((1, 1), (2, 2), (3, 2)):
                         for stride in ((1, 1), (2, 2), (1, 2)):
-                            for pad in (0, 1):
+                            for padding in (0, 1):
                                 print("Checking Inputs:", (num_images,
                                       num_input_maps) + input_shape)
                                 print("Filters:", (num_filters, num_input_maps)
                                       + kernel_shape)
-                                print("Stride: ", stride, "Pad: ", pad)
+                                print("Stride: ", stride, "padding: ", padding)
                                 inputs = np.random.rand(num_images,
                                                         num_input_maps,
                                                         *input_shape)
@@ -123,10 +125,10 @@ def test_conv2d_forward_batch_pycuda():
                                 bias =  np.random.rand(num_filters)
 
                                 output_height = \
-                                    (input_shape[0] + 2 * pad -
+                                    (input_shape[0] + 2 * padding -
                                      kernel_shape[0]) / stride[0] + 1
                                 output_width = \
-                                    (input_shape[1] + 2 * pad -
+                                    (input_shape[1] + 2 * padding -
                                      kernel_shape[1]) / stride[1] + 1
 
                                 true_outputs = np.zeros((num_images,
@@ -135,7 +137,8 @@ def test_conv2d_forward_batch_pycuda():
                                                            output_width))
 
                                 _conv2d_forward_batch(inputs, weights, bias,
-                                                      true_outputs, pad, stride)
+                                                      true_outputs, padding,
+                                                      stride)
 
                                 outputs = np.zeros((num_images, num_filters) +
                                                    (output_height,
@@ -145,7 +148,7 @@ def test_conv2d_forward_batch_pycuda():
                                 b_dev = _h.create_from_numpy(bias)
                                 o_dev = _h.create_from_numpy(outputs)
                                 _h.conv2d_forward_batch(i_dev, w_dev, b_dev,
-                                                        o_dev, pad, stride)
+                                                        o_dev, padding, stride)
                                 outputs = _h.get_numpy_copy(o_dev)
 
                                 assert np.allclose(outputs, true_outputs)
