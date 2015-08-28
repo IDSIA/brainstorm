@@ -54,6 +54,15 @@ def fully_connected_layer(spec):
     return layer, spec
 
 
+def fully_connected_layer_nd(spec):
+    in_shapes = {'default': ShapeTemplate('T', 'B', 2, 3, 4)}
+    layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
+                                    NO_CON, NO_CON,
+                                    size=3,
+                                    activation_function=spec['act_func'])
+    return layer, spec
+
+
 def squared_difference_layer(spec):
     in_shapes = {'inputs_1': ShapeTemplate('T', 'B', 3, 2),
                  'inputs_2': ShapeTemplate('T', 'B', 3, 2)
@@ -172,6 +181,7 @@ layers_to_test = [
     noop_layer,
     loss_layer,
     fully_connected_layer,
+    fully_connected_layer_nd,
     binomial_crossentropy_layer,
     classification_layer,
     rnn_layer,
