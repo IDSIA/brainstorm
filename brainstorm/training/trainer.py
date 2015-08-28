@@ -55,19 +55,19 @@ class Trainer(Describable):
         while True:
             self.current_epoch += 1
             sys.stdout.flush()
-            train_errors = []
+            train_loss = []
             if self.verbose:
                 print('\n\n', 15 * '- ', "Epoch", self.current_epoch,
                       15 * ' -')
             iterator = training_data_getter(verbose=self.verbose,
                                             handler=net.handler)
             for i in run(net, iterator):
-                train_errors.append(self.stepper.run())
+                train_loss.append(self.stepper.run())
                 net.apply_weight_modifiers()
                 if self._emit_hooks(net, 'update', i + 1):
                     break
 
-            self._add_log('training_errors', np.mean(train_errors))
+            self._add_log('training_loss', np.mean(train_loss))
             if self._emit_hooks(net, 'epoch'):
                 break
 
@@ -83,7 +83,7 @@ class Trainer(Describable):
             mon.__name__ = name
 
     def _start_hooks(self, net, hook_kwargs):
-        self.logs = {'training_errors': [float('NaN')]}
+        self.logs = {'training_loss': [float('NaN')]}
         for name, hook in self.hooks.items():
             self._start_hook(net, name, hook, hook_kwargs)
 
