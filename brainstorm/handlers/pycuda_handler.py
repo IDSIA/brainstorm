@@ -23,14 +23,17 @@ except ImportError:
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
 
-    __undescribed__ = {'context', 'dtype', 'EMPTY'}
+    __undescribed__ = {'context', 'dtype', 'EMPTY',
+                       'cudnn_context', 'cudnn_tensor_format',
+                       'cudnn_data_type', 'cudnn_convmode', 'cudnn_convpref',
+                       'cudnn_addmode', 'cudnn_pooling_mode'}
 
     def __init__(self, init_cudnn=True):
         self.context = cumisc._global_cublas_handle
         self.dtype = np.float32
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
-
-        if init_cudnn:
+        self.init_cudnn = init_cudnn
+        if self.init_cudnn:
             self.cudnn_context = cudnn.cudnnCreate()
             self.cudnn_tensor_format = cudnn.cudnnTensorFormat[
                 'CUDNN_TENSOR_NCHW']
