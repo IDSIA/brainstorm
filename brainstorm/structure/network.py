@@ -8,8 +8,7 @@ import json
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.structure.buffers import BufferManager, \
-    create_buffer_views_from_layout
+from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import (resolve_references,
                                                   prune_view_references,
@@ -77,7 +76,8 @@ class Network(Seedable):
         with h5py.File(filename, 'r') as f:
             description = json.loads(f['description'].value.decode())
             net = create_from_description(description)
-            net.handler.set_from_numpy(net.buffer.parameters, f['parameters'].value)
+            net.handler.set_from_numpy(net.buffer.parameters,
+                                       f['parameters'].value)
         return net
 
     def __init__(self, layers, buffer_manager, architecture, seed=None,
@@ -197,24 +197,24 @@ class Network(Seedable):
                                          seed=init_rnd.generate_seed()))
 
     def set_weight_modifiers(self, default_or_mod_dict=None, **kwargs):
-        """Install WeightModifiers in the network that can change the weights.
+        """Install ValueModifiers in the network that can change the weights.
 
         They can be run manually using net.apply_weight_modifiers(), but they
         will also be called by the trainer after each weight update.
 
-        WeightModifiers can be set for specific weights in the same way as
+        ValueModifiers can be set for specific weights in the same way as
         initializers can, but there is no 'fallback'.
         (so look there for details)
 
-        A modifier can be a WeightModifier object or a list of them.
+        A modifier can be a ValueModifier object or a list of them.
         So for example:
         >> net.set_weight_modifiers(
-            default=bs.ClipWeights(-1, 1)
+            default=bs.ClipValues(-1, 1)
             FullyConnectedLayer={'W': [bs.RescaleIncomingWeights(),
-                                       bs.MaskWeights(my_mask)]}
+                                       bs.MaskValues(my_mask)]}
             )
 
-        Note: The order in which WeightModifiers appear in the list matters,
+        Note: The order in which ValueModifiers appear in the list matters,
         because it is the same order in which they will be executed.
         """
         weight_mod_refs = _update_references_with_dict(default_or_mod_dict,
@@ -233,7 +233,7 @@ class Network(Seedable):
 
     def set_gradient_modifiers(self, default_or_mod_dict=None, **kwargs):
         """
-        Install WeightModifiers in the network that can change the gradient.
+        Install ValueModifiers in the network that can change the gradient.
 
         They can be run manually using net.apply_gradient_modifiers(), but they
         will also be called by the network after each backward pass.
@@ -242,15 +242,15 @@ class Network(Seedable):
         initializers can, but there is no 'fallback'.
         (so look there for details)
 
-        A modifier can be a WeightModifier object or a list of them.
+        A modifier can be a ValueModifier object or a list of them.
         So for example:
         >> net.set_gradient_modifiers(
-            default=bs.ClipWeights(-1, 1)
-            FullyConnectedLayer={'W': [bs.ClipWeights(),
-                                       bs.MaskWeights(my_mask)]}
+            default=bs.ClipValues(-1, 1)
+            FullyConnectedLayer={'W': [bs.ClipValues(),
+                                       bs.MaskValues(my_mask)]}
             )
 
-        Note: The order in which WeightModifiers appear in the list matters,
+        Note: The order in which ValueModifiers appear in the list matters,
         because it is the same order in which they will be executed.
         """
         gradient_mod_refs = _update_references_with_dict(default_or_mod_dict,
@@ -277,7 +277,7 @@ class Network(Seedable):
     # -------------------------- Running Methods ------------------------------
 
     def provide_external_data(self, data):
-        time_size, batch_size = data[next(iter(data))].shape[:2]
+        time_size, batch_size = data[next(iter(data))].shape[: 2]
         self.buffer = self._buffer_manager.resize(time_size, batch_size)
         for name, val in data.items():
             self.handler.copy_to(self.buffer.Input.outputs[name], val)
@@ -331,7 +331,6 @@ class Network(Seedable):
             f.create_dataset(
                 'parameters', compression='gzip',
                 data=self.handler.get_numpy_copy(self.buffer.parameters))
-
 
 
 # ########################### Helper Methods ##################################
