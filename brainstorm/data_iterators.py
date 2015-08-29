@@ -18,9 +18,9 @@ def progress_bar(maximum, prefix='[',
     while i < len(bar):
         progress = yield out
         j = math.trunc(progress / maximum * len(bar))
-        out = bar[i:j]
+        out = bar[i: j]
         i = j
-    elapsed_str = str(datetime.utcnow() - start_time)[:-5]
+    elapsed_str = str(datetime.utcnow() - start_time)[: -5]
     yield out + suffix.format(elapsed_str)
 
 
@@ -55,7 +55,7 @@ class Undivided(DataIterator):
             device_data = {}
             i = 0
             for key, value in self.data.items():
-                device_data[key] = arr[i:i + value.size].reshape(value.shape)
+                device_data[key] = arr[i: i + value.size].reshape(value.shape)
                 handler.set_from_numpy(device_data[key], value)
                 i += value.size
 
@@ -96,12 +96,13 @@ class Online(DataIterator, Seedable):
                 device_data = {}
                 j = 0
                 for key, value in self.data.items():
-                    val_s = value[:, idx:idx + 1]
-                    device_data[key] = arr[j:j+val_s.size].reshape(val_s.shape)
+                    val_s = value[:, idx: idx + 1]
+                    device_data[key] = arr[j: j + val_s.size].reshape(
+                        val_s.shape)
                     handler.set_from_numpy(device_data[key], val_s)
                     j += val_s.size
             else:
-                device_data = {k: v[:, idx:idx + 1]
+                device_data = {k: v[:, idx: idx + 1]
                                for k, v in self.data.items()}
             yield device_data
             print(p_bar.send(i + 1), end='')
@@ -151,7 +152,8 @@ class Minibatches(DataIterator, Seedable):
                 j = 0
                 for key, value in self.data.items():
                     val_s = value[chunk]
-                    device_data[key] = arr[j:j+val_s.size].reshape(val_s.shape)
+                    device_data[key] = arr[j: j+val_s.size].reshape(
+                        val_s.shape)
                     handler.set_from_numpy(device_data[key], val_s)
                     j += val_s.size
             else:
