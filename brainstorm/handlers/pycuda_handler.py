@@ -85,7 +85,7 @@ class PyCudaHandler(Handler):
 
     @staticmethod
     def mult_tt(a, b, out):
-        mult_kernel(a, b, out)
+        mult_tt_kernel(a, b, out)
 
     @staticmethod
     def mult_add_tt(a, b, out):
@@ -94,6 +94,10 @@ class PyCudaHandler(Handler):
     @staticmethod
     def mult_st(a, b, out):
         mult_st_kernel(a, b, out)
+
+    @staticmethod
+    def mult_add_st(a, b, out):
+        mult_add_st_kernel(a, b, out)
 
     @staticmethod
     def add_tt(a, b, out):
@@ -194,22 +198,28 @@ class PyCudaHandler(Handler):
         return out
 
 
-mult_kernel = ElementwiseKernel(
+mult_tt_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] * y[i]",
-    "elem_mult_kernel"
+    "mult_tt_kernel"
 )
 
 mult_add_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] += x[i] * y[i]",
-    "elem_mult_kernel"
+    "mult_add_kernel"
 )
 
 mult_st_kernel = ElementwiseKernel(
     "float x, float* y, float *out",
     "out[i] = x * y[i]",
-    "elem_mult_kernel"
+    "mult_st_kernel"
+)
+
+mult_add_st_kernel = ElementwiseKernel(
+    "float x, float* y, float *out",
+    "out[i] += x * y[i]",
+    "mult_add_st_kernel"
 )
 
 add_mm_kernel = ElementwiseKernel(

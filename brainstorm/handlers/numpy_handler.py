@@ -96,6 +96,10 @@ class NumpyHandler(Handler):
         np.multiply(a, b, out)
 
     @staticmethod
+    def mult_add_st(a, b, out):
+        out[:] += a * b
+
+    @staticmethod
     def add_tt(a, b, out):
         assert a.shape == b.shape == out.shape
         out[:] = a + b
