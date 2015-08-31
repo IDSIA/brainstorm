@@ -48,4 +48,4 @@ def test_learn_xor_function():
     print('Rounded output:', np.round(out.flatten()))
     print('Targets       :', targets.flatten())
     assert np.all(np.round(out) == targets)
-    assert min(tr.logs['training_errors'][1:]) < 0.5
+    assert min(tr.logs['training_loss'][1:]) < 0.5
