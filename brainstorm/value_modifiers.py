@@ -19,7 +19,7 @@ class ValueModifier(Seedable, Describable):
         raise NotImplementedError()
 
     def __repr__(self):
-        return "<{}.{}.{}}>".format(self.layer_name, self.view_name,
+        return "<{}.{}.{}>".format(self.layer_name, self.view_name,
                                     self.__class__.__name__)
 
 

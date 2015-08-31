@@ -257,7 +257,7 @@ def test_shape_template_matches3(shape, expected):
     [('F', 'F', 'F'), False],
     [(), False],
 ])
-def test_shape_template_matches3(shape, expected):
+def test_shape_template_matches4(shape, expected):
     st = ShapeTemplate(1, 2, 7)
     assert st.matches(shape) == expected
     try:
