@@ -7,21 +7,29 @@ import pycuda.driver as drv
 import pycuda.autoinit
 from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
+from pycuda.curandom import XORWOWRandomNumberGenerator
 import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
+from brainstorm.randomness import global_rnd
 culinalg.init()
 
 
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
 
-    __undescribed__ = {'context', 'dtype', 'EMPTY'}
+    __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd'}
 
-    def __init__(self):
-        self.context = cumisc._global_cublas_handle
+    def __init__(self, seed=None):
         self.dtype = np.float32
+        self.context = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
+        if seed is None:
+                seed = global_rnd.generate_seed()
+
+        def get_seeds(n):
+            return gpuarray.to_gpu(np.ones(n, np.int32) * seed)
+        self.rnd = XORWOWRandomNumberGenerator(seed_getter=get_seeds)
 
     array_type = pycuda.gpuarray.GPUArray
     size = staticmethod(lambda x: x.size)
@@ -65,7 +73,11 @@ class PyCudaHandler(Handler):
         self.fill(a, 1.0)
         return a
 
-    # ---------------- Mathematical Operations ---------------- #
+    # ---------------- General mathematical operations ---------------- #
+
+    def generate_probability_mask(self, mask, probability):
+        self.rnd.fill_uniform(mask)
+        create_probabilistic_mask_kernel(mask, probability, mask)
 
     def sum_t(self, a, axis, out):
         if len(a.shape) < 3 and (axis == 0 or axis == 1):
@@ -197,6 +209,14 @@ class PyCudaHandler(Handler):
                       np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
         return out
 
+    # ---------------- Layer specific operations ---------------- #
+
+# ---------------- kernels ---------------- #
+create_probabilistic_mask_kernel = ElementwiseKernel(
+    "float* inp, float prob, float* mask",
+    "if (inp[i] < prob) mask[i] = 1; else mask[i] = 0;",
+    "create_probabilistic_mask_kernel"
+)
 
 mult_tt_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
@@ -266,13 +286,13 @@ tanh_deriv_kernel = ElementwiseKernel(
 
 rel_kernel = ElementwiseKernel(
     "float* x, float* y",
-    "if (x[i]>0) y[i] = x[i]; else y[i]=0.0;",
+    "if (x[i] > 0) y[i] = x[i]; else y[i] = 0.0;",
     "rel_kernel"
 )
 
 rel_deriv_kernel = ElementwiseKernel(
     "float* x, float* y, float* dy, float* dx",
-    "if (y[i]>0) dx[i] = dy[i]; else dx[i]=0.0;",
+    "if (y[i] > 0) dx[i] = dy[i]; else dx[i] = 0.0;",
     "rel_deriv_kernel"
 )
 
@@ -296,13 +316,13 @@ div_kernel = ElementwiseKernel(
 
 binarize_v_kernel = ElementwiseKernel(
     "float* out, float* v, int nrows, int ncols",
-    "out[i] = v[i/ncols] == (i % ncols) ? 1.0f : 0.0f",
+    "out[i] = v[i / ncols] == (i % ncols) ? 1.0f : 0.0f",
     "binarize_v_kernel"
 )
 
 index_m_by_v_kernel = ElementwiseKernel(
     "float* out, float* v, float* m, int nrows, int ncols",
-    "out[i] = m[i*ncols + int(v[i])]",
+    "out[i] = m[i * ncols + int(v[i])]",
     "index_m_by_v_kernel"
 )
 

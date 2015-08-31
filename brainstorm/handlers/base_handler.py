@@ -79,6 +79,20 @@ class Handler(Describable):
 
     # ---------------- Mathematical Operations ---------------- #
 
+    def generate_probability_mask(self, mask, probability):
+        """ Fill an array with zeros and ones.
+
+        Fill an array with zeros and ones such that the probability of an
+        entry being one is equal to *probability*.
+
+        :param mask: array to will be filled
+        :param probability: probability of an entry of *mask* being one
+        :type mask: numpy.ndarray
+        :type probability: float
+
+        :rtype: None
+        """
+
     @abc.abstractmethod
     def add_tt(self, a, b, out):
         """ """

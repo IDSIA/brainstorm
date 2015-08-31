@@ -3,16 +3,18 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers.base_handler import Handler
+from brainstorm.randomness import RandomState, global_rnd
 
 
 # noinspection PyMethodOverriding
 class NumpyHandler(Handler):
-    __undescribed__ = {'context', 'EMPTY'}
+    __undescribed__ = {'context', 'EMPTY', 'rnd'}
 
-    def __init__(self, dtype):
+    def __init__(self, dtype, seed=None):
         self.dtype = dtype
         self.context = 'numpy'
         self.EMPTY = np.zeros(0)
+        self.rnd = global_rnd.create_random_state(seed)
 
     array_type = np.ndarray
     size = staticmethod(lambda x: x.size)
@@ -58,7 +60,10 @@ class NumpyHandler(Handler):
     def ones(self, shape):
         return np.ones(shape=shape, dtype=self.dtype)
 
-    # ---------------- Mathematical Operations ---------------- #
+    # ---------------- General mathematical operations ---------------- #
+
+    def generate_probability_mask(self, mask, probability):
+        mask[:] = self.rnd.uniform(size=mask.shape) < probability
 
     @staticmethod
     def sum_t(a, axis, out):
