@@ -52,7 +52,6 @@ class SaveNetwork(Hook):
         self.filename = filename
 
     def __call__(self, epoch, net, stepper, logs):
-        params = net.handler.get_numpy_copy(net.buffer.parameters)
         net.save_as_hdf5(self.filename)
 
     def load_network(self):
@@ -85,16 +84,19 @@ class SaveBestNetwork(Hook):
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
                 if self.run_verbosity:
-                    print(">> {} improved. Saving network to {} ...".format(
-                          ".".join(self.error_log_name), self.filename))
+                    print("{} >> {} improved. Saving network to {} ...".format(
+                          self.__name__, ".".join(self.error_log_name),
+                          self.filename))
                 net.save_as_hdf5(self.filename)
             else:
                 if self.run_verbosity:
-                    print(">> {} improved. Caching parameters ...".format(
-                          ".".join(self.error_log_name)))
+                    print("{} >> {} improved. Caching parameters ...".format(
+                          self.__name__, ".".join(self.error_log_name)))
                 self.parameters = params
         elif self.run_verbosity:
-            print(">> Last saved parameters after epoch {}".format(best_idx))
+            print("{} >> Last saved parameters after epoch {} when {} was {}"
+                  "".format(self.__name__, best_idx,
+                            ".".join(self.error_log_name), e[best_idx]))
 
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
@@ -196,7 +198,8 @@ class MonitorLayerDeltas(Hook):
 class StopAfterEpoch(Hook):
     def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
                  verbose=None):
-        super(StopAfterEpoch, self).__init__(name, timescale, interval, verbose)
+        super(StopAfterEpoch, self).__init__(name, timescale,
+                                             interval, verbose)
         self.max_epochs = max_epochs
 
     def __call__(self, epoch, net, stepper, logs):
@@ -239,13 +242,12 @@ class StopOnNan(Hook):
         for log_name in self.logs_to_check:
             log = get_by_path(logs, log_name)
             if not np.all(np.isfinite(log)):
-                raise StopIteration("NaN or infinite value detected in {}"
-                                    .format(log_name))
+                raise StopIteration("{} >> NaN or inf detected in {}"
+                                    .format(self.__name__, log_name))
         if self.check_parameters:
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if not np.all(np.isfinite(params)):
-                raise StopIteration("Nan or infinite value detected in the "
-                                    "parameters!")
+                raise StopIteration("{} >> NaN or inf detected in parameters!")
 
 
 class InfoUpdater(Hook):
@@ -346,7 +348,10 @@ class MonitorAccuracy(Hook):
     def start(self, net, stepper, verbose, monitor_kwargs):
         super(MonitorAccuracy, self).start(net, stepper, verbose,
                                            monitor_kwargs)
-        assert self.iter_name in monitor_kwargs
+        assert self.iter_name in monitor_kwargs, \
+            "{} >> {} is not present in monitor_kwargs. Remember to pass it " \
+            "as kwarg to Trainer.train().".format(self.__name__,
+                                                  self.iter_name)
         assert self.out_layer in net.layers
         self.iter = monitor_kwargs[self.iter_name]
         self.masked = self.mask_name in self.iter.data.keys()

@@ -8,6 +8,7 @@ from brainstorm.layers import InputLayerImpl
 from brainstorm.layers.base_layer import get_layer_class_from_typename
 from brainstorm.layers.classification_layer import ClassificationLayerImpl
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
+from brainstorm.layers.highway_layer import HighwayLayerImpl
 from brainstorm.layers.squared_difference_layer import \
     SquaredDifferenceLayerImpl
 from brainstorm.layers.binomial_cross_entropy_layer import \
@@ -50,6 +51,14 @@ def fully_connected_layer(spec):
                                     NO_CON, NO_CON,
                                     size=4,
                                     activation_function=spec['act_func'])
+    return layer, spec
+
+
+def highway_layer(spec):
+    in_shapes = {'H': ShapeTemplate('T', 'B', 2, 3),
+                 'T': ShapeTemplate('T', 'B', 2, 3),
+                 'x': ShapeTemplate('T', 'B', 2, 3)}
+    layer = HighwayLayerImpl('HighwayLayer', in_shapes, NO_CON, NO_CON)
     return layer, spec
 
 
@@ -162,6 +171,7 @@ layers_to_test = [
     noop_layer,
     loss_layer,
     fully_connected_layer,
+    highway_layer,
     binomial_crossentropy_layer,
     classification_layer,
     rnn_layer,

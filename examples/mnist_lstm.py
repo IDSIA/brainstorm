@@ -59,7 +59,7 @@ network = bs.Network.from_layer(out)
 network.set_memory_handler(PyCudaHandler())
 network.initialize({"default": bs.Gaussian(0.01),
                     "lstm": {'bf': 4, 'bi': 4, 'bo': 4}}, seed=42)
-network.set_gradient_modifiers({"lstm": bs.ClipWeights(low=-1., high=1)})
+network.set_gradient_modifiers({"lstm": bs.ClipValues(low=-1., high=1)})
 
 # ---------------------------- Set up Iterators ----------------------------- #
 

@@ -6,12 +6,12 @@ from brainstorm.randomness import Seedable
 from brainstorm.describable import Describable
 
 
-class WeightModifier(Seedable, Describable):
+class ValueModifier(Seedable, Describable):
 
     __undescribed__ = {'layer_name', 'view_name'}
 
     def __init__(self):
-        super(WeightModifier, self).__init__()
+        super(ValueModifier, self).__init__()
         self.layer_name = ''
         self.view_name = ''
 
@@ -23,7 +23,7 @@ class WeightModifier(Seedable, Describable):
                                     self.__class__.__name__)
 
 
-class ConstrainL2Norm(WeightModifier):
+class ConstrainL2Norm(ValueModifier):
 
     """
     Consrrains the L2 norm of the incoming weights to every neuron/unit to be
@@ -64,7 +64,7 @@ class ConstrainL2Norm(WeightModifier):
             .format(self.layer_name, self.view_name, self.limit)
 
 
-class ClipWeights(WeightModifier):
+class ClipValues(ValueModifier):
 
     """
     Clips (limits) the weights to be between low and high.
@@ -72,14 +72,14 @@ class ClipWeights(WeightModifier):
 
     Should be added to the network via the set_weight_modifiers method like so:
 
-    >> net.set_weight_modifiers(RnnLayer={'HR': ClipWeights()})
+    >> net.set_weight_modifiers(RnnLayer={'HR': ClipValues()})
 
     See Network.set_weight_modifiers for more information on how to control
     which weights to affect.
     """
 
     def __init__(self, low=-1., high=1.):
-        super(ClipWeights, self).__init__()
+        super(ClipValues, self).__init__()
         self.low = low
         self.high = high
 
@@ -87,11 +87,11 @@ class ClipWeights(WeightModifier):
         handler.clip_t(view, self.low, self.high, view)
 
     def __repr__(self):
-        return "<{}.{}.ClipWeights [{:0.4f}; {:0.4f}]>"\
+        return "<{}.{}.ClipValues [{:0.4f}; {:0.4f}]>"\
             .format(self.layer_name, self.view_name, self.low, self.high)
 
 
-class MaskWeights(WeightModifier):
+class MaskValues(ValueModifier):
 
     """
     Multiplies the weights elementwise with the mask.
@@ -100,7 +100,7 @@ class MaskWeights(WeightModifier):
 
     Should be added to the network via the set_weight_modifiers method like so:
 
-    >> net.set_weight_modifiers(RnnLayer={'HR': MaskWeights(M)})
+    >> net.set_weight_modifiers(RnnLayer={'HR': MaskValues(M)})
 
     See Network.set_weight_modifiers for more information on how to control
     which weights to affect.
@@ -109,7 +109,7 @@ class MaskWeights(WeightModifier):
     __undescribed__ = {'device_mask'}
 
     def __init__(self, mask):
-        super(MaskWeights, self).__init__()
+        super(MaskValues, self).__init__()
         assert isinstance(mask, np.ndarray)
         self.mask = mask
         self.device_mask = None
@@ -122,7 +122,7 @@ class MaskWeights(WeightModifier):
         handler.mult_tt(view, self.device_mask, view)
 
 
-class FreezeWeights(WeightModifier):
+class FreezeValues(ValueModifier):
 
     """
     Prevents the weights from changing at all.
@@ -131,7 +131,7 @@ class FreezeWeights(WeightModifier):
     it sees and resets them to that every time.
 
     Should be added to the network via the set_constraints method like so:
-    >> net.set_constraints(RnnLayer={'HR': FreezeWeights()})
+    >> net.set_constraints(RnnLayer={'HR': FreezeValues()})
     See Network.set_constraints for more information on how to control which
     weights to affect.
     """
@@ -139,7 +139,7 @@ class FreezeWeights(WeightModifier):
     __undescribed__ = {'weights', 'device_weights'}
 
     def __init__(self, weights=None):
-        super(FreezeWeights, self).__init__()
+        super(FreezeValues, self).__init__()
         self.weights = weights
         self.device_weights = None
 

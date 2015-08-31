@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-
-import numpy as np
 from brainstorm.describable import Describable
 from brainstorm.training.schedules import get_schedule
 
@@ -96,35 +94,40 @@ class MomentumStep(TrainingStep):
                  scale_learning_rate=True):
         super(MomentumStep, self).__init__()
         self.velocity = None
-        self.momentum = get_schedule(momentum)
-        self.learning_rate = get_schedule(learning_rate)
+        self.learning_rate_schedule = get_schedule(learning_rate)
+        self.momentum_schedule = get_schedule(momentum)
         assert isinstance(scale_learning_rate, bool), \
-            "scale_learning_rate must be boolen"
+            "scale_learning_rate must be True or False."
         self.scale_learning_rate = scale_learning_rate
 
-    def _initialize(self):
-        self.velocity = np.zeros(self.net.get_param_size())
+    def start(self, net):
+        super(MomentumStep, self).start(net)
+        self.velocity = net.handler.zeros(net.buffer.parameters.shape)
 
     def run(self):
-        # TODO: adjust to using handlers and new network interface
-        learning_rate = self.learning_rate()
-        momentum = self.momentum()
-        self.velocity *= momentum
+        learning_rate = self.learning_rate_schedule()
+        momentum = self.momentum_schedule()
+        if self.scale_learning_rate:
+            learning_rate *= (1 - momentum)
+
         self.net.forward_pass(training_pass=True)
         loss = self.net.get_loss_value()
         self.net.backward_pass()
-        if self.scale_learning_rate:
-            dv = (1 - momentum) * learning_rate * self.net.buffer.gradient[:]
-        else:
-            dv = learning_rate * self.net.buffer.gradient[:]
 
-        self.velocity -= dv
-        self.net.buffer.parameters[:] += self.velocity
+        self.net.handler.mult_st(momentum,
+                                 self.velocity,
+                                 out=self.velocity)
+        self.net.handler.mult_add_st(-learning_rate,
+                                     self.net.buffer.gradients,
+                                     out=self.velocity)
+        self.net.handler.add_tt(self.velocity,
+                                self.net.buffer.parameters,
+                                out=self.net.buffer.parameters)
         return loss
 
     def __init_from_description__(self, description):
-        self.learning_rate = get_schedule(self.learning_rate)
-        self.momentum = get_schedule(self.momentum)
+        self.learning_rate_schedule = get_schedule(self.learning_rate_schedule)
+        self.momentum_schedule = get_schedule(self.momentum_schedule)
 
 
 class NesterovStep(MomentumStep):
