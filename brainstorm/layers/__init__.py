@@ -22,6 +22,7 @@ from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
 from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.rnn_layer import RnnLayerImpl
+from brainstorm.layers.dropout_layer import DropoutLayerImpl
 
 
 CONSTRUCTION_LAYERS = {}
@@ -92,13 +93,18 @@ def Mask(name=None):
     return ConstructionWrapper.create('Mask', name=name)
 
 
+def Dropout(drop_prob=0.5, name=None):
+    return ConstructionWrapper.create('Dropout', drop_prob=drop_prob,
+                                      name=name)
+
+
 # ------------------------ Automatic Construction Layers ----------------------
 
 def construction_layer_for(layer_impl):
     layer_name = layer_impl.__name__
-    assert layer_name.endswith('LayerImpl'), \
-        "{} should end with 'LayerImpl'".format(layer_name)
-    layer_name = layer_name[:-9]
+    assert layer_name.endswith('Impl'), \
+        "{} should end with 'Impl'".format(layer_name)
+    layer_name = layer_name[:-4]
     return partial(ConstructionWrapper.create, layer_name)
 
 

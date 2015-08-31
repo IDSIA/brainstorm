@@ -23,7 +23,7 @@ class MaskLayerImpl(LayerBaseImpl):
         flat_mask = flatten_time(_h, buffers.inputs.mask)
         flat_out = flatten_time_and_features(_h, buffers.outputs.default)
 
-        self.handler.mult_mv(flat_inp, flat_mask, out=flat_out)
+        _h.mult_mv(flat_inp, flat_mask, out=flat_out)
 
     def backward_pass(self, buffers):
         _h = self.handler
@@ -35,5 +35,5 @@ class MaskLayerImpl(LayerBaseImpl):
         flat_in_deltas = flatten_time_and_features(
             _h, buffers.input_deltas.default)
 
-        self.handler.mult_mv(flat_out_deltas, flat_mask, tmp)
-        self.handler.add_tt(tmp, flat_in_deltas, flat_in_deltas)
+        _h.mult_mv(flat_out_deltas, flat_mask, tmp)
+        _h.add_tt(tmp, flat_in_deltas, flat_in_deltas)
