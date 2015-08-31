@@ -320,7 +320,7 @@ class Network(Seedable):
                 for gm in gradient_mods:
                     gm.rnd.set_seed(self.rnd.generate_seed())
                     gm(self.handler,
-                       self.buffer[layer_name].parameters[view_name])
+                       self.buffer[layer_name].gradients[view_name])
 
     # -------------------------- Serialization --------------------------------
 
