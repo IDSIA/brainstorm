@@ -64,7 +64,7 @@ test_getter = bs.Minibatches(batch_size=500, verbose=True,
 
 trainer = bs.Trainer(bs.MomentumStep(learning_rate=0.1, momentum=0.9),
                      double_buffering=False)
-trainer.add_hook(bs.hooks.StopAfterEpoch(200))
+trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "out.output",
                                           name="validation accuracy",
                                           verbose=True))

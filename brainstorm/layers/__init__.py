@@ -109,7 +109,7 @@ def construction_layer_for(layer_impl):
 
 
 for Layer in get_inheritors(LayerBaseImpl):
-    layer_name = Layer.__name__[:-9]
+    layer_name = Layer.__name__[:-4]
     if layer_name not in CONSTRUCTION_LAYERS:
         CONSTRUCTION_LAYERS[layer_name] = construction_layer_for(Layer)
 
