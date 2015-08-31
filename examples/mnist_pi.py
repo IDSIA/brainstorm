@@ -8,6 +8,7 @@ import os
 import gzip
 import pickle
 import sys
+bs.global_rnd.set_seed(42)
 if sys.version_info < (3,):
     from urllib import urlretrieve
 else:
@@ -38,18 +39,21 @@ test_inputs, test_targets = \
 inp, out = bs.get_in_out_layers_for_classification(784, 10,
                                                    outlayer_name='out')
 inp >> \
-    bs.layers.FullyConnected(1000, name='hid1', activation_function='rel') >> \
-    bs.layers.FullyConnected(1000, name='hid2', activation_function='rel') >> \
+    bs.layers.Dropout(drop_prob=0.2) >> \
+    bs.layers.FullyConnected(1200, name='hid1', activation_function='rel') >> \
+    bs.layers.Dropout(drop_prob=0.5) >> \
+    bs.layers.FullyConnected(1200, name='hid2', activation_function='rel') >> \
+    bs.layers.Dropout(drop_prob=0.5) >> \
     out
 network = bs.Network.from_layer(out)
 
 network.set_memory_handler(PyCudaHandler())
-network.initialize(bs.Gaussian(0.01), seed=42)
+network.initialize(bs.Gaussian(0.01))
 network.set_weight_modifiers({"out": bs.ConstrainL2Norm(1)})
 
 # ---------------------------- Set up Iterators ----------------------------- #
 
-train_getter = bs.Minibatches(batch_size=100, verbose=True, seed=42,
+train_getter = bs.Minibatches(batch_size=100, verbose=True,
                               default=train_inputs, targets=train_targets)
 valid_getter = bs.Minibatches(batch_size=500, verbose=True,
                               default=valid_inputs, targets=valid_targets)
@@ -58,8 +62,9 @@ test_getter = bs.Minibatches(batch_size=500, verbose=True,
 
 # ----------------------------- Set up Trainer ------------------------------ #
 
-trainer = bs.Trainer(bs.SgdStep(learning_rate=0.1), double_buffering=False)
-trainer.add_hook(bs.hooks.StopAfterEpoch(100))
+trainer = bs.Trainer(bs.MomentumStep(learning_rate=0.1, momentum=0.9),
+                     double_buffering=False)
+trainer.add_hook(bs.hooks.StopAfterEpoch(200))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "out.output",
                                           name="validation accuracy",
                                           verbose=True))
