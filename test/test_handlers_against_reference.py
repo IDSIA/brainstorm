@@ -13,33 +13,39 @@ handler = PyCudaHandler()
 some_2d_shapes = ((1, 1), (4, 1), (1, 4), (5, 5), (3, 4), (4, 3))
 some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
+np.set_printoptions(linewidth=150)
 
-def operation_check(ref_op, op, ref_args, args, ignored_args=[]):
+def operation_check(ref_op, op, ref_args, args, ignored_args=[], atol=1e-8):
     print("-" * 40)
     ref_op(*ref_args)
     op(*args)
     check_list = []
     for i, (ref_arg, arg) in enumerate(zip(ref_args, args)):
         if i in ignored_args:
-            print(i, "was ignored")
+            #print(i, "was ignored")
             continue
-        print("Checking argument number", i)
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
-            check = np.allclose(ref_arg, arg_ref)
+            check = np.allclose(ref_arg, arg_ref, atol=atol)
             check_list.append(check)
             if not check:
-                print("\nReference (expected) array {}:\n{}".format(
+                print("\nCheck failed for argument number %d:" % i)
+                print("Reference (expected) array {}:\n{}".format(
                     ref_arg.shape,ref_arg))
                 print("\nObtained array {}:\n{}".format(arg_ref.shape,
                                                         arg_ref))
+                d = ref_arg.ravel() - arg_ref.ravel()
+                print("Frobenius Norm of differences: ", np.sum(d*d))
         else:
             check = (ref_arg == arg)
             check_list.append(check)
             if not check:
+                print("Check failed for argument number", i)
                 print("\nReference (expected) array:\n", ref_arg)
                 print("\nObtained array:\n", arg)
-        print("Check was ", check)
+                d = ref_arg.ravel() - arg_ref.ravel()
+                print("Frobenius Norm of differences: ", np.sum(d*d))
+        #print("Check was ", check)
     if False in check_list:
         return False
     else:
@@ -383,7 +389,8 @@ def test_conv2d_forward():
             print(x.shape, w.shape)
             assert operation_check(ref.conv2d_forward_batch,
                                    handler.conv2d_forward_batch,
-                                   ref_args, get_args_from_ref_args(ref_args))
+                                   ref_args, get_args_from_ref_args(ref_args),
+                                   atol=1e-6)
 
 
 def test_conv2d_backward():
@@ -411,7 +418,8 @@ def test_conv2d_backward():
                         o_deltas, w_deltas, b_deltas)
             assert operation_check(ref.conv2d_backward_batch,
                                    handler.conv2d_backward_batch,
-                                   ref_args, get_args_from_ref_args(ref_args))
+                                   ref_args, get_args_from_ref_args(ref_args),
+                                   atol=1e-4)
 
 
 def test_pool2d_forward():
@@ -461,7 +469,8 @@ def test_pool2d_backward():
                                              strides, argmax)
                     ref_args = (x, window, outputs, padding, strides, argmax,
                                 i_deltas, o_deltas)
+                    print(x.shape, window, outputs.shape, padding, strides)
                     assert operation_check(ref.pool2d_backward_batch,
                                     handler.pool2d_backward_batch,
                                     ref_args, get_args_from_ref_args(ref_args),
-                                    ignored_args=[5])
+                                    ignored_args=[5], atol=1e-6)
