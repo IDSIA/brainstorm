@@ -278,7 +278,7 @@ class PyCudaHandler(Handler):
         db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
 
         cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
-            x_desc, x_data, id_desc, id_data, conv_desc, beta,
+            x_desc, x_data, od_desc, od_data, conv_desc, beta,
             dw_desc, dw_data)
         cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
             w_desc, w_data, od_desc, od_data, conv_desc, beta,
