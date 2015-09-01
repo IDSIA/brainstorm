@@ -1,11 +1,13 @@
 # coding=utf-8
 from __future__ import division, print_function
-import cython
-from cython.view cimport array as cvarray
-import numpy as np
-cimport numpy as np
 
-#ctypedef np.float32_t DTYPE_t
+cimport numpy as np
+from cython.view cimport array as cvarray
+from libc.float cimport FLT_MAX, DBL_MAX
+
+import cython
+import numpy as np
+
 
 ctypedef fused DTYPE_t:
     np.float32_t
@@ -17,7 +19,10 @@ cdef inline DTYPE_t dtype_t_max(DTYPE_t a, DTYPE_t b) nogil:
 cdef inline int int_max(int a, int b) nogil: return a if a >= b else b
 cdef inline int int_min(int a, int b) nogil: return a if a <= b else b
 
+# Note: this is forked from Anders Boesen Lindbo Larsen's cudarray code
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
             tuple kernel not None,
             DTYPE_t[:, :, :, ::1] outputs not None,
@@ -40,6 +45,15 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int in_y_max = 0
     cdef int in_x_max = 0
     cdef DTYPE_t value, new_value
+    cdef DTYPE_t min_value
+
+    # for output compatibility with cudnn, we must
+    # use the minimum allowed value
+    if DTYPE_t is np.float32_t:
+        min_value = -FLT_MAX
+    else:
+        min_value = -DBL_MAX
+
     with nogil:
         for i in range(n_inputs):
             for c in range(n_filters):
@@ -51,7 +65,9 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
                         x = x_out*stride_x-padding
                         x_min = int_max(x, 0)
                         x_max = int_min(x+pool_w, in_w)
-                        value = -1e38
+                        value = min_value
+                        in_y_max = -1
+                        in_x_max = -1
                         for in_y in range(y_min, y_max):
                             for in_x in range(x_min, x_max):
                                 new_value = inputs[i, c, in_y, in_x,]
@@ -92,4 +108,5 @@ def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                     for x in range(out_w):
                         in_y = <int>(argmax[i, c, y, x, 0])
                         in_x = <int>(argmax[i, c, y, x, 1])
-                        in_deltas[i, c, in_y, in_x] += out_deltas[i, c, y, x]
+                        if in_y >= 0 and in_x >= 0:
+                            in_deltas[i, c, in_y, in_x] += out_deltas[i, c, y, x]
