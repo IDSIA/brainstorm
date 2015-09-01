@@ -222,7 +222,7 @@ class PyCudaHandler(Handler):
             self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
             self.cudnn_convpref, 0)
 
-        alpha, beta = 1.0, 1.0
+        alpha, beta = 1.0, 0.0
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         w_data = ctypes.c_void_p(int(weights.gpudata))
         b_data = ctypes.c_void_p(int(bias.gpudata))
@@ -230,6 +230,7 @@ class PyCudaHandler(Handler):
         cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
             x_data, w_desc, w_data, conv_desc, algo, None, 0, beta, y_desc,
             y_data)
+        beta = 1.0
         cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
             b_desc, b_data, beta, y_desc, y_data)
 
@@ -268,7 +269,7 @@ class PyCudaHandler(Handler):
         cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
             stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
 
-        alpha, beta = 1.0, 1.0
+        alpha, beta = 1.0, 0.0
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         w_data = ctypes.c_void_p(int(weights.gpudata))
         id_data = ctypes.c_void_p(int(in_deltas.gpudata))
@@ -313,7 +314,7 @@ class PyCudaHandler(Handler):
         #assert(outshape == outputs.shape)
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
-        alpha, beta = 1.0, 1.0
+        alpha, beta = 1.0, 0.0
         cudnn.cudnnPoolingForward(self.cudnn_context, pool_desc, alpha,
             x_desc, x_data, beta, y_desc, y_data)
 
@@ -345,10 +346,10 @@ class PyCudaHandler(Handler):
         y_data = ctypes.c_void_p(int(outputs.gpudata))
         id_data = ctypes.c_void_p(int(in_deltas.gpudata))
         od_data = ctypes.c_void_p(int(out_deltas.gpudata))
-        alpha, beta = 1.0, 1.0
+        alpha, beta = 1.0, 0.0
         cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
-            x_desc, x_data, id_desc, id_data, y_desc, y_data, beta,
-            od_desc, od_data)
+            y_desc, y_data, od_desc, od_data, x_desc, x_data, beta,
+            id_desc, id_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyTensorDescriptor(y_desc)
