@@ -24,10 +24,10 @@ class Initializer(Seedable, Describable):
     def __call__(self, shape):
         raise NotImplementedError()
 
-    def _assert_2d(self, shape):
-        if len(shape) != 2:
+    def _assert_atleast2d(self, shape):
+        if len(shape) < 2:
             raise InitializationError(
-                "{} only works on 2D matrices, but was {}".format(
+                "{} only works on >2D matrices, but shape was {}".format(
                     self.__class__.__name__, shape))
 
 
@@ -104,8 +104,9 @@ class DenseSqrtFanIn(Initializer):
         self.scale = scale
 
     def __call__(self, shape):
-        self._assert_2d(shape)
-        return self.scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(shape[0])
+        self._assert_atleast2d(shape)
+        num_in = np.prod(shape[1:])
+        return self.scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(num_in)
 
 
 class DenseSqrtFanInOut(Initializer):
@@ -123,8 +124,8 @@ class DenseSqrtFanInOut(Initializer):
         self.scale = scale
 
     def __call__(self, shape):
-        self._assert_2d(shape)
-        n1, n2 = shape
+        self._assert_atleast2d(shape)
+        n1, n2 = shape[0], np.prod(shape[1:])
         return self.scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(n1 + n2)
 
 
@@ -145,7 +146,7 @@ class SparseInputs(Initializer):
         self.connections = connections
 
     def __call__(self, shape):
-        self._assert_2d(shape)
+        self._assert_atleast2d(shape)
         if shape[0] < self.connections:
             raise InitializationError("Input dimension to small: {} < {}"
                                       "".format(shape[0], self.connections))
@@ -175,7 +176,7 @@ class SparseOutputs(Initializer):
         self.connections = connections
 
     def __call__(self, shape):
-        self._assert_2d(shape)
+        self._assert_atleast2d(shape)
         if shape[1] < self.connections:
             raise InitializationError("Output dimension to small: {} < {}"
                                       "".format(shape[1], self.connections))
@@ -205,7 +206,7 @@ class EchoState(Initializer):
         self.spectral_radius = spectral_radius
 
     def __call__(self, shape):
-        self._assert_2d(shape)
+        self._assert_atleast2d(shape)
         if shape[0] != shape[1]:
             raise InitializationError("Matrix should be square but was: {}"
                                       "".format(shape))
