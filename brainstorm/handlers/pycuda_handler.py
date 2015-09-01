@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function
 import numpy as np
+import warnings
 from pycuda import gpuarray, cumath
 import pycuda.driver as drv
 import pycuda.autoinit
@@ -14,13 +15,22 @@ from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
 culinalg.init()
 
+try:
+    import ctypes
+    import libcudnn as cudnn
+except ImportError:
+    warnings.warn("CUDNN libraries are not available.")
+
 
 # noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
 
-    __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd'}
+    __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd',
+                       'cudnn_context', 'cudnn_tensor_format',
+                       'cudnn_data_type', 'cudnn_convmode', 'cudnn_convpref',
+                       'cudnn_addmode', 'cudnn_pooling_mode'}
 
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, init_cudnn=True):
         self.dtype = np.float32
         self.context = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
@@ -30,6 +40,22 @@ class PyCudaHandler(Handler):
         def get_seeds(n):
             return gpuarray.to_gpu(np.ones(n, np.int32) * seed)
         self.rnd = XORWOWRandomNumberGenerator(seed_getter=get_seeds)
+        self.init_cudnn = init_cudnn
+        if self.init_cudnn:
+            self.cudnn_context = cudnn.cudnnCreate()
+            self.cudnn_tensor_format = cudnn.cudnnTensorFormat[
+                'CUDNN_TENSOR_NCHW']
+            self.cudnn_data_type = cudnn.cudnnDataType[
+                'CUDNN_DATA_FLOAT']
+            self.cudnn_convmode = cudnn.cudnnConvolutionMode[
+                'CUDNN_CROSS_CORRELATION']
+            # TODO we should use use PREFER_FASTEST eventually!
+            self.cudnn_convpref = cudnn.cudnnConvolutionFwdPreference[
+                #'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
+                'CUDNN_CONVOLUTION_FWD_NO_WORKSPACE']
+            self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
+            self.cudnn_pooling_mode = cudnn.cudnnPoolingMode[
+                'CUDNN_POOLING_MAX']
 
     array_type = pycuda.gpuarray.GPUArray
     size = staticmethod(lambda x: x.size)
@@ -39,6 +65,7 @@ class PyCudaHandler(Handler):
 
     def __init_from_description__(self, description):
         self.__init__()
+
 
     def allocate(self, size):
         return gpuarray.zeros(size, dtype=self.dtype)
@@ -173,6 +200,178 @@ class PyCudaHandler(Handler):
     @staticmethod
     def index_m_by_v(m, v, out):
         index_m_by_v_kernel(out, v, m, m.shape[0], m.shape[1])
+
+
+    def conv2d_forward_batch(self, inputs, weights, bias, outputs,
+                             padding, stride):
+        upscalex, upscaley = 1, 1  # currently not exposed to API
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+                                         self.cudnn_data_type, *inputs.shape)
+
+        w_desc = cudnn.cudnnCreateFilterDescriptor()
+        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
+                                         *weights.shape)
+
+        b_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, 1, bias.size, 1, 1)
+
+        conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
+        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
+            stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
+
+        # TODO: remove this sanity check once implementation works
+        outshape = cudnn.cudnnGetConvolution2dForwardOutputDim(
+            conv_desc, x_desc, w_desc)
+        assert(outshape == outputs.shape)
+        assert(weights.shape[0] == bias.size)
+        assert(outputs.shape[1] == bias.size)
+
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+        self.cudnn_data_type, *outputs.shape)
+
+        # TODO: we hardcode a memory limit of zero for cudnn
+        algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
+            self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
+            self.cudnn_convpref, 0)
+
+        alpha, beta = 1.0, 0.0
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        w_data = ctypes.c_void_p(int(weights.gpudata))
+        b_data = ctypes.c_void_p(int(bias.gpudata))
+        y_data = ctypes.c_void_p(int(outputs.gpudata))
+        cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
+            x_data, w_desc, w_data, conv_desc, algo, None, 0, beta, y_desc,
+            y_data)
+        beta = 1.0
+        cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
+            b_desc, b_data, beta, y_desc, y_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyTensorDescriptor(y_desc)
+        cudnn.cudnnDestroyFilterDescriptor(w_desc)
+        cudnn.cudnnDestroyTensorDescriptor(b_desc)
+        cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
+        #cudnn.cudnnDestroy(cudnn_context)
+
+
+    def conv2d_backward_batch(self, inputs, weights, padding, stride,
+                              in_deltas, out_deltas, weight_deltas,
+                              bias_deltas):
+        upscalex, upscaley = 1, 1  # currently not exposed to API
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *inputs.shape)
+        id_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *in_deltas.shape)
+        od_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *out_deltas.shape)
+        w_desc = cudnn.cudnnCreateFilterDescriptor()
+        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
+            *weights.shape)
+        dw_desc = cudnn.cudnnCreateFilterDescriptor()
+        cudnn.cudnnSetFilter4dDescriptor(dw_desc, self.cudnn_data_type,
+            *weight_deltas.shape)
+        db_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(db_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, 1, bias_deltas.size, 1, 1)
+        conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
+        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
+            stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
+
+        alpha, beta = 1.0, 0.0
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        w_data = ctypes.c_void_p(int(weights.gpudata))
+        id_data = ctypes.c_void_p(int(in_deltas.gpudata))
+        od_data = ctypes.c_void_p(int(out_deltas.gpudata))
+        dw_data = ctypes.c_void_p(int(weight_deltas.gpudata))
+        db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
+
+        cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
+            x_desc, x_data, od_desc, od_data, conv_desc, beta,
+            dw_desc, dw_data)
+        cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
+            w_desc, w_data, od_desc, od_data, conv_desc, beta,
+            id_desc, id_data)
+        cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
+            od_desc, od_data, beta, db_desc, db_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyFilterDescriptor(w_desc)
+        cudnn.cudnnDestroyTensorDescriptor(id_desc)
+        cudnn.cudnnDestroyTensorDescriptor(od_desc)
+        cudnn.cudnnDestroyFilterDescriptor(dw_desc)
+        cudnn.cudnnDestroyFilterDescriptor(db_desc)
+        cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
+
+
+    def pool2d_forward_batch(self, inputs, window, outputs, padding,
+                             stride, argmax):
+        pool_desc = cudnn.cudnnCreatePoolingDescriptor()
+        cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
+            window[0], window[1], padding, padding, stride[0], stride[1])
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *inputs.shape)
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *outputs.shape)
+
+        # TODO: remove this sanity check once implementation works
+        #outshape = cudnn.cudnnGetPooling2dForwardOutputDim(
+        #    conv_desc, x_desc)
+        #assert(outshape == outputs.shape)
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        y_data = ctypes.c_void_p(int(outputs.gpudata))
+        alpha, beta = 1.0, 0.0
+        cudnn.cudnnPoolingForward(self.cudnn_context, pool_desc, alpha,
+            x_desc, x_data, beta, y_desc, y_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyTensorDescriptor(y_desc)
+        cudnn.cudnnDestroyPoolingDescriptor(pool_desc)
+
+
+    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
+                             argmax, in_deltas, out_deltas):
+        pool_desc = cudnn.cudnnCreatePoolingDescriptor()
+        cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
+            window[0], window[1], padding, padding, stride[0], stride[1])
+
+        x_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *inputs.shape)
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+        self.cudnn_data_type, *outputs.shape)
+        id_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *in_deltas.shape)
+        od_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
+            self.cudnn_data_type, *out_deltas.shape)
+
+        x_data = ctypes.c_void_p(int(inputs.gpudata))
+        y_data = ctypes.c_void_p(int(outputs.gpudata))
+        id_data = ctypes.c_void_p(int(in_deltas.gpudata))
+        od_data = ctypes.c_void_p(int(out_deltas.gpudata))
+        alpha, beta = 1.0, 0.0
+        cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
+            y_desc, y_data, od_desc, od_data, x_desc, x_data, beta,
+            id_desc, id_data)
+
+        cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        cudnn.cudnnDestroyTensorDescriptor(y_desc)
+        cudnn.cudnnDestroyTensorDescriptor(id_desc)
+        cudnn.cudnnDestroyTensorDescriptor(od_desc)
+        cudnn.cudnnDestroyPoolingDescriptor(pool_desc)
 
     # Activation functions
 

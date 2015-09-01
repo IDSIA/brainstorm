@@ -121,13 +121,13 @@ class MonitorLayerParameters(Hook):
             v = net.handler.get_numpy_copy(v)
             log[key] = OrderedDict()
             log[key]['min'] = v.min()
+            log[key]['avg'] = v.mean()
             log[key]['max'] = v.max()
-            log[key]['mean'] = v.mean()
             if len(v.shape) > 1:
                 log[key]['min_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).min()
+                log[key]['avg_L2_norm'] = np.sqrt(np.sum(v ** 2,
+                                                         axis=1)).mean()
                 log[key]['max_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).max()
-                log[key]['mean_L2_norm'] = np.sqrt(np.sum(v ** 2,
-                                                          axis=1)).mean()
 
         return log
 
@@ -186,6 +186,39 @@ class MonitorLayerDeltas(Hook):
 
         for key, v in net.buffer[self.layer_name].input_deltas.items():
             n = 'in_deltas.{}'.format(key)
+            log[n] = OrderedDict()
+            v = net.handler.get_numpy_copy(v)
+            log[n]['min'] = v.min()
+            log[n]['avg'] = v.mean()
+            log[n]['max'] = v.max()
+
+        return log
+
+
+class MonitorLayerInOuts(Hook):
+    """
+    Monitor some statistics about all the inputs and outputs of a layer.
+    """
+    def __init__(self, layer_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        if name is None:
+            name = "MonitorInOuts_{}".format(layer_name)
+        super(MonitorLayerInOuts, self).__init__(name, timescale,
+                                                 interval, verbose)
+        self.layer_name = layer_name
+
+    def __call__(self, epoch, net, stepper, logs):
+        log = OrderedDict()
+        for key, v in net.buffer[self.layer_name].inputs.items():
+            n = 'inputs.{}'.format(key)
+            v = net.handler.get_numpy_copy(v)
+            log[n] = OrderedDict()
+            log[n]['min'] = v.min()
+            log[n]['avg'] = v.mean()
+            log[n]['max'] = v.max()
+
+        for key, v in net.buffer[self.layer_name].outputs.items():
+            n = 'outputs.{}'.format(key)
             log[n] = OrderedDict()
             v = net.handler.get_numpy_copy(v)
             log[n]['min'] = v.min()

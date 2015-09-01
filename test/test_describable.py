@@ -313,7 +313,7 @@ def test_create_from_description_with_invalid_description_raises():
 def test_describe_pycuda_handler():
     pch = PyCudaHandler()
     d = get_description(pch)
-    assert d == {'@type': 'PyCudaHandler'}
+    assert d == {'@type': 'PyCudaHandler', 'init_cudnn': True}
     pch2 = create_from_description(d)
     assert isinstance(pch2, PyCudaHandler)
 

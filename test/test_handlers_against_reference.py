@@ -13,23 +13,43 @@ handler = PyCudaHandler()
 some_2d_shapes = ((1, 1), (4, 1), (1, 4), (5, 5), (3, 4), (4, 3))
 some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
+np.set_printoptions(linewidth=150)
 
-def operation_check(ref_op, op, ref_args, args):
-    print("--" * 80)
+def operation_check(ref_op, op, ref_args, args, ignored_args=[], atol=1e-8):
+    print("-" * 40)
     ref_op(*ref_args)
     op(*args)
-    check = True
-    for (ref_arg, arg) in zip(ref_args, args):
+    check_list = []
+    for i, (ref_arg, arg) in enumerate(zip(ref_args, args)):
+        if i in ignored_args:
+            #print(i, "was ignored")
+            continue
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
-            print("\nReference (expected) array:\n", ref_arg)
-            print("\nObtained array:\n", arg_ref)
-            check = np.allclose(ref_arg, arg_ref)
+            check = np.allclose(ref_arg, arg_ref, atol=atol)
+            check_list.append(check)
+            if not check:
+                print("\nCheck failed for argument number %d:" % i)
+                print("Reference (expected) array {}:\n{}".format(
+                    ref_arg.shape,ref_arg))
+                print("\nObtained array {}:\n{}".format(arg_ref.shape,
+                                                        arg_ref))
+                d = ref_arg.ravel() - arg_ref.ravel()
+                print("Frobenius Norm of differences: ", np.sum(d*d))
         else:
-            print("\nReference (expected) array:\n", ref_arg)
-            print("\nObtained array:\n", arg)
             check = (ref_arg == arg)
-    return check
+            check_list.append(check)
+            if not check:
+                print("Check failed for argument number", i)
+                print("\nReference (expected) array:\n", ref_arg)
+                print("\nObtained array:\n", arg)
+                d = ref_arg.ravel() - arg_ref.ravel()
+                print("Frobenius Norm of differences: ", np.sum(d*d))
+        #print("Check was ", check)
+    if False in check_list:
+        return False
+    else:
+        return True
 
 
 def get_args_from_ref_args(ref_args):
@@ -359,3 +379,110 @@ def test_rel_deriv():
         ref_args = (x, y, dy, dx)
         assert operation_check(ref.rel_deriv, handler.rel_deriv,
                                ref_args, get_args_from_ref_args(ref_args))
+
+
+def test_conv2d_forward():
+    img_shapes = [(1, 1, 3, 3), (3, 1, 32, 32), (2, 3, 6, 4), (1, 2, 3, 4)]
+    w_shapes = [(1, 1, 1), (3, 3, 3), (6, 2, 2), (2, 1, 3)]
+
+    list_x = get_random_arrays(img_shapes)
+    stride = (1, 1)
+    padding = 1
+
+    for ws in w_shapes:
+        for x in list_x:
+            w_shape = (ws[0], x.shape[1], ws[1], ws[2])
+            w = np.random.uniform(size=w_shape).astype(ref_dtype)
+            b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
+            oh = (x.shape[2] + 2 * padding - w.shape[2]) / stride[0] + 1
+            ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
+            out = np.zeros((x.shape[0], w.shape[0])+ (oh, ow), dtype=ref_dtype)
+            ref_args = (x, w, b, out, padding, stride)
+            print(x.shape, w.shape)
+            assert operation_check(ref.conv2d_forward_batch,
+                                   handler.conv2d_forward_batch,
+                                   ref_args, get_args_from_ref_args(ref_args),
+                                   atol=1e-6)
+
+
+def test_conv2d_backward():
+    img_shapes = [(1, 1, 3, 3), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 3, 4)]
+    w_shapes = [(3, 3, 3), (6, 4, 5), (2, 5, 3)]
+
+    list_x = get_random_arrays(img_shapes)
+    stride = (1, 1)
+    padding = 1
+
+    for ws in w_shapes:
+        for x in list_x:
+            w_shape = (ws[0], x.shape[1], ws[1], ws[2])
+            w = np.random.uniform(size=w_shape).astype(ref_dtype)
+            b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
+            oh = (x.shape[2] + 2 * padding - w.shape[2]) / stride[0] + 1
+            ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
+            out_shape = (x.shape[0], w.shape[0])+ (oh, ow)
+            o_deltas = np.random.uniform(size=out_shape).astype(ref_dtype)
+            i_deltas = np.zeros_like(x, dtype=ref_dtype)
+            w_deltas = np.zeros_like(w, dtype=ref_dtype)
+            b_deltas = np.zeros_like(b, dtype=ref_dtype)
+
+            ref_args = (x, w, padding, stride, i_deltas,
+                        o_deltas, w_deltas, b_deltas)
+            assert operation_check(ref.conv2d_backward_batch,
+                                   handler.conv2d_backward_batch,
+                                   ref_args, get_args_from_ref_args(ref_args),
+                                   atol=1e-4)
+
+
+def test_pool2d_forward():
+    img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
+    window_list= [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
+    strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
+    list_x = get_random_arrays(img_shapes)
+
+    for x in list_x:
+        for padding in (0, 1, 2):
+            for strides in strides_list:
+                for window in window_list:
+                    out_shape = (x.shape[0], x.shape[1],
+                        (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
+                        (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
+                    outputs = np.zeros(out_shape, dtype=ref_dtype)
+                    argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
+                    ref_args = (x, window, outputs, padding, strides, argmax)
+                    print(x.shape, window, outputs.shape, padding, strides)
+                    assert operation_check(ref.pool2d_forward_batch,
+                                    handler.pool2d_forward_batch,
+                                    ref_args, get_args_from_ref_args(ref_args),
+                                    ignored_args=[5])
+
+
+def test_pool2d_backward():
+    img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
+    window_list= [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
+    strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
+    list_x = get_random_arrays(img_shapes)
+
+    for x in list_x:
+        for padding in (0, 1, 2):
+            for strides in strides_list:
+                for window in window_list:
+                    out_shape = (x.shape[0], x.shape[1],
+                        (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
+                        (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
+                    outputs = np.zeros(out_shape, dtype=ref_dtype)
+                    o_deltas = np.random.normal(size=out_shape)
+                    o_deltas = o_deltas.astype(ref_dtype)
+                    i_deltas = np.zeros_like(x, dtype=ref_dtype)
+                    argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
+
+                    # initialize argmax
+                    ref.pool2d_forward_batch(x, window, outputs, padding,
+                                             strides, argmax)
+                    ref_args = (x, window, outputs, padding, strides, argmax,
+                                i_deltas, o_deltas)
+                    print(x.shape, window, outputs.shape, padding, strides)
+                    assert operation_check(ref.pool2d_backward_batch,
+                                    handler.pool2d_backward_batch,
+                                    ref_args, get_args_from_ref_args(ref_args),
+                                    ignored_args=[5], atol=1e-6)

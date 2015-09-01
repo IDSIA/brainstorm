@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import RandomState, global_rnd
+from brainstorm.handlers import _cpuop
 
 
 # noinspection PyMethodOverriding
@@ -222,26 +223,28 @@ class NumpyHandler(Handler):
         return im2col_map
 
     @classmethod
-    def conv2d_forward_batch(cls, inputs, weights, bias, outputs, pad, stride):
+    def conv2d_forward_batch(cls, inputs, weights, bias, outputs,
+                             padding, stride):
 
         num_filters = weights.shape[0]
         num_images, num_input_maps, input_rows, input_cols = inputs.shape
         kernel_size = (weights.shape[2], weights.shape[3])
         out_shape = outputs.shape[1:]
 
-        im2col_map = cls.get_im2col_map(num_input_maps, input_rows + 2 * pad,
-                                        input_cols + 2 * pad, kernel_size,
-                                        stride)
+        im2col_map = cls.get_im2col_map(num_input_maps,
+                                        input_rows + 2 * padding,
+                                        input_cols + 2 * padding,
+                                        kernel_size, stride)
 
         # reshape
         for i in range(num_images):
             # pad
-            if pad == 0:
+            if padding == 0:
                 im = inputs[i]
             else:
-                im = np.zeros((inputs.shape[1], inputs.shape[2] + 2 * pad,
-                               inputs.shape[3] + 2 * pad))
-                im[:, pad: -pad, pad: -pad] = inputs[i]
+                im = np.zeros((inputs.shape[1], inputs.shape[2] + 2 * padding,
+                               inputs.shape[3] + 2 * padding))
+                im[:, padding: -padding, padding: -padding] = inputs[i]
 
             # Get all actual indices & index into input array for output
             col = np.take(im, im2col_map)
@@ -256,7 +259,7 @@ class NumpyHandler(Handler):
         outputs += bias.reshape((1, num_filters, 1, 1))
 
     @classmethod
-    def conv2d_backward_batch(cls, inputs, weights, pad, stride, in_deltas,
+    def conv2d_backward_batch(cls, inputs, weights, padding, stride, in_deltas,
                               out_deltas, weight_deltas, bias_deltas):
         if stride != (1, 1):
             raise NotImplementedError("Strides > 1 for ConvolutionLayer2D are "
@@ -266,13 +269,14 @@ class NumpyHandler(Handler):
         _, num_output_maps, output_rows, output_cols = out_deltas.shape
         kernel_size = (weights.shape[2], weights.shape[3])
 
-        im2col_map = cls.get_im2col_map(num_input_maps, input_rows + 2 * pad,
-                                        input_cols + 2 * pad, kernel_size,
-                                        stride)
+        im2col_map = cls.get_im2col_map(num_input_maps,
+                                        input_rows + 2 * padding,
+                                        input_cols + 2 * padding,
+                                        kernel_size, stride)
 
-        dpadh = ((input_rows + 2 * pad - 1) * stride[0] + kernel_size[0] -
+        dpadh = ((input_rows + 2 * padding - 1) * stride[0] + kernel_size[0] -
                  output_rows) // 2
-        dpadw = ((input_cols + 2 * pad - 1) * stride[1] + kernel_size[1] -
+        dpadw = ((input_cols + 2 * padding - 1) * stride[1] + kernel_size[1] -
                  output_cols) // 2
         col2im_map = cls.get_im2col_map(num_output_maps,
                                         output_rows + 2 * dpadh,
@@ -282,12 +286,12 @@ class NumpyHandler(Handler):
         bias_deltas.fill(0.0)
         for i in range(num_images):
             # pad
-            if pad == 0:
+            if padding == 0:
                 im = inputs[i]
             else:
-                im = np.zeros((num_input_maps, input_rows + 2 * pad,
-                               input_cols + 2 * pad))
-                im[:, pad: -pad, pad: -pad] = inputs[i]
+                im = np.zeros((num_input_maps, input_rows + 2 * padding,
+                               input_cols + 2 * padding))
+                im[:, padding: -padding, padding: -padding] = inputs[i]
 
             # Get all actual indices & index into input array for final output
             col = np.take(im, im2col_map)
@@ -319,15 +323,25 @@ class NumpyHandler(Handler):
             col = np.take(im, col2im_map)
 
             # temp contains deltas WRT padded inputs
-            temp = np.dot(reshaped_weights, col).reshape((num_input_maps,
-                                                          input_rows + 2 * pad,
-                                                          input_cols + 2 *
-                                                          pad))
+            new_shape = (num_input_maps,
+                         input_rows + 2 * padding,
+                         input_cols + 2 * padding)
+            temp = np.dot(reshaped_weights, col).reshape(new_shape)
             # Remove padding
-            if pad == 0:
+            if padding == 0:
                 in_deltas[i] += temp
             else:
-                in_deltas[i] += temp[:, pad: -pad, pad: -pad]
+                in_deltas[i] += temp[:, padding: -padding, padding: -padding]
+
+    def pool2d_forward_batch(self, inputs, window, outputs, padding,
+                             stride, argmax):
+        _cpuop.maxpool_forward(inputs, window, outputs, padding,
+                               stride, argmax)
+
+    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
+                              argmax, in_deltas, out_deltas):
+        _cpuop.maxpool_backward(inputs, window, outputs, padding, stride,
+                                argmax, in_deltas, out_deltas)
 
     # ---------------- Activation functions -----------------------------------
 

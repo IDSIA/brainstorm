@@ -23,7 +23,8 @@ from brainstorm.layers.lstm_layer import LstmLayerImpl
 from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.rnn_layer import RnnLayerImpl
 from brainstorm.layers.dropout_layer import DropoutLayerImpl
-
+from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
+from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
 
 CONSTRUCTION_LAYERS = {}
 
@@ -91,6 +92,25 @@ def SquaredDifference(name=None):
 
 def Mask(name=None):
     return ConstructionWrapper.create('Mask', name=name)
+
+def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=1,
+                       activation_function='linear', name=None):
+    return ConstructionWrapper.create('Convolution2D',
+                                      num_filters=num_filters,
+                                      kernel_size=kernel_size,
+                                      stride=stride,
+                                      padding=padding,
+                                      activation_function=activation_function,
+                                      name=name)
+
+
+def Pooling2D(num_filters, kernel_size, stride=(1, 1), padding=1, name=None):
+    return ConstructionWrapper.create('Pooling2D',
+                                      num_filters=num_filters,
+                                      kernel_size=kernel_size,
+                                      stride=stride,
+                                      padding=padding,
+                                      name=name)
 
 
 def Dropout(drop_prob=0.5, name=None):
