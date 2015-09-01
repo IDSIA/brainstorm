@@ -94,12 +94,13 @@ class DenseSqrtFanIn(Initializer):
     """
     Initializes the weights randomly according to a uniform distribution over
     the interval [-1/sqrt(n), 1/sqrt(n)] where n is the number of inputs to
-    each neuron.
+    each neuron. Uses scaling = sqrt(6) by default which is appropriate for
+    rel units.
     """
 
-    __default_values__ = {'scale': 1.0}
+    __default_values__ = {'scale': np.sqrt(6)}
 
-    def __init__(self, scale=1.0):
+    def __init__(self, scale=np.sqrt(6)):
         super(DenseSqrtFanIn, self).__init__()
         self.scale = scale
 
@@ -114,12 +115,12 @@ class DenseSqrtFanInOut(Initializer):
     Initializes the weights randomly according to a uniform distribution over
     the interval [-1/sqrt(n1+n2), 1/sqrt(n1+n2)] where n1 is the number of
     inputs to each neuron and n2 is the number of neurons in the current layer.
-    Use scaling = 4*sqrt(6) for sigmoid units and sqrt(6) (used by default) for
-    tanh units.
+    Use scaling = 4*sqrt(6) for sigmoid units, sqrt(6) for tanh units and
+    sqrt(12) for rel units (used by default).
     """
-    __default_values__ = {'scale': np.sqrt(6)}
+    __default_values__ = {'scale': np.sqrt(12)}
 
-    def __init__(self, scale=np.sqrt(6)):
+    def __init__(self, scale=np.sqrt(12)):
         super(DenseSqrtFanInOut, self).__init__()
         self.scale = scale
 

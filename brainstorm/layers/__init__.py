@@ -38,7 +38,7 @@ def Input(out_shapes, name=None):
                                       out_shapes=out_shapes)
 
 
-def FullyConnected(size, activation_function='linear', name=None):
+def FullyConnected(size, activation_function='rel', name=None):
     return ConstructionWrapper.create('FullyConnected',
                                       size=size,
                                       name=name,
@@ -94,7 +94,7 @@ def Mask(name=None):
     return ConstructionWrapper.create('Mask', name=name)
 
 def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=1,
-                       activation_function='linear', name=None):
+                       activation_function='rel', name=None):
     return ConstructionWrapper.create('Convolution2D',
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
