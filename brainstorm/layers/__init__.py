@@ -93,8 +93,9 @@ def SquaredDifference(name=None):
 def Mask(name=None):
     return ConstructionWrapper.create('Mask', name=name)
 
-def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=1,
-                       activation_function='rel', name=None):
+
+def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
+                  activation_function='rel', name=None):
     return ConstructionWrapper.create('Convolution2D',
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
@@ -104,7 +105,7 @@ def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=1,
                                       name=name)
 
 
-def Pooling2D(num_filters, kernel_size, stride=(1, 1), padding=1, name=None):
+def Pooling2D(num_filters, kernel_size, stride=(1, 1), padding=0, name=None):
     return ConstructionWrapper.create('Pooling2D',
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
