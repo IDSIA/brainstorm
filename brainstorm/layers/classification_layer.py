@@ -3,7 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.utils import LayerValidationError, flatten_time
+from brainstorm.utils import LayerValidationError, flatten_time, \
+    flatten_time_and_features
 from brainstorm.structure.shapes import ShapeTemplate
 
 
@@ -22,7 +23,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
     and it also does not use the deltas coming in from the 'outputs'.
     """
 
-    inputs = {'default': ShapeTemplate('T', 'B', 'F'),
+    inputs = {'default': ShapeTemplate('T', 'B', '...'),
               'targets': ShapeTemplate('T', 'B', 1)
               }
 
@@ -32,7 +33,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
     expected_kwargs = {'size'}
 
     def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes.get('default')[2])
+        s = self.kwargs.get('size', self.in_shapes.get('default').feature_size)
         if not isinstance(s, int):
             raise LayerValidationError('size must be int but was {}'.format(s))
 
@@ -66,7 +67,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         Ha = buffers.internals.Ha
 
         # reshape
-        flat_input = flatten_time(_h, inputs)
+        flat_input = flatten_time_and_features(_h, inputs)
         flat_output = flatten_time(_h, outputs)
         flat_Ha = flatten_time(_h, Ha)
         flat_loss = flatten_time(_h, loss)
@@ -101,12 +102,12 @@ class ClassificationLayerImpl(LayerBaseImpl):
         dHa = buffers.internals.dHa
 
         # reshape
-        flat_inputs = flatten_time(_h, inputs)
+        flat_inputs = flatten_time_and_features(_h, inputs)
         flat_outputs = flatten_time(_h, outputs)
         flat_targets = flatten_time(_h, targets)
         flat_dHa = flatten_time(_h, dHa)
         flat_dloss = flatten_time(_h, dloss)
-        flat_dinputs = flatten_time(_h, dinputs)
+        flat_dinputs = flatten_time_and_features(_h, dinputs)
 
         # derivative of multinomial cross-entropy error wrt softmax:
         # y - t
