@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+import numpy as np
 
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
@@ -67,6 +68,7 @@ setup(
     ],
 
     ext_modules = cythonize([Extension("brainstorm.handlers._cpuop",
-        ["brainstorm/handlers/_cpuop.pyx"])
+        ["brainstorm/handlers/_cpuop.pyx"],
+        include_dirs=[np.get_include()])
     ]),
 )
