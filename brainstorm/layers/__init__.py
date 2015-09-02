@@ -123,14 +123,14 @@ def Dropout(drop_prob=0.5, name=None):
 
 def construction_layer_for(layer_impl):
     layer_name = layer_impl.__name__
-    assert layer_name.endswith('Impl'), \
-        "{} should end with 'Impl'".format(layer_name)
-    layer_name = layer_name[:-4]
+    assert layer_name.endswith('LayerImpl'), \
+        "{} should end with 'LayerImpl'".format(layer_name)
+    layer_name = layer_name[:-9]
     return partial(ConstructionWrapper.create, layer_name)
 
 
 for Layer in get_inheritors(LayerBaseImpl):
-    layer_name = Layer.__name__[:-4]
+    layer_name = Layer.__name__[:-9]
     if layer_name not in CONSTRUCTION_LAYERS:
         CONSTRUCTION_LAYERS[layer_name] = construction_layer_for(Layer)
 
