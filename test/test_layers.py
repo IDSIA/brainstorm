@@ -202,7 +202,7 @@ spec_list = [
     (1, 1, 'tanh'),
     (3, 2, 'tanh'),
     (2, 3, 'sigmoid'),
-    (5, 5, 'rel'),
+    (2, 3, 'rel'),
     (1, 4, 'linear')]
 spec_ids = ['{}{}{}'.format(*p) for p in spec_list]
 
