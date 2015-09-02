@@ -249,6 +249,14 @@ def test_log_t():
         assert operation_check(ref.log_t, handler.log_t, ref_args,
                                get_args_from_ref_args(ref_args))
 
+def test_sign_t():
+    list_a = get_random_arrays(some_nd_shapes)
+    list_a += [np.random.random_integers(-2, 2, (3, 3))]
+    for a in list_a:
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, out)
+        assert operation_check(ref.sign_t, handler.sign_t, ref_args,
+                               get_args_from_ref_args(ref_args))
 
 def test_divide_tt():
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)

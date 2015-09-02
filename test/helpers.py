@@ -77,7 +77,7 @@ def run_deltas_test(layer, specs, inputs_name, outputs_name):
     delta_approx = get_approx_deltas(layer, inputs_name,
                                      outputs_name, layer_buffers,
                                      eps).reshape(delta_calc.shape)
-    if np.allclose(delta_approx, delta_calc, rtol=1e-4, atol=1e-4):
+    if np.allclose(delta_approx, delta_calc, rtol=1e-3, atol=1e-4):
         return True
 
     print("Deltas check for '{}' WRT '{}' failed with a MSE of {}"

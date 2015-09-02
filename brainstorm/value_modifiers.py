@@ -170,3 +170,38 @@ class FreezeValues(ValueModifier):
             handler.set_from_numpy(self.device_weights, self.weights)
 
         handler.copy_to(view, self.device_weights)
+
+
+class L1Decay(GradientModifier):
+
+    """
+    Applies L1 weight decay.
+
+    New gradients = gradients - factor * sign(parameters)
+    """
+
+    def __init__(self, factor=0):
+        super(L1Decay, self).__init__()
+        self.factor = factor
+
+    def __call__(self, handler, parameters, gradients):
+        tmp = handler.zeros(parameters.shape)
+        handler.sign_t(parameters, out=tmp)
+        handler.subtract_tt(gradients, self.factor * tmp)
+
+
+class L2Decay(GradientModifier):
+
+    """
+    Applies L2 weight decay.
+
+    New gradients = gradients - factor * parameters
+    """
+
+    def __init__(self, factor=0):
+        super(L2Decay, self).__init__()
+        self.factor = factor
+
+    def __call__(self, handler, parameters, gradients):
+        handler.subtract_tt(gradients, self.factor * parameters)
+

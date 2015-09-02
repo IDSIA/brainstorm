@@ -167,6 +167,10 @@ class Handler(Describable):
         """ """
 
     @abc.abstractmethod
+    def sign_t(self, a, out):
+        """ """
+
+    @abc.abstractmethod
     def binarize_v(self, v, out):
         """ """
 

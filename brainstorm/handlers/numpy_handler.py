@@ -135,6 +135,9 @@ class NumpyHandler(Handler):
     def log_t(self, a, out):
         np.log(a, out)
 
+    def sign_t(self, a, out):
+        np.sign(a, out=out)
+
     def divide_tt(self, a, b, out):
         out[:] = a / b
 

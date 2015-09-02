@@ -159,6 +159,9 @@ class PyCudaHandler(Handler):
     def log_t(self, a, out):
         cumath.log(a, out=out)
 
+    def sign_t(self, a, out):
+        sign_kernel(a, out)
+
     def divide_tt(self, a, b, out):
         div_kernel(a, b, out)
 
@@ -493,6 +496,12 @@ clip_kernel = ElementwiseKernel(
     "float* a, float* out, float a_min, float a_max",
     "out[i] = fminf(fmaxf(a[i], a_min), a_max);",
     "clip_kernel"
+)
+
+sign_kernel = ElementwiseKernel(
+    "float* a, float* out",
+    "out[i] = (a[i] > 0) - (a[i] < 0);",
+    "sign_kernel"
 )
 
 div_kernel = ElementwiseKernel(
