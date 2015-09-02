@@ -187,7 +187,7 @@ class L1Decay(GradientModifier):
     def __call__(self, handler, parameters, gradients):
         tmp = handler.zeros(parameters.shape)
         handler.sign_t(parameters, out=tmp)
-        handler.subtract_tt(gradients, self.factor * tmp)
+        handler.subtract_tt(gradients, self.factor * tmp, out=gradients)
 
 
 class L2Decay(GradientModifier):
@@ -203,5 +203,5 @@ class L2Decay(GradientModifier):
         self.factor = factor
 
     def __call__(self, handler, parameters, gradients):
-        handler.subtract_tt(gradients, self.factor * parameters)
+        handler.subtract_tt(gradients, self.factor * parameters, out=gradients)
 
