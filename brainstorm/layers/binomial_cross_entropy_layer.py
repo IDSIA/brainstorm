@@ -75,8 +75,8 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
         _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
 
         # reshape for summation
-        cee = flatten_time_and_features(_h, cee)
-        cee_sum = flatten_time(_h, cee_sum)
+        cee = flatten_time_and_features(cee)
+        cee_sum = flatten_time(cee_sum)
         _h.sum_t(cee, axis=1, out=cee_sum)
         _h.mult_st(-1, cee_sum, cee_sum)  # * -1
 

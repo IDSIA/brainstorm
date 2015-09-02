@@ -40,7 +40,7 @@ def test_flatten_time():
     _h = NumpyHandler(np.float64)
     shape = (2, 3, 2, 4)
     x = np.random.randn(*shape)
-    y = flatten_time(_h, x).copy()
+    y = flatten_time(x).copy()
     yp = x.reshape((6, 2, 4))
     assert np.allclose(y, yp)
 
@@ -49,6 +49,6 @@ def test_flatten_time_and_features():
     _h = NumpyHandler(np.float64)
     shape = (2, 3, 2, 4)
     x = np.random.randn(*shape)
-    y = flatten_time_and_features(_h, x).copy()
+    y = flatten_time_and_features(x).copy()
     yp = x.reshape((6, 8))
     assert np.allclose(y, yp)

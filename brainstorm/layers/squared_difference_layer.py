@@ -60,10 +60,10 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         diff = buffers.internals.squared_diff
         diff_sum = buffers.outputs.default
 
-        flat_inputs_1 = flatten_time_and_features(_h, inputs_1)
-        flat_inputs_2 = flatten_time_and_features(_h, inputs_2)
-        flat_diff = flatten_time_and_features(_h, diff)
-        flat_diff_sum = flatten_time(_h, diff_sum)
+        flat_inputs_1 = flatten_time_and_features(inputs_1)
+        flat_inputs_2 = flatten_time_and_features(inputs_2)
+        flat_diff = flatten_time_and_features(diff)
+        flat_diff_sum = flatten_time(diff_sum)
 
         # calculate
         _h.subtract_tt(flat_inputs_1, flat_inputs_2, out=flat_diff)

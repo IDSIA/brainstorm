@@ -18,10 +18,6 @@ class NumpyHandler(Handler):
         self.rnd = global_rnd.create_random_state(seed)
 
     array_type = np.ndarray
-    size = staticmethod(lambda x: x.size)
-    shape = staticmethod(lambda x: x.shape)
-    reshape = staticmethod(lambda x, s: x.reshape(s))
-    slice = staticmethod(lambda x, s: x[s])
 
     def __describe__(self):
         return {

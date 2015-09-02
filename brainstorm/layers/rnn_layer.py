@@ -62,8 +62,8 @@ class RnnLayerImpl(LayerBaseImpl):
         outputs = buffers.outputs.default
         Ha = buffers.internals.Ha
 
-        flat_inputs = flatten_time(_h, inputs)
-        flat_H = flatten_time(_h, Ha[:-1])
+        flat_inputs = flatten_time(inputs)
+        flat_H = flatten_time(Ha[:-1])
 
         _h.dot_mm(flat_inputs, W, flat_H, transb=True)
         _h.add_mv(flat_H, bias, flat_H)
@@ -91,9 +91,9 @@ class RnnLayerImpl(LayerBaseImpl):
             self.act_func_deriv(Ha[t], outputs[t],
                                 dHb[t], dHa[t])
 
-        flat_inputs = flatten_time(_h, inputs)
-        flat_dinputs = flatten_time(_h, dinputs)
-        flat_dHa = flatten_time(_h, dHa[:-1])
+        flat_inputs = flatten_time(inputs)
+        flat_dinputs = flatten_time(dinputs)
+        flat_dHa = flatten_time(dHa[:-1])
 
         # calculate in_deltas and gradients
         _h.dot_add_mm(flat_dHa, W, flat_dinputs)
@@ -102,7 +102,7 @@ class RnnLayerImpl(LayerBaseImpl):
         _h.sum_t(flat_dHa, axis=0, out=dbias_tmp)
         _h.add_tt(dbias, dbias_tmp, dbias)
 
-        flat_outputs = flatten_time(_h, outputs[:-2])
-        flat_dHa = flatten_time(_h, dHa[1:-1])
+        flat_outputs = flatten_time(outputs[:-2])
+        flat_dHa = flatten_time(dHa[1:-1])
         _h.dot_add_mm(flat_outputs, flat_dHa, dR, transa=True)
         _h.dot_add_mm(outputs[-1], dHa[0], dR, transa=True)

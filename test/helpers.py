@@ -110,11 +110,11 @@ def get_approx_deltas(layer, inputs_name, outputs_name, layer_buffers, eps):
     _h = layer.handler
 
     view = layer_buffers.inputs[inputs_name]
-    size = _h.size(view)
+    size = view.size
     x0 = _h.get_numpy_copy(view).reshape((size,))
 
     def f(x):
-        flat_view = _h.reshape(view, (size,))
+        flat_view = view.reshape((size,))
         _h.set_from_numpy(flat_view, x)  # set to new value
         layer.forward_pass(layer_buffers)
         return _h.get_numpy_copy(layer_buffers.outputs[outputs_name]).sum()
@@ -138,11 +138,11 @@ def get_approx_gradients(layer, parameter_name, outputs_name, layer_buffers,
     _h = layer.handler
 
     view = layer_buffers.parameters[parameter_name]
-    size = _h.size(view)
+    size = view.size
     x0 = _h.get_numpy_copy(view).reshape((size,))
 
     def f(x):
-        flat_view = _h.reshape(view, (size,))
+        flat_view = view.reshape((size,))
         _h.set_from_numpy(flat_view, x)  # set to new value
         layer.forward_pass(layer_buffers)
         return _h.get_numpy_copy(layer_buffers.outputs[outputs_name]).sum()
