@@ -23,6 +23,23 @@ class ValueModifier(Seedable, Describable):
                                     self.__class__.__name__)
 
 
+class GradientModifier(Seedable, Describable):
+
+    __undescribed__ = {'layer_name', 'view_name'}
+
+    def __init__(self):
+        super(GradientModifier, self).__init__()
+        self.layer_name = ''
+        self.view_name = ''
+
+    def __call__(self, handler, parameters, gradients):
+        raise NotImplementedError()
+
+    def __repr__(self):
+        return "<{}.{}.{}>".format(self.layer_name, self.view_name,
+                                    self.__class__.__name__)
+
+
 class ConstrainL2Norm(ValueModifier):
 
     """

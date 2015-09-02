@@ -20,6 +20,7 @@ from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.describable import get_description, create_from_description
+from brainstorm.value_modifiers import ValueModifier, GradientModifier
 
 __all__ = ['Network']
 
@@ -230,6 +231,7 @@ class Network(Seedable):
             'fallback is not supported for weight modifiers'
         weight_mods = prune_view_references(weight_mods)
         self.weight_modifiers = order_and_copy_modifiers(weight_mods)
+        # TODO: Check that all are ValueModifiers
 
     def set_gradient_modifiers(self, default_or_mod_dict=None, **kwargs):
         """
@@ -266,6 +268,7 @@ class Network(Seedable):
             'fallback is not supported for gradient modifiers'
         gradient_mods = prune_view_references(gradient_mods)
         self.gradient_modifiers = order_and_copy_modifiers(gradient_mods)
+        # TODO: Check that all are ValueModifiers or GradientModifiers
 
     def set_memory_handler(self, new_handler):
         self.handler = new_handler
@@ -319,8 +322,13 @@ class Network(Seedable):
             for view_name, gradient_mods in views.items():
                 for gm in gradient_mods:
                     gm.rnd.set_seed(self.rnd.generate_seed())
-                    gm(self.handler,
-                       self.buffer[layer_name].gradients[view_name])
+                    if isinstance(gm, GradientModifier):
+                        gm(self.handler,
+                           self.buffer[layer_name].parameters[view_name],
+                           self.buffer[layer_name].gradients[view_name])
+                    else:
+                        gm(self.handler,
+                           self.buffer[layer_name].gradients[view_name])
 
     # -------------------------- Serialization --------------------------------
 
