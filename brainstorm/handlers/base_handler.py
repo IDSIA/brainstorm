@@ -102,7 +102,7 @@ class Handler(Describable):
         """ """
 
     @abc.abstractmethod
-    def add_mv(self, a, b, out):
+    def add_mv(self, m, v, out):
         """ """
 
     @abc.abstractmethod
@@ -120,6 +120,10 @@ class Handler(Describable):
     @abc.abstractmethod
     def mult_st(self, a, b, out):
         """ """
+
+    @abc.abstractmethod
+    def mult_add_st(self, a, b, out):
+        out[:] += a * b
 
     @abc.abstractmethod
     def mult_mv(self, m, v, out):
@@ -168,6 +172,27 @@ class Handler(Describable):
 
     @abc.abstractmethod
     def index_m_by_v(self, m, v, out):
+        """ """
+
+    @abc.abstractmethod
+    def conv2d_forward_batch(self, inputs, weights, bias, outputs,
+                             padding, stride):
+        """ """
+
+    @abc.abstractmethod
+    def conv2d_backward_batch(self, inputs, weights, padding, stride,
+                              in_deltas, out_deltas, weight_deltas,
+                              bias_deltas):
+        """ """
+
+    @abc.abstractmethod
+    def pool2d_forward_batch(self, inputs, window, outputs, padding,
+                             stride, argmax):
+        """ """
+
+    @abc.abstractmethod
+    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
+                              argmax, in_deltas, out_deltas):
         """ """
 
     # ---------------- Activation functions -----------------------------------

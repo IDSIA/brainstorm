@@ -3,11 +3,11 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers.base_handler import Handler
-from brainstorm.randomness import RandomState, global_rnd
+from brainstorm.randomness import global_rnd
 from brainstorm.handlers import _cpuop
 
 
-# noinspection PyMethodOverriding
+# noinspection PyMethodMayBeStatic
 class NumpyHandler(Handler):
     __undescribed__ = {'context', 'EMPTY', 'rnd'}
 
@@ -35,8 +35,7 @@ class NumpyHandler(Handler):
     def allocate(self, size):
         return np.zeros(size, dtype=self.dtype)
 
-    @staticmethod
-    def fill(mem, val):
+    def fill(self, mem, val):
         mem.fill(val)
 
     def set_from_numpy(self, mem, arr):
@@ -46,12 +45,10 @@ class NumpyHandler(Handler):
         assert type(arr) == self.array_type
         return arr.copy()
 
-    @staticmethod
-    def create_from_numpy(arr):
+    def create_from_numpy(self, arr):
         return arr.copy()
 
-    @staticmethod
-    def copy_to(dest, src):
+    def copy_to(self, dest, src):
         # FIXME: change casting to 'no'
         np.copyto(dest, src, casting='same_kind')
 
@@ -66,8 +63,7 @@ class NumpyHandler(Handler):
     def generate_probability_mask(self, mask, probability):
         mask[:] = self.rnd.uniform(size=mask.shape) < probability
 
-    @staticmethod
-    def sum_t(a, axis, out):
+    def sum_t(self, a, axis, out):
         assert axis is None or (len(a.shape) < 3 and (axis == 0 or axis == 1))
 
         if axis is not None and len(out.shape) == len(a.shape):
@@ -76,51 +72,41 @@ class NumpyHandler(Handler):
             keepdims = False
         np.sum(a, axis=axis, out=out, keepdims=keepdims)
 
-    @staticmethod
-    def dot_mm(a, b, out, transa='N', transb='N'):
+    def dot_mm(self, a, b, out, transa='N', transb='N'):
         x = a.T if (transa == 'T') else a
         y = b.T if (transb == 'T') else b
         # np.dot(x, y, out)  # FIXME: doesn't work with strided out
         out[:] = np.dot(x, y)
 
-    @staticmethod
-    def dot_add_mm(a, b, out, transa='N', transb='N'):
+    def dot_add_mm(self, a, b, out, transa='N', transb='N'):
         x = a.T if (transa == 'T') else a
         y = b.T if (transb == 'T') else b
         out[:] += np.dot(x, y)
 
-    @staticmethod
-    def mult_tt(a, b, out):
+    def mult_tt(self, a, b, out):
         np.multiply(a, b, out)
 
-    @staticmethod
-    def mult_add_tt(a, b, out):
+    def mult_add_tt(self, a, b, out):
         out[:] += a * b
 
-    @staticmethod
-    def mult_st(a, b, out):
+    def mult_st(self, a, b, out):
         np.multiply(a, b, out)
 
-    @staticmethod
-    def mult_add_st(a, b, out):
+    def mult_add_st(self, a, b, out):
         out[:] += a * b
 
-    @staticmethod
-    def add_tt(a, b, out):
+    def add_tt(self, a, b, out):
         assert a.shape == b.shape == out.shape
         out[:] = a + b
 
-    @staticmethod
-    def add_st(s, t, out):
+    def add_st(self, s, t, out):
         out[:] = t + s
 
-    @staticmethod
-    def subtract_tt(a, b, out):
+    def subtract_tt(self, a, b, out):
         assert a.shape == b.shape == out.shape
         out[:] = a - b
 
-    @staticmethod
-    def add_mv(m, v, out):
+    def add_mv(self, m, v, out):
         """
         Add (M, N) matrix elementwise to (1, N) or (N, 1) or (N,) vector using
         broadcasting.
@@ -131,8 +117,7 @@ class NumpyHandler(Handler):
             or (len(v.shape) == 1 and v.shape[0] == m.shape[1])
         out[:] = m + v
 
-    @staticmethod
-    def broadcast_features_t(a, out):
+    def broadcast_features_t(self, a, out):
         assert len(a.shape) == 3
         assert a.shape[2] == 1
         assert len(out.shape) > 2
@@ -143,21 +128,17 @@ class NumpyHandler(Handler):
         shape_to_tile = (1, 1) + out.shape[2:]
         out[:] = np.tile(b, shape_to_tile)
 
-    @staticmethod
-    def clip_t(a, a_min, a_max, out):
+    def clip_t(self, a, a_min, a_max, out):
         assert a_max >= a_min
         np.clip(a, a_min, a_max, out)
 
-    @staticmethod
-    def log_t(a, out):
+    def log_t(self, a, out):
         np.log(a, out)
 
-    @staticmethod
-    def divide_tt(a, b, out):
+    def divide_tt(self, a, b, out):
         out[:] = a / b
 
-    @staticmethod
-    def divide_mv(m, v, out):
+    def divide_mv(self, m, v, out):
         """
         Divide (M, N) matrix elementwise by a (1, N) or (N, 1) or (N,) vector
         using broadcasting.
@@ -167,8 +148,7 @@ class NumpyHandler(Handler):
             or (len(v.shape) == 1 and v.shape[0] == m.shape[1])
         out[:] = m / v
 
-    @staticmethod
-    def mult_mv(m, v, out):
+    def mult_mv(self, m, v, out):
         """
         Multiply (M, N) matrix elementwise by a (1, N) or (N, 1) or (N,) vector
         using broadcasting.
@@ -178,19 +158,16 @@ class NumpyHandler(Handler):
             or (len(v.shape) == 1 and v.shape[0] == m.shape[1])
         out[:] = m * v
 
-    @staticmethod
-    def binarize_v(v, out):
+    def binarize_v(self, v, out):
         out[:] = 0.
         for i in range(v.shape[0]):
             out[i, int(v[i])] = 1.0
 
-    @staticmethod
-    def index_m_by_v(m, v, out):
+    def index_m_by_v(self, m, v, out):
         for i in range(m.shape[0]):
             out[i] = m[i, int(v[i])]
 
-    @staticmethod
-    def get_im2col_map(num_input_maps, input_rows, input_cols,
+    def get_im2col_map(self, num_input_maps, input_rows, input_cols,
                        kernel_size, stride):
         # im2col built upon http://stackoverflow.com/a/30110497
         # Returns a 2D map which performs im2col on a 3D array
@@ -222,8 +199,7 @@ class NumpyHandler(Handler):
 
         return im2col_map
 
-    @classmethod
-    def conv2d_forward_batch(cls, inputs, weights, bias, outputs,
+    def conv2d_forward_batch(self, inputs, weights, bias, outputs,
                              padding, stride):
 
         num_filters = weights.shape[0]
@@ -231,10 +207,10 @@ class NumpyHandler(Handler):
         kernel_size = (weights.shape[2], weights.shape[3])
         out_shape = outputs.shape[1:]
 
-        im2col_map = cls.get_im2col_map(num_input_maps,
-                                        input_rows + 2 * padding,
-                                        input_cols + 2 * padding,
-                                        kernel_size, stride)
+        im2col_map = self.get_im2col_map(num_input_maps,
+                                         input_rows + 2 * padding,
+                                         input_cols + 2 * padding,
+                                         kernel_size, stride)
 
         # reshape
         for i in range(num_images):
@@ -258,9 +234,9 @@ class NumpyHandler(Handler):
 
         outputs += bias.reshape((1, num_filters, 1, 1))
 
-    @classmethod
-    def conv2d_backward_batch(cls, inputs, weights, padding, stride, in_deltas,
-                              out_deltas, weight_deltas, bias_deltas):
+    def conv2d_backward_batch(self, inputs, weights, padding, stride,
+                              in_deltas, out_deltas, weight_deltas,
+                              bias_deltas):
         if stride != (1, 1):
             raise NotImplementedError("Strides > 1 for ConvolutionLayer2D are "
                                       "not supported yet.")
@@ -269,19 +245,19 @@ class NumpyHandler(Handler):
         _, num_output_maps, output_rows, output_cols = out_deltas.shape
         kernel_size = (weights.shape[2], weights.shape[3])
 
-        im2col_map = cls.get_im2col_map(num_input_maps,
-                                        input_rows + 2 * padding,
-                                        input_cols + 2 * padding,
-                                        kernel_size, stride)
+        im2col_map = self.get_im2col_map(num_input_maps,
+                                         input_rows + 2 * padding,
+                                         input_cols + 2 * padding,
+                                         kernel_size, stride)
 
         dpadh = ((input_rows + 2 * padding - 1) * stride[0] + kernel_size[0] -
                  output_rows) // 2
         dpadw = ((input_cols + 2 * padding - 1) * stride[1] + kernel_size[1] -
                  output_cols) // 2
-        col2im_map = cls.get_im2col_map(num_output_maps,
-                                        output_rows + 2 * dpadh,
-                                        output_cols + 2 * dpadw,
-                                        kernel_size, (1, 1))
+        col2im_map = self.get_im2col_map(num_output_maps,
+                                         output_rows + 2 * dpadh,
+                                         output_cols + 2 * dpadw,
+                                         kernel_size, (1, 1))
         weight_deltas.fill(0.0)
         bias_deltas.fill(0.0)
         for i in range(num_images):
@@ -302,8 +278,8 @@ class NumpyHandler(Handler):
                                                       kernel_size[1] *
                                                       num_input_maps)
             reshaped_out_deltas = out_deltas[i].reshape((num_filters, -1))
-            cls.dot_add_mm(reshaped_out_deltas, col, out=reshaped_dweights,
-                           transb='T')
+            self.dot_add_mm(reshaped_out_deltas, col, out=reshaped_dweights,
+                            transb='T')
             bias_deltas += np.sum(reshaped_out_deltas, axis=1)
 
             # Compute in_deltas
@@ -345,32 +321,25 @@ class NumpyHandler(Handler):
 
     # ---------------- Activation functions -----------------------------------
 
-    @staticmethod
-    def sigmoid(x, y):
+    def sigmoid(self, x, y):
         y[:] = 1. / (1. + np.exp(-x))
 
-    @staticmethod
-    def sigmoid_deriv(x, y, dy, dx):
+    def sigmoid_deriv(self, x, y, dy, dx):
         dx[:] = dy * y * (1. - y)
 
-    @staticmethod
-    def tanh(x, y):
+    def tanh(self, x, y):
         np.tanh(x, y)
 
-    @staticmethod
-    def tanh_deriv(x, y, dy, dx):
+    def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
 
-    @staticmethod
-    def rel(x, y):
+    def rel(self, x, y):
         y[:] = x * (x > 0)
 
-    @staticmethod
-    def rel_deriv(x, y, dy, dx):
+    def rel_deriv(self, x, y, dy, dx):
         dx[:] = dy * (y > 0)
 
-    @staticmethod
-    def softmax_m(m, out):
+    def softmax_m(self, m, out):
         """Applies softmax to matrix over last dimension"""
         maxes = np.amax(m, axis=1, keepdims=True)
         e = np.exp(m - maxes)

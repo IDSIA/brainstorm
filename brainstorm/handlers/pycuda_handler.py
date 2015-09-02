@@ -13,6 +13,7 @@ import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
+
 culinalg.init()
 
 try:
@@ -22,9 +23,7 @@ except ImportError:
     warnings.warn("CUDNN libraries are not available.")
 
 
-# noinspection PyMethodOverriding
 class PyCudaHandler(Handler):
-
     __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd',
                        'cudnn_context', 'cudnn_tensor_format',
                        'cudnn_data_type', 'cudnn_convmode', 'cudnn_convpref',
@@ -35,10 +34,11 @@ class PyCudaHandler(Handler):
         self.context = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
         if seed is None:
-                seed = global_rnd.generate_seed()
+            seed = global_rnd.generate_seed()
 
         def get_seeds(n):
             return gpuarray.to_gpu(np.ones(n, np.int32) * seed)
+
         self.rnd = XORWOWRandomNumberGenerator(seed_getter=get_seeds)
         self.init_cudnn = init_cudnn
         if self.init_cudnn:
@@ -51,7 +51,7 @@ class PyCudaHandler(Handler):
                 'CUDNN_CROSS_CORRELATION']
             # TODO we should use use PREFER_FASTEST eventually!
             self.cudnn_convpref = cudnn.cudnnConvolutionFwdPreference[
-                #'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
+                # 'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
                 'CUDNN_CONVOLUTION_FWD_NO_WORKSPACE']
             self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
             self.cudnn_pooling_mode = cudnn.cudnnPoolingMode[
@@ -66,12 +66,10 @@ class PyCudaHandler(Handler):
     def __init_from_description__(self, description):
         self.__init__()
 
-
     def allocate(self, size):
         return gpuarray.zeros(size, dtype=self.dtype)
 
-    @staticmethod
-    def fill(mem, val):
+    def fill(self, mem, val):
         mem.fill(val)
 
     def set_from_numpy(self, mem, arr):
@@ -87,8 +85,7 @@ class PyCudaHandler(Handler):
     def create_from_numpy(self, arr):
         return gpuarray.to_gpu(arr.astype(self.dtype))
 
-    @staticmethod
-    def copy_to(dest, src):
+    def copy_to(self, dest, src):
         # Copy data from src to dest (both must be GPUArrays)
         drv.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 
@@ -114,48 +111,37 @@ class PyCudaHandler(Handler):
         else:
             raise NotImplementedError
 
-    @staticmethod
-    def dot_mm(a, b, out, transa='N', transb='N'):
+    def dot_mm(self, a, b, out, transa='N', transb='N'):
         culinalg.dot(a, b, transa=transa, transb=transb, out=out)
 
-    @staticmethod
-    def dot_add_mm(a, b, out, transa='N', transb='N'):
+    def dot_add_mm(self, a, b, out, transa='N', transb='N'):
         culinalg.add_dot(a, b, out, transa, transb)
 
-    @staticmethod
-    def mult_tt(a, b, out):
+    def mult_tt(self, a, b, out):
         mult_tt_kernel(a, b, out)
 
-    @staticmethod
-    def mult_add_tt(a, b, out):
+    def mult_add_tt(self, a, b, out):
         mult_add_kernel(a, b, out)
 
-    @staticmethod
-    def mult_st(a, b, out):
+    def mult_st(self, a, b, out):
         mult_st_kernel(a, b, out)
 
-    @staticmethod
-    def mult_add_st(a, b, out):
+    def mult_add_st(self, a, b, out):
         mult_add_st_kernel(a, b, out)
 
-    @staticmethod
-    def add_tt(a, b, out):
+    def add_tt(self, a, b, out):
         add_mm_kernel(a, b, out)
 
-    @staticmethod
-    def add_st(s, t, out):
+    def add_st(self, s, t, out):
         add_st_kernel(s, t, out)
 
-    @staticmethod
-    def subtract_tt(a, b, out):
+    def subtract_tt(self, a, b, out):
         subtract_mm_kernel(a, b, out)
 
-    @staticmethod
-    def add_mv(m, v, out):
+    def add_mv(self, m, v, out):
         cumisc.add_matvec(m, v, out=out)
 
-    @staticmethod
-    def broadcast_features_t(a, out):
+    def broadcast_features_t(self, a, out):
         assert len(a.shape) == 3
         assert a.shape[2] == 1
         assert len(out.shape) > 2
@@ -163,44 +149,36 @@ class PyCudaHandler(Handler):
         out_flat = out.reshape(out.size)
         broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
 
-    @staticmethod
-    def clip_t(a, a_min, a_max, out):
+    def clip_t(self, a, a_min, a_max, out):
         clip_kernel(a, out, a_min, a_max)
 
-    @staticmethod
-    def log_t(a, out):
+    def log_t(self, a, out):
         cumath.log(a, out=out)
 
-    @staticmethod
-    def divide_tt(a, b, out):
+    def divide_tt(self, a, b, out):
         div_kernel(a, b, out)
 
-    @staticmethod
-    def divide_mv(m, v, out):
+    def divide_mv(self, m, v, out):
         """
         Divide (M, N) matrix elementwise by a (1, N) vector using broadcasting.
         """
         cumisc.div_matvec(m, v, out=out)
 
-    @classmethod
-    def mult_mv(cls, m, v, out):
+    def mult_mv(self, m, v, out):
         """
         Multiply (M, N) matrix elementwise by a (1, N) vector using
         broadcasting.
         """
         if m.shape == v.shape:
-            cls.mult_tt(m, v, out=out)
+            self.mult_tt(m, v, out=out)
         else:
             cumisc.mult_matvec(m, v, out=out)
 
-    @staticmethod
-    def binarize_v(v, out):
+    def binarize_v(self, v, out):
         binarize_v_kernel(out, v, out.shape[0], out.shape[1])
 
-    @staticmethod
-    def index_m_by_v(m, v, out):
+    def index_m_by_v(self, m, v, out):
         index_m_by_v_kernel(out, v, m, m.shape[0], m.shape[1])
-
 
     def conv2d_forward_batch(self, inputs, weights, bias, outputs,
                              padding, stride):
@@ -216,22 +194,24 @@ class PyCudaHandler(Handler):
 
         b_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, 1, bias.size, 1, 1)
+                                         self.cudnn_data_type, 1, bias.size, 1,
+                                         1)
 
         conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
         cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
-            stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
+                                              stride[0], stride[1], upscalex,
+                                              upscaley, self.cudnn_convmode)
 
         # TODO: remove this sanity check once implementation works
         outshape = cudnn.cudnnGetConvolution2dForwardOutputDim(
             conv_desc, x_desc, w_desc)
-        assert(outshape == outputs.shape)
-        assert(weights.shape[0] == bias.size)
-        assert(outputs.shape[1] == bias.size)
+        assert (outshape == outputs.shape)
+        assert (weights.shape[0] == bias.size)
+        assert (outputs.shape[1] == bias.size)
 
         y_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
-        self.cudnn_data_type, *outputs.shape)
+                                         self.cudnn_data_type, *outputs.shape)
 
         # TODO: we hardcode a memory limit of zero for cudnn
         algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
@@ -244,19 +224,19 @@ class PyCudaHandler(Handler):
         b_data = ctypes.c_void_p(int(bias.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
         cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
-            x_data, w_desc, w_data, conv_desc, algo, None, 0, beta, y_desc,
-            y_data)
+                                      x_data, w_desc, w_data, conv_desc, algo,
+                                      None, 0, beta, y_desc,
+                                      y_data)
         beta = 1.0
         cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
-            b_desc, b_data, beta, y_desc, y_data)
+                             b_desc, b_data, beta, y_desc, y_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyTensorDescriptor(y_desc)
         cudnn.cudnnDestroyFilterDescriptor(w_desc)
         cudnn.cudnnDestroyTensorDescriptor(b_desc)
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
-        #cudnn.cudnnDestroy(cudnn_context)
-
+        # cudnn.cudnnDestroy(cudnn_context)
 
     def conv2d_backward_batch(self, inputs, weights, padding, stride,
                               in_deltas, out_deltas, weight_deltas,
@@ -265,25 +245,29 @@ class PyCudaHandler(Handler):
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *inputs.shape)
+                                         self.cudnn_data_type, *inputs.shape)
         id_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *in_deltas.shape)
+                                         self.cudnn_data_type,
+                                         *in_deltas.shape)
         od_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *out_deltas.shape)
+                                         self.cudnn_data_type,
+                                         *out_deltas.shape)
         w_desc = cudnn.cudnnCreateFilterDescriptor()
         cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
-            *weights.shape)
+                                         *weights.shape)
         dw_desc = cudnn.cudnnCreateFilterDescriptor()
         cudnn.cudnnSetFilter4dDescriptor(dw_desc, self.cudnn_data_type,
-            *weight_deltas.shape)
+                                         *weight_deltas.shape)
         db_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(db_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, 1, bias_deltas.size, 1, 1)
+                                         self.cudnn_data_type, 1,
+                                         bias_deltas.size, 1, 1)
         conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
         cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
-            stride[0], stride[1], upscalex, upscaley, self.cudnn_convmode)
+                                              stride[0], stride[1], upscalex,
+                                              upscaley, self.cudnn_convmode)
 
         alpha, beta = 1.0, 0.0
         x_data = ctypes.c_void_p(int(inputs.gpudata))
@@ -294,13 +278,16 @@ class PyCudaHandler(Handler):
         db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
 
         cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
-            x_desc, x_data, od_desc, od_data, conv_desc, beta,
-            dw_desc, dw_data)
+                                             x_desc, x_data, od_desc, od_data,
+                                             conv_desc, beta,
+                                             dw_desc, dw_data)
         cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
-            w_desc, w_data, od_desc, od_data, conv_desc, beta,
-            id_desc, id_data)
+                                           w_desc, w_data, od_desc, od_data,
+                                           conv_desc, beta,
+                                           id_desc, id_data)
         cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
-            od_desc, od_data, beta, db_desc, db_data)
+                                           od_desc, od_data, beta, db_desc,
+                                           db_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyFilterDescriptor(w_desc)
@@ -310,53 +297,55 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyFilterDescriptor(db_desc)
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
 
-
     def pool2d_forward_batch(self, inputs, window, outputs, padding,
                              stride, argmax):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
         cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
-            window[0], window[1], padding, padding, stride[0], stride[1])
+                                          window[0], window[1], padding,
+                                          padding, stride[0], stride[1])
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *inputs.shape)
+                                         self.cudnn_data_type, *inputs.shape)
         y_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *outputs.shape)
+                                         self.cudnn_data_type, *outputs.shape)
 
         # TODO: remove this sanity check once implementation works
-        #outshape = cudnn.cudnnGetPooling2dForwardOutputDim(
+        # outshape = cudnn.cudnnGetPooling2dForwardOutputDim(
         #    conv_desc, x_desc)
-        #assert(outshape == outputs.shape)
+        # assert(outshape == outputs.shape)
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
         alpha, beta = 1.0, 0.0
         cudnn.cudnnPoolingForward(self.cudnn_context, pool_desc, alpha,
-            x_desc, x_data, beta, y_desc, y_data)
+                                  x_desc, x_data, beta, y_desc, y_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyTensorDescriptor(y_desc)
         cudnn.cudnnDestroyPoolingDescriptor(pool_desc)
 
-
     def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
-                             argmax, in_deltas, out_deltas):
+                              argmax, in_deltas, out_deltas):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
         cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
-            window[0], window[1], padding, padding, stride[0], stride[1])
+                                          window[0], window[1], padding,
+                                          padding, stride[0], stride[1])
 
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *inputs.shape)
+                                         self.cudnn_data_type, *inputs.shape)
         y_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
-        self.cudnn_data_type, *outputs.shape)
+                                         self.cudnn_data_type, *outputs.shape)
         id_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *in_deltas.shape)
+                                         self.cudnn_data_type,
+                                         *in_deltas.shape)
         od_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
-            self.cudnn_data_type, *out_deltas.shape)
+                                         self.cudnn_data_type,
+                                         *out_deltas.shape)
 
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
@@ -364,8 +353,9 @@ class PyCudaHandler(Handler):
         od_data = ctypes.c_void_p(int(out_deltas.gpudata))
         alpha, beta = 1.0, 0.0
         cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
-            y_desc, y_data, od_desc, od_data, x_desc, x_data, beta,
-            id_desc, id_data)
+                                   y_desc, y_data, od_desc, od_data, x_desc,
+                                   x_data, beta,
+                                   id_desc, id_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyTensorDescriptor(y_desc)
@@ -375,32 +365,25 @@ class PyCudaHandler(Handler):
 
     # Activation functions
 
-    @staticmethod
-    def sigmoid(x, y):
+    def sigmoid(self, x, y):
         sigmoid_kernel(x, y)
 
-    @staticmethod
-    def sigmoid_deriv(x, y, dy, dx):
+    def sigmoid_deriv(self, x, y, dy, dx):
         sigmoid_deriv_kernel(x, y, dy, dx)
 
-    @staticmethod
-    def tanh(x, y):
+    def tanh(self, x, y):
         tanh_kernel(x, y)
 
-    @staticmethod
-    def tanh_deriv(x, y, dy, dx):
+    def tanh_deriv(self, x, y, dy, dx):
         tanh_deriv_kernel(x, y, dy, dx)
 
-    @staticmethod
-    def rel(x, y):
+    def rel(self, x, y):
         rel_kernel(x, y)
 
-    @staticmethod
-    def rel_deriv(x, y, dy, dx):
+    def rel_deriv(self, x, y, dy, dx):
         rel_deriv_kernel(x, y, dy, dx)
 
-    @staticmethod
-    def softmax_m(m, out):
+    def softmax_m(self, m, out):
         """Applies softmax to matrix over last dimension"""
         n, k = m.shape
         tmp = gpuarray.empty((1, n), dtype=m.dtype)
@@ -408,7 +391,8 @@ class PyCudaHandler(Handler):
                       np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
         return out
 
-    # ---------------- Layer specific operations ---------------- #
+        # ---------------- Layer specific operations ---------------- #
+
 
 # ---------------- kernels ---------------- #
 create_probabilistic_mask_kernel = ElementwiseKernel(
