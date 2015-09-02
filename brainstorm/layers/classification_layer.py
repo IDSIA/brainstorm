@@ -74,7 +74,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         flat_targets = flatten_time(_h, targets)
 
         # calculate activation
-        _h.dot_mm(flat_input, W, flat_Ha, transb='T')
+        _h.dot_mm(flat_input, W, flat_Ha, transb=True)
         _h.add_mv(flat_Ha, bias, flat_Ha)
 
         # softmax
@@ -118,5 +118,5 @@ class ClassificationLayerImpl(LayerBaseImpl):
 
         # calculate in_deltas and gradients
         _h.dot_add_mm(flat_dHa, W, out=flat_dinputs)
-        _h.dot_mm(flat_dHa, flat_inputs, dW, transa='T')
+        _h.dot_mm(flat_dHa, flat_inputs, dW, transa=True)
         _h.sum_t(flat_dHa, axis=0, out=dbias)

@@ -65,7 +65,7 @@ class RnnLayerImpl(LayerBaseImpl):
         flat_inputs = flatten_time(_h, inputs)
         flat_H = flatten_time(_h, Ha[:-1])
 
-        _h.dot_mm(flat_inputs, W, flat_H, transb='T')
+        _h.dot_mm(flat_inputs, W, flat_H, transb=True)
         _h.add_mv(flat_H, bias, flat_H)
 
         for t in range(inputs.shape[0]):
@@ -87,7 +87,7 @@ class RnnLayerImpl(LayerBaseImpl):
         T = inputs.shape[0] - 1
         self.act_func_deriv(Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
-            _h.dot_add_mm(dHa[t + 1], R, dHb[t], transb='T')
+            _h.dot_add_mm(dHa[t + 1], R, dHb[t], transb=True)
             self.act_func_deriv(Ha[t], outputs[t],
                                 dHb[t], dHa[t])
 
@@ -97,12 +97,12 @@ class RnnLayerImpl(LayerBaseImpl):
 
         # calculate in_deltas and gradients
         _h.dot_add_mm(flat_dHa, W, flat_dinputs)
-        _h.dot_add_mm(flat_dHa, flat_inputs, dW, transa='T')
+        _h.dot_add_mm(flat_dHa, flat_inputs, dW, transa=True)
         dbias_tmp = _h.allocate(dbias.shape)
         _h.sum_t(flat_dHa, axis=0, out=dbias_tmp)
         _h.add_tt(dbias, dbias_tmp, dbias)
 
         flat_outputs = flatten_time(_h, outputs[:-2])
         flat_dHa = flatten_time(_h, dHa[1:-1])
-        _h.dot_add_mm(flat_outputs, flat_dHa, dR, transa='T')
-        _h.dot_add_mm(outputs[-1], dHa[0], dR, transa='T')
+        _h.dot_add_mm(flat_outputs, flat_dHa, dR, transa=True)
+        _h.dot_add_mm(outputs[-1], dHa[0], dR, transa=True)

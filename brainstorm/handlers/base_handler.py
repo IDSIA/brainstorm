@@ -147,11 +147,11 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def dot_mm(self, a, b, out, transa='N', transb='N'):
+    def dot_mm(self, a, b, out, transa=False, transb=False):
         """ """
 
     @abc.abstractmethod
-    def dot_add_mm(self, a, b, out, transa='N', transb='N'):
+    def dot_add_mm(self, a, b, out, transa=False, transb=False):
         """ """
 
     @abc.abstractmethod

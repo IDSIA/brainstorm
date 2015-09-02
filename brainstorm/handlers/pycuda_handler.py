@@ -111,10 +111,14 @@ class PyCudaHandler(Handler):
         else:
             raise NotImplementedError
 
-    def dot_mm(self, a, b, out, transa='N', transb='N'):
+    def dot_mm(self, a, b, out, transa=False, transb=False):
+        transa = 'T' if transa else 'N'
+        transb = 'T' if transb else 'N'
         culinalg.dot(a, b, transa=transa, transb=transb, out=out)
 
-    def dot_add_mm(self, a, b, out, transa='N', transb='N'):
+    def dot_add_mm(self, a, b, out, transa=False, transb=False):
+        transa = 'T' if transa else 'N'
+        transb = 'T' if transb else 'N'
         culinalg.add_dot(a, b, out, transa, transb)
 
     def mult_tt(self, a, b, out):

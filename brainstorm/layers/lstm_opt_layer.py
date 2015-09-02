@@ -91,12 +91,12 @@ class LstmOptLayerImpl(LayerBaseImpl):
         F = S[:, :, out_size * 2:out_size * 3]
         O = S[:, :, out_size * 3:]
 
-        _h.dot_mm(flat_x, W, flat_S, transb='T')  # all inputs times weights
+        _h.dot_mm(flat_x, W, flat_S, transb=True)  # all inputs times weights
         _h.add_mv(flat_S, b, flat_S)  # all biases
 
         for t in range(time_size):
             # Recurrent Connections
-            _h.dot_add_mm(y[t - 1], R, S[t], transb='T')
+            _h.dot_add_mm(y[t - 1], R, S[t], transb=True)
 
             # Activations for Z and gates
             self.act_func(Z[t], Z[t])
@@ -167,8 +167,8 @@ class LstmOptLayerImpl(LayerBaseImpl):
 
         # Gradient for the recurrent weights
         flat_y = y[:-2].reshape(((time_size - 1) * batch_size, y.shape[2]))
-        _h.dot_add_mm(flat_dS[batch_size:], flat_y, dR, transa='T')
-        _h.dot_add_mm(dS[0], y[-1], dR, transa='T')
+        _h.dot_add_mm(flat_dS[batch_size:], flat_y, dR, transa=True)
+        _h.dot_add_mm(dS[0], y[-1], dR, transa=True)
 
         # biases
         bias_tmp = _h.allocate(db.shape)
@@ -176,7 +176,7 @@ class LstmOptLayerImpl(LayerBaseImpl):
         _h.add_tt(bias_tmp, db, db)
 
         # Gradients for the input weights
-        _h.dot_add_mm(flat_dS, flat_x, dW, transa='T')
+        _h.dot_add_mm(flat_dS, flat_x, dW, transa=True)
 
         # Input Deltas
         _h.dot_add_mm(flat_dS, W, flat_dx)

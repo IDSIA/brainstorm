@@ -72,15 +72,15 @@ class NumpyHandler(Handler):
             keepdims = False
         np.sum(a, axis=axis, out=out, keepdims=keepdims)
 
-    def dot_mm(self, a, b, out, transa='N', transb='N'):
-        x = a.T if (transa == 'T') else a
-        y = b.T if (transb == 'T') else b
+    def dot_mm(self, a, b, out, transa=False, transb=False):
+        x = a.T if transa else a
+        y = b.T if transb else b
         # np.dot(x, y, out)  # FIXME: doesn't work with strided out
         out[:] = np.dot(x, y)
 
-    def dot_add_mm(self, a, b, out, transa='N', transb='N'):
-        x = a.T if (transa == 'T') else a
-        y = b.T if (transb == 'T') else b
+    def dot_add_mm(self, a, b, out, transa=False, transb=False):
+        x = a.T if transa else a
+        y = b.T if transb else b
         out[:] += np.dot(x, y)
 
     def mult_tt(self, a, b, out):
@@ -279,7 +279,7 @@ class NumpyHandler(Handler):
                                                       num_input_maps)
             reshaped_out_deltas = out_deltas[i].reshape((num_filters, -1))
             self.dot_add_mm(reshaped_out_deltas, col, out=reshaped_dweights,
-                            transb='T')
+                            transb=True)
             bias_deltas += np.sum(reshaped_out_deltas, axis=1)
 
             # Compute in_deltas

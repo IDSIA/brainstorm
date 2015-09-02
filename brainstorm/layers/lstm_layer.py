@@ -114,19 +114,19 @@ class LstmLayerImpl(LayerBaseImpl):
 
         for t in range(time_size):
             # Block input
-            _h.dot_mm(x[t], Wz, Za[t], transb='T')
+            _h.dot_mm(x[t], Wz, Za[t], transb=True)
             _h.dot_add_mm(y[t - 1], Rz, Za[t])
             _h.add_mv(Za[t], bz, Za[t])
             self.act_func(Za[t], Zb[t])
 
             # Input Gate
-            _h.dot_mm(x[t], Wi, Ia[t], transb='T')
+            _h.dot_mm(x[t], Wi, Ia[t], transb=True)
             _h.dot_add_mm(y[t - 1], Ri, Ia[t])
             _h.add_mv(Ia[t], bi, Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
-            _h.dot_mm(x[t], Wf, Fa[t], transb='T')
+            _h.dot_mm(x[t], Wf, Fa[t], transb=True)
             _h.dot_add_mm(y[t - 1], Rf, Fa[t])
             _h.add_mv(Fa[t], bf, Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
@@ -136,7 +136,7 @@ class LstmLayerImpl(LayerBaseImpl):
             _h.mult_add_tt(Fb[t], Ca[t - 1], Ca[t])
 
             # Output Gate
-            _h.dot_mm(x[t], Wo, Oa[t], transb='T')
+            _h.dot_mm(x[t], Wo, Oa[t], transb=True)
             _h.dot_add_mm(y[t - 1], Ro, Oa[t])
             _h.add_mv(Oa[t], bo, Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
@@ -169,10 +169,10 @@ class LstmLayerImpl(LayerBaseImpl):
         for t in range(time_size - 1, -1, - 1):
             # cumulate recurrent deltas
             _h.copy_to(dy[t], deltas[t])
-            _h.dot_add_mm(dIa[t + 1], Ri, dy[t], transb='T')
-            _h.dot_add_mm(dFa[t + 1], Rf, dy[t], transb='T')
-            _h.dot_add_mm(dOa[t + 1], Ro, dy[t], transb='T')
-            _h.dot_add_mm(dZa[t + 1], Rz, dy[t], transb='T')
+            _h.dot_add_mm(dIa[t + 1], Ri, dy[t], transb=True)
+            _h.dot_add_mm(dFa[t + 1], Rf, dy[t], transb=True)
+            _h.dot_add_mm(dOa[t + 1], Ro, dy[t], transb=True)
+            _h.dot_add_mm(dZa[t + 1], Rz, dy[t], transb=True)
 
             # Output Gate
             _h.mult_tt(dy[t], Cb[t], dOb[t])
@@ -202,16 +202,16 @@ class LstmLayerImpl(LayerBaseImpl):
             _h.dot_add_mm(dZa[t], Wz, dx[t])
 
             # Gradients for the input weights
-            _h.dot_add_mm(dIa[t], x[t], dWi, transa='T')
-            _h.dot_add_mm(dFa[t], x[t], dWf, transa='T')
-            _h.dot_add_mm(dOa[t], x[t], dWo, transa='T')
-            _h.dot_add_mm(dZa[t], x[t], dWz, transa='T')
+            _h.dot_add_mm(dIa[t], x[t], dWi, transa=True)
+            _h.dot_add_mm(dFa[t], x[t], dWf, transa=True)
+            _h.dot_add_mm(dOa[t], x[t], dWo, transa=True)
+            _h.dot_add_mm(dZa[t], x[t], dWz, transa=True)
 
             # Gradient for the recurrent weights
-            _h.dot_add_mm(y[t], dIa[t + 1], dRi, transa='T')
-            _h.dot_add_mm(y[t], dFa[t + 1], dRf, transa='T')
-            _h.dot_add_mm(y[t], dOa[t + 1], dRo, transa='T')
-            _h.dot_add_mm(y[t], dZa[t + 1], dRz, transa='T')
+            _h.dot_add_mm(y[t], dIa[t + 1], dRi, transa=True)
+            _h.dot_add_mm(y[t], dFa[t + 1], dRf, transa=True)
+            _h.dot_add_mm(y[t], dOa[t + 1], dRo, transa=True)
+            _h.dot_add_mm(y[t], dZa[t + 1], dRz, transa=True)
 
             # biases
             bias_tmp = _h.allocate(dbz.shape)
