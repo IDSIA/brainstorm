@@ -91,7 +91,7 @@ class BufferManager(object):
             self.hubs, time_size, batch_size)
 
         if total_size > self.size:
-            self.full_buffer = self.handler.allocate(total_size)
+            self.full_buffer = self.handler.allocate((total_size,))
             self.size = total_size
 
         self.buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
@@ -135,8 +135,8 @@ class BufferManager(object):
                 c = self.handler.zeros(
                     (hub.context_size, self.batch_size, hub.size))
 
-                context_start_idx = self.time_size - hub.context_size * 2
-                context_stop_idx = self.time_size - hub.context_size
+                context_start_idx = self.time_size - hub.context_size
+                context_stop_idx = self.time_size
 
                 self.handler.copy_to(
                     c, buf[context_start_idx:context_stop_idx])
@@ -148,7 +148,7 @@ class BufferManager(object):
         for c, buf in zip(context, self.buffers):
             if c is None:
                 continue
-            self.handler.copy_to(buf[(self.time_size - c.shape[0]):], c)
+            self.handler.copy_to(buf[self.time_size:], c)
 
     def clear_context(self):
         if self.buffers is None:

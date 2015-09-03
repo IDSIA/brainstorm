@@ -6,6 +6,7 @@ from brainstorm import Network, Gaussian
 from brainstorm.layers import Input, Rnn, Lstm
 import numpy as np
 import pytest
+from .helpers import HANDLER
 
 np.random.seed(1234)
 
@@ -40,32 +41,34 @@ def net_with_context(request):
 
 def test_context_slice_allows_continuing_forward_pass(net_with_context):
     net = net_with_context
+    net.set_memory_handler(HANDLER)
     net.initialize(Gaussian(0.1), seed=1234)
-    all_data = np.random.randn(4, 1, 2)
+    all_data = HANDLER.create_from_numpy(np.random.randn(4, 1, 2))
 
     # First do a pass on all the data
     net.provide_external_data({'default': all_data})
     net.forward_pass()
-    final_context = [x.copy() if x is not None else None for x in
-                     net.get_context()]
-    final_outputs = net.buffer.out.outputs.default
+    final_context = [HANDLER.get_numpy_copy(x) if x is not None else None
+                     for x in net.get_context()]
+    final_outputs = HANDLER.get_numpy_copy(net.buffer.out.outputs.default)
 
     # Pass only part of data
-    data_a = all_data[:2, :, :].copy()
+    data_a = all_data[:2]
     net.provide_external_data({'default': data_a})
     net.forward_pass()
 
     # Pass rest of data with context
-    data_b = all_data[2:, :, :].copy()
+    data_b = all_data[2:]
     net.provide_external_data({'default': data_b})
     net.forward_pass(context=net.get_context())
-    context = [x.copy() if x is not None else None for x in net.get_context()]
-    outputs = net.buffer.out.outputs.default
+    context = [HANDLER.get_numpy_copy(x) if x is not None else None
+               for x in net.get_context()]
+    outputs = HANDLER.get_numpy_copy(net.buffer.out.outputs.default)
 
     # Check if outputs are the same as final_outputs
-    print("Outputs:\n", outputs)
-    print("Should match:\n", final_outputs[2:])
-    assert np.allclose(outputs, final_outputs[2:])
+    print("Outputs:\n", outputs[:-1])
+    print("Should match:\n", final_outputs[2:-1])
+    assert np.allclose(outputs[:-1], final_outputs[2:-1])
 
     # Check if context is same as final_context
     assert len(context) == len(final_context), "Context list sizes mismatch!"
