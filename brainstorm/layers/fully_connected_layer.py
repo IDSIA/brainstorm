@@ -68,7 +68,7 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
 
         # calculate outputs
         _h.dot_mm(flat_input, W, flat_H, transb=True)
-        _h.add_mv(flat_H, bias, flat_H)
+        _h.add_mv(flat_H, bias.reshape((1, self.size)), flat_H)
         self.act_func(H, outputs)
 
     def backward_pass(self, buffers):

@@ -75,7 +75,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
 
         # calculate activation
         _h.dot_mm(flat_input, W, flat_Ha, transb=True)
-        _h.add_mv(flat_Ha, bias, flat_Ha)
+        _h.add_mv(flat_Ha, bias.reshape((1, bias.shape[0])), flat_Ha)
 
         # softmax
         _h.softmax_m(flat_Ha, flat_output)

@@ -66,7 +66,7 @@ class RnnLayerImpl(LayerBaseImpl):
         flat_H = flatten_time(Ha[:-1])
 
         _h.dot_mm(flat_inputs, W, flat_H, transb=True)
-        _h.add_mv(flat_H, bias, flat_H)
+        _h.add_mv(flat_H, bias.reshape((1, self.size)), flat_H)
 
         for t in range(inputs.shape[0]):
             _h.dot_add_mm(outputs[t - 1], R, Ha[t])

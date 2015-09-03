@@ -77,6 +77,10 @@ class Handler(Describable):
     def fill(self, mem, val):
         """ """
 
+    @abc.abstractmethod
+    def create_from_numpy(self, arr):
+        """ """
+
     # ---------------- Mathematical Operations ---------------- #
 
     def generate_probability_mask(self, mask, probability):

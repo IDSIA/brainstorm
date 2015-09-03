@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError, flatten_time, \
-    flatten_time_and_features
+    flatten_time_and_features, flatten_features
 from brainstorm.structure.shapes import ShapeTemplate
 
 
@@ -84,7 +84,8 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
 
         # grad_diff_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_features_t(grad_diff_sum, grad_diff)
+        grad_diff_fflat = flatten_features(grad_diff)
+        _h.broadcast_features_t(grad_diff_sum, grad_diff_fflat)
 
         # calculate
         _h.subtract_tt(inputs_1, inputs_2, out=tmp)

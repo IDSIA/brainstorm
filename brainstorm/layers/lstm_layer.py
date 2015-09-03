@@ -116,19 +116,19 @@ class LstmLayerImpl(LayerBaseImpl):
             # Block input
             _h.dot_mm(x[t], Wz, Za[t], transb=True)
             _h.dot_add_mm(y[t - 1], Rz, Za[t])
-            _h.add_mv(Za[t], bz, Za[t])
+            _h.add_mv(Za[t], bz.reshape((1, self.size)), Za[t])
             self.act_func(Za[t], Zb[t])
 
             # Input Gate
             _h.dot_mm(x[t], Wi, Ia[t], transb=True)
             _h.dot_add_mm(y[t - 1], Ri, Ia[t])
-            _h.add_mv(Ia[t], bi, Ia[t])
+            _h.add_mv(Ia[t], bi.reshape((1, self.size)), Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
             _h.dot_mm(x[t], Wf, Fa[t], transb=True)
             _h.dot_add_mm(y[t - 1], Rf, Fa[t])
-            _h.add_mv(Fa[t], bf, Fa[t])
+            _h.add_mv(Fa[t], bf.reshape((1, self.size)), Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
 
             # Cell
@@ -138,7 +138,7 @@ class LstmLayerImpl(LayerBaseImpl):
             # Output Gate
             _h.dot_mm(x[t], Wo, Oa[t], transb=True)
             _h.dot_add_mm(y[t - 1], Ro, Oa[t])
-            _h.add_mv(Oa[t], bo, Oa[t])
+            _h.add_mv(Oa[t], bo.reshape((1, self.size)), Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
 
             # Block output

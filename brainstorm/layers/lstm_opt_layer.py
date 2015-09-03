@@ -92,7 +92,7 @@ class LstmOptLayerImpl(LayerBaseImpl):
         O = S[:, :, out_size * 3:]
 
         _h.dot_mm(flat_x, W, flat_S, transb=True)  # all inputs times weights
-        _h.add_mv(flat_S, b, flat_S)  # all biases
+        _h.add_mv(flat_S, b.reshape((1, b.shape[0])), flat_S)  # all biases
 
         for t in range(time_size):
             # Recurrent Connections
