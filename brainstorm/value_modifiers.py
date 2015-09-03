@@ -66,7 +66,7 @@ class ConstrainL2Norm(ValueModifier):
     def __call__(self, handler, view):
         if len(view.shape) < 2:
             return
-        mat = handler.reshape(view, (view.shape[0], view.size // view.shape[0]))
+        mat = view.reshape((view.shape[0], view.size // view.shape[0]))
         sq_norm = handler.allocate((view.shape[0], 1))
         divisor = handler.allocate(sq_norm.shape)
 

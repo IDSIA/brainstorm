@@ -57,9 +57,9 @@ class Pooling2DLayerImpl(LayerBaseImpl):
 
         # reshape
         t, b, c, h, w = inputs.shape
-        flat_inputs = _h.reshape(inputs, (t * b, c, h, w))
-        flat_outputs = _h.reshape(outputs, (t * b,) + outputs.shape[2:])
-        flat_argmax = _h.reshape(argmax, (t * b,) + argmax.shape[2:])
+        flat_inputs = inputs.reshape((t * b, c, h, w))
+        flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
+        flat_argmax = argmax.reshape((t * b,) + argmax.shape[2:])
 
         # calculate outputs
         _h.pool2d_forward_batch(flat_inputs, self.kernel_size, flat_outputs,
@@ -77,12 +77,12 @@ class Pooling2DLayerImpl(LayerBaseImpl):
 
         # reshape
         t, b, c, h, w = inputs.shape
-        flat_inputs = _h.reshape(inputs, (t * b, c, h, w))
-        flat_in_deltas = _h.reshape(in_deltas, (t * b, c, h, w))
-        flat_out_deltas = _h.reshape(out_deltas, (t * b,)
-                                     + out_deltas.shape[2:])
-        flat_outputs = _h.reshape(outputs, (t * b,) + outputs.shape[2:])
-        flat_argmax = _h.reshape(argmax, (t * b,) + argmax.shape[2:])
+        flat_inputs = inputs.reshape((t * b, c, h, w))
+        flat_in_deltas = in_deltas.reshape((t * b, c, h, w))
+        flat_out_deltas = out_deltas.reshape((t * b,)
+                                             + out_deltas.shape[2:])
+        flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
+        flat_argmax = argmax.reshape((t * b,) + argmax.shape[2:])
 
         _h.pool2d_backward_batch(flat_inputs, self.kernel_size,
                                  flat_outputs, self.padding, self.stride,

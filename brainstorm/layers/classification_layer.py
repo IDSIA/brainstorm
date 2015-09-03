@@ -67,15 +67,15 @@ class ClassificationLayerImpl(LayerBaseImpl):
         Ha = buffers.internals.Ha
 
         # reshape
-        flat_input = flatten_time_and_features(_h, inputs)
-        flat_output = flatten_time(_h, outputs)
-        flat_Ha = flatten_time(_h, Ha)
-        flat_loss = flatten_time(_h, loss)
-        flat_targets = flatten_time(_h, targets)
+        flat_input = flatten_time_and_features(inputs)
+        flat_output = flatten_time(outputs)
+        flat_Ha = flatten_time(Ha)
+        flat_loss = flatten_time(loss)
+        flat_targets = flatten_time(targets)
 
         # calculate activation
         _h.dot_mm(flat_input, W, flat_Ha, transb=True)
-        _h.add_mv(flat_Ha, bias, flat_Ha)
+        _h.add_mv(flat_Ha, bias.reshape((1, bias.shape[0])), flat_Ha)
 
         # softmax
         _h.softmax_m(flat_Ha, flat_output)
@@ -102,12 +102,12 @@ class ClassificationLayerImpl(LayerBaseImpl):
         dHa = buffers.internals.dHa
 
         # reshape
-        flat_inputs = flatten_time_and_features(_h, inputs)
-        flat_outputs = flatten_time(_h, outputs)
-        flat_targets = flatten_time(_h, targets)
-        flat_dHa = flatten_time(_h, dHa)
-        flat_dloss = flatten_time(_h, dloss)
-        flat_dinputs = flatten_time_and_features(_h, dinputs)
+        flat_inputs = flatten_time_and_features(inputs)
+        flat_outputs = flatten_time(outputs)
+        flat_targets = flatten_time(targets)
+        flat_dHa = flatten_time(dHa)
+        flat_dloss = flatten_time(dloss)
+        flat_dinputs = flatten_time_and_features(dinputs)
 
         # derivative of multinomial cross-entropy error wrt softmax:
         # y - t

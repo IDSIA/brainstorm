@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+from brainstorm.handlers.debug_handler import DebugHandler
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.architecture import Connection
 from brainstorm.layers import InputLayerImpl
@@ -292,7 +293,8 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
         # compare new output
         layer.forward_pass(layer_buffers)
         for key, value in layer_buffers.outputs.items():
-            assert np.allclose(outputs[key], value, rtol=eps, atol=eps), internal
+            assert np.allclose(outputs[key], HANDLER.get_numpy_copy(value),
+                               rtol=eps, atol=eps), internal
 
 
 def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
@@ -327,7 +329,8 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         layer.forward_pass(layer_buffers)
         layer.backward_pass(layer_buffers)
         for key, value in layer_buffers.input_deltas.items():
-            assert np.allclose(deltas[key], value, rtol=eps, atol=eps)
+            assert np.allclose(deltas[key], HANDLER.get_numpy_copy(value),
+                               rtol=eps, atol=eps)
 
 
 def test_layer_add_to_deltas(layer_specs):
@@ -362,7 +365,8 @@ def test_layer_add_to_deltas(layer_specs):
 
     # assert all input deltas are 1.0 bigger
     for key, value in layer_buffers.input_deltas.items():
-        passed = np.allclose(deltas[key] + 1.0, value, rtol=eps, atol=eps)
+        passed = np.allclose(deltas[key] + 1.0, HANDLER.get_numpy_copy(value),
+                             rtol=eps, atol=eps)
         if not passed:
             print("Adding deltas test failed for {}!".format(key))
             print("Calculated Deltas:\n", value)
@@ -375,23 +379,24 @@ def test_elementwise_act_func_gradients():
     pairs_to_test = [(HANDLER.sigmoid, HANDLER.sigmoid_deriv),
                      (HANDLER.tanh, HANDLER.tanh_deriv),
                      (HANDLER.rel, HANDLER.rel_deriv)]
+    test_shape = (3, 2, 4)
 
     for fwd, bwd in pairs_to_test:
         print("------------------")
         print("Testing", fwd.__name__)
-        inputs = HANDLER.create_from_numpy(np.random.randn(3, 2, 4))
-        outputs = HANDLER.create_from_numpy(np.zeros_like(inputs))
-        doutputs = HANDLER.create_from_numpy(np.ones_like(inputs))
-        dinputs = HANDLER.create_from_numpy(np.zeros_like(inputs))
+        inputs = HANDLER.create_from_numpy(np.random.randn(*test_shape))
+        outputs = HANDLER.zeros(test_shape)
+        doutputs = HANDLER.ones(test_shape)
+        dinputs = HANDLER.zeros(test_shape)
         fwd(inputs, outputs)
         bwd(inputs, outputs, doutputs, dinputs)
         grad_calc = HANDLER.get_numpy_copy(dinputs)
 
-        size = HANDLER.size(inputs)
+        size = inputs.size
         x0 = HANDLER.get_numpy_copy(inputs).reshape((size,))
 
         def f(x):
-            flat_inputs = HANDLER.reshape(inputs, (size,))
+            flat_inputs = inputs.reshape((size,))
             HANDLER.set_from_numpy(flat_inputs, x)
             HANDLER.fill(outputs, 0.)
             fwd(inputs, outputs)
@@ -399,7 +404,15 @@ def test_elementwise_act_func_gradients():
 
         grad_approx = approx_fprime(x0, f, 1e-5).reshape(grad_calc.shape)
 
-        assert np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
+        close = np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
+        if not close:
+            print('-- Approximated Gradient ----')
+            print(grad_approx)
+            print('---- Calculated Gradient ----')
+            print(grad_calc)
+            print('------------- Difference ----')
+            print(grad_approx - grad_calc)
+        assert close
 
 
 def test_get_layer_class_from_typename():

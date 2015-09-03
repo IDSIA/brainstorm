@@ -92,8 +92,8 @@ class Convolution2DLayerImpl(LayerBaseImpl):
         H = buffers.internals.H
 
         # reshape
-        flat_inputs = flatten_time(_h, inputs)
-        flat_H = flatten_time(_h, H)
+        flat_inputs = flatten_time(inputs)
+        flat_H = flatten_time(H)
 
         # calculate outputs
         _h.conv2d_forward_batch(flat_inputs, W, bias, flat_H,
@@ -112,9 +112,9 @@ class Convolution2DLayerImpl(LayerBaseImpl):
         H, dH = buffers.internals
 
         # reshape
-        flat_inputs = flatten_time(_h, inputs)
-        flat_in_deltas = flatten_time(_h, in_deltas)
-        flat_dH = flatten_time(_h, dH)
+        flat_inputs = flatten_time(inputs)
+        flat_in_deltas = flatten_time(in_deltas)
+        flat_dH = flatten_time(dH)
 
         # calculate in_deltas and gradients
         self.act_func_deriv(H, outputs, out_deltas, dH)

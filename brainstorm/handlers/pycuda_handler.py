@@ -58,10 +58,6 @@ class PyCudaHandler(Handler):
                 'CUDNN_POOLING_MAX']
 
     array_type = pycuda.gpuarray.GPUArray
-    size = staticmethod(lambda x: x.size)
-    shape = staticmethod(lambda x: x.shape)
-    reshape = staticmethod(lambda x, s: x.reshape(s))
-    slice = staticmethod(lambda x, s: x[s])
 
     def __init_from_description__(self, description):
         self.__init__()

@@ -63,12 +63,12 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         H = buffers.internals.H
 
         # reshape
-        flat_input = flatten_time_and_features(_h, inputs)
-        flat_H = flatten_time(_h, H)
+        flat_input = flatten_time_and_features(inputs)
+        flat_H = flatten_time(H)
 
         # calculate outputs
         _h.dot_mm(flat_input, W, flat_H, transb=True)
-        _h.add_mv(flat_H, bias, flat_H)
+        _h.add_mv(flat_H, bias.reshape((1, self.size)), flat_H)
         self.act_func(H, outputs)
 
     def backward_pass(self, buffers):
@@ -83,9 +83,9 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         H, dH = buffers.internals
 
         # reshape
-        flat_input = flatten_time_and_features(_h, inputs)
-        flat_dH = flatten_time(_h, dH)
-        flat_in_delta_buffer = flatten_time_and_features(_h, in_deltas)
+        flat_input = flatten_time_and_features(inputs)
+        flat_dH = flatten_time(dH)
+        flat_in_delta_buffer = flatten_time_and_features(in_deltas)
 
         # calculate in_deltas and gradients
         self.act_func_deriv(H, outputs, out_deltas, dH)

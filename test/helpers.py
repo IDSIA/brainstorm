@@ -2,14 +2,14 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers import NumpyHandler
+from brainstorm.handlers import NumpyHandler, DebugHandler
 import numpy as np
 from brainstorm.structure.buffers import get_total_size_slices_and_shapes, \
     create_buffer_views_from_layout
 from brainstorm.structure.layout import create_layout
 
 np.random.seed(1234)
-HANDLER = NumpyHandler(np.float64)
+HANDLER = DebugHandler(NumpyHandler(np.float64))
 
 
 def approx_fprime(x0, f, epsilon, *args):
@@ -42,7 +42,7 @@ def set_up_layer(layer, specs):
     hubs, layout = create_layout({'test_layer': layer})
     total_size, slices, shapes = get_total_size_slices_and_shapes(
         hubs, time_steps, batch_size)
-    full_buffer = HANDLER.allocate(total_size)
+    full_buffer = HANDLER.allocate((total_size, ))
     buffers = [full_buffer[slice_].reshape(shape)
                for slice_, shape in zip(slices, shapes)]
     view = create_buffer_views_from_layout(layout, buffers, hubs)
@@ -51,7 +51,7 @@ def set_up_layer(layer, specs):
 
     # init parameters randomly
     HANDLER.set_from_numpy(view.parameters,
-                           np.random.randn(len(view.parameters)) * 0.1)
+                           np.random.randn(view.parameters.size) * 0.1)
 
     for key, value in view.test_layer.inputs.items():
         if key in specs:  # if a special input is given use that
@@ -73,7 +73,7 @@ def run_deltas_test(layer, specs, inputs_name, outputs_name):
     layer.forward_pass(layer_buffers)
     HANDLER.fill(layer_buffers.output_deltas[outputs_name], 1.0)
     layer.backward_pass(layer_buffers)
-    delta_calc = layer_buffers.input_deltas[inputs_name]
+    delta_calc = HANDLER.get_numpy_copy(layer_buffers.input_deltas[inputs_name])
     delta_approx = get_approx_deltas(layer, inputs_name,
                                      outputs_name, layer_buffers,
                                      eps).reshape(delta_calc.shape)
@@ -110,11 +110,11 @@ def get_approx_deltas(layer, inputs_name, outputs_name, layer_buffers, eps):
     _h = layer.handler
 
     view = layer_buffers.inputs[inputs_name]
-    size = _h.size(view)
+    size = view.size
     x0 = _h.get_numpy_copy(view).reshape((size,))
 
     def f(x):
-        flat_view = _h.reshape(view, (size,))
+        flat_view = view.reshape((size,))
         _h.set_from_numpy(flat_view, x)  # set to new value
         layer.forward_pass(layer_buffers)
         return _h.get_numpy_copy(layer_buffers.outputs[outputs_name]).sum()
@@ -138,11 +138,11 @@ def get_approx_gradients(layer, parameter_name, outputs_name, layer_buffers,
     _h = layer.handler
 
     view = layer_buffers.parameters[parameter_name]
-    size = _h.size(view)
+    size = view.size
     x0 = _h.get_numpy_copy(view).reshape((size,))
 
     def f(x):
-        flat_view = _h.reshape(view, (size,))
+        flat_view = view.reshape((size,))
         _h.set_from_numpy(flat_view, x)  # set to new value
         layer.forward_pass(layer_buffers)
         return _h.get_numpy_copy(layer_buffers.outputs[outputs_name]).sum()
@@ -160,7 +160,7 @@ def run_gradients_test(layer, specs, parameter_name, outputs_name):
     layer.forward_pass(layer_buffers)
     HANDLER.fill(layer_buffers.output_deltas[outputs_name], 1.0)
     layer.backward_pass(layer_buffers)
-    grad_calc = layer_buffers.gradients[parameter_name]
+    grad_calc = HANDLER.get_numpy_copy(layer_buffers.gradients[parameter_name])
     grad_approx = get_approx_gradients(layer, parameter_name,
                                        outputs_name, layer_buffers,
                                        eps).reshape(grad_calc.shape)

@@ -19,9 +19,9 @@ class MaskLayerImpl(LayerBaseImpl):
     def forward_pass(self, buffers, training_pass=True):
         _h = self.handler
 
-        flat_inp = flatten_time_and_features(_h, buffers.inputs.default)
-        flat_mask = flatten_time(_h, buffers.inputs.mask)
-        flat_out = flatten_time_and_features(_h, buffers.outputs.default)
+        flat_inp = flatten_time_and_features(buffers.inputs.default)
+        flat_mask = flatten_time(buffers.inputs.mask)
+        flat_out = flatten_time_and_features(buffers.outputs.default)
 
         _h.mult_mv(flat_inp, flat_mask, out=flat_out)
 
@@ -29,11 +29,11 @@ class MaskLayerImpl(LayerBaseImpl):
         _h = self.handler
 
         flat_out_deltas = flatten_time_and_features(
-            _h, buffers.output_deltas.default)
+            buffers.output_deltas.default)
         tmp = self.handler.allocate(flat_out_deltas.shape)
-        flat_mask = flatten_time(_h, buffers.inputs.mask)
+        flat_mask = flatten_time(buffers.inputs.mask)
         flat_in_deltas = flatten_time_and_features(
-            _h, buffers.input_deltas.default)
+            buffers.input_deltas.default)
 
         _h.mult_mv(flat_out_deltas, flat_mask, tmp)
         _h.add_tt(tmp, flat_in_deltas, flat_in_deltas)
