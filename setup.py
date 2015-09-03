@@ -54,7 +54,7 @@ setup(
               'brainstorm.layers',
               'brainstorm.training',
               'brainstorm.handlers'],
-    install_requires=['six', 'numpy'],
+    install_requires=['six', 'numpy', 'h5py'],
     tests_requires=['pytest', 'mock'],
     cmdclass={'test': PyTest},
     license='MIT',
@@ -67,8 +67,7 @@ setup(
         'Programming Language :: Python :: 3.3',
     ],
 
-    ext_modules = cythonize([Extension("brainstorm.handlers._cpuop",
-        ["brainstorm/handlers/_cpuop.pyx"],
-        include_dirs=[np.get_include()])
-    ]),
+    ext_modules=cythonize([Extension("brainstorm.handlers._cpuop",
+                                     ["brainstorm/handlers/_cpuop.pyx"],
+                                     include_dirs=[np.get_include()])]),
 )
