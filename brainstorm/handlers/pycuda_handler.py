@@ -158,6 +158,9 @@ class PyCudaHandler(Handler):
     def sign_t(self, a, out):
         sign_kernel(a, out)
 
+    def sqrt_t(self, a, out):
+        cumath.sqrt(a, out)
+
     def divide_tt(self, a, b, out):
         div_kernel(a, b, out)
 

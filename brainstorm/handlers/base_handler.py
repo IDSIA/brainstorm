@@ -171,6 +171,10 @@ class Handler(Describable):
         """ """
 
     @abc.abstractmethod
+    def sqrt_t(self, a, out):
+        """ """
+
+    @abc.abstractmethod
     def sign_t(self, a, out):
         """ """
 

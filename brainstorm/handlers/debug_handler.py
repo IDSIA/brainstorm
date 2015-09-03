@@ -226,6 +226,11 @@ class DebugHandler(Handler):
         assert_shapes_equal(a, out)
         self.handler.sign_t(a.array, out.array)
 
+    def sqrt_t(self, a, out):
+        assert_debug_arrays(a, out)
+        assert_shapes_equal(a, out)
+        self.handler.sqrt_t(a.array, out.array)
+
     def binarize_v(self, v, out):
         assert_debug_arrays(v, out)
         assert len(v.shape) == len(out.shape) == 2

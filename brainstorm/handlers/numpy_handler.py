@@ -134,6 +134,9 @@ class NumpyHandler(Handler):
     def sign_t(self, a, out):
         np.sign(a, out=out)
 
+    def sqrt_t(self, a, out):
+        np.sqrt(a, out)
+
     def divide_tt(self, a, b, out):
         out[:] = a / b
 
