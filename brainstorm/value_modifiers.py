@@ -177,7 +177,7 @@ class L1Decay(GradientModifier):
     """
     Applies L1 weight decay.
 
-    New gradients = gradients - factor * sign(parameters)
+    New gradients = gradients + factor * sign(parameters)
     """
 
     def __init__(self, factor=0):
@@ -187,7 +187,7 @@ class L1Decay(GradientModifier):
     def __call__(self, handler, parameters, gradients):
         tmp = handler.zeros(parameters.shape)
         handler.sign_t(parameters, out=tmp)
-        handler.subtract_tt(gradients, self.factor * tmp, out=gradients)
+        handler.mult_add_st(self.factor, tmp, out=gradients)
 
 
 class L2Decay(GradientModifier):
@@ -195,7 +195,7 @@ class L2Decay(GradientModifier):
     """
     Applies L2 weight decay.
 
-    New gradients = gradients - factor * parameters
+    New gradients = gradients + factor * parameters
     """
 
     def __init__(self, factor=0):
@@ -203,5 +203,4 @@ class L2Decay(GradientModifier):
         self.factor = factor
 
     def __call__(self, handler, parameters, gradients):
-        handler.subtract_tt(gradients, self.factor * parameters, out=gradients)
-
+        handler.mult_add_st(self.factor, parameters, out=gradients)
