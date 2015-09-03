@@ -122,7 +122,7 @@ class Minibatches(DataIterator, Seedable):
         self.nr_sequences = _assert_correct_data_format(named_data)
         self.data = named_data
         self.shuffle = shuffle
-        self.verbose = True
+        self.verbose = verbose
         self.batch_size = batch_size
         self.sample_size = sum(d.shape[0] * np.prod(d.shape[2:]) * batch_size
                                for d in self.data.values())
