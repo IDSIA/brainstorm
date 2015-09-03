@@ -5,6 +5,8 @@ from brainstorm.handlers.base_handler import Handler
 import numpy as np
 
 
+# ############################## Debug Array ################################ #
+
 class DebugArray(object):
     def __init__(self, arr):
         assert arr is not None
@@ -31,35 +33,7 @@ class DebugArray(object):
         return DebugArray(arr=self.array.reshape(new_shape))
 
 
-def assert_is_shape(shape):
-    assert isinstance(shape, tuple), type(shape)
-    for i in shape:
-        assert isinstance(i, int), "{} was {}".format(i, type(i))
-        assert 0 <= i, "{} < 0".format(i)
-
-
-def assert_debug_arrays(*arrays):
-    for i, arr in enumerate(arrays):
-        assert isinstance(arr, DebugArray), \
-            "{}. is no DebugArray but a {}".format(i, type(arr))
-
-
-def assert_shapes_equal(ref_shape, *shapes):
-    if isinstance(ref_shape, DebugArray):
-        ref_shape = ref_shape.shape
-    assert_is_shape(ref_shape)
-    for i, shape in enumerate(shapes):
-        if isinstance(shape, DebugArray):
-            shape = shape.shape
-        assert_is_shape(shape)
-        assert shape == ref_shape, \
-            "Shape mismatch: {}[{}.] != {}[1st]".format(shape, i, ref_shape)
-
-
-def assert_is_scalar(s):
-    assert isinstance(s, (int, float)), \
-        "{} is not a scalar but a {}".format(s, type(s))
-
+# ############################# Debug Handler ############################### #
 
 class DebugHandler(Handler):
     def __init__(self, handler):
@@ -108,7 +82,7 @@ class DebugHandler(Handler):
         assert isinstance(arr, np.ndarray)
         return DebugArray(self.handler.create_from_numpy(arr))
 
-    # ---------------- Mathematical Operations ---------------- #
+    # ----------------------- Mathematical Operations ----------------------- #
 
     def generate_probability_mask(self, mask, probability):
         assert_debug_arrays(mask)
@@ -247,6 +221,11 @@ class DebugHandler(Handler):
         assert_shapes_equal(a, out)
         self.handler.log_t(a.array, out.array)
 
+    def sign_t(self, a, out):
+        assert_debug_arrays(a, out)
+        assert_shapes_equal(a, out)
+        self.handler.sign_t(a.array, out.array)
+
     def binarize_v(self, v, out):
         assert_debug_arrays(v, out)
         assert len(v.shape) == len(out.shape) == 2
@@ -318,7 +297,7 @@ class DebugHandler(Handler):
                                            padding, stride, argmax.array,
                                            in_deltas.array, out_deltas.array)
 
-    # ---------------- Activation functions -----------------------------------
+    # ---------------- Activation functions ----------------------------------#
 
     def sigmoid(self, x, y):
         assert_debug_arrays(x, y)
@@ -367,3 +346,36 @@ class DebugHandler(Handler):
         assert_shapes_equal(m, out)
         assert len(m.shape) == 2, "len({}) != 2".format(m.shape)
         self.handler.softmax_m(m.array, out.array)
+
+
+# ############################ Helper Methods ############################### #
+
+
+def assert_is_shape(shape):
+    assert isinstance(shape, tuple), type(shape)
+    for i in shape:
+        assert isinstance(i, int), "{} was {}".format(i, type(i))
+        assert 0 <= i, "{} < 0".format(i)
+
+
+def assert_debug_arrays(*arrays):
+    for i, arr in enumerate(arrays):
+        assert isinstance(arr, DebugArray), \
+            "{}. is no DebugArray but a {}".format(i, type(arr))
+
+
+def assert_shapes_equal(ref_shape, *shapes):
+    if isinstance(ref_shape, DebugArray):
+        ref_shape = ref_shape.shape
+    assert_is_shape(ref_shape)
+    for i, shape in enumerate(shapes):
+        if isinstance(shape, DebugArray):
+            shape = shape.shape
+        assert_is_shape(shape)
+        assert shape == ref_shape, \
+            "Shape mismatch: {}[{}.] != {}[1st]".format(shape, i, ref_shape)
+
+
+def assert_is_scalar(s):
+    assert isinstance(s, (int, float)), \
+        "{} is not a scalar but a {}".format(s, type(s))
