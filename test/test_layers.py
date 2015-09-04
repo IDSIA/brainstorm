@@ -3,6 +3,7 @@
 
 from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers.debug_handler import DebugHandler
+
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.architecture import Connection
 from brainstorm.layers import InputLayerImpl
@@ -27,6 +28,7 @@ from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
 from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
+from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 
 import pytest
 
@@ -124,7 +126,8 @@ def lstm_layer(spec):
     layer = LstmLayerImpl('LstmLayer',
                           {'default': ShapeTemplate('T', 'B', 5)},
                           NO_CON, NO_CON,
-                          size=7)
+                          size=7,
+                          activation_function=spec['act_func'])
     return layer, {}
 
 
@@ -168,6 +171,7 @@ def convolution_layer_2d_c(spec):
     return convolution_layer_2d(spec, input_shape=(2, 3, 4), num_filters=2,
                                 kernel_size=(2, 3))
 
+
 def pooling_layer_2d(spec):
     y = ShapeTemplate('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
@@ -175,7 +179,14 @@ def pooling_layer_2d(spec):
                                     ShapeTemplate('T', 'B', 1, 4, 4)},
                                    NO_CON, NO_CON, num_filters=1,
                                    kernel_size=(2, 2), stride=(1, 1))
-    return layer, {}
+    return layer, spec
+
+
+def batch_norm_layer(spec):
+    layer = BatchNormLayerImpl('BatchNorm',
+                               {'default': ShapeTemplate('T', 'B', 3, 2)},
+                               NO_CON, NO_CON)
+    return layer, spec
 
 
 layers_to_test = [
@@ -194,7 +205,8 @@ layers_to_test = [
     convolution_layer_2d_b,
     convolution_layer_2d_c,
     convolution_layer_2d,
-    pooling_layer_2d
+    pooling_layer_2d,
+    batch_norm_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]
@@ -202,7 +214,7 @@ ids = [f.__name__ for f in layers_to_test]
 spec_list = [
     (1, 1, 'tanh'),
     (3, 2, 'tanh'),
-    (2, 3, 'sigmoid'),
+    (5, 1, 'sigmoid'),
     (2, 3, 'rel'),
     (1, 4, 'linear')]
 spec_ids = ['{}{}{}'.format(*p) for p in spec_list]

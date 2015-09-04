@@ -25,6 +25,7 @@ from brainstorm.layers.rnn_layer import RnnLayerImpl
 from brainstorm.layers.dropout_layer import DropoutLayerImpl
 from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
+from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 
 CONSTRUCTION_LAYERS = {}
 
@@ -117,6 +118,10 @@ def Pooling2D(num_filters, kernel_size, stride=(1, 1), padding=0, name=None):
 def Dropout(drop_prob=0.5, name=None):
     return ConstructionWrapper.create('Dropout', drop_prob=drop_prob,
                                       name=name)
+
+
+def BatchNorm(name=None):
+    return ConstructionWrapper.create('BatchNorm', name=name)
 
 
 # ------------------------ Automatic Construction Layers ----------------------
