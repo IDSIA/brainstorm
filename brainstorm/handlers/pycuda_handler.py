@@ -138,6 +138,9 @@ class PyCudaHandler(Handler):
     def subtract_tt(self, a, b, out):
         subtract_mm_kernel(a, b, out)
 
+    def subtract_mv(self, m, v, out):
+        cumisc.binaryop_matvec('-', m, v, None, out, None)
+
     def add_mv(self, m, v, out):
         cumisc.add_matvec(m, v, out=out)
 

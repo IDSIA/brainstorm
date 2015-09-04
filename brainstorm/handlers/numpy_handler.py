@@ -102,15 +102,14 @@ class NumpyHandler(Handler):
         assert a.shape == b.shape == out.shape
         out[:] = a - b
 
+    def subtract_mv(self, m, v, out):
+        out[:] = m - v
+
     def add_mv(self, m, v, out):
         """
-        Add (M, N) matrix elementwise to (1, N) or (N, 1) or (N,) vector using
+        Add (M, N) matrix elementwise to (1, N) or (N, 1) vector using
         broadcasting.
         """
-        # TODO: Generalize to support broadcast along both dimensions
-        assert len(m.shape) == 2
-        assert (len(v.shape) == 2 and (v.shape[0] == 1 or v.shape[1] == 1)) \
-            or (len(v.shape) == 1 and v.shape[0] == m.shape[1])
         out[:] = m + v
 
     def broadcast_features_t(self, a, out):

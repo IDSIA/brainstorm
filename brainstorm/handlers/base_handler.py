@@ -114,6 +114,10 @@ class Handler(Describable):
         """ """
 
     @abc.abstractmethod
+    def subtract_mv(self, m, v, out):
+        """ """
+
+    @abc.abstractmethod
     def sum_t(self, a, axis, out):
         """ """
 

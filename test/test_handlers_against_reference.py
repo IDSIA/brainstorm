@@ -15,14 +15,15 @@ some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
 np.set_printoptions(linewidth=150)
 
-def operation_check(ref_op, op, ref_args, args, ignored_args=[], atol=1e-8):
+
+def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
     print("-" * 40)
     ref_op(*ref_args)
     op(*args)
     check_list = []
     for i, (ref_arg, arg) in enumerate(zip(ref_args, args)):
         if i in ignored_args:
-            #print(i, "was ignored")
+            # print(i, "was ignored")
             continue
         if type(ref_arg) is ref.array_type:
             arg_ref = handler.get_numpy_copy(arg)
@@ -45,7 +46,7 @@ def operation_check(ref_op, op, ref_args, args, ignored_args=[], atol=1e-8):
                 print("\nObtained array:\n", arg)
                 d = ref_arg.ravel() - arg_ref.ravel()
                 print("Frobenius Norm of differences: ", np.sum(d*d))
-        #print("Check was ", check)
+        # print("Check was ", check)
     if False in check_list:
         return False
     else:
@@ -196,6 +197,20 @@ def test_subtract_tt():
                                get_args_from_ref_args(ref_args))
 
 
+def test_subtract_mv():
+    # Only checking with row vectors
+    list_a = get_random_arrays()
+    list_b = get_random_arrays()
+    list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
+
+    for a, b in zip(list_a, list_b):
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, b, out)
+
+        assert operation_check(ref.subtract_mv, handler.subtract_mv, ref_args,
+                               get_args_from_ref_args(ref_args))
+
+
 def test_add_mv():
     # Only checking with row vectors
     list_a = get_random_arrays()
@@ -249,6 +264,7 @@ def test_log_t():
         assert operation_check(ref.log_t, handler.log_t, ref_args,
                                get_args_from_ref_args(ref_args))
 
+
 def test_sign_t():
     list_a = get_random_arrays(some_nd_shapes)
     list_a += [np.random.random_integers(-2, 2, (3, 3))]
@@ -257,6 +273,7 @@ def test_sign_t():
         ref_args = (a, out)
         assert operation_check(ref.sign_t, handler.sign_t, ref_args,
                                get_args_from_ref_args(ref_args))
+
 
 def test_divide_tt():
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
@@ -305,7 +322,7 @@ def test_mult_mv():
     list_b = get_random_arrays()
     list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
     for a, b in zip(list_a, list_b):
-        print('-'*40)
+        print('-' * 40)
         print("a:\n", a)
         print("b:\n", b)
         out = np.zeros_like(a, dtype=ref_dtype)
@@ -315,11 +332,11 @@ def test_mult_mv():
                                get_args_from_ref_args(ref_args))
 
 
-def test_binarize_v(): # TODO
+def test_binarize_v():  # TODO
     pass
 
 
-def test_index_m_by_v(): # TODO
+def test_index_m_by_v():  # TODO
     pass
 
 
@@ -428,7 +445,7 @@ def test_conv2d_backward():
             b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
             oh = (x.shape[2] + 2 * padding - w.shape[2]) / stride[0] + 1
             ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
-            out_shape = (x.shape[0], w.shape[0])+ (oh, ow)
+            out_shape = (x.shape[0], w.shape[0]) + (oh, ow)
             o_deltas = np.random.uniform(size=out_shape).astype(ref_dtype)
             i_deltas = np.zeros_like(x, dtype=ref_dtype)
             w_deltas = np.zeros_like(w, dtype=ref_dtype)
@@ -444,7 +461,7 @@ def test_conv2d_backward():
 
 def test_pool2d_forward():
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
-    window_list= [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
+    window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
     list_x = get_random_arrays(img_shapes)
 
@@ -452,17 +469,19 @@ def test_pool2d_forward():
         for padding in (0, 1, 2):
             for strides in strides_list:
                 for window in window_list:
-                    out_shape = (x.shape[0], x.shape[1],
+                    out_shape = (
+                        x.shape[0], x.shape[1],
                         (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
                         (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
                     argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
                     ref_args = (x, window, outputs, padding, strides, argmax)
                     print(x.shape, window, outputs.shape, padding, strides)
-                    assert operation_check(ref.pool2d_forward_batch,
-                                    handler.pool2d_forward_batch,
-                                    ref_args, get_args_from_ref_args(ref_args),
-                                    ignored_args=[5])
+                    assert operation_check(
+                        ref.pool2d_forward_batch,
+                        handler.pool2d_forward_batch,
+                        ref_args, get_args_from_ref_args(ref_args),
+                        ignored_args=[5])
 
 
 def test_pool2d_backward():
@@ -475,7 +494,8 @@ def test_pool2d_backward():
         for padding in (0, 1, 2):
             for strides in strides_list:
                 for window in window_list:
-                    out_shape = (x.shape[0], x.shape[1],
+                    out_shape = (
+                        x.shape[0], x.shape[1],
                         (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
                         (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
@@ -490,7 +510,8 @@ def test_pool2d_backward():
                     ref_args = (x, window, outputs, padding, strides, argmax,
                                 i_deltas, o_deltas)
                     print(x.shape, window, outputs.shape, padding, strides)
-                    assert operation_check(ref.pool2d_backward_batch,
-                                    handler.pool2d_backward_batch,
-                                    ref_args, get_args_from_ref_args(ref_args),
-                                    ignored_args=[5], atol=1e-6)
+                    assert operation_check(
+                        ref.pool2d_backward_batch,
+                        handler.pool2d_backward_batch,
+                        ref_args, get_args_from_ref_args(ref_args),
+                        ignored_args=[5], atol=1e-6)

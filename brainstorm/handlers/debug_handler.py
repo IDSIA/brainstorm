@@ -114,6 +114,14 @@ class DebugHandler(Handler):
         assert_shapes_equal(a, b, out)
         self.handler.subtract_tt(a.array, b.array, out.array)
 
+    def subtract_mv(self, m, v, out):
+        assert_debug_arrays(m, v, out)
+        assert_shapes_equal(m, out)
+        assert len(m.shape) == 2, "len({}) != 2".format(m.shape)
+        assert v.shape == (m.shape[0], 1) or v.shape == (1, m.shape[1]), \
+            "invalid shape {}".format(v.shape)
+        self.handler.subtract_mv(m.array, v.array, out.array)
+
     def sum_t(self, a, axis, out):
         assert_debug_arrays(a, out)
         dims = len(a.shape)
