@@ -120,8 +120,9 @@ def Dropout(drop_prob=0.5, name=None):
                                       name=name)
 
 
-def BatchNorm(name=None):
-    return ConstructionWrapper.create('BatchNorm', name=name)
+def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
+    return ConstructionWrapper.create('BatchNorm', name=name, decay=decay,
+                                      epsilon=epsilon)
 
 
 # ------------------------ Automatic Construction Layers ----------------------
