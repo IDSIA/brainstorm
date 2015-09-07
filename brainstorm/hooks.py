@@ -115,6 +115,11 @@ class MonitorLayerParameters(Hook):
                                                      interval, verbose)
         self.layer_name = layer_name
 
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        assert self.layer_name in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
+
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
         for key, v in net.buffer[self.layer_name].parameters.items():
@@ -144,6 +149,11 @@ class MonitorLayerGradients(Hook):
                                                     interval, verbose)
         self.layer_name = layer_name
 
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        assert self.layer_name in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
+
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
         for key, v in net.buffer[self.layer_name].gradients.items():
@@ -166,6 +176,11 @@ class MonitorLayerDeltas(Hook):
         super(MonitorLayerDeltas, self).__init__(name, timescale,
                                                  interval, verbose)
         self.layer_name = layer_name
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        assert self.layer_name in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
@@ -206,6 +221,11 @@ class MonitorLayerInOuts(Hook):
         super(MonitorLayerInOuts, self).__init__(name, timescale,
                                                  interval, verbose)
         self.layer_name = layer_name
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        assert self.layer_name in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
