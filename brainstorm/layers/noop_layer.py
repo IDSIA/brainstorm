@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.structure.shapes import ShapeTemplate
 
 
 class NoOpLayerImpl(LayerBaseImpl):
@@ -9,6 +10,8 @@ class NoOpLayerImpl(LayerBaseImpl):
     This layer just copies its input into its output.
     """
     expected_kwargs = {}
+    inputs = {'default': ShapeTemplate('T', 'B', '...')}
+    outputs = {'default': ShapeTemplate('T', 'B', '...')}
 
     def _get_output_shapes(self):
         return self.in_shapes

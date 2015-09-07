@@ -60,8 +60,7 @@ class HighwayLayerImpl(LayerBaseImpl):
         _h.subtract_tt(tmp, T, out=tmp)
         _h.mult_add_tt(tmp, dy, out=dx)
 
-        _h.mult_tt(T, dy, out=tmp)
-        _h.add_tt(tmp, dH, out=dH)
+        _h.mult_add_tt(T, dy, out=dH)
 
         _h.subtract_tt(H, x, out=tmp)
         _h.mult_add_tt(tmp, dy, out=dT)
