@@ -172,13 +172,25 @@ def convolution_layer_2d_c(spec):
                                 kernel_size=(2, 3))
 
 
-def pooling_layer_2d(spec):
+def maxpooling_layer_2d(spec):
     y = ShapeTemplate('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
                                    {'default':
                                     ShapeTemplate('T', 'B', 1, 4, 4)},
                                    NO_CON, NO_CON, num_filters=1,
-                                   kernel_size=(2, 2), stride=(1, 1))
+                                   kernel_size=(2, 2), stride=(1, 1),
+                                   type="max")
+    return layer, spec
+
+
+def avgpooling_layer_2d(spec):
+    y = ShapeTemplate('T', 'B', 3, 5, 4)
+    layer = Pooling2DLayerImpl('Pooling2DLayer',
+                                   {'default':
+                                    ShapeTemplate('T', 'B', 1, 4, 4)},
+                                   NO_CON, NO_CON, num_filters=1,
+                                   kernel_size=(2, 2), stride=(1, 1),
+                                   type="avg")
     return layer, spec
 
 
@@ -205,7 +217,8 @@ layers_to_test = [
     convolution_layer_2d_b,
     convolution_layer_2d_c,
     convolution_layer_2d,
-    pooling_layer_2d,
+    maxpooling_layer_2d,
+    avgpooling_layer_2d,
     batch_norm_layer
 ]
 

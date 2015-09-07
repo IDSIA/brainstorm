@@ -310,15 +310,24 @@ class NumpyHandler(Handler):
             else:
                 in_deltas[i] += temp[:, padding: -padding, padding: -padding]
 
-    def pool2d_forward_batch(self, inputs, window, outputs, padding,
-                             stride, argmax):
+    def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride, argmax):
         _cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
 
-    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
-                              argmax, in_deltas, out_deltas):
+    def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, argmax, in_deltas, out_deltas):
         _cpuop.maxpool_backward(inputs, window, outputs, padding, stride,
                                 argmax, in_deltas, out_deltas)
+
+    def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride):
+        _cpuop.avgpool_forward(inputs, window, outputs, padding, stride)
+
+    def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, in_deltas, out_deltas):
+        _cpuop.avgpool_backward(inputs, window, outputs, padding, stride,
+                                in_deltas, out_deltas)
 
     # ---------------- Activation functions -----------------------------------
 

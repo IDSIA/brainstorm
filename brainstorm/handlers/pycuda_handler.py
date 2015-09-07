@@ -27,7 +27,7 @@ class PyCudaHandler(Handler):
     __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd',
                        'cudnn_context', 'cudnn_tensor_format',
                        'cudnn_data_type', 'cudnn_convmode', 'cudnn_convpref',
-                       'cudnn_addmode', 'cudnn_pooling_mode'}
+                       'cudnn_addmode'}
 
     def __init__(self, seed=None, init_cudnn=True):
         self.dtype = np.float32
@@ -54,8 +54,6 @@ class PyCudaHandler(Handler):
                 # 'CUDNN_CONVOLUTION_FWD_PREFER_FASTEST']
                 'CUDNN_CONVOLUTION_FWD_NO_WORKSPACE']
             self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
-            self.cudnn_pooling_mode = cudnn.cudnnPoolingMode[
-                'CUDNN_POOLING_MAX']
 
     array_type = pycuda.gpuarray.GPUArray
 
@@ -307,10 +305,38 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyFilterDescriptor(db_desc)
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
 
-    def pool2d_forward_batch(self, inputs, window, outputs, padding,
-                             stride, argmax):
+    def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride, argmax):
+        pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
+        self._pool2d_forward_batch(inputs, window, outputs, padding,
+                                   stride, argmax, pool_mode)
+
+    def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, argmax, in_deltas, out_deltas):
+        pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
+        self._pool2d_backward_batch(inputs, window, outputs, padding, stride,
+                                    argmax, in_deltas, out_deltas,
+                                    pool_mode)
+
+    def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride):
+        pool_mode = cudnn.cudnnPoolingMode[
+            'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
+        self._pool2d_forward_batch(inputs, window, outputs, padding,
+                                   stride, None, pool_mode)
+
+    def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, in_deltas, out_deltas):
+        pool_mode = cudnn.cudnnPoolingMode[
+            'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
+        self._pool2d_backward_batch(inputs, window, outputs, padding,
+                             stride, None, in_deltas, out_deltas, pool_mode)
+
+
+    def _pool2d_forward_batch(self, inputs, window, outputs, padding,
+                             stride, argmax, pooling_mode):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
-        cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
+        cudnn.cudnnSetPooling2dDescriptor(pool_desc, pooling_mode,
                                           window[0], window[1], padding,
                                           padding, stride[0], stride[1])
 
@@ -335,10 +361,10 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyTensorDescriptor(y_desc)
         cudnn.cudnnDestroyPoolingDescriptor(pool_desc)
 
-    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
-                              argmax, in_deltas, out_deltas):
+    def _pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
+                               argmax, in_deltas, out_deltas, pooling_mode):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
-        cudnn.cudnnSetPooling2dDescriptor(pool_desc, self.cudnn_pooling_mode,
+        cudnn.cudnnSetPooling2dDescriptor(pool_desc, pooling_mode,
                                           window[0], window[1], padding,
                                           padding, stride[0], stride[1])
 

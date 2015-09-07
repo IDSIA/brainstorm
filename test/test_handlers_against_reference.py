@@ -29,6 +29,7 @@ def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
             arg_ref = handler.get_numpy_copy(arg)
             check = np.allclose(ref_arg, arg_ref, atol=atol)
             check_list.append(check)
+            print(arg)
             if not check:
                 print("\nCheck failed for argument number %d:" % i)
                 print("Reference (expected) array {}:\n{}".format(
@@ -459,7 +460,7 @@ def test_conv2d_backward():
                                    atol=1e-4)
 
 
-def test_pool2d_forward():
+def test_maxpool2d_forward():
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
     window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
@@ -478,13 +479,13 @@ def test_pool2d_forward():
                     ref_args = (x, window, outputs, padding, strides, argmax)
                     print(x.shape, window, outputs.shape, padding, strides)
                     assert operation_check(
-                        ref.pool2d_forward_batch,
-                        handler.pool2d_forward_batch,
+                        ref.maxpool2d_forward_batch,
+                        handler.maxpool2d_forward_batch,
                         ref_args, get_args_from_ref_args(ref_args),
                         ignored_args=[5])
 
 
-def test_pool2d_backward():
+def test_maxpool2d_backward():
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
     window_list= [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
@@ -505,13 +506,68 @@ def test_pool2d_backward():
                     argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
 
                     # initialize argmax
-                    ref.pool2d_forward_batch(x, window, outputs, padding,
+                    ref.maxpool2d_forward_batch(x, window, outputs, padding,
                                              strides, argmax)
                     ref_args = (x, window, outputs, padding, strides, argmax,
                                 i_deltas, o_deltas)
                     print(x.shape, window, outputs.shape, padding, strides)
                     assert operation_check(
-                        ref.pool2d_backward_batch,
-                        handler.pool2d_backward_batch,
+                        ref.maxpool2d_backward_batch,
+                        handler.maxpool2d_backward_batch,
                         ref_args, get_args_from_ref_args(ref_args),
                         ignored_args=[5], atol=1e-6)
+
+
+def test_avgpool2d_forward():
+    img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
+    window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
+    strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
+    list_x = get_random_arrays(img_shapes)
+
+    for x in list_x:
+        for padding in (0, 1, 2):
+            for strides in strides_list:
+                for window in window_list:
+                    out_shape = (
+                        x.shape[0], x.shape[1],
+                        (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
+                        (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
+                    outputs = np.zeros(out_shape, dtype=ref_dtype)
+                    ref_args = (x, window, outputs, padding, strides)
+                    print(x.shape, window, outputs.shape, padding, strides)
+                    assert operation_check(
+                        ref.avgpool2d_forward_batch,
+                        handler.avgpool2d_forward_batch,
+                        ref_args, get_args_from_ref_args(ref_args),
+                        atol=1e-6)
+
+
+def test_avgpool2d_backward():
+    img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
+    window_list= [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
+    strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
+    list_x = get_random_arrays(img_shapes)
+
+    for x in list_x:
+        for padding in (0, 1, 2):
+            for strides in strides_list:
+                for window in window_list:
+                    out_shape = (
+                        x.shape[0], x.shape[1],
+                        (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
+                        (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
+                    outputs = np.zeros(out_shape, dtype=ref_dtype)
+                    o_deltas = np.random.normal(size=out_shape)
+                    o_deltas = o_deltas.astype(ref_dtype)
+                    i_deltas = np.zeros_like(x, dtype=ref_dtype)
+
+                    ref.avgpool2d_forward_batch(x, window, outputs, padding,
+                                             strides)
+                    ref_args = (x, window, outputs, padding, strides,
+                                i_deltas, o_deltas)
+                    print(x.shape, window, outputs.shape, padding, strides)
+                    assert operation_check(
+                        ref.avgpool2d_backward_batch,
+                        handler.avgpool2d_backward_batch,
+                        ref_args, get_args_from_ref_args(ref_args),
+                        atol=1e-6)

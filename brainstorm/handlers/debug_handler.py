@@ -281,8 +281,8 @@ class DebugHandler(Handler):
                                            weight_deltas.array,
                                            bias_deltas.array)
 
-    def pool2d_forward_batch(self, inputs, window, outputs, padding,
-                             stride, argmax):
+    def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride, argmax):
         assert_debug_arrays(inputs, outputs, argmax)
         assert_is_shape(window)
         assert len(window) == 2, "len({}) != 2".format(window)
@@ -291,11 +291,12 @@ class DebugHandler(Handler):
         assert isinstance(padding, int) and 0 <= padding, \
             "invalid padding {}".format(padding)
         # TODO: check shapes of inputs, outputs, argmax
-        self.handler.pool2d_forward_batch(inputs.array, window, outputs.array,
-                                          padding, stride, argmax.array)
+        self.handler.maxpool2d_forward_batch(inputs.array, window,
+                                             outputs.array, padding, stride,
+                                             argmax.array)
 
-    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
-                              argmax, in_deltas, out_deltas):
+    def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, argmax, in_deltas, out_deltas):
         assert_debug_arrays(inputs, outputs, argmax, in_deltas, out_deltas)
         assert_is_shape(window)
         assert len(window) == 2, "len({}) != 2".format(window)
@@ -306,10 +307,41 @@ class DebugHandler(Handler):
         assert_shapes_equal(inputs, in_deltas)
         assert_shapes_equal(outputs, out_deltas)
         # TODO: check shapes of inputs, outputs, argmax
-        self.handler.pool2d_backward_batch(inputs.array, window, outputs.array,
-                                           padding, stride, argmax.array,
-                                           in_deltas.array, out_deltas.array)
+        self.handler.maxpool2d_backward_batch(inputs.array, window,
+                                              outputs.array,
+                                              padding, stride, argmax.array,
+                                              in_deltas.array,
+                                              out_deltas.array)
 
+    def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride):
+        assert_debug_arrays(inputs, outputs)
+        assert_is_shape(window)
+        assert len(window) == 2, "len({}) != 2".format(window)
+        assert_is_shape(stride)
+        assert len(stride) == 2, "len({}) != 2".format(stride)
+        assert isinstance(padding, int) and 0 <= padding, \
+            "invalid padding {}".format(padding)
+        # TODO: check shapes of inputs, outputs,
+        self.handler.avgpool2d_forward_batch(inputs.array, window, outputs.array,
+                                          padding, stride)
+
+    def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, in_deltas, out_deltas):
+        assert_debug_arrays(inputs, outputs, in_deltas, out_deltas)
+        assert_is_shape(window)
+        assert len(window) == 2, "len({}) != 2".format(window)
+        assert_is_shape(stride)
+        assert len(stride) == 2, "len({}) != 2".format(stride)
+        assert isinstance(padding, int) and 0 <= padding, \
+            "invalid padding {}".format(padding)
+        assert_shapes_equal(inputs, in_deltas)
+        assert_shapes_equal(outputs, out_deltas)
+        # TODO: check shapes of inputs, outputs
+        self.handler.avgpool2d_backward_batch(inputs.array, window,
+                                              outputs.array, padding, stride,
+                                              in_deltas.array,
+                                              out_deltas.array)
     # ---------------- Activation functions ----------------------------------#
 
     def sigmoid(self, x, y):

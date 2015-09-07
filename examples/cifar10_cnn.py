@@ -64,11 +64,11 @@ act = 'rel'
 # this network is similar to the 'cifar10-quick' example in caffe
 inp >> \
     bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv1', activation_function=act) >> \
-    bs.layers.Pooling2D(32, kernel_size=(3, 3), stride=(2, 2), name='pool1') >> \
+    bs.layers.Pooling2D(32, type="max", kernel_size=(3, 3), stride=(2, 2), name='pool1') >> \
     bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv2', activation_function=act) >> \
-    bs.layers.Pooling2D(32, kernel_size=(3, 3), stride=(2, 2), name='pool2') >> \
+    bs.layers.Pooling2D(32, type="max", kernel_size=(3, 3), stride=(2, 2), name='pool2') >> \
     bs.layers.Convolution2D(64, kernel_size=(5, 5), padding=2, name='conv3',activation_function=act) >> \
-    bs.layers.Pooling2D(64, kernel_size=(3, 3), stride=(2, 2), name='pool3') >> \
+    bs.layers.Pooling2D(64, type="max", kernel_size=(3, 3), stride=(2, 2), name='pool3') >> \
     bs.layers.FullyConnected(64, name='fc1', activation_function=act) >> \
     out - "loss" >> bs.layers.Loss()
 
@@ -85,10 +85,10 @@ network.initialize({'conv1': {'W': bs.Gaussian(0.0001), 'bias': 0},
 # ------------------------------ Set up Trainer ----------------------------- #
 
 trainer = bs.Trainer(bs.SgdStep(learning_rate=0.001), double_buffering=False)
-trainer.add_hook(bs.hooks.StopAfterEpoch(100))
+trainer.add_hook(bs.hooks.StopAfterEpoch(10))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "out.output",
                                           name="validation accuracy",
-                                          verbose=True, timescale='update',
+                                          verbose=True,
                                           interval=100))
 #trainer.add_hook(bs.hooks.SaveBestNetwork("validation accuracy",
 #                                          filename='cifar10_cnn_best.hdf5',

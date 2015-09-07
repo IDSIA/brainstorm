@@ -202,13 +202,23 @@ class Handler(Describable):
         """ """
 
     @abc.abstractmethod
-    def pool2d_forward_batch(self, inputs, window, outputs, padding,
-                             stride, argmax):
+    def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride):
         """ """
 
     @abc.abstractmethod
-    def pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
-                              argmax, in_deltas, out_deltas):
+    def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, in_deltas, out_deltas):
+        """ """
+
+    @abc.abstractmethod
+    def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride):
+        """ """
+
+    @abc.abstractmethod
+    def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, in_deltas, out_deltas):
         """ """
 
     # ---------------- Activation functions -----------------------------------
