@@ -290,14 +290,15 @@ class PyCudaHandler(Handler):
                                              x_desc, x_data, od_desc, od_data,
                                              conv_desc, beta,
                                              dw_desc, dw_data)
+
+        cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
+                                           od_desc, od_data, beta, db_desc,
+                                           db_data)
+        beta = 1.0  # Gradients w.r.t. inputs should be added
         cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
                                            w_desc, w_data, od_desc, od_data,
                                            conv_desc, beta,
                                            id_desc, id_data)
-        cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
-                                           od_desc, od_data, beta, db_desc,
-                                           db_data)
-
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
         cudnn.cudnnDestroyFilterDescriptor(w_desc)
         cudnn.cudnnDestroyTensorDescriptor(id_desc)
