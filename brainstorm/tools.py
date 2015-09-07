@@ -3,7 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm import layers
 
-__all__ = ['get_in_out_layers_for_classification', 'draw_network']
+__all__ = ['get_in_out_layers_for_classification', 'draw_network',
+           'print_network_info']
 
 
 def get_in_out_layers_for_classification(in_shape, nr_classes,
@@ -50,3 +51,25 @@ def draw_network(network, filename='network.png'):
     except ImportError:
         print("pydot is required for drawing networks but was not found.")
 
+
+def print_network_info(network):
+    print('=' * 30, "Network information", '=' * 30)
+    print('total number of parameters: ', network.buffer.parameters.size)
+    for layer in network.layers.values():
+        print(layer.name)
+        num_params = 0
+        for view in network.buffer[layer.name].parameters.keys():
+            view_size = network.buffer[layer.name].parameters[view].size
+            view_shape = network.buffer[layer.name].parameters[view].shape
+            print('\t', view, view_shape)
+            num_params += view_size
+        print('number of parameters:', num_params)
+        print('input shapes:')
+        for view in layer.in_shapes.keys():
+            print('\t', view, layer.in_shapes[view].feature_shape, end='\t')
+        print()
+        print('output shapes:')
+        for view in layer.out_shapes.keys():
+            print('\t', view, layer.out_shapes[view].feature_shape, end='\t')
+        print()
+        print('-' * 80)
