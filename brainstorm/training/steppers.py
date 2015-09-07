@@ -139,20 +139,26 @@ class NesterovStep(MomentumStep):
     learning_rate is multiplied by (1 - momentum) when used.
     """
     def run(self):
-        # TODO: adjust to using handlers and new network interface
-        learning_rate = self.learning_rate()
-        momentum = self.momentum()
-        self.velocity *= momentum
-        self.net.buffer.parameters[:] += self.velocity
+        learning_rate = self.learning_rate_schedule()
+        momentum = self.momentum_schedule()
+        if self.scale_learning_rate:
+            learning_rate *= (1 - momentum)
+
+        self.net.handler.mult_st(momentum,
+                                 self.velocity,
+                                 out=self.velocity)
+        self.net.handler.add_tt(self.velocity,
+                                self.net.buffer.parameters,
+                                out=self.net.buffer.parameters)
         self.net.forward_pass(training_pass=True)
         loss = self.net.get_loss_value()
         self.net.backward_pass()
-        if self.scale_learning_rate:
-            dv = (1 - momentum) * learning_rate * \
-                self.net.buffer.gradient[:]
-        else:
-            dv = learning_rate * self.net.buffer.gradient[:]
 
-        self.velocity -= dv
-        self.net.buffer.parameters[:] -= dv
+        self.net.handler.mult_add_st(-learning_rate,
+                                     self.net.buffer.gradients,
+                                     self.velocity)
+        self.net.handler.mult_add_st(-learning_rate,
+                                     self.net.buffer.gradients,
+                                     self.net.buffer.parameters)
         return loss
+
