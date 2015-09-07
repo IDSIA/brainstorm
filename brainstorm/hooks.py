@@ -312,11 +312,11 @@ class MonitorLoss(Hook):
 
     def __call__(self, epoch, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
-        errors = []
+        loss = []
         for _ in run_network(net, iterator):
             net.forward_pass()
-            errors.append(net.get_loss_value())
-        return np.mean(errors)
+            loss.append(net.get_loss_value())
+        return np.mean(loss)
 
 
 class MonitorAccuracy(Hook):
@@ -394,8 +394,11 @@ class MonitorAccuracy(Hook):
         _h = net.handler
         errors = 0
         totals = 0
+        loss = []
+        log = OrderedDict()
         for _ in run_network(net, iterator):
             net.forward_pass()
+            loss.append(net.get_loss_value())
             out = _h.get_numpy_copy(net.buffer[self.out_layer]
                                     .outputs[self.out_name])
             target = _h.get_numpy_copy(net.buffer.Input
@@ -421,7 +424,9 @@ class MonitorAccuracy(Hook):
                 errors += np.sum(out_class != target_class)
                 totals += np.prod(target_class.shape)
 
-        return 1.0 - errors / totals
+        log['accuracy'] = 1.0 - errors / totals
+        log['loss'] = np.mean(loss)
+        return log
 
 
 class MonitorHammingScore(Hook):
