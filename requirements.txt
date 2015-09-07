@@ -2,3 +2,4 @@ numpy
 six
 wheel>=0.22
 mock
+h5py
