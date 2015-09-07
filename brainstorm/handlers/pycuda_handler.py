@@ -387,7 +387,7 @@ class PyCudaHandler(Handler):
         y_data = ctypes.c_void_p(int(outputs.gpudata))
         id_data = ctypes.c_void_p(int(in_deltas.gpudata))
         od_data = ctypes.c_void_p(int(out_deltas.gpudata))
-        alpha, beta = 1.0, 0.0
+        alpha, beta = 1.0, 1.0
         cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
                                    y_desc, y_data, od_desc, od_data, x_desc,
                                    x_data, beta,
