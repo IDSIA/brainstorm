@@ -85,6 +85,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         # now our targets are indices so all p_i = 0 except for i=t
         _h.fill(loss, 0.)
         _h.index_m_by_v(flat_output, flat_targets, flat_loss)
+        _h.clip_t(flat_loss, 1e-6, 1.0, flat_loss)
         _h.log_t(loss, loss)
         _h.mult_st(-1, loss, loss)
 
