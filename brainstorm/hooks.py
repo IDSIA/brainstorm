@@ -191,21 +191,21 @@ class MonitorLayerDeltas(Hook):
             log[key]['avg'] = v.mean()
             log[key]['max'] = v.max()
 
+        out_deltas_log = log['output_deltas'] = OrderedDict()
         for key, v in net.buffer[self.layer_name].output_deltas.items():
-            n = 'out_deltas.{}'.format(key)
-            log[n] = OrderedDict()
             v = net.handler.get_numpy_copy(v)
-            log[n]['min'] = v.min()
-            log[n]['avg'] = v.mean()
-            log[n]['max'] = v.max()
+            key_log = out_deltas_log[key] = OrderedDict()
+            key_log['min'] = v.min()
+            key_log['avg'] = v.mean()
+            key_log['max'] = v.max()
 
+        in_deltas_log = log['input_deltas'] = OrderedDict()
         for key, v in net.buffer[self.layer_name].input_deltas.items():
-            n = 'in_deltas.{}'.format(key)
-            log[n] = OrderedDict()
+            key_log = in_deltas_log[key] = OrderedDict()
             v = net.handler.get_numpy_copy(v)
-            log[n]['min'] = v.min()
-            log[n]['avg'] = v.mean()
-            log[n]['max'] = v.max()
+            key_log[key]['min'] = v.min()
+            key_log[key]['avg'] = v.mean()
+            key_log[key]['max'] = v.max()
 
         return log
 
@@ -229,21 +229,21 @@ class MonitorLayerInOuts(Hook):
 
     def __call__(self, epoch, net, stepper, logs):
         log = OrderedDict()
+        input_log = log['inputs'] = OrderedDict()
         for key, v in net.buffer[self.layer_name].inputs.items():
-            n = 'inputs.{}'.format(key)
             v = net.handler.get_numpy_copy(v)
-            log[n] = OrderedDict()
-            log[n]['min'] = v.min()
-            log[n]['avg'] = v.mean()
-            log[n]['max'] = v.max()
+            key_log = input_log[key] = OrderedDict()
+            key_log['min'] = v.min()
+            key_log['avg'] = v.mean()
+            key_log['max'] = v.max()
 
+        output_log = log['outputs'] = OrderedDict()
         for key, v in net.buffer[self.layer_name].outputs.items():
-            n = 'outputs.{}'.format(key)
-            log[n] = OrderedDict()
+            key_log = output_log[key] = OrderedDict()
             v = net.handler.get_numpy_copy(v)
-            log[n]['min'] = v.min()
-            log[n]['avg'] = v.mean()
-            log[n]['max'] = v.max()
+            key_log['min'] = v.min()
+            key_log['avg'] = v.mean()
+            key_log['max'] = v.max()
 
         return log
 
@@ -284,12 +284,15 @@ class StopOnNan(Hook):
 
     Can also check logs for invalid values.
     """
-    def __init__(self, logs_to_check=(), check_parameters=True, name=None):
-        super(StopOnNan, self).__init__(name, 'epoch', 1)
+    def __init__(self, logs_to_check=(), check_parameters=True,
+                 check_training_loss=True, name=None, timescale='epoch',
+                 interval=1):
+        super(StopOnNan, self).__init__(name, timescale, interval)
         self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check,
                                                             string_types)
                               else logs_to_check)
         self.check_parameters = check_parameters
+        self.check_training_loss = check_training_loss
 
     def __call__(self, epoch, net, stepper, logs):
         for log_name in self.logs_to_check:
@@ -300,7 +303,13 @@ class StopOnNan(Hook):
         if self.check_parameters:
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if not np.all(np.isfinite(params)):
-                raise StopIteration("{} >> NaN or inf detected in parameters!")
+                raise StopIteration("{} >> NaN or inf detected in parameters!"
+                                    .format(self.__name__))
+
+        if self.check_training_loss and logs['training_loss']:
+            if np.all(np.isfinite(logs['training_loss'][1:])):
+                raise StopIteration("{} >> NaN or inf detected in "
+                                    "training_loss!".format(self.__name__))
 
 
 class InfoUpdater(Hook):
