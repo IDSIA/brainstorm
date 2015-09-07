@@ -7,19 +7,16 @@ from brainstorm.structure.shapes import ShapeTemplate
 
 
 class Pooling2DLayerImpl(LayerBaseImpl):
-    expected_kwargs = {'num_filters', 'kernel_size', 'type', 'stride',
+    expected_kwargs = {'kernel_size', 'type', 'stride',
                        'padding', 'activation_function'}
     inputs = {'default': ShapeTemplate('T', 'B', '...')}
     outputs = {'default': ShapeTemplate('T', 'B', '...')}
 
     def _setup_hyperparameters(self):
-        assert 'num_filters' in self.kwargs, "num_filters must be specified " \
-                                             " for PoolingLayer2D"
         assert 'kernel_size' in self.kwargs, "kernel_size must be specified " \
                                              "for PoolingLayer2D"
         assert 'type' in self.kwargs, "type must be specified " \
                                       "for PoolingLayer2D"
-        self.num_filters = self.kwargs['num_filters']
         self.kernel_size = self.kwargs['kernel_size']
         self.type = self.kwargs['type']
         self.padding = self.kwargs.get('padding', 0)
@@ -40,7 +37,6 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         kernel_size = self.kernel_size
         padding = self.padding
         stride = self.stride
-        num_filters = self.num_filters
         in_shape = self.in_shapes['default'].feature_shape
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "PoolingLayer2D must have 3 dimensional input but input " \
@@ -50,7 +46,7 @@ class Pooling2DLayerImpl(LayerBaseImpl):
                          stride[0]) + 1
         output_width = ((in_shape[2] + 2 * padding - kernel_size[1]) //
                         stride[1]) + 1
-        output_shape = (num_filters, output_height, output_width)
+        output_shape = (in_shape[0], output_height, output_width)
         return {'default': ShapeTemplate('T', 'B', *output_shape)}
 
     def forward_pass(self, buffers, training_pass=True):
@@ -91,7 +87,6 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         flat_out_deltas = out_deltas.reshape((t * b,)
                                              + out_deltas.shape[2:])
         flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
-
 
         if self.type == 'max':
             argmax = buffers.internals.argmax

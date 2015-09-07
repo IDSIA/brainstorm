@@ -106,10 +106,10 @@ def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                                       name=name)
 
 
-def Pooling2D(num_filters, kernel_size, stride=(1, 1), padding=0, name=None):
+def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
     return ConstructionWrapper.create('Pooling2D',
-                                      num_filters=num_filters,
                                       kernel_size=kernel_size,
+                                      type=type,
                                       stride=stride,
                                       padding=padding,
                                       name=name)

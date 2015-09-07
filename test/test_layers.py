@@ -175,22 +175,22 @@ def convolution_layer_2d_c(spec):
 def maxpooling_layer_2d(spec):
     y = ShapeTemplate('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
-                                   {'default':
-                                    ShapeTemplate('T', 'B', 1, 4, 4)},
-                                   NO_CON, NO_CON, num_filters=1,
-                                   kernel_size=(2, 2), stride=(1, 1),
-                                   type="max")
+                               {'default':
+                                ShapeTemplate('T', 'B', 1, 4, 4)},
+                               NO_CON, NO_CON,
+                               kernel_size=(2, 2), stride=(1, 1),
+                               type="max")
     return layer, spec
 
 
 def avgpooling_layer_2d(spec):
     y = ShapeTemplate('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
-                                   {'default':
-                                    ShapeTemplate('T', 'B', 1, 4, 4)},
-                                   NO_CON, NO_CON, num_filters=1,
-                                   kernel_size=(2, 2), stride=(1, 1),
-                                   type="avg")
+                               {'default':
+                                ShapeTemplate('T', 'B', 1, 4, 4)},
+                               NO_CON, NO_CON,
+                               kernel_size=(2, 2), stride=(1, 1),
+                               type="avg")
     return layer, spec
 
 
