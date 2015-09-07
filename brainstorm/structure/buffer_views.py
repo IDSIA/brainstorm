@@ -37,6 +37,8 @@ class BufferView(list):
     def __getitem__(self, item):
         if isinstance(item, int):
             return super(BufferView, self).__getitem__(item)
+        assert item in self.keys(), '{} is not present. Available items are ' \
+                                    '{}'.format(item, self.keys())
         return self.__dict__[item]
 
     def __contains__(self, item):
