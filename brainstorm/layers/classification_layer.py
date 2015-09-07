@@ -53,7 +53,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
 
         parameters = OrderedDict()
         parameters['W'] = ShapeTemplate(out_size, in_size)
-        parameters['b'] = ShapeTemplate(out_size)
+        parameters['bias'] = ShapeTemplate(out_size)
         return parameters
 
     def forward_pass(self, buffers, training_pass=True):
