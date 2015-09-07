@@ -74,7 +74,7 @@ def test_buffer_view_dict_getitem(buffer_view):
     assert buffer_view['R'] is R
     assert buffer_view['b'] is b
 
-    with pytest.raises(KeyError):
+    with pytest.raises(AssertionError):
         _ = buffer_view['nonexisting']
 
 
