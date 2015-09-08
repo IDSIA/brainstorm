@@ -9,6 +9,10 @@ Installation
 
 Note: These instructions are for Ubuntu 14.04.
 
+Pre-requisites:
+
+You need the Ubuntu packages `python-dev`, `libhdf5-dev` as well as the Python package `cython` before you install. Then:
+
 * Clone the repository: `git clone git@github.com:Qwlouse/brainstorm.git`
 * Install: `cd brainstorm; pip install -e .`
 
