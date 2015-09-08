@@ -18,10 +18,11 @@ To install:
 
 If you'd like to use an NVIDIA GPU, make sure you have CUDA installed, then:
 
-* Get latest PyCUDA: `pip install git+ssh://git@github.com/inducer/pycuda#egg=pycuda`
-* Get latest scikit-cuda: `pip install git+ssh://git@github.com/lebedov/scikit-cuda#egg=scikit-cuda`
+* Get latest PyCUDA: `pip install -U git+ssh://git@github.com/inducer/pycuda#egg=pycuda`
+* Get latest scikit-cuda: `pip install -U git+ssh://git@github.com/lebedov/scikit-cuda#egg=scikit-cuda`
 
 If you'd like to use convolutional/pooling layers on the GPU, these are provided through NVIDIA cuDNN which you should install from https://developer.nvidia.com/cudnn
+
 Then install the latest Python wrappers for cuDNN (2.0b2 as of this writing): `pip install cudnn-python-wrappers==2.0b2`
 
 Brainstorm uses the HDF5 file format to store datasets, networks etc. It is recommended to use a single location to store all datasets prepared and used by Brainstorm, which can be specified by setting the environment variable `BRAINSTORM_DATA_DIR` in your .bashrc file.
