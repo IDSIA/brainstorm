@@ -83,9 +83,9 @@ group = variant.create_group('test')
 group.create_dataset(name='default', data=x_te, compression='gzip')
 group.create_dataset(name='targets', data=y_te, compression='gzip')
 
-
-x_tr = (ds[:, 1:].reshape((1, 50000, 3, 32, 32)) - tr_mean) / tr_std
-y_tr = (ds[:, 0].reshape((1, 50000, 1)) - tr_mean) / tr_std
+num_tr = 50000
+x_tr = (ds[:num_tr, 1:].reshape((1, num_tr, 3, 32, 32)) - tr_mean) / tr_std
+y_tr = ds[:num_tr, 0].reshape((1, num_tr, 1))
 
 variant = f.create_group('normalized_full')
 group = variant.create_group('training')

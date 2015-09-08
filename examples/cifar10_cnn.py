@@ -31,15 +31,13 @@ inp >> \
     bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2), name='pool2') >> \
     bs.layers.Convolution2D(64, kernel_size=(5, 5), padding=2, name='conv3') >> \
     bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2), name='pool3') >> \
-    bs.layers.FullyConnected(64, name='fc1') >> \
+    bs.layers.FullyConnected(64, name='fc') >> \
     out
 
 network = bs.Network.from_layer(out)
 network.set_memory_handler(PyCudaHandler())
-network.initialize({'conv1': {'W': bs.Gaussian(0.0001), 'bias': 0},
-                    'conv2': {'W': bs.Gaussian(0.01), 'bias': 0},
-                    'conv3': {'W': bs.Gaussian(0.01), 'bias': 0},
-                    'fc1': {'W': bs.Gaussian(0.1), 'bias': 0},
+network.initialize({'conv*': {'W': bs.Gaussian(0.01), 'bias': 0},
+                    'fc': {'W': bs.Gaussian(0.1), 'bias': 0},
                     'Output': {'W': bs.Gaussian(0.1), 'bias': 0},
                     })
 
