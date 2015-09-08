@@ -2,20 +2,19 @@
 Brainstorm
 ==========
 
-.. image:: https://badge.fury.io/py/brainstorm.png
-    :target: http://badge.fury.io/py/brainstorm
+Brainstorm is a library designed to make working with neural networks fast, flexible and fun.
 
-.. image:: https://travis-ci.org/Qwlouse/brainstorm.png?branch=master
-    :target: https://travis-ci.org/Qwlouse/brainstorm
+Installation
+------------
 
-.. image:: https://pypip.in/d/brainstorm/badge.png
-    :target: https://pypi.python.org/pypi/brainstorm
+Note: These instructions are for Ubuntu 14.04.
 
+* Clone the repository: `git clone git@github.com:Qwlouse/brainstorm.git`
+* Install: `cd brainstorm; pip install -e .`
 
-A fresh start for the pylstm RNN library
+If you'd like to use an NVIDIA GPU, make sure you have CUDA installed, then:
 
+* Get latest PyCUDA: `pip install git+ssh://git@github.com/inducer/pycuda#egg=pycuda`
+* Get latest scikit-cuda: `pip install git+ssh://git@github.com/lebedov/scikit-cuda#egg=scikit-cuda`
 
-Features
---------
-
-* TODO
+If you'd like to use convolutional/pooling layers on the GPU, these are provided through NVIDIA cuDNN which you should install from https://developer.nvidia.com/cudnn
