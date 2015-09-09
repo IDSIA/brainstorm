@@ -27,7 +27,7 @@ archive_paths = [
     'cifar-10-batches-bin/test_batch.bin'
 ]
 
-print("Extracting data ...")
+print("Extracting CIFAR-10 data ...")
 with tarfile.open(cifar10_file) as f:
     res = []
     for fn in archive_paths:
@@ -58,7 +58,11 @@ The CIFAR-10 dataset is a labeled subset of the 80 million tiny images
 dataset. It consists of 60000 32x32 colour images in 10 classes, with 6000
 images per class. There are 50000 training images and 10000 test images.
 
+The dataset was obtained from the link:
+http://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
+
 Variants:
+
 normalized_full: Contains 'training' and 'test' sets. Image data has been
 normalized to have zero mean and unit standard deviation.
 
