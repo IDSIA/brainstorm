@@ -18,8 +18,8 @@ To install:
 
 If you'd like to use an NVIDIA GPU, make sure you have CUDA installed, then:
 
-* Get latest PyCUDA: `pip install -U git+ssh://git@github.com/inducer/pycuda#egg=pycuda`
-* Get latest scikit-cuda: `pip install -U git+ssh://git@github.com/lebedov/scikit-cuda#egg=scikit-cuda`
+* Get latest PyCUDA: `pip install -U git+https://github.com/inducer/pycuda#egg=pycuda`
+* Get latest scikit-cuda: `pip install -U git+https://github.com/lebedov/scikit-cuda#egg=scikit-cuda`
 
 If you'd like to use convolutional/pooling layers on the GPU, these are provided through NVIDIA cuDNN which you should install from https://developer.nvidia.com/cudnn
 
