@@ -93,6 +93,11 @@ class PyCudaHandler(Handler):
 
     # ---------------- General mathematical operations ---------------- #
 
+    def fill_gaussian(self, mean, std, out):
+        self.rnd.fill_normal(out)
+        self.mult_st(std, out, out=out)
+        self.add_st(mean, out, out=out)
+
     def generate_probability_mask(self, mask, probability):
         self.rnd.fill_uniform(mask)
         create_probabilistic_mask_kernel(mask, probability, mask)

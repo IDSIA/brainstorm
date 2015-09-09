@@ -83,6 +83,14 @@ class Handler(Describable):
 
     # ---------------- Mathematical Operations ---------------- #
 
+    def fill_gaussian(self, mean, std, out):
+        """
+        :param mean:
+        :param std:
+        :param out:
+        :return:
+        """
+
     def generate_probability_mask(self, mask, probability):
         """ Fill an array with zeros and ones.
 

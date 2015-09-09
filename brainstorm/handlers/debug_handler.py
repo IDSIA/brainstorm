@@ -84,6 +84,11 @@ class DebugHandler(Handler):
 
     # ----------------------- Mathematical Operations ----------------------- #
 
+    def fill_gaussian(self, mean, std, out):
+        assert_debug_arrays(out)
+        assert std >= 0.0
+        self.handler.fill_gaussian(mean, std, out.array)
+
     def generate_probability_mask(self, mask, probability):
         assert_debug_arrays(mask)
         assert_is_scalar(probability)
