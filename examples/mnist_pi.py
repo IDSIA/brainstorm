@@ -13,7 +13,7 @@ bs.global_rnd.set_seed(42)
 
 # ---------------------------- Set up Iterators ----------------------------- #
 
-data_dir = os.environ.get('BRAINSTORM_DATA_DIR', '.')
+data_dir = os.environ.get('BRAINSTORM_DATA_DIR', '../data')
 data_file = os.path.join(data_dir, 'MNIST.hdf5')
 ds = h5py.File(data_file, 'r')['normalized_split']
 x_tr, y_tr = ds['training']['default'].value, ds['training']['targets'].value
