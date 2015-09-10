@@ -45,6 +45,12 @@ class Trainer(Describable):
     def train(self, net, training_data_getter, **hook_kwargs):
         if self.verbose:
             print('\n\n', 15 * '- ', "Before Training", 15 * ' -')
+        assert set(training_data_getter.data_names) == set(
+            net.buffer.Input.outputs.keys()), \
+            "The data names provided by the training data iterator {} do not " \
+            "map to the network input names {}".format(
+                training_data_getter.data_names,
+                net.buffer.Input.outputs.keys())
         self.stepper.start(net)
         self._start_hooks(net, hook_kwargs)
         self._emit_hooks(net, 'epoch')

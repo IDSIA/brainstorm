@@ -30,6 +30,10 @@ def silence():
 
 
 class DataIterator(object):
+
+    def __init__(self, data_names):
+        self.data_names = data_names
+
     def __call__(self, handler, verbose=False):
         pass
 
@@ -43,16 +47,14 @@ class AddGaussianNoise(DataIterator):
     """
 
     def __init__(self, iter, std_dict, mean_dict=None):
-
         """
-
         :param iter: any DataIterator to which noise is to be added
         :param std_dict: specifies the standard deviation of noise added to
         each named data item
         :param mean_dict: specifies the mean of noise added to each named
         data item
         """
-
+        super(AddGaussianNoise, self).__init__(iter.data_names)
         if mean_dict is not None:
             assert set(mean_dict.keys()) == set(std_dict.keys()), \
                 "means and standard deviations must be provided for " \
@@ -86,6 +88,7 @@ class Undivided(DataIterator):
         :param named_data: named arrays with 3+ dimensions ('T', 'B', ...)
         :type named_data: dict[str, ndarray]
         """
+        super(Undivided, self).__init__(named_data.keys())
         _ = _assert_correct_data_format(named_data)
         self.data = named_data
         self.total_size = sum(d.size for d in self.data.values())
@@ -112,6 +115,7 @@ class Online(DataIterator, Seedable):
 
     def __init__(self, shuffle=True, verbose=None, seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
+        DataIterator.__init__(self, named_data.keys())
         self.nr_sequences = _assert_correct_data_format(named_data)
         self.data = named_data
         self.shuffle = shuffle
@@ -164,6 +168,7 @@ class Minibatches(DataIterator, Seedable):
     def __init__(self, batch_size=10, shuffle=True, verbose=None,
                  seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
+        DataIterator.__init__(self, named_data.keys())
         self.nr_sequences = _assert_correct_data_format(named_data)
         self.data = named_data
         self.shuffle = shuffle
