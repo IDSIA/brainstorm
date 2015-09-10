@@ -91,13 +91,13 @@ class Undivided(DataIterator):
         super(Undivided, self).__init__(named_data.keys())
         _ = _assert_correct_data_format(named_data)
         self.data = named_data
-        self.total_size = sum(d.size for d in self.data.values())
+        self.total_size = int(sum(d.size for d in self.data.values()))
 
     def __call__(self, handler, verbose=False):
         if isinstance(self.data, handler.array_type):
             yield self.data
         else:
-            arr = handler.allocate(self.total_size)
+            arr = handler.allocate((self.total_size,))
             device_data = {}
             i = 0
             for key, value in self.data.items():
@@ -120,8 +120,8 @@ class Online(DataIterator, Seedable):
         self.data = named_data
         self.shuffle = shuffle
         self.verbose = verbose
-        self.sample_size = sum(d.shape[0] * np.prod(d.shape[2:])
-                               for d in self.data.values())
+        self.sample_size = int(sum(d.shape[0] * np.prod(d.shape[2:])
+                                   for d in self.data.values()))
 
     def __call__(self, handler, verbose=False):
         if (self.verbose is None and verbose) or self.verbose:
@@ -132,7 +132,7 @@ class Online(DataIterator, Seedable):
         need_copy = not all([isinstance(v, handler.array_type)
                              for v in self.data.values()])
         if need_copy:
-            arr = handler.allocate(self.sample_size)
+            arr = handler.allocate((self.sample_size, ))
 
         print(next(p_bar), end='')
         sys.stdout.flush()
@@ -174,8 +174,8 @@ class Minibatches(DataIterator, Seedable):
         self.shuffle = shuffle
         self.verbose = verbose
         self.batch_size = batch_size
-        self.sample_size = sum(d.shape[0] * np.prod(d.shape[2:]) * batch_size
-                               for d in self.data.values())
+        self.sample_size = int(sum(d.shape[0] * np.prod(d.shape[2:]) * batch_size
+                                   for d in self.data.values()))
 
     def __call__(self, handler, verbose=False):
         if (self.verbose is None and verbose) or self.verbose:
@@ -186,7 +186,7 @@ class Minibatches(DataIterator, Seedable):
         need_copy = not all([isinstance(v, handler.array_type)
                              for v in self.data.values()])
         if need_copy:
-            arr = handler.allocate(self.sample_size)
+            arr = handler.allocate((self.sample_size,))
 
         print(next(p_bar), end='')
         sys.stdout.flush()
