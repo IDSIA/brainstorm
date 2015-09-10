@@ -2,7 +2,6 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers.debug_handler import DebugHandler
 
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.architecture import Connection
@@ -29,6 +28,7 @@ from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
 from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
 from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
+from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
 
 import pytest
 
@@ -128,7 +128,7 @@ def lstm_layer(spec):
                           NO_CON, NO_CON,
                           size=7,
                           activation_function=spec['act_func'])
-    return layer, {}
+    return layer, spec
 
 
 def lstm_opt_layer(spec):
@@ -201,6 +201,14 @@ def batch_norm_layer(spec):
     return layer, spec
 
 
+def elementwise_layer(spec):
+    layer = ElementwiseLayerImpl('Op',
+                        {'default': ShapeTemplate('T', 'B', 3, 2)},
+                        NO_CON, NO_CON,
+                        activation_function=spec['act_func'])
+    return layer, spec
+
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -219,7 +227,8 @@ layers_to_test = [
     convolution_layer_2d,
     maxpooling_layer_2d,
     avgpooling_layer_2d,
-    batch_norm_layer
+    batch_norm_layer,
+    elementwise_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]
@@ -251,15 +260,12 @@ def layer_specs(request, spec):
 
 def test_deltas_calculation_of_layer(layer_specs):
     layer, specs = layer_specs
-    print("\n========= Testing Deltas for: '{}' =========".format(layer.name))
-
     skip_outputs = specs.get('skip_outputs', [])
     skip_inputs = specs.get('skip_inputs', [])
     successful = True
     for outputs_name in layer.out_shapes:
         if outputs_name in skip_outputs:
             continue
-        print("----------- WRT Output: '{}' ----------- ".format(outputs_name))
 
         for inputs_name in layer.in_shapes:
             if inputs_name in skip_inputs:
@@ -272,15 +278,12 @@ def test_deltas_calculation_of_layer(layer_specs):
 
 def test_gradients_for_layer(layer_specs):
     layer, specs = layer_specs
-    print("\n======== Testing Gradients for: '{}' ========".format(layer.name))
-
     skip_outputs = specs.get('skip_outputs', [])
     skip_parameters = specs.get('skip_parameters', [])
     successful = True
     for outputs_name in layer.out_shapes:
         if outputs_name in skip_outputs:
             continue
-        print("----------- WRT Output: '{}' ----------- ".format(outputs_name))
 
         for param_name in layer.get_parameter_structure():
             if param_name in skip_parameters:
@@ -293,8 +296,6 @@ def test_gradients_for_layer(layer_specs):
 
 def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
-    print("\n========= Testing Internal State Insensitivity for: {} ========="
-          .format(layer.name))
     layer_buffers = set_up_layer(layer, specs)
     time_steps = specs.get('time_steps', 3)
 
@@ -324,8 +325,6 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
 
 def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
-    print("\n========= Testing Internal State Insensitivity for: {} ========="
-          .format(layer.name))
     layer_buffers = set_up_layer(layer, specs)
     time_steps = specs.get('time_steps', 3)
     eps = specs.get('eps', 1e-8)
@@ -360,8 +359,6 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
 
 def test_layer_add_to_deltas(layer_specs):
     layer, specs = layer_specs
-    print("\n----- Testing Internal State Insensitivity for: {} -----".format(
-        layer.name))
     layer_buffers = set_up_layer(layer, specs)
     eps = specs.get('eps', 1e-8)
     for key in layer_buffers.output_deltas.keys():

@@ -9,6 +9,7 @@ np.random.seed(1234)
 
 NO_CON = set()
 
+
 def _conv2d_forward_batch(inputs, weights, bias, outputs, padding, stride):
     """
     Loop-based implementation of 2D convolution to check against.
@@ -52,8 +53,8 @@ def _conv2d_forward_batch(inputs, weights, bias, outputs, padding, stride):
 def test_get_im2col_map():  # TODO
     pass
 
+
 def test_conv2d_forward_batch_numpy():
-    print("\n--------- Testing conv2d_forward_batch ---------")
     _h = NumpyHandler(np.float64)
     for input_shape in ((3, 3), (5, 4), (4, 9)):
         for num_images in (1, 4):
@@ -62,11 +63,6 @@ def test_conv2d_forward_batch_numpy():
                     for kernel_shape in ((1, 1), (2, 2), (3, 2)):
                         for stride in ((1, 1), (2, 2), (1, 2)):
                             for padding in (0, 1):
-                                print("Checking Inputs:", (num_images,
-                                      num_input_maps) + input_shape)
-                                print("Filters:", (num_filters, num_input_maps)
-                                      + kernel_shape)
-                                print("Stride: ", stride, "padding: ", padding)
                                 inputs = np.random.rand(num_images,
                                                         num_input_maps,
                                                         *input_shape)
@@ -98,11 +94,20 @@ def test_conv2d_forward_batch_numpy():
                                                       true_outputs, padding,
                                                       stride)
 
-                                assert np.allclose(outputs, true_outputs)
+                                passed = np.allclose(outputs, true_outputs)
+                                if not passed:
+                                    print("Failed for Inputs:", (num_images,
+                                          num_input_maps) + input_shape)
+                                    print("Filters:",
+                                          (num_filters, num_input_maps) +
+                                          kernel_shape)
+                                    print("Stride: ", stride, "padding: ",
+                                          padding)
+
+                                assert passed
 
 
 def test_conv2d_forward_batch_pycuda():
-    print("\n--------- Testing conv2d_forward_batch ---------")
     _h = PyCudaHandler(init_cudnn=True)
     for input_shape in ((3, 3), (5, 4), (4, 9)):
         for num_images in (1, 4):
@@ -111,11 +116,7 @@ def test_conv2d_forward_batch_pycuda():
                     for kernel_shape in ((1, 1), (2, 2), (3, 2)):
                         for stride in ((1, 1), (2, 2), (1, 2)):
                             for padding in (0, 1):
-                                print("Checking Inputs:", (num_images,
-                                      num_input_maps) + input_shape)
-                                print("Filters:", (num_filters, num_input_maps)
-                                      + kernel_shape)
-                                print("Stride: ", stride, "padding: ", padding)
+
                                 inputs = np.random.rand(num_images,
                                                         num_input_maps,
                                                         *input_shape)
@@ -150,5 +151,14 @@ def test_conv2d_forward_batch_pycuda():
                                 _h.conv2d_forward_batch(i_dev, w_dev, b_dev,
                                                         o_dev, padding, stride)
                                 outputs = _h.get_numpy_copy(o_dev)
-
-                                assert np.allclose(outputs, true_outputs)
+                                passed = np.allclose(outputs, true_outputs)
+                                if not passed:
+                                    print("Checking Inputs:",
+                                          (num_images, num_input_maps) +
+                                          input_shape)
+                                    print("Filters:",
+                                          (num_filters, num_input_maps) +
+                                          kernel_shape)
+                                    print("Stride: ", stride, "padding: ",
+                                          padding)
+                                assert passed

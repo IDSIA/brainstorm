@@ -26,6 +26,7 @@ from brainstorm.layers.dropout_layer import DropoutLayerImpl
 from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
 from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
+from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
 
 CONSTRUCTION_LAYERS = {}
 
@@ -123,6 +124,12 @@ def Dropout(drop_prob=0.5, name=None):
 def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
     return ConstructionWrapper.create('BatchNorm', name=name, decay=decay,
                                       epsilon=epsilon)
+
+
+def Elementwise(activation_function='rel', name=None):
+    return ConstructionWrapper.create('Elementwise',
+                                      name=name,
+                                      activation_function=activation_function)
 
 
 # ------------------------ Automatic Construction Layers ----------------------
