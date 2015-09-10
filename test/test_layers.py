@@ -2,7 +2,6 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers.debug_handler import DebugHandler
 
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.architecture import Connection
@@ -29,6 +28,7 @@ from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
 from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
 from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
+from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
 
 import pytest
 
@@ -128,7 +128,7 @@ def lstm_layer(spec):
                           NO_CON, NO_CON,
                           size=7,
                           activation_function=spec['act_func'])
-    return layer, {}
+    return layer, spec
 
 
 def lstm_opt_layer(spec):
@@ -201,6 +201,14 @@ def batch_norm_layer(spec):
     return layer, spec
 
 
+def elementwise_layer(spec):
+    layer = ElementwiseLayerImpl('Op',
+                        {'default': ShapeTemplate('T', 'B', 3, 2)},
+                        NO_CON, NO_CON,
+                        activation_function=spec['act_func'])
+    return layer, spec
+
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -219,7 +227,8 @@ layers_to_test = [
     convolution_layer_2d,
     maxpooling_layer_2d,
     avgpooling_layer_2d,
-    batch_norm_layer
+    batch_norm_layer,
+    elementwise_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]
