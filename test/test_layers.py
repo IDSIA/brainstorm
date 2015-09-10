@@ -251,15 +251,12 @@ def layer_specs(request, spec):
 
 def test_deltas_calculation_of_layer(layer_specs):
     layer, specs = layer_specs
-    print("\n========= Testing Deltas for: '{}' =========".format(layer.name))
-
     skip_outputs = specs.get('skip_outputs', [])
     skip_inputs = specs.get('skip_inputs', [])
     successful = True
     for outputs_name in layer.out_shapes:
         if outputs_name in skip_outputs:
             continue
-        print("----------- WRT Output: '{}' ----------- ".format(outputs_name))
 
         for inputs_name in layer.in_shapes:
             if inputs_name in skip_inputs:
@@ -272,15 +269,12 @@ def test_deltas_calculation_of_layer(layer_specs):
 
 def test_gradients_for_layer(layer_specs):
     layer, specs = layer_specs
-    print("\n======== Testing Gradients for: '{}' ========".format(layer.name))
-
     skip_outputs = specs.get('skip_outputs', [])
     skip_parameters = specs.get('skip_parameters', [])
     successful = True
     for outputs_name in layer.out_shapes:
         if outputs_name in skip_outputs:
             continue
-        print("----------- WRT Output: '{}' ----------- ".format(outputs_name))
 
         for param_name in layer.get_parameter_structure():
             if param_name in skip_parameters:
@@ -293,8 +287,6 @@ def test_gradients_for_layer(layer_specs):
 
 def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
-    print("\n========= Testing Internal State Insensitivity for: {} ========="
-          .format(layer.name))
     layer_buffers = set_up_layer(layer, specs)
     time_steps = specs.get('time_steps', 3)
 
@@ -324,8 +316,6 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
 
 def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
     layer, specs = layer_specs
-    print("\n========= Testing Internal State Insensitivity for: {} ========="
-          .format(layer.name))
     layer_buffers = set_up_layer(layer, specs)
     time_steps = specs.get('time_steps', 3)
     eps = specs.get('eps', 1e-8)
@@ -360,8 +350,6 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
 
 def test_layer_add_to_deltas(layer_specs):
     layer, specs = layer_specs
-    print("\n----- Testing Internal State Insensitivity for: {} -----".format(
-        layer.name))
     layer_buffers = set_up_layer(layer, specs)
     eps = specs.get('eps', 1e-8)
     for key in layer_buffers.output_deltas.keys():
