@@ -4,10 +4,16 @@ from __future__ import division, print_function, unicode_literals
 
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError, flatten_time_and_features, \
     flatten_time
 from brainstorm.structure.shapes import ShapeTemplate
+
+
+def BinomialCrossEntropy(name=None):
+    return ConstructionWrapper.create('BinomialCrossEntropy',
+                                      name=name)
 
 
 class BinomialCrossEntropyLayerImpl(LayerBaseImpl):

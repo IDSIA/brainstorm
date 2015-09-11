@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.architecture import Connection
-from brainstorm.layers import InputLayerImpl
+from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.base_layer import get_layer_class_from_typename
 from brainstorm.layers.classification_layer import ClassificationLayerImpl
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl

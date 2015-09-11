@@ -38,7 +38,7 @@ def draw_network(network, filename='network.png'):
 
     try:
         import pygraphviz as pgv
-        graph = pgv.AGraph()
+        graph = pgv.AGraph(directed=True)
         for k, v in network.architecture.items():
                 for out_view, dest_list in v['@outgoing_connections'].items():
                     for dest in dest_list:

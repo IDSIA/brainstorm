@@ -2,10 +2,18 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
+
+
+def FullyConnected(size, activation_function='rel', name=None):
+    return ConstructionWrapper.create('FullyConnected',
+                                      size=size,
+                                      name=name,
+                                      activation_function=activation_function)
 
 
 class FullyConnectedLayerImpl(LayerBaseImpl):

@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
+
+
+def Elementwise(activation_function='rel', name=None):
+    return ConstructionWrapper.create('Elementwise',
+                                      name=name,
+                                      activation_function=activation_function)
 
 
 class ElementwiseLayerImpl(LayerBaseImpl):

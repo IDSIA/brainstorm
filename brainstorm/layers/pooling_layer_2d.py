@@ -2,8 +2,18 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
+
+
+def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
+    return ConstructionWrapper.create('Pooling2D',
+                                      kernel_size=kernel_size,
+                                      type=type,
+                                      stride=stride,
+                                      padding=padding,
+                                      name=name)
 
 
 class Pooling2DLayerImpl(LayerBaseImpl):
