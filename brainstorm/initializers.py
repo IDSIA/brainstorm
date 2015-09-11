@@ -9,7 +9,7 @@ from brainstorm.utils import InitializationError
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in [
     'Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
-    'SparseInputs', 'SparseOutputs', 'EchoState', 'LstmOptInit']]
+    'SparseInputs', 'SparseOutputs', 'EchoState', 'LstmOptInit', 'Identity']]
 
 
 # ########################### Support Classes #################################
@@ -216,6 +216,30 @@ class EchoState(Initializer):
         # normalizing and setting spectral radius (correct, slow):
         rho_weights = max(abs(np.linalg.eig(weights)[0]))
         return weights * (self.spectral_radius / rho_weights)
+
+
+class Identity(Initializer):
+    """
+    Initialize a matrix to the (scaled) identity matrix + some noise.
+    """
+
+    def __init__(self, scale=1.0, std=0.01, enforce_square=True, seed=None):
+        super(Identity, self).__init__(seed=seed)
+        self.scale = scale
+        self.std = std
+        self.enforce_square = enforce_square
+
+    def __call__(self, shape):
+        self._assert_atleast2d(shape)
+        if len(shape) > 2:
+            raise InitializationError("Works only with 2D matrices but shape "
+                                      "was: {}".format(shape))
+        if self.enforce_square and shape[0] != shape[1]:
+            raise InitializationError("Matrix needs to be square, but was {}"
+                                      "".format(shape))
+        weights = np.eye(shape[0], shape[1], dtype=np.float) * self.scale
+        weights += self.rnd.randn(*shape) * self.std
+        return weights
 
 
 class LstmOptInit(Initializer):
