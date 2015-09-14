@@ -200,8 +200,8 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
 def random_crop(DTYPE_t[:, :, :, :, ::1] inputs not None,
                 int height,
                 int width,
-                np.ndarray[np.int_t, ndim=1] row_indices,
-                np.ndarray[np.int_t, ndim=1] col_indices,
+                np.int_t[:] row_indices,
+                np.int_t[:] col_indices,
                 DTYPE_t[:, :, :, :, ::1] outputs not None):
     cdef int batch_size = row_indices.shape[0]
     cdef int num_channels = inputs.shape[2]
