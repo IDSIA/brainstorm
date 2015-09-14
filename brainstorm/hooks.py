@@ -307,7 +307,7 @@ class StopOnNan(Hook):
                                     .format(self.__name__))
 
         if self.check_training_loss and logs['training_loss']:
-            if np.all(np.isfinite(logs['training_loss'][1:])):
+            if not np.all(np.isfinite(logs['training_loss'][1:])):
                 raise StopIteration("{} >> NaN or inf detected in "
                                     "training_loss!".format(self.__name__))
 
