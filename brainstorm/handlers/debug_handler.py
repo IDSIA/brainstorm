@@ -41,7 +41,7 @@ class DebugHandler(Handler):
     def __init__(self, handler):
         self.handler = handler
         self.EMPTY = DebugArray(arr=handler.EMPTY)
-        self.array_type = handler.array_type
+        self.array_type = DebugArray
 
     # ------------------------- Allocate new memory ------------------------- #
 
