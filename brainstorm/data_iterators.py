@@ -7,7 +7,7 @@ import numpy as np
 import sys
 from brainstorm.randomness import Seedable
 from brainstorm.utils import IteratorValidationError
-
+from copy import copy
 
 def progress_bar(maximum, prefix='[',
                  bar='====1====2====3====4====5====6====7====8====9====0',
@@ -74,7 +74,8 @@ class AddGaussianNoise(DataIterator):
                 mean = self.mean_dict.get(key, 0.0)
                 std = self.std_dict.get(key)
                 handler.fill_gaussian(mean=mean, std=std, out=noise)
-                handler.add_tt(data[key], noise, out=data[key])
+                handler.add_tt(data[key], noise, out=noise)
+                data[key] = noise
             yield data
 
 
