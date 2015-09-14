@@ -7,7 +7,6 @@ import numpy as np
 import sys
 from brainstorm.randomness import Seedable
 from brainstorm.utils import IteratorValidationError
-from copy import copy
 
 def progress_bar(maximum, prefix='[',
                  bar='====1====2====3====4====5====6====7====8====9====0',
@@ -95,18 +94,7 @@ class Undivided(DataIterator):
         self.total_size = int(sum(d.size for d in self.data.values()))
 
     def __call__(self, handler, verbose=False):
-        if isinstance(self.data, handler.array_type):
-            yield self.data
-        else:
-            arr = handler.allocate((self.total_size,))
-            device_data = {}
-            i = 0
-            for key, value in self.data.items():
-                device_data[key] = arr[i: i + value.size].reshape(value.shape)
-                handler.set_from_numpy(device_data[key], value)
-                i += value.size
-
-        yield device_data
+        yield self.data
 
 
 class Online(DataIterator, Seedable):
@@ -130,30 +118,15 @@ class Online(DataIterator, Seedable):
         else:
             p_bar = silence()
 
-        need_copy = not all([isinstance(v, handler.array_type)
-                             for v in self.data.values()])
-        if need_copy:
-            arr = handler.allocate((self.sample_size, ))
-
         print(next(p_bar), end='')
         sys.stdout.flush()
         indices = np.arange(self.nr_sequences)
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
-            if need_copy:
-                device_data = {}
-                j = 0
-                for key, value in self.data.items():
-                    val_s = value[:, idx: idx + 1]
-                    device_data[key] = arr[j: j + val_s.size].reshape(
-                        val_s.shape)
-                    handler.set_from_numpy(device_data[key], val_s)
-                    j += val_s.size
-            else:
-                device_data = {k: v[:, idx: idx + 1]
-                               for k, v in self.data.items()}
-            yield device_data
+            data = {k: v[:, idx: idx + 1]
+                    for k, v in self.data.items()}
+            yield data
             print(p_bar.send(i + 1), end='')
             sys.stdout.flush()
 
@@ -184,11 +157,6 @@ class Minibatches(DataIterator, Seedable):
         else:
             p_bar = silence()
 
-        need_copy = not all([isinstance(v, handler.array_type)
-                             for v in self.data.values()])
-        if need_copy:
-            arr = handler.allocate((self.sample_size,))
-
         print(next(p_bar), end='')
         sys.stdout.flush()
         indices = np.arange(
@@ -199,19 +167,8 @@ class Minibatches(DataIterator, Seedable):
             chunk = (slice(None),
                      slice(idx * self.batch_size, (idx + 1) * self.batch_size))
 
-            if need_copy:
-                device_data = {}
-                j = 0
-                for key, value in self.data.items():
-                    val_s = value[chunk]
-                    device_data[key] = arr[j: j + val_s.size].reshape(
-                        val_s.shape)
-                    handler.set_from_numpy(device_data[key], val_s)
-                    j += val_s.size
-            else:
-                device_data = {k: v[chunk]
-                               for k, v in self.data.items()}
-            yield device_data
+            data = {k: v[chunk] for k, v in self.data.items()}
+            yield data
             print(p_bar.send((i + 1) * self.batch_size), end='')
             sys.stdout.flush()
 

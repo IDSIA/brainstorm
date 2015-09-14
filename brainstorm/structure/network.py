@@ -283,7 +283,11 @@ class Network(Seedable):
         time_size, batch_size = data[next(iter(data))].shape[: 2]
         self.buffer = self._buffer_manager.resize(time_size, batch_size)
         for name, buf in self.buffer.Input.outputs.items():
-            self.handler.copy_to(buf, data[name])
+            if isinstance(data[name], self.handler.array_type):
+                self.handler.copy_to(buf, data[name])
+            else:
+                # assert isinstance(data[name], np.ndarray)
+                self.handler.set_from_numpy(buf, data[name])
 
     def forward_pass(self, training_pass=False, context=None):
         if context is None:

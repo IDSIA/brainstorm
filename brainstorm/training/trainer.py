@@ -154,15 +154,15 @@ class Trainer(Describable):
 def run_network_double_buffer(net, iterator):
     def run_it(it):
         try:
-            run_it.data = next(it)
+            net.provide_external_data(next(it))
         except StopIteration:
-            run_it.data = StopIteration
-    run_it.data = None
+            run_it.stop = True
+
+    run_it.stop = False
 
     run_it(iterator)
     i = 0
-    while run_it.data != StopIteration:
-        net.provide_external_data(run_it.data)
+    while not run_it.stop:
         t = threading.Thread(target=run_it, args=(iterator,))
         t.start()
         yield i
