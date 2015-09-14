@@ -109,7 +109,8 @@ def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                         in_y = <int>(argmax[i, c, y, x, 0])
                         in_x = <int>(argmax[i, c, y, x, 1])
                         if in_y >= 0 and in_x >= 0:
-                            in_deltas[i, c, in_y, in_x] += out_deltas[i, c, y, x]
+                            in_deltas[i, c, in_y, in_x] += \
+                                out_deltas[i, c, y, x]
 
 
 @cython.boundscheck(False)
@@ -190,4 +191,29 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                         x_max = int_min(x+pool_w, in_w)
                         for yy in range(y_min, y_max):
                             for xx in range(x_min, x_max):
-                                 in_deltas[i, c, yy, xx] += out_deltas[i, c, y_out, x_out] / pool_size
+                                 in_deltas[i, c, yy, xx] += \
+                                     out_deltas[i, c, y_out, x_out] / pool_size
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def random_crop(DTYPE_t[:, :, :, :, ::1] inputs not None,
+                int height,
+                int width,
+                np.ndarray[np.int_t, ndim=1] row_indices,
+                np.ndarray[np.int_t, ndim=1] col_indices,
+                DTYPE_t[:, :, :, :, ::1] outputs not None):
+    cdef int batch_size = row_indices.shape[0]
+    cdef int num_channels = inputs.shape[2]
+    cdef int start_row, start_col, i, j, k, l
+    with nogil:
+        for i in range(batch_size):
+            start_row = row_indices[i]
+            start_col = col_indices[i]
+            for j in range(0, num_channels):
+                for k in range(0, height):
+                    for l in range(0, width):
+                        outputs[0, i, j, k, l] = inputs[0, i, j,
+                                                        k + start_row,
+                                                        l + start_col]
+

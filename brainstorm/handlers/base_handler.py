@@ -211,12 +211,12 @@ class Handler(Describable):
 
     @abc.abstractmethod
     def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
-                                stride):
+                                stride, argmax):
         """ """
 
     @abc.abstractmethod
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
-                                 stride, in_deltas, out_deltas):
+                                 stride, argmax, in_deltas, out_deltas):
         """ """
 
     @abc.abstractmethod
