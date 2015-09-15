@@ -4,7 +4,7 @@ from __future__ import division, print_function
 
 from brainstorm.training.trainer import Trainer
 from brainstorm.training.steppers import SgdStep, MomentumStep, NesterovStep
-from brainstorm.training.schedules import LinearSchedule, ExponentialSchedule
+from brainstorm.training.schedules import Linear, Exponential, MultiStep
 
 __all__ = ['Trainer', 'SgdStep', 'MomentumStep', 'NesterovStep',
-           'LinearSchedule', 'ExponentialSchedule']
+           'Linear', 'Exponential', 'MultiStep']
