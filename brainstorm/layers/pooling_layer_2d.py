@@ -48,6 +48,7 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         padding = self.padding
         stride = self.stride
         in_shape = self.in_shapes['default'].feature_shape
+        # TODO: Check that the input size is enough to pool
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "PoolingLayer2D must have 3 dimensional input but input " \
             "shape was %s" % in_shape
