@@ -14,7 +14,8 @@ class Trainer(Describable):
     different training methods (Steppers) and call Hooks.
     """
     __undescribed__ = {
-        'current_epoch': 0,
+        'current_epoch_nr': 0,
+        'current_update_nr': 0,
         'logs': {},
         'failed_hooks': {}
     }
@@ -25,22 +26,23 @@ class Trainer(Describable):
         self.verbose = verbose
         self.double_buffering = double_buffering
         self.hooks = OrderedDict()
-        self.current_epoch = 0
+        self.current_epoch_nr = 0
+        self.current_update_nr = 0
         self.logs = dict()
 
-    def add_hook(self, hook, name=None):
-        if name is None:
-            name = hook.__name__
-        if name in self.hooks:
-            raise ValueError("Hook '{}' already exists.".format(name))
-        if self.hooks:
-            last = next(reversed(self.hooks))
-            priority = self.hooks[last].priority + 1
-        else:
-            priority = 0
-        self.hooks[name] = hook
-        hook.__name__ = name
-        hook.priority = priority
+    def add_hook(self, hook):
+        """Add a hook to this trainer.
+
+        Note that hooks will be called in the order that they are added.
+
+        :param hook: Any Hook object that should be called by this trainer.
+        :type hook: brainstorm.hooks.Hook
+        :raises ValueError: If a hook with the same name has already been added
+        """
+        if hook.__name__ in self.hooks:
+            raise ValueError("Hook '{}' already exists.".format(hook.__name__))
+        self.hooks[hook.__name__] = hook
+        hook.priority = max([h.priority for h in self.hooks.values()]) + 1
 
     def train(self, net, training_data_getter, **hook_kwargs):
         if self.verbose:
@@ -53,24 +55,26 @@ class Trainer(Describable):
                 net.buffer.Input.outputs.keys())
         self.stepper.start(net)
         self._start_hooks(net, hook_kwargs)
-        self._emit_hooks(net, 'epoch')
+        if self._emit_hooks(net, 'epoch'):
+            return
 
         run = (run_network_double_buffer if self.double_buffering else
                run_network)
 
         while True:
-            self.current_epoch += 1
+            self.current_epoch_nr += 1
             sys.stdout.flush()
             train_loss = []
             if self.verbose:
-                print('\n\n', 15 * '- ', "Epoch", self.current_epoch,
+                print('\n\n', 15 * '- ', "Epoch", self.current_epoch_nr,
                       15 * ' -')
             iterator = training_data_getter(verbose=self.verbose,
                                             handler=net.handler)
             for i in run(net, iterator):
+                self.current_update_nr += 1
                 train_loss.append(self.stepper.run())
                 net.apply_weight_modifiers()
-                if self._emit_hooks(net, 'update', i + 1):
+                if self._emit_hooks(net, 'update'):
                     break
 
             self._add_log('training_loss', np.mean(train_loss))
@@ -91,64 +95,63 @@ class Trainer(Describable):
     def _start_hooks(self, net, hook_kwargs):
         self.logs = {'training_loss': [float('NaN')]}
         for name, hook in self.hooks.items():
-            self._start_hook(net, name, hook, hook_kwargs)
+            try:
+                if hasattr(hook, 'start'):
+                    hook.start(net, self.stepper, self.verbose, hook_kwargs)
+            except Exception:
+                print('An error occurred while starting the "{}" hook:'
+                      .format(name), file=sys.stderr)
+                raise
 
-    def _start_hook(self, net, name, hook, hook_kwargs):
-        try:
-            if hasattr(hook, 'start'):
-                hook.start(net, self.stepper, self.verbose, hook_kwargs)
-        except Exception:
-            print('An error occurred while starting the "{}" hook:'
-                  ''.format(name), file=sys.stderr)
-            raise
-
-    def _add_log(self, name, val, verbose=None, logs=None, indent=0):
-        if verbose is None:
-            verbose = self.verbose
-        if logs is None:
-            logs = self.logs
-        if isinstance(val, dict):
-            if verbose:
-                print(" " * indent + name)
-            if name not in logs:
-                logs[name] = dict()
-            for k, v in val.items():
-                self._add_log(k, v, verbose, logs[name], indent+2)
-        elif val is not None:
-            if verbose:
-                print(" " * indent + ("{0:%d}: {1}" % (40-indent)).format(name,
-                                                                          val))
-            if name not in logs:
-                logs[name] = []
-            logs[name].append(val)
-
-    def _emit_hooks(self, net, timescale, update_nr=None):
-        update_nr = self.current_epoch if timescale == 'epoch' else update_nr
+    def _emit_hooks(self, net, timescale):
         should_stop = False
+        count = self.current_epoch_nr if timescale == 'epoch' else \
+            self.current_update_nr
+
         for name, hook in self.hooks.items():
-            if getattr(hook, 'timescale', 'epoch') != timescale:
+            if hook.timescale != timescale or count % hook.interval != 0:
                 continue
-            if update_nr % getattr(hook, 'interval', 1) == 0:
-                hook_log, stop = self._call_hook(hook, net)
-                should_stop |= stop
-                self._add_log(name, hook_log,
-                              verbose=getattr(hook, 'verbose', None))
+
+            hook_log, stop = self._call_hook(hook, net)
+            should_stop |= stop
+            self._add_log(name, hook_log, hook.verbose)
 
         return should_stop
 
     def _call_hook(self, hook, net):
         try:
-            return hook(epoch=self.current_epoch, net=net,
+            return hook(epoch_nr=self.current_epoch_nr,
+                        update_nr=self.current_update_nr,
+                        net=net,
                         stepper=self.stepper, logs=self.logs), False
         except StopIteration as err:
             print(">> Stopping because:", err)
-            if hasattr(err, 'value'):
-                return err.value, True
-            return None, True
-        except Exception as err:
-            if hasattr(err, 'args') and err.args:
-                err.args = (str(err.args[0]) + " in " + str(hook),)
+            return getattr(err, 'value', None), True
+        except Exception:
+            print('An error occurred while calling the "{}" hook:'
+                  .format(hook.__name__), file=sys.stderr)
             raise
+
+    def _add_log(self, name, val, verbose=None, logs=None, indent=0):
+        if val is None:
+            return
+
+        verbose = self.verbose if verbose is None else verbose
+        logs = self.logs if logs is None else logs
+
+        if isinstance(val, dict):
+            if verbose:
+                print(" " * indent + name)
+            logs[name] = dict() if name not in logs else logs[name]
+
+            for k, v in val.items():
+                self._add_log(k, v, verbose, logs[name], indent + 2)
+        else:
+            if verbose:
+                print(" " * indent + ("{0:%d}: {1}" % (40-indent))
+                      .format(name, val))
+            logs[name] = [] if name not in logs else logs[name]
+            logs[name].append(val)
 
 
 def run_network_double_buffer(net, iterator):
