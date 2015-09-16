@@ -36,9 +36,12 @@ class DebugArray(object):
 # ############################# Debug Handler ############################### #
 
 class DebugHandler(Handler):
+    __undescribed__ = {'EMPTY', 'array_type'}
+
     def __init__(self, handler):
         self.handler = handler
         self.EMPTY = DebugArray(arr=handler.EMPTY)
+        self.array_type = DebugArray
 
     # ------------------------- Allocate new memory ------------------------- #
 
@@ -83,6 +86,11 @@ class DebugHandler(Handler):
         return DebugArray(self.handler.create_from_numpy(arr))
 
     # ----------------------- Mathematical Operations ----------------------- #
+
+    def fill_gaussian(self, mean, std, out):
+        assert_debug_arrays(out)
+        assert std >= 0.0
+        self.handler.fill_gaussian(mean, std, out.array)
 
     def generate_probability_mask(self, mask, probability):
         assert_debug_arrays(mask)

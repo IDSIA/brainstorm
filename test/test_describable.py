@@ -382,6 +382,7 @@ def test_describe_trainer():
             'StopOnNan': {
                 '@type': 'StopOnNan',
                 'check_parameters': True,
+                'check_training_loss': True,
                 'logs_to_check': [],
                 'priority': 1}},
         'stepper': {

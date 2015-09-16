@@ -56,6 +56,9 @@ class NumpyHandler(Handler):
 
     # ---------------- General mathematical operations ---------------- #
 
+    def fill_gaussian(self, mean, std, out):
+        out[:] = std * self.rnd.standard_normal(out.shape) + mean
+
     def generate_probability_mask(self, mask, probability):
         mask[:] = self.rnd.uniform(size=mask.shape) < probability
 

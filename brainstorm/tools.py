@@ -66,21 +66,19 @@ def get_in_out_layers_for_regression(in_shape, nr_classes,
 
 
 def draw_network(network, filename='network.png'):
+
     try:
-        import pydot
-        graph = pydot.Dot(graph_type='digraph')
-
+        import pygraphviz as pgv
+        graph = pgv.AGraph(directed=True)
         for k, v in network.architecture.items():
-            for out_view, dest_list in v['@outgoing_connections'].items():
-                for dest in dest_list:
-                    edge = pydot.Edge(k, dest.split('.')[0])
-                    graph.add_edge(edge)
+                for out_view, dest_list in v['@outgoing_connections'].items():
+                    for dest in dest_list:
+                        graph.add_edge(k, dest.split('.')[0])
 
-        graph.write_png(filename)
+        graph.draw(filename, prog='dot')
         print('Network drawing saved as {}'.format(filename))
-
     except ImportError:
-        print("pydot is required for drawing networks but was not found.")
+        print("pygraphviz is required for drawing networks but was not found.")
 
 
 def print_network_info(network):

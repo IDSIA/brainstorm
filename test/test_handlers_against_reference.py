@@ -17,7 +17,6 @@ np.set_printoptions(linewidth=150)
 
 
 def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
-    print("-" * 40)
     ref_op(*ref_args)
     op(*args)
     check_list = []
@@ -29,8 +28,9 @@ def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
             arg_ref = handler.get_numpy_copy(arg)
             check = np.allclose(ref_arg, arg_ref, atol=atol)
             check_list.append(check)
-            print(arg)
             if not check:
+                print("-" * 40)
+                print(arg)
                 print("\nCheck failed for argument number %d:" % i)
                 print("Reference (expected) array {}:\n{}".format(
                     ref_arg.shape,ref_arg))
@@ -42,6 +42,8 @@ def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
             check = (ref_arg == arg)
             check_list.append(check)
             if not check:
+                print("-" * 40)
+                print(arg)
                 print("Check failed for argument number", i)
                 print("\nReference (expected) array:\n", ref_arg)
                 print("\nObtained array:\n", arg)
@@ -323,9 +325,9 @@ def test_mult_mv():
     list_b = get_random_arrays()
     list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
     for a, b in zip(list_a, list_b):
-        print('-' * 40)
-        print("a:\n", a)
-        print("b:\n", b)
+        #print('-' * 40)
+        #print("a:\n", a)
+        #print("b:\n", b)
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -424,11 +426,14 @@ def test_conv2d_forward():
             ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
             out = np.zeros((x.shape[0], w.shape[0])+ (oh, ow), dtype=ref_dtype)
             ref_args = (x, w, b, out, padding, stride)
-            print(x.shape, w.shape)
-            assert operation_check(ref.conv2d_forward_batch,
-                                   handler.conv2d_forward_batch,
-                                   ref_args, get_args_from_ref_args(ref_args),
-                                   atol=1e-6)
+
+            passed = operation_check(ref.conv2d_forward_batch,
+                                     handler.conv2d_forward_batch,
+                                     ref_args, get_args_from_ref_args(ref_args),
+                                     atol=1e-6)
+            if not passed:
+                print(x.shape, w.shape)
+            assert passed
 
 
 def test_conv2d_backward():
@@ -454,10 +459,13 @@ def test_conv2d_backward():
 
             ref_args = (x, w, padding, stride, i_deltas,
                         o_deltas, w_deltas, b_deltas)
-            assert operation_check(ref.conv2d_backward_batch,
-                                   handler.conv2d_backward_batch,
-                                   ref_args, get_args_from_ref_args(ref_args),
-                                   atol=1e-4)
+            passed = operation_check(ref.conv2d_backward_batch,
+                                     handler.conv2d_backward_batch,
+                                     ref_args, get_args_from_ref_args(ref_args),
+                                     atol=1e-4)
+            if not passed:
+                print(x.shape, w.shape)
+            assert passed
 
 
 def test_maxpool2d_forward():
@@ -477,12 +485,14 @@ def test_maxpool2d_forward():
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
                     argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
                     ref_args = (x, window, outputs, padding, strides, argmax)
-                    print(x.shape, window, outputs.shape, padding, strides)
-                    assert operation_check(
+                    passed = operation_check(
                         ref.maxpool2d_forward_batch,
                         handler.maxpool2d_forward_batch,
                         ref_args, get_args_from_ref_args(ref_args),
                         ignored_args=[5])
+                    if not passed:
+                        print(x.shape, window, outputs.shape, padding, strides)
+                    assert passed
 
 
 def test_maxpool2d_backward():
@@ -510,12 +520,15 @@ def test_maxpool2d_backward():
                                              strides, argmax)
                     ref_args = (x, window, outputs, padding, strides, argmax,
                                 i_deltas, o_deltas)
-                    print(x.shape, window, outputs.shape, padding, strides)
-                    assert operation_check(
+
+                    passed = operation_check(
                         ref.maxpool2d_backward_batch,
                         handler.maxpool2d_backward_batch,
                         ref_args, get_args_from_ref_args(ref_args),
                         ignored_args=[5], atol=1e-6)
+                    if not passed:
+                        print(x.shape, window, outputs.shape, padding, strides)
+                    assert passed
 
 
 def test_avgpool2d_forward():
@@ -534,12 +547,14 @@ def test_avgpool2d_forward():
                         (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
                     ref_args = (x, window, outputs, padding, strides)
-                    print(x.shape, window, outputs.shape, padding, strides)
-                    assert operation_check(
+                    passed = operation_check(
                         ref.avgpool2d_forward_batch,
                         handler.avgpool2d_forward_batch,
                         ref_args, get_args_from_ref_args(ref_args),
                         atol=1e-6)
+                    if not passed:
+                        print(x.shape, window, outputs.shape, padding, strides)
+                    assert passed
 
 
 def test_avgpool2d_backward():
@@ -565,9 +580,11 @@ def test_avgpool2d_backward():
                                              strides)
                     ref_args = (x, window, outputs, padding, strides,
                                 i_deltas, o_deltas)
-                    print(x.shape, window, outputs.shape, padding, strides)
-                    assert operation_check(
+                    passed = operation_check(
                         ref.avgpool2d_backward_batch,
                         handler.avgpool2d_backward_batch,
                         ref_args, get_args_from_ref_args(ref_args),
                         atol=1e-6)
+                    if not passed:
+                        print(x.shape, window, outputs.shape, padding, strides)
+                    assert passed

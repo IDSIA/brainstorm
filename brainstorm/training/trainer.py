@@ -45,6 +45,12 @@ class Trainer(Describable):
     def train(self, net, training_data_getter, **hook_kwargs):
         if self.verbose:
             print('\n\n', 15 * '- ', "Before Training", 15 * ' -')
+        assert set(training_data_getter.data.keys()) == set(
+            net.buffer.Input.outputs.keys()), \
+            "The data names provided by the training data iterator {} do not " \
+            "map to the network input names {}".format(
+                training_data_getter.data.keys(),
+                net.buffer.Input.outputs.keys())
         self.stepper.start(net)
         self._start_hooks(net, hook_kwargs)
         self._emit_hooks(net, 'epoch')
@@ -148,15 +154,15 @@ class Trainer(Describable):
 def run_network_double_buffer(net, iterator):
     def run_it(it):
         try:
-            run_it.data = next(it)
+            net.provide_external_data(next(it))
         except StopIteration:
-            run_it.data = StopIteration
-    run_it.data = None
+            run_it.stop = True
+
+    run_it.stop = False
 
     run_it(iterator)
     i = 0
-    while run_it.data != StopIteration:
-        net.provide_external_data(run_it.data)
+    while not run_it.stop:
         t = threading.Thread(target=run_it, args=(iterator,))
         t.start()
         yield i

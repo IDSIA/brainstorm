@@ -6,13 +6,16 @@ from brainstorm.structure import *
 from brainstorm.randomness import global_rnd
 from brainstorm.initializers import *
 from brainstorm.training import *
-from brainstorm.data_iterators import Online, Undivided, Minibatches
+from brainstorm.data_iterators import (AddGaussianNoise, Flip, Pad,
+                                       RandomCrop, Online, Undivided,
+                                       Minibatches)
 from brainstorm.value_modifiers import (
     ClipValues, MaskValues, FreezeValues, ConstrainL2Norm, L1Decay, L2Decay)
 from brainstorm.tools import *
 
 from brainstorm import hooks
 from brainstorm import layers
+from brainstorm import handlers
 
 
 __version__ = '0.1'

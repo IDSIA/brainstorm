@@ -2,9 +2,21 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.utils import flatten_time
+
+
+def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
+                  activation_function='rel', name=None):
+    return ConstructionWrapper.create('Convolution2D',
+                                      num_filters=num_filters,
+                                      kernel_size=kernel_size,
+                                      stride=stride,
+                                      padding=padding,
+                                      activation_function=activation_function,
+                                      name=name)
 
 
 class Convolution2DLayerImpl(LayerBaseImpl):

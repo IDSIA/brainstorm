@@ -2,8 +2,18 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
+
+
+def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
+    return ConstructionWrapper.create('Pooling2D',
+                                      kernel_size=kernel_size,
+                                      type=type,
+                                      stride=stride,
+                                      padding=padding,
+                                      name=name)
 
 
 class Pooling2DLayerImpl(LayerBaseImpl):
@@ -38,6 +48,7 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         padding = self.padding
         stride = self.stride
         in_shape = self.in_shapes['default'].feature_shape
+        # TODO: Check that the input size is enough to pool
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "PoolingLayer2D must have 3 dimensional input but input " \
             "shape was %s" % in_shape

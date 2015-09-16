@@ -83,6 +83,14 @@ class Handler(Describable):
 
     # ---------------- Mathematical Operations ---------------- #
 
+    def fill_gaussian(self, mean, std, out):
+        """
+        :param mean:
+        :param std:
+        :param out:
+        :return:
+        """
+
     def generate_probability_mask(self, mask, probability):
         """ Fill an array with zeros and ones.
 
@@ -203,12 +211,12 @@ class Handler(Describable):
 
     @abc.abstractmethod
     def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
-                                stride):
+                                stride, argmax):
         """ """
 
     @abc.abstractmethod
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
-                                 stride, in_deltas, out_deltas):
+                                 stride, argmax, in_deltas, out_deltas):
         """ """
 
     @abc.abstractmethod
