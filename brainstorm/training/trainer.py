@@ -53,7 +53,8 @@ class Trainer(Describable):
                 net.buffer.Input.outputs.keys())
         self.stepper.start(net)
         self._start_hooks(net, hook_kwargs)
-        self._emit_hooks(net, 'epoch')
+        if self._emit_hooks(net, 'epoch'):
+            return
 
         run = (run_network_double_buffer if self.double_buffering else
                run_network)

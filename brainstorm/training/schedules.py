@@ -153,8 +153,7 @@ class MultiStep(Describable):
 
         :param initial_value: Initial value of the parameter
         :type initial_value: float
-        :param steps: List of update numbers at which the values should be
-        switched.
+        :param steps: List of update numbers at which the values are switched.
         :type steps: list[int]
         :param values: List of values to set after specified update numbers.
         :type values: list[float]
