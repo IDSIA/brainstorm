@@ -32,9 +32,16 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         self.padding = self.kwargs.get('padding', 0)
         self.stride = self.kwargs.get('stride', (1, 1))
         assert self.type in ('max', 'avg')
-        assert type(self.padding) is int and self.padding >= 0
-        assert type(self.stride) is tuple and self.stride[0] >= 0 and \
-            self.stride[1] >= 0
+        assert type(self.padding) is int and self.padding >= 0, \
+            "Invalid padding: {}".format(self.padding)
+        assert type(self.kernel_size) in [list, tuple] and \
+            len(self.kernel_size) == 2, "Kernel size must be list or " \
+                                        "tuple  of length 2: {}".format(
+                                        self.kernel_size)
+        assert type(self.stride) in [list, tuple] and len(self.stride) == 2, \
+            "Stride must be list or tuple of length 2: {}".format(self.stride)
+        assert self.stride[0] >= 0 and self.stride[1] >= 0, \
+            "Invalid stride: {}".format(self.stride)
 
     def get_internal_structure(self):
         argmax_shape = self.out_shapes['default'].feature_shape + (2, )
@@ -48,6 +55,7 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         padding = self.padding
         stride = self.stride
         in_shape = self.in_shapes['default'].feature_shape
+        # TODO: Check that the input size is enough to pool
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "PoolingLayer2D must have 3 dimensional input but input " \
             "shape was %s" % in_shape

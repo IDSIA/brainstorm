@@ -31,8 +31,14 @@ def silence():
 
 
 class DataIterator(object):
-    def __init__(self, data_names):
-        self.data_names = data_names
+    def __init__(self, data):
+        """
+        BaseClass for Data Iterators.
+
+        :param data: Named data items to iterate over.
+        :type data: dict[unicode, np.ndarray]
+        """
+        self.data = data
 
     def __call__(self, handler, verbose=False):
         pass
@@ -61,7 +67,7 @@ class AddGaussianNoise(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data_names)
+        DataIterator.__init__(self, iter.data)
         if mean_dict is not None:
             assert set(mean_dict.keys()) == set(std_dict.keys()), \
                 "means and standard deviations must be provided for " \
@@ -111,7 +117,7 @@ class Flip(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data_names)
+        DataIterator.__init__(self, iter.data)
         prob_dict = {'default': 0.5} if prob_dict is None else prob_dict
         for key in prob_dict.keys():
             if key not in iter.data.keys():
@@ -158,7 +164,7 @@ class Pad(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data_names)
+        DataIterator.__init__(self, iter.data)
         if value_dict is not None:
             if set(size_dict.keys()) != set(value_dict.keys()):
                 raise IteratorValidationError(
@@ -210,7 +216,7 @@ class RandomCrop(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data_names)
+        DataIterator.__init__(self, iter.data)
         for key, val in shape_dict.items():
             if key not in iter.data.keys():
                 raise IteratorValidationError(
@@ -255,9 +261,9 @@ class Undivided(DataIterator):
     def __init__(self, **named_data):
         """
         :param named_data: named arrays with 3+ dimensions ('T', 'B', ...)
-        :type named_data: dict[str, ndarray]
+        :type named_data: dict[unicode, ndarray]
         """
-        super(Undivided, self).__init__(named_data.keys())
+        super(Undivided, self).__init__(named_data)
         _ = _assert_correct_data_format(named_data)
         self.data = named_data
         self.total_size = int(sum(d.size for d in self.data.values()))
@@ -273,7 +279,7 @@ class Online(DataIterator, Seedable):
 
     def __init__(self, shuffle=True, verbose=None, seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, named_data.keys())
+        DataIterator.__init__(self, named_data)
         self.nr_sequences = _assert_correct_data_format(named_data)
         self.data = named_data
         self.shuffle = shuffle
@@ -311,7 +317,7 @@ class Minibatches(DataIterator, Seedable):
     def __init__(self, batch_size=10, shuffle=True, verbose=None,
                  seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, named_data.keys())
+        DataIterator.__init__(self, named_data)
         self.nr_sequences = _assert_correct_data_format(named_data)
         self.data = named_data
         self.shuffle = shuffle

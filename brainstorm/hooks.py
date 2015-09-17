@@ -416,7 +416,7 @@ class MonitorAccuracy(Hook):
                                                   self.iter_name)
         assert self.out_layer in net.layers
         self.iter = monitor_kwargs[self.iter_name]
-        self.masked = self.mask_name in self.iter.data_names
+        self.masked = self.mask_name in self.iter.data.keys()
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
