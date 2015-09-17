@@ -23,6 +23,7 @@ class Constant(Describable):
     """
     Returns a constant value at every update.
     """
+
     def __init__(self, value):
         self.value = value
 
@@ -58,7 +59,7 @@ class Linear(Describable):
         :param final_value: Value returned after the last change.
         :type final_value: float
         :param num_changes: Total number of changes to be made according to a
-        linear schedule.
+                            linear schedule.
         :type num_changes: int
         :param interval: Number of updates to wait before making each change.
         :type interval: int
@@ -75,9 +76,8 @@ class Linear(Describable):
             self.current_value = self.final_value
         else:
             self.current_value = self.initial_value + \
-                                 ((
-                                      self.final_value - self.initial_value) / self.num_changes) * \
-                                 (self.update_number // self.interval)
+                ((self.final_value - self.initial_value) / self.num_changes) \
+                * (self.update_number // self.interval)
         self.update_number += 1
         return self.current_value
 
@@ -148,7 +148,7 @@ class MultiStep(Describable):
         'step_number': 0
     }
 
-    def __init__(self, initial_value, steps, values):
+    def __init__(self, initial_value, steps, values, name='value'):
         """
 
         :param initial_value: Initial value of the parameter
@@ -157,19 +157,23 @@ class MultiStep(Describable):
         :type steps: list[int]
         :param values: List of values to set after specified update numbers.
         :type values: list[float]
+        :param name: Name/label of the quantity to be changed.
         """
         assert len(steps) == len(values)
         self.initial_value = initial_value
         self.steps = steps
         self.values = values
+        self.name = name
         self.update_number = 0
         self.step_number = 0
         self.current_value = None
 
     def __call__(self):
         if self.step_number < len(self.steps) and \
-           self.update_number == self.steps[self.step_number]:
+                self.update_number == self.steps[self.step_number]:
             self.step_number += 1
+            print("Changing {} to {}".format(
+                self.name, self.values[self.step_number - 1]))
         self.current_value = self.initial_value if self.step_number == 0 \
             else self.values[self.step_number - 1]
         self.update_number += 1
