@@ -1,5 +1,25 @@
 #!/usr/bin/env python
 # coding=utf-8
+"""
+This module provides the core functionality for describing objects.
+
+Description
+-----------
+In brainstorm most objects can be converted into a so called description using
+the :func:`get_description` function.
+A description is a JSON-serializable data structure that contains all `static`
+information to re-create that object using the :func:`create_from_description`
+function. It does not, however, contain any `dynamic` information.
+This means that an object created from a description is in the same state as
+if it had been freshly instantiated, without any later modifications of its
+internal state.
+
+The descriptions for the basic types ``int``, ``float``, ``bool``, ``str``,
+``list`` and ``dict`` are these values themselves. Other objects need to
+inherit from :class:`Describable` and their description is always a ``dict``
+containing the ``'@type': 'ClassName'`` key possibly along with other
+properties.
+"""
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 import six
@@ -12,46 +32,41 @@ class Describable(object):
     Base class for all objects that can be described and initialized from a
     description.
 
-    Derived classes can specify the __undescribed__ field to prevent certain
-    attributes from being described. This field can be either a set of
+    Derived classes can specify the :attr:`__undescribed__` field to
+    prevent
+    certain attributes from being described. This field can be either a set of
     attribute names, or a dictionary mapping attribute names to their
     initialization value (used when a new object is created from the
     description).
 
-    Derived classes can also specify an __default_values__ dict. This dict
-    allows for omitting certain attributes from the description if their value
-    is equal to that default value.
+    Derived classes can also specify an :attr:`__default_values__` dict. This
+    dict allows for omitting certain attributes from the description if their
+    value is equal to that default value.
     """
     __undescribed__ = {}
+    """
+    Set or dict of attributes that should not be part of the description.
+    If specified as a dict, then these attributes are initialized to the
+    specified values.
+    """
+
     __default_values__ = {}
-
-    @classmethod
-    def __get_all_undescribed__(cls):
-        ignore = {}
-        for c_ignore in _traverse_ancestor_attrs(cls, '__undescribed__'):
-            if isinstance(c_ignore, dict):
-                ignore.update(c_ignore)
-            elif isinstance(c_ignore, set):
-                ignore.update({k: None for k in c_ignore})
-        return ignore
-
-    @classmethod
-    def __get_all_default_values__(cls):
-        default = {}
-        for c_default in _traverse_ancestor_attrs(cls, '__default_values__'):
-            if isinstance(c_default, dict):
-                default.update(c_default)
-        return default
+    """
+    Dict of attributes with their corresponding default values.
+    They will only be part of the description if their value differs from their
+    default value
+    """
 
     def __describe__(self):
         """
         Returns a description of this object. That is a dictionary
-        containing the name of the class as '@type' and all members of the
+        containing the name of the class as ``@type`` and all members of the
         class. This description is json-serializable.
 
         If a sub-class of Describable contains non-describable members, it has
         to override this method to specify how it should be described.
 
+        :return: Description of this object
         :rtype: dict
         """
         description = {}
@@ -83,6 +98,7 @@ class Describable(object):
 
         :param description: description of this object
         :type description: dict
+        :return: A new instance of this class according to the description.
         """
         assert cls.__name__ == description['@type'], \
             "Description for '{}' has wrong type '{}'".format(
@@ -110,8 +126,37 @@ class Describable(object):
         """
         pass
 
+    @classmethod
+    def __get_all_undescribed__(cls):
+        ignore = {}
+        for c_ignore in _traverse_ancestor_attrs(cls, '__undescribed__'):
+            if isinstance(c_ignore, dict):
+                ignore.update(c_ignore)
+            elif isinstance(c_ignore, set):
+                ignore.update({k: None for k in c_ignore})
+        return ignore
+
+    @classmethod
+    def __get_all_default_values__(cls):
+        default = {}
+        for c_default in _traverse_ancestor_attrs(cls, '__default_values__'):
+            if isinstance(c_default, dict):
+                default.update(c_default)
+        return default
+
 
 def get_description(this):
+    """
+    Create a JSON-serializable description of this object.
+
+    This description can be used to create a new instance of this object by
+    calling :func:`create_from_description`.
+
+    :param this: An object to be described. Must either be a basic datatype
+                 or inherit from Describable.
+    :type this: Describable
+    :return: A JSON-serializable description of this object.
+    """
     if isinstance(this, Describable):
         return this.__describe__()
 
@@ -144,6 +189,13 @@ def get_description(this):
 
 
 def create_from_description(description):
+    """
+    Instantiate a new object from a description.
+
+    :param description: A description of the object.
+    :type description: dict
+    :return: A new instance of the described object
+    """
     if isinstance(description, dict):
         if '@type' in description:
             name = description['@type']

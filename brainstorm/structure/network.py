@@ -101,68 +101,79 @@ class Network(Seedable):
         """Initialize the weights of the network.
 
         Initialization can be specified in two equivalent ways:
-          1) just a default initializer:
-          >> net.initialize(bs.Gaussian())
-          Note that this is equivalent to:
-          >> net.initialize(default=bs.Gaussian())
 
-          2) by passing a dictionary:
-          >> net.initialize({'RegularLayer': bs.Uniform(),
-                                'LstmLayer': bs.Gaussian()})
+            1. just a default initializer:
 
-          3) by using keyword arguments:
-          >> net.initialize(RegularLayer=bs.Uniform(),
-                            LstmLayer=bs.Uniform())
+                >>> net.initialize(bs.Gaussian())
+
+                Note that this is equivalent to:
+
+                >>> net.initialize(default=bs.Gaussian())
+
+            2. by passing a dictionary:
+
+                >>> net.initialize({'RegularLayer': bs.Uniform(),
+                ...                 'LstmLayer': bs.Gaussian()})
+
+            3. by using keyword arguments:
+
+                >>> net.initialize(RegularLayer=bs.Uniform(),
+                ...                LstmLayer=bs.Uniform())
 
         All following explanations will be with regards to the dictionary style
         of initialization, because it is the most general one.
 
-        Note: It is not recommended to combine 2) and 3) but if they are, then
-        keyword arguments take precedence.
+        .. note:: It is not recommended to combine 2. and 3. but if they are,
+            then keyword arguments take precedence.
 
         Each initialization consists of a layer-pattern and that maps to an
         initializer or a weight-pattern dictionary.
 
         Layer patterns can take the following forms:
-          1) {'layer_name': INIT_OR_SUBDICT}
-             Matches all the weights of the layer named layer_name
-          2) {'layer_*': INIT_OR_SUBDICT}
-             Matches all layers with a name that starts with 'layer_'
-             The wild-card '*' can appear at arbitrary positions and even
-             multiple times in one path.
+
+            1. ``{'layer_name': INIT_OR_SUBDICT}``
+               Matches all the weights of the layer named layer_name
+            2. ``{'layer_*': INIT_OR_SUBDICT}``
+               Matches all layers with a name that starts with ``layer_``
+               The wild-card ``*`` can appear at arbitrary positions and even
+               multiple times in one path.
 
         There are two special layer patterns:
-          3) {'default': INIT}
-             Matches all weights that are not matched by any other path-pattern
-          4) {'fallback': INIT}
-             Set a fallback initializer for every weight. It will only be
-             evaluated for the weights for which the regular initializer failed
-             with an InitializationError.
-             (This is useful for initializers that require a certain shape of
-              weights and will not work otherwise. The fallback will then be
-              used for all cases when that initializer failed.)
+
+            3. ``{'default': INIT}``
+               Matches all weights that are not matched by any other path-pattern
+            4. ``{'fallback': INIT}``
+               Set a fallback initializer for every weight. It will only be
+               evaluated for the weights for which the regular initializer failed
+               with an InitializationError.
+
+               `This is useful for initializers that require a certain shape
+               of weights and will not work otherwise. The fallback will then
+               be used for all cases when that initializer failed.`
 
         The weight-pattern sub-dictionary follows the same form as the layer-
         pattern:
-          1) {'layer_pattern': {'a': INIT_A, 'b': INIT_B}}
-          2) {'layer_pattern': {'a*': INIT}
-          3) {'layer_pattern': {'default': INIT}
-          4) {'layer_pattern': {'fallback': INIT}
+
+            1) ``{'layer_pattern': {'a': INIT_A, 'b': INIT_B}}``
+            2) ``{'layer_pattern': {'a*': INIT}``
+            3) ``{'layer_pattern': {'default': INIT}``
+            4) ``{'layer_pattern': {'fallback': INIT}``
 
 
         An initializer can either be a scalar, something that converts to a
-        numpy array of the correct shape or an Initializer object.
+        numpy array of the correct shape or an :class:`Initializer` object.
         So for example:
-        >> net.initialize(
-            default=0,
-            RnnLayer={'b': [1, 2, 3, 4, 5]},
-            ForwardLayer=bs.Gaussian())
 
-        Note: Each view must match exactly one initialization and up to one
-        fallback to be unambiguous. Otherwise the initialization will fail.
+        >>> net.initialize(default=0,
+        ...                RnnLayer={'b': [1, 2, 3, 4, 5]},
+        ...                ForwardLayer=bs.Gaussian())
+
+        .. Note:: Each view must match exactly one initialization and up to one
+            fallback to be unambiguous. Otherwise the initialization will fail.
 
         You can specify a seed to make the initialization reproducible:
-        >> net.initialize({'default': bs.Gaussian()}, seed=1234)
+
+        >>> net.initialize({'default': bs.Gaussian()}, seed=1234)
         """
         init_refs = _update_references_with_dict(default_or_init_dict, kwargs)
         self.initializers = get_description(init_refs)
@@ -198,25 +209,28 @@ class Network(Seedable):
                                          seed=init_rnd.generate_seed()))
 
     def set_weight_modifiers(self, default_or_mod_dict=None, **kwargs):
-        """Install ValueModifiers in the network that can change the weights.
+        """
+        Install :class:`ValueModifiers` in the network to change the weights.
 
-        They can be run manually using net.apply_weight_modifiers(), but they
-        will also be called by the trainer after each weight update.
+        They can be run manually using :meth:`.apply_weight_modifiers`,
+        but they will also be called by the trainer after each weight update.
 
-        ValueModifiers can be set for specific weights in the same way as
-        initializers can, but there is no 'fallback'.
-        (so look there for details)
+        :class:`ValueModifiers` can be set for specific weights in the same way
+        :class:`Initializer` can, but there is no ``fallback``.
+        (see :meth:`.initialize` for details)
 
-        A modifier can be a ValueModifier object or a list of them.
+
+        A modifier can be a :class:`ValueModifiers` object or a list of them.
         So for example:
-        >> net.set_weight_modifiers(
-            default=bs.ClipValues(-1, 1)
-            FullyConnectedLayer={'W': [bs.RescaleIncomingWeights(),
-                                       bs.MaskValues(my_mask)]}
-            )
 
-        Note: The order in which ValueModifiers appear in the list matters,
-        because it is the same order in which they will be executed.
+        >>> net.set_weight_modifiers(
+        ...    default=bs.ClipValues(-1, 1)
+        ...    FullyConnectedLayer={'W': [bs.RescaleIncomingWeights(),
+        ...                               bs.MaskValues(my_mask)]}
+        ...    )
+
+        .. Note:: The order in which ValueModifiers appear in the list matters,
+            because it is the same order in which they will be executed.
         """
         weight_mod_refs = _update_references_with_dict(default_or_mod_dict,
                                                        kwargs)
@@ -235,25 +249,26 @@ class Network(Seedable):
 
     def set_gradient_modifiers(self, default_or_mod_dict=None, **kwargs):
         """
-        Install ValueModifiers in the network that can change the gradient.
+        Install :class:`ValueModifiers` in the network to change the gradient.
 
-        They can be run manually using net.apply_gradient_modifiers(), but they
-        will also be called by the network after each backward pass.
+        They can be run manually using :meth:`.apply_gradient_modifiers`, but
+        they will also be called by the network after each backward pass.
 
         Gradient modifiers can be set for specific weights in the same way as
-        initializers can, but there is no 'fallback'.
-        (so look there for details)
+        :class:`Initializer` can, but there is no ``fallback``.
+        (see :meth:`.initialize` for details)
 
-        A modifier can be a ValueModifier object or a list of them.
+        A modifier can be a :class:`ValueModifiers` object or a list of them.
         So for example:
-        >> net.set_gradient_modifiers(
-            default=bs.ClipValues(-1, 1)
-            FullyConnectedLayer={'W': [bs.ClipValues(),
-                                       bs.MaskValues(my_mask)]}
-            )
 
-        Note: The order in which ValueModifiers appear in the list matters,
-        because it is the same order in which they will be executed.
+        >>> net.set_gradient_modifiers(
+        ...    default=bs.ClipValues(-1, 1)
+        ...    FullyConnectedLayer={'W': [bs.ClipValues(),
+        ...                               bs.MaskValues(my_mask)]}
+        ...    )
+
+        .. Note:: The order in which ValueModifiers appear in the list matters,
+            because it is the same order in which they will be executed.
         """
         gradient_mod_refs = _update_references_with_dict(default_or_mod_dict,
                                                          kwargs)
