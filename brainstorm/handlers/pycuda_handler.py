@@ -5,7 +5,6 @@ import numpy as np
 import warnings
 from pycuda import gpuarray, cumath
 import pycuda.driver as drv
-import pycuda.autoinit
 from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
 from pycuda.curandom import XORWOWRandomNumberGenerator
@@ -13,8 +12,8 @@ import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
+import atexit
 
-culinalg.init()
 
 try:
     import ctypes
@@ -23,15 +22,37 @@ except ImportError:
     warnings.warn("CUDNN libraries are not available.")
 
 
+__pycuda_context, __pycuda_device = None, None
+
+def _shutdown():
+    from pycuda.tools import clear_context_caches
+    cuda_memory_pool.stop_holding()
+    cumisc.shutdown()
+    clear_context_caches()
+    __pycuda_context.pop()
+    __pycuda_context = None
+    __pycuda_device = None
+    import gc
+    gc.collect()
+
+
+
 class PyCudaHandler(Handler):
-    __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd',
-                       'cudnn_context', 'cudnn_tensor_format',
+    __undescribed__ = {'cublas_handle', 'dtype', 'EMPTY', 'rnd',
+                       'cudnn_handle', 'cudnn_tensor_format',
                        'cudnn_data_type', 'cudnn_convmode', 'cudnn_convpref',
                        'cudnn_addmode'}
 
-    def __init__(self, seed=None, init_cudnn=True):
+    def __init__(self, seed=None, gpu_id=0, init_cudnn=True):
+        global __pycuda_context, __pycuda_device
+        drv.init()
+        _pycuda_device = drv.Device(gpu_id)
+        _pycuda_context = __pycuda_device.make_context()
+        atexit.register(_shutdown)
+        culinalg.init()
+
         self.dtype = np.float32
-        self.context = cumisc._global_cublas_handle
+        self.cublas_handle = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
         if seed is None:
             seed = global_rnd.generate_seed()
@@ -42,7 +63,7 @@ class PyCudaHandler(Handler):
         self.rnd = XORWOWRandomNumberGenerator(seed_getter=get_seeds)
         self.init_cudnn = init_cudnn
         if self.init_cudnn:
-            self.cudnn_context = cudnn.cudnnCreate()
+            self.cudnn_handle = cudnn.cudnnCreate()
             self.cudnn_tensor_format = cudnn.cudnnTensorFormat[
                 'CUDNN_TENSOR_NCHW']
             self.cudnn_data_type = cudnn.cudnnDataType[
@@ -227,7 +248,7 @@ class PyCudaHandler(Handler):
 
         # TODO: we hardcode a memory limit of zero for cudnn
         algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
-            self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
+            self.cudnn_handle, x_desc, w_desc, conv_desc, y_desc,
             self.cudnn_convpref, 0)
 
         alpha, beta = 1.0, 0.0
@@ -235,12 +256,12 @@ class PyCudaHandler(Handler):
         w_data = ctypes.c_void_p(int(weights.gpudata))
         b_data = ctypes.c_void_p(int(bias.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
-        cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
+        cudnn.cudnnConvolutionForward(self.cudnn_handle, alpha, x_desc,
                                       x_data, w_desc, w_data, conv_desc, algo,
                                       None, 0, beta, y_desc,
                                       y_data)
         beta = 1.0
-        cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
+        cudnn.cudnnAddTensor(self.cudnn_handle, self.cudnn_addmode, alpha,
                              b_desc, b_data, beta, y_desc, y_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
@@ -248,7 +269,7 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyFilterDescriptor(w_desc)
         cudnn.cudnnDestroyTensorDescriptor(b_desc)
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
-        # cudnn.cudnnDestroy(cudnn_context)
+        # cudnn.cudnnDestroy(cudnn_handle)
 
     def conv2d_backward_batch(self, inputs, weights, padding, stride,
                               in_deltas, out_deltas, weight_deltas,
@@ -289,16 +310,16 @@ class PyCudaHandler(Handler):
         dw_data = ctypes.c_void_p(int(weight_deltas.gpudata))
         db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
 
-        cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
+        cudnn.cudnnConvolutionBackwardFilter(self.cudnn_handle, alpha,
                                              x_desc, x_data, od_desc, od_data,
                                              conv_desc, beta,
                                              dw_desc, dw_data)
 
-        cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
+        cudnn.cudnnConvolutionBackwardBias(self.cudnn_handle, alpha,
                                            od_desc, od_data, beta, db_desc,
                                            db_data)
         beta = 1.0  # Gradients w.r.t. inputs should be added
-        cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
+        cudnn.cudnnConvolutionBackwardData(self.cudnn_handle, alpha,
                                            w_desc, w_data, od_desc, od_data,
                                            conv_desc, beta,
                                            id_desc, id_data)
@@ -337,7 +358,6 @@ class PyCudaHandler(Handler):
         self._pool2d_backward_batch(inputs, window, outputs, padding,
                              stride, None, in_deltas, out_deltas, pool_mode)
 
-
     def _pool2d_forward_batch(self, inputs, window, outputs, padding,
                              stride, argmax, pooling_mode):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
@@ -359,7 +379,7 @@ class PyCudaHandler(Handler):
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
         alpha, beta = 1.0, 0.0
-        cudnn.cudnnPoolingForward(self.cudnn_context, pool_desc, alpha,
+        cudnn.cudnnPoolingForward(self.cudnn_handle, pool_desc, alpha,
                                   x_desc, x_data, beta, y_desc, y_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
@@ -393,7 +413,7 @@ class PyCudaHandler(Handler):
         id_data = ctypes.c_void_p(int(in_deltas.gpudata))
         od_data = ctypes.c_void_p(int(out_deltas.gpudata))
         alpha, beta = 1.0, 1.0
-        cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
+        cudnn.cudnnPoolingBackward(self.cudnn_handle, pool_desc, alpha,
                                    y_desc, y_data, od_desc, od_data, x_desc,
                                    x_data, beta,
                                    id_desc, id_data)

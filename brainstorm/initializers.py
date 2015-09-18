@@ -9,7 +9,7 @@ from brainstorm.utils import InitializationError
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in [
     'Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
-    'SparseInputs', 'SparseOutputs', 'EchoState', 'LstmOptInit']]
+    'SparseInputs', 'SparseOutputs', 'EchoState', 'LstmOptInit', 'Identity']]
 
 
 # ########################### Support Classes #################################
@@ -51,7 +51,7 @@ class ArrayInitializer(Initializer):
 
 class Gaussian(Initializer):
     """
-    Initializes the weights randomly according to a normal distribution of
+    Initializes the parameters randomly according to a normal distribution of
     given mean and standard deviation.
     """
     __default_values__ = {'mean': 0.0}
@@ -67,7 +67,7 @@ class Gaussian(Initializer):
 
 class Uniform(Initializer):
     """
-    Initializes the weights randomly according to a uniform distribution over
+    Initializes the parameters randomly according to a uniform distribution over
     the interval [low, high].
     """
     __default_values__ = {'low': None}
@@ -92,7 +92,7 @@ class Uniform(Initializer):
 
 class DenseSqrtFanIn(Initializer):
     """
-    Initializes the weights randomly according to a uniform distribution over
+    Initializes the parameters randomly according to a uniform distribution over
     the interval [-1/sqrt(n), 1/sqrt(n)] where n is the number of inputs to
     each neuron. Uses scaling = sqrt(6) by default which is appropriate for
     rel units.
@@ -112,7 +112,7 @@ class DenseSqrtFanIn(Initializer):
 
 class DenseSqrtFanInOut(Initializer):
     """
-    Initializes the weights randomly according to a uniform distribution over
+    Initializes the parameters randomly according to a uniform distribution over
     the interval [-1/sqrt(n1+n2), 1/sqrt(n1+n2)] where n1 is the number of
     inputs to each neuron and n2 is the number of neurons in the current layer.
     Use scaling = 4*sqrt(6) for sigmoid units, sqrt(6) for tanh units and
@@ -133,7 +133,7 @@ class DenseSqrtFanInOut(Initializer):
 class SparseInputs(Initializer):
     """
     Makes sure every neuron only gets activation from a certain number of input
-    neurons and the rest of the weights are 0.
+    neurons and the rest of the parameters are 0.
     The connections are initialized by evaluating the passed sub_initializer.
 
     Example usage:
@@ -163,7 +163,7 @@ class SparseInputs(Initializer):
 class SparseOutputs(Initializer):
     """
     Makes sure every neuron is propagating its activation only to a certain
-    number of output neurons, and the rest of the weights are 0.
+    number of output neurons, and the rest of the parameters are 0.
     The connections are initialized by evaluating the passed sub_initializer.
 
     Example usage:
@@ -212,16 +212,41 @@ class EchoState(Initializer):
             raise InitializationError("Matrix should be square but was: {}"
                                       "".format(shape))
 
-        weights = self.rnd.uniform(-0.5, 0.5, size=shape)
+        parameters = self.rnd.uniform(-0.5, 0.5, size=shape)
         # normalizing and setting spectral radius (correct, slow):
-        rho_weights = max(abs(np.linalg.eig(weights)[0]))
-        return weights * (self.spectral_radius / rho_weights)
+        rho_parameters = max(abs(np.linalg.eig(parameters)[0]))
+        return parameters * (self.spectral_radius / rho_parameters)
+
+
+class Identity(Initializer):
+    """
+    Initialize a matrix to the (scaled) identity matrix + some noise.
+    """
+
+    def __init__(self, scale=1.0, std=0.01, enforce_square=True, seed=None):
+        super(Identity, self).__init__(seed=seed)
+        self.scale = scale
+        self.std = std
+        self.enforce_square = enforce_square
+
+    def __call__(self, shape):
+        self._assert_atleast2d(shape)
+        if len(shape) > 2:
+            raise InitializationError("Works only with 2D matrices but shape "
+                                      "was: {}".format(shape))
+        if self.enforce_square and shape[0] != shape[1]:
+            raise InitializationError("Matrix needs to be square, but was {}"
+                                      "".format(shape))
+        weights = np.eye(shape[0], shape[1], dtype=np.float) * self.scale
+        weights += self.rnd.randn(*shape) * self.std
+        return weights
 
 
 class LstmOptInit(Initializer):
     """
     Used to initialize an LstmOpt layer.
-    This is useful because in an LstmOpt layer all the weights are concatenated
+    This is useful because in an LstmOpt layer all the parameters are
+    concatenated for efficiency.
 
     The parameters (input_block, input_gate, forget_gate, and output_gate)
     can be scalars or Initializers themselves.

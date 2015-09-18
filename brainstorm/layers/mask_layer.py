@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from brainstorm.structure.construction import ConstructionWrapper
 import numpy as np
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.utils import flatten_time_and_features, flatten_time
+
+
+def Mask(name=None):
+    return ConstructionWrapper.create('Mask', name=name)
 
 
 class MaskLayerImpl(LayerBaseImpl):

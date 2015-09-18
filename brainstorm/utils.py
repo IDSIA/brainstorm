@@ -140,9 +140,9 @@ def flatten_time_and_features(array):
     assert len(array.shape) >= 3, "Time & features can be flattened only "\
                                   "for arrays with at least 3 dimensions."
     t, b, f = array.shape[0], array.shape[1], array.shape[2:]
-    return array.reshape((t * b, np.product(f)))
+    return array.reshape((t * b, int(np.product(f))))
 
 
 def flatten_features(array, start_idx=2):
     return array.reshape(array.shape[:start_idx] +
-                         (np.product(array.shape[start_idx:]),))
+                         (int(np.product(array.shape[start_idx:])),))

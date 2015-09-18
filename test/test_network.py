@@ -43,7 +43,7 @@ def test_context_slice_allows_continuing_forward_pass(net_with_context):
     net = net_with_context
     net.set_memory_handler(HANDLER)
     net.initialize(Gaussian(0.1), seed=1234)
-    all_data = HANDLER.create_from_numpy(np.random.randn(4, 1, 2))
+    all_data = np.random.randn(4, 1, 2)
 
     # First do a pass on all the data
     net.provide_external_data({'default': all_data})

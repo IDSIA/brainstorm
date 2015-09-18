@@ -2,9 +2,15 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.utils import flatten_time_and_features
+
+
+def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
+    return ConstructionWrapper.create('BatchNorm', name=name, decay=decay,
+                                      epsilon=epsilon)
 
 
 class BatchNormLayerImpl(LayerBaseImpl):

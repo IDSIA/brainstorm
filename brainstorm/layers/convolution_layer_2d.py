@@ -2,9 +2,21 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
+from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.utils import flatten_time
+
+
+def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
+                  activation_function='rel', name=None):
+    return ConstructionWrapper.create('Convolution2D',
+                                      num_filters=num_filters,
+                                      kernel_size=kernel_size,
+                                      stride=stride,
+                                      padding=padding,
+                                      activation_function=activation_function,
+                                      name=name)
 
 
 class Convolution2DLayerImpl(LayerBaseImpl):
@@ -23,11 +35,18 @@ class Convolution2DLayerImpl(LayerBaseImpl):
                                              "for ConvolutionLayer"
         self.num_filters = self.kwargs['num_filters']
         self.kernel_size = self.kwargs['kernel_size']
-        self.padding = self.kwargs.get('padding', 0)
         self.stride = self.kwargs.get('stride', (1, 1))
-        assert type(self.padding) is int and self.padding >= 0
-        assert type(self.stride) is tuple and self.stride[0] >= 0 and \
-            self.stride[1] >= 0
+        self.padding = self.kwargs.get('padding', 0)
+        assert type(self.padding) is int and self.padding >= 0, \
+            "Invalid padding: {}".format(self.padding)
+        assert type(self.kernel_size) in [list, tuple] and \
+            len(self.kernel_size) == 2, "Kernel size must be list or " \
+                                        "tuple  of length 2: {}".format(
+                                        self.kernel_size)
+        assert type(self.stride) in [list, tuple] and len(self.stride) == 2, \
+            "Stride must be list or tuple of length 2: {}".format(self.stride)
+        assert self.stride[0] >= 0 and self.stride[1] >= 0, \
+            "Invalid stride: {}".format(self.stride)
 
     def set_handler(self, new_handler):
         super(Convolution2DLayerImpl, self).set_handler(new_handler)

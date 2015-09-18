@@ -36,7 +36,7 @@ class Hook(Describable):
         else:
             self.run_verbosity = self.verbose
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         pass
 
 
@@ -51,7 +51,7 @@ class SaveNetwork(Hook):
         super(SaveNetwork, self).__init__(name, timescale, interval)
         self.filename = filename
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         net.save_as_hdf5(self.filename)
 
     def load_network(self):
@@ -75,7 +75,7 @@ class SaveBestNetwork(Hook):
         assert criterion == 'min' or criterion == 'max'
         self.criterion = criterion
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         e = logs
         for en in self.error_log_name:
             e = e[en]
@@ -120,7 +120,7 @@ class MonitorLayerParameters(Hook):
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         log = OrderedDict()
         for key, v in net.buffer[self.layer_name].parameters.items():
             v = net.handler.get_numpy_copy(v)
@@ -154,7 +154,7 @@ class MonitorLayerGradients(Hook):
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         log = OrderedDict()
         for key, v in net.buffer[self.layer_name].gradients.items():
             v = net.handler.get_numpy_copy(v)
@@ -182,7 +182,7 @@ class MonitorLayerDeltas(Hook):
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         log = OrderedDict()
         for key, v in net.buffer[self.layer_name].internals.items():
             v = net.handler.get_numpy_copy(v)
@@ -227,7 +227,7 @@ class MonitorLayerInOuts(Hook):
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         log = OrderedDict()
         input_log = log['inputs'] = OrderedDict()
         for key, v in net.buffer[self.layer_name].inputs.items():
@@ -255,8 +255,8 @@ class StopAfterEpoch(Hook):
                                              interval, verbose)
         self.max_epochs = max_epochs
 
-    def __call__(self, epoch, net, stepper, logs):
-        if epoch >= self.max_epochs:
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if epoch_nr >= self.max_epochs:
             raise StopIteration("Maximum number of epochs ({}) reached."
                                 .format(self.max_epochs))
 
@@ -269,7 +269,7 @@ class EarlyStopper(Hook):
         self.error = error_log_name.split('.')
         self.patience = patience
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         errors = logs
         for en in self.error:
             errors = errors[en]
@@ -294,7 +294,7 @@ class StopOnNan(Hook):
         self.check_parameters = check_parameters
         self.check_training_loss = check_training_loss
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         for log_name in self.logs_to_check:
             log = get_by_path(logs, log_name)
             if not np.all(np.isfinite(log)):
@@ -307,7 +307,7 @@ class StopOnNan(Hook):
                                     .format(self.__name__))
 
         if self.check_training_loss and logs['training_loss']:
-            if np.all(np.isfinite(logs['training_loss'][1:])):
+            if not np.all(np.isfinite(logs['training_loss'][1:])):
                 raise StopIteration("{} >> NaN or inf detected in "
                                     "training_loss!".format(self.__name__))
 
@@ -319,9 +319,9 @@ class InfoUpdater(Hook):
         self.run = run
         self.__name__ = self.__class__.__name__ if name is None else name
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         info = self.run.info
-        info['epoch'] = epoch
+        info['epoch'] = epoch_nr
         info['monitor'] = logs
         if 'nr_parameters' not in info:
             info['nr_parameters'] = net.buffer.parameters.size
@@ -339,7 +339,7 @@ class MonitorLoss(Hook):
         assert self.iter_name in monitor_kwargs
         self.iter = monitor_kwargs[self.iter_name]
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
         loss = []
         for _ in run_network(net, iterator):
@@ -418,7 +418,7 @@ class MonitorAccuracy(Hook):
         self.iter = monitor_kwargs[self.iter_name]
         self.masked = self.mask_name in self.iter.data.keys()
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
         _h = net.handler
         errors = 0
@@ -518,7 +518,7 @@ class MonitorHammingScore(Hook):
         assert self.out_layer in net.layers
         self.iter = monitor_kwargs[self.iter_name]
 
-    def __call__(self, epoch, net, stepper, logs):
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
         _h = net.handler
         errors = 0
