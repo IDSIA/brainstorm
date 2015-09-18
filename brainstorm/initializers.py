@@ -8,7 +8,7 @@ from brainstorm.utils import InitializationError
 
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in [
-    'Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
+    'ArrayInitializer', 'Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
     'SparseInputs', 'SparseOutputs', 'EchoState', 'LstmOptInit', 'Identity']]
 
 
