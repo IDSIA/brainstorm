@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from brainstorm.training.steppers import TrainingStep
 from brainstorm.structure.network import Network
 import numpy as np
 from six import string_types
@@ -312,7 +313,6 @@ class InfoUpdater(Hook):
     def __init__(self, run, name=None):
         super(InfoUpdater, self).__init__(name, 'epoch', 1)
         self.run = run
-        self.__name__ = self.__class__.__name__ if name is None else name
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         info = self.run.info
@@ -532,6 +532,29 @@ class MonitorHammingScore(Hook):
             totals += np.prod(target.shape)
 
         return 1.0 - errors / totals
+
+
+class ModifyStepperAttribute(Hook):
+    """ Save the information from logs to the Sacred custom info dict"""
+    def __init__(self, schedule, attr_name='learning_rate',
+                 timescale='epoch', interval=1, name=None, verbose=None):
+        super(ModifyStepperAttribute, self).__init__(name, timescale,
+                                                     interval, verbose)
+        self.schedule = schedule
+        self.attr_name = attr_name
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(ModifyStepperAttribute, self).start(net, stepper, verbose,
+                                                  monitor_kwargs)
+        assert isinstance(stepper, TrainingStep)
+        assert hasattr(stepper, self.attr_name), \
+            "The stepper {} does not have the attribute {}".format(
+                stepper.__class__.__name__, self.attr_name)
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        setattr(stepper, self.attr_name,
+                self.schedule(epoch_nr, update_nr, self.timescale,
+                              self.interval, net, stepper, logs))
 
 
 class VisualiseAccuracy(Hook):

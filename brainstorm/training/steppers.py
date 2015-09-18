@@ -2,7 +2,6 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.describable import Describable
-from brainstorm.training.schedules import get_schedule
 
 
 # ########################### Base Class ######################################
@@ -51,7 +50,7 @@ class SgdStep(TrainingStep):
 
     def __init__(self, learning_rate=0.1):
         super(SgdStep, self).__init__()
-        self.learning_rate_schedule = get_schedule(learning_rate)
+        self.learning_rate = learning_rate
         self.update = None
 
     def start(self, net):
@@ -59,20 +58,16 @@ class SgdStep(TrainingStep):
         self.update = net.handler.zeros(net.buffer.parameters.shape)
 
     def run(self):
-        learning_rate = self.learning_rate_schedule()
         self.net.forward_pass(training_pass=True)
         loss = self.net.get_loss_value()
         self.net.backward_pass()
-        self.net.handler.mult_st(-learning_rate,
+        self.net.handler.mult_st(-self.learning_rate,
                                  self.net.buffer.gradients,
                                  out=self.update)
         self.net.handler.add_tt(self.update,
                                 self.net.buffer.parameters,
                                 out=self.net.buffer.parameters)
         return loss
-
-    def __init_from_description__(self, description):
-        self.learning_rate_schedule = get_schedule(self.learning_rate_schedule)
 
 
 class MomentumStep(TrainingStep):
@@ -90,8 +85,8 @@ class MomentumStep(TrainingStep):
                  scale_learning_rate=True):
         super(MomentumStep, self).__init__()
         self.velocity = None
-        self.learning_rate_schedule = get_schedule(learning_rate)
-        self.momentum_schedule = get_schedule(momentum)
+        self.learning_rate = learning_rate
+        self.momentum = momentum
         assert isinstance(scale_learning_rate, bool), \
             "scale_learning_rate must be True or False."
         self.scale_learning_rate = scale_learning_rate
@@ -101,8 +96,8 @@ class MomentumStep(TrainingStep):
         self.velocity = net.handler.zeros(net.buffer.parameters.shape)
 
     def run(self):
-        learning_rate = self.learning_rate_schedule()
-        momentum = self.momentum_schedule()
+        learning_rate = self.learning_rate
+        momentum = self.momentum
         if self.scale_learning_rate:
             learning_rate *= (1 - momentum)
 
@@ -121,10 +116,6 @@ class MomentumStep(TrainingStep):
                                 out=self.net.buffer.parameters)
         return loss
 
-    def __init_from_description__(self, description):
-        self.learning_rate_schedule = get_schedule(self.learning_rate_schedule)
-        self.momentum_schedule = get_schedule(self.momentum_schedule)
-
 
 class NesterovStep(MomentumStep):
     """
@@ -135,8 +126,8 @@ class NesterovStep(MomentumStep):
     learning_rate is multiplied by (1 - momentum) when used.
     """
     def run(self):
-        learning_rate = self.learning_rate_schedule()
-        momentum = self.momentum_schedule()
+        learning_rate = self.learning_rate
+        momentum = self.momentum
         if self.scale_learning_rate:
             learning_rate *= (1 - momentum)
 
