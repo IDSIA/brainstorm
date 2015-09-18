@@ -378,13 +378,13 @@ def test_describe_trainer():
             'StopAfterEpoch': {
                 '@type': 'StopAfterEpoch',
                 'max_epochs': 23,
-                'priority': 0},
+                'priority': 1},
             'StopOnNan': {
                 '@type': 'StopOnNan',
                 'check_parameters': True,
                 'check_training_loss': True,
                 'logs_to_check': [],
-                'priority': 1}},
+                'priority': 2}},
         'stepper': {
             '@type': 'SgdStep',
             'learning_rate_schedule': 0.7}

@@ -358,7 +358,6 @@ class PyCudaHandler(Handler):
         self._pool2d_backward_batch(inputs, window, outputs, padding,
                              stride, None, in_deltas, out_deltas, pool_mode)
 
-
     def _pool2d_forward_batch(self, inputs, window, outputs, padding,
                              stride, argmax, pooling_mode):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()

@@ -7,7 +7,7 @@ Shape
 All data passed to the iterators has to match the shape ``(T, B, ...)`` where
 ``T`` is the maximum sequence length and ``B`` is the number of sequences.
 This has to be true even if the data is not sequential. In that case it would
- be ``(1, B, ...)``.
+be ``(1, B, ...)``.
 
 
 File Format
