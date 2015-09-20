@@ -8,6 +8,7 @@ import pycuda.driver as drv
 from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
 from pycuda.curandom import XORWOWRandomNumberGenerator
+from pycuda.tools import DeviceMemoryPool
 import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
@@ -22,19 +23,22 @@ except ImportError:
     warnings.warn("CUDNN libraries are not available.")
 
 
-__pycuda_context, __pycuda_device = None, None
+_pycuda_context, _pycuda_device, _cuda_memory_pool = None, None, None
 
 def _shutdown():
+    global _pycuda_context, _pycuda_device, _cuda_memory_pool
     from pycuda.tools import clear_context_caches
-    cuda_memory_pool.stop_holding()
+    #print(__cuda_memory_pool)
+    _cuda_memory_pool.stop_holding()
     cumisc.shutdown()
     clear_context_caches()
-    __pycuda_context.pop()
-    __pycuda_context = None
-    __pycuda_device = None
+    _pycuda_context.pop()
+    _pycuda_context = None
+    _pycuda_device = None
     import gc
     gc.collect()
 
+_softmax_impl = None
 
 
 class PyCudaHandler(Handler):
@@ -44,12 +48,14 @@ class PyCudaHandler(Handler):
                        'cudnn_addmode'}
 
     def __init__(self, seed=None, gpu_id=0, init_cudnn=True):
-        global __pycuda_context, __pycuda_device
+        global _pycuda_context, _pycuda_device, _softmax_impl, \
+               _cuda_memory_pool
         drv.init()
         _pycuda_device = drv.Device(gpu_id)
-        _pycuda_context = __pycuda_device.make_context()
+        _pycuda_context = _pycuda_device.make_context()
+        _cuda_memory_pool = DeviceMemoryPool()
         atexit.register(_shutdown)
-        culinalg.init()
+        cumisc.init(_cuda_memory_pool.allocate)
 
         self.dtype = np.float32
         self.cublas_handle = cumisc._global_cublas_handle
@@ -76,7 +82,60 @@ class PyCudaHandler(Handler):
                 'CUDNN_CONVOLUTION_FWD_NO_WORKSPACE']
             self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
 
-    array_type = pycuda.gpuarray.GPUArray
+        _softmax_kernel_code = """
+        #include "float.h"
+
+        __global__ void softmax_kernel(float* mat, float* tmp, float* out,
+                                       unsigned int height, unsigned int width) {
+              __shared__ float max_vals[32];
+            float cur_max = -FLT_MAX;
+            float val = 0;
+
+            for (unsigned int i = threadIdx.x; i < width; i += 32) {
+                val = mat[blockIdx.x * width + i];
+                if (val > cur_max)
+                    cur_max = val;
+            }
+
+            max_vals[threadIdx.x] = cur_max;
+            __syncthreads();
+            if (threadIdx.x == 0) {
+                cur_max = -FLT_MAX;
+                for (unsigned int i = 0; i < 32; i++) {
+                    if (max_vals[i] > cur_max)
+                        cur_max = max_vals[i];
+                }
+                tmp[blockIdx.x] = cur_max;
+            }
+            __syncthreads();
+
+
+            float sum = 0.0;
+            for (unsigned int i = threadIdx.x; i < width; i += 32) {
+                float x =  __expf(mat[blockIdx.x * width + i] - tmp[blockIdx.x]);
+                out[blockIdx.x * width + i] = x;
+                sum += x;
+            }
+            max_vals[threadIdx.x] = sum;
+            __syncthreads();
+            if (threadIdx.x == 0) {
+                sum = 0.0;
+                for (unsigned int i = 0; i < 32; i++)
+                    sum += max_vals[i];
+                tmp[blockIdx.x] = sum;
+            }
+            __syncthreads();
+            for (unsigned int i = threadIdx.x; i < width; i += 32) {
+                out[blockIdx.x * width + i] /= tmp[blockIdx.x];
+            }
+        }
+        """
+        _mod = SourceModule(_softmax_kernel_code)
+        _softmax_impl = _mod.get_function("softmax_kernel")
+
+
+    array_type = gpuarray.GPUArray
+
 
     def __init_from_description__(self, description):
         self.__init__()
@@ -576,53 +635,3 @@ index_m_by_v_kernel = ElementwiseKernel(
     "index_m_by_v_kernel"
 )
 
-__softmax_kernel_code = """
-    #include "float.h"
-
-    __global__ void softmax_kernel(float* mat, float* tmp, float* out,
-                                   unsigned int height, unsigned int width) {
-          __shared__ float max_vals[32];
-        float cur_max = -FLT_MAX;
-        float val = 0;
-
-        for (unsigned int i = threadIdx.x; i < width; i += 32) {
-            val = mat[blockIdx.x * width + i];
-            if (val > cur_max)
-                cur_max = val;
-        }
-
-        max_vals[threadIdx.x] = cur_max;
-        __syncthreads();
-        if (threadIdx.x == 0) {
-            cur_max = -FLT_MAX;
-            for (unsigned int i = 0; i < 32; i++) {
-                if (max_vals[i] > cur_max)
-                    cur_max = max_vals[i];
-            }
-            tmp[blockIdx.x] = cur_max;
-        }
-        __syncthreads();
-
-
-        float sum = 0.0;
-        for (unsigned int i = threadIdx.x; i < width; i += 32) {
-            float x =  __expf(mat[blockIdx.x * width + i] - tmp[blockIdx.x]);
-            out[blockIdx.x * width + i] = x;
-            sum += x;
-        }
-        max_vals[threadIdx.x] = sum;
-        __syncthreads();
-        if (threadIdx.x == 0) {
-            sum = 0.0;
-            for (unsigned int i = 0; i < 32; i++)
-                sum += max_vals[i];
-            tmp[blockIdx.x] = sum;
-        }
-        __syncthreads();
-        for (unsigned int i = threadIdx.x; i < width; i += 32) {
-            out[blockIdx.x * width + i] /= tmp[blockIdx.x];
-        }
-    }
-    """
-_mod = SourceModule(__softmax_kernel_code)
-_softmax_impl = _mod.get_function("softmax_kernel")
