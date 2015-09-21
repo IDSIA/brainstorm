@@ -10,6 +10,7 @@ from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.layers.batch_normalization_layer import BatchNorm
 from brainstorm.layers.binomial_cross_entropy_layer import BinomialCrossEntropy
 from brainstorm.layers.classification_layer import Classification
+from brainstorm.layers.regression_layer import Regression
 from brainstorm.layers.convolution_layer_2d import Convolution2D
 from brainstorm.layers.dropout_layer import Dropout
 from brainstorm.layers.elementwise_layer import Elementwise

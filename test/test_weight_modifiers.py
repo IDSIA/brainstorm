@@ -7,7 +7,7 @@ from brainstorm.handlers import PyCudaHandler, default_handler
 
 
 def test_limit_incoming_weights_squared():
-
+    handler = PyCudaHandler()
     for orig in (np.random.rand(4, 5), np.random.randn(3, 5, 4, 6)):
         for limit in [0.00001, 1, 10, 10000]:
             x = orig.reshape(orig.shape[0], orig.size / orig.shape[0]).copy()
@@ -20,7 +20,7 @@ def test_limit_incoming_weights_squared():
             mod(default_handler, y)
             assert np.allclose(y, out)
 
-            handler = PyCudaHandler()
             y = handler.create_from_numpy(orig)
             mod(handler, y)
             assert np.allclose(handler.get_numpy_copy(y), out)
+            handler.shutdown()

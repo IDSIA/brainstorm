@@ -51,7 +51,7 @@ x_tr = (x_tr - tr_mean) / tr_std
 x_va = (x_va - tr_mean) / tr_std
 x_te = (x_te - tr_mean) / tr_std
 
-print("Creating HDF5 dataset ...")
+print("Creating CIFAR-10 HDF5 dataset ...")
 f = h5py.File(hdf_file, 'w')
 description = """
 The CIFAR-10 dataset is a labeled subset of the 80 million tiny images
