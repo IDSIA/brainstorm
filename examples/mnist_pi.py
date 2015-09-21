@@ -46,13 +46,13 @@ network.set_weight_modifiers({"out": bs.ConstrainL2Norm(1)})
 trainer = bs.Trainer(bs.MomentumStep(learning_rate=0.1, momentum=0.9),
                      double_buffering=False)
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
-trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "out.output",
-                                          name="validation",
+trainer.add_hook(bs.hooks.MonitorAccuracy('valid_getter', 'out.output',
+                                          name='validation',
                                           verbose=True))
-trainer.add_hook(bs.hooks.SaveBestNetwork("validation.accuracy",
+trainer.add_hook(bs.hooks.SaveBestNetwork('validation.accuracy',
                                           filename='mnist_pi_best.hdf5',
-                                          name="best weights",
-                                          criterion="max"))
+                                          name='best weights',
+                                          criterion='max'))
 
 # -------------------------------- Train ------------------------------------ #
 

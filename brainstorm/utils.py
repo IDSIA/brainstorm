@@ -99,7 +99,7 @@ def sort_by_index_key(x):
 def get_by_path(d, path):
     """Access an element of the dict d using the (possibly dotted) path.
 
-    So for example 'foo.bar.baz' would return d['foo']['bar']['baz'].
+    For example, 'foo.bar.baz' would return d['foo']['bar']['baz'].
 
     :param d: (nested) dictionary
     :type d: dict
@@ -107,8 +107,13 @@ def get_by_path(d, path):
     :type path: str
     :return: object
     """
-    for p in path.split('.'):
-        d = d[p]
+    try:
+        for p in path.split('.'):
+            d = d[p]
+    except KeyError:
+        print('Did not find log `{}`. Available logs are {}'.format(
+            path, flatten_keys(d)))
+        raise
     return d
 
 
@@ -146,3 +151,27 @@ def flatten_time_and_features(array):
 def flatten_features(array, start_idx=2):
     return array.reshape(array.shape[:start_idx] +
                          (int(np.product(array.shape[start_idx:])),))
+
+
+def flatten_keys(dictionary):
+    """
+    Flattens the keys for a nested dictionary using dot notation. This
+    returns all the keys which can be accessed via `get_by_path`.
+
+    For example, {'a': None, 'b': {'x': None}} would return ['a', 'b.x']
+
+    :param dictionary: A dictionary which should be flattened.
+    :type dictionary: dict
+    :return: list of flattened keys
+    :rtype: list[unicode]
+    """
+    if not isinstance(dictionary, dict):
+        return []
+    keys = []
+    for k, v in dictionary.items():
+        if isinstance(v, dict):
+            for x in flatten_keys(v):
+                keys.append(k + '.' + x)
+        else:
+            keys.append(k)
+    return keys

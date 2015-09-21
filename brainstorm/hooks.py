@@ -8,7 +8,7 @@ from six import string_types
 from collections import OrderedDict
 from brainstorm.describable import Describable
 from brainstorm.training.trainer import run_network
-from brainstorm.utils import get_by_path
+from brainstorm.utils import get_by_path, flatten_keys
 
 
 class Hook(Describable):
@@ -66,37 +66,34 @@ class SaveBestNetwork(Hook):
     __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
 
-    def __init__(self, error_log_name, filename=None, name=None,
+    def __init__(self, log_name, filename=None, name=None,
                  criterion='max', verbose=None):
         super(SaveBestNetwork, self).__init__(name, 'epoch', 1, verbose)
-        self.error_log_name = error_log_name.split('.')
+        self.log_name = log_name
         self.filename = filename
         self.parameters = None
         assert criterion == 'min' or criterion == 'max'
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        e = logs
-        for en in self.error_log_name:
-            e = e[en]
+        e = get_by_path(logs, self.log_name)
         best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
         if best_idx == len(e) - 1:
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
                 if self.run_verbosity:
                     print("{} >> {} improved. Saving network to {} ...".format(
-                          self.__name__, ".".join(self.error_log_name),
-                          self.filename))
+                          self.__name__, self.log_name, self.filename))
                 net.save_as_hdf5(self.filename)
             else:
                 if self.run_verbosity:
                     print("{} >> {} improved. Caching parameters ...".format(
-                          self.__name__, ".".join(self.error_log_name)))
+                          self.__name__, self.log_name))
                 self.parameters = params
         elif self.run_verbosity:
             print("{} >> Last saved parameters after epoch {} when {} was {}"
-                  "".format(self.__name__, best_idx,
-                            ".".join(self.error_log_name), e[best_idx]))
+                  "".format(self.__name__, best_idx, self.log_name,
+                            e[best_idx]))
 
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
@@ -264,17 +261,15 @@ class StopAfterEpoch(Hook):
 class EarlyStopper(Hook):
     __default_values__ = {'patience': 1}
 
-    def __init__(self, error_log_name, patience=1, name=None):
+    def __init__(self, log_name, patience=1, name=None):
         super(EarlyStopper, self).__init__(name, 'epoch', 1)
-        self.error = error_log_name.split('.')
+        self.log_name = log_name
         self.patience = patience
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        errors = logs
-        for en in self.error:
-            errors = errors[en]
-        best_error_idx = np.argmin(errors)
-        if len(errors) > best_error_idx + self.patience:
+        e = get_by_path(logs, self.log_name)
+        best_error_idx = np.argmin(e)
+        if len(e) > best_error_idx + self.patience:
             raise StopIteration("Error did not fall for %d epochs! Stopping."
                                 % self.patience)
 
