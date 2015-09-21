@@ -56,7 +56,7 @@ inp, out = bs.get_in_out_layers_for_classification(1, 10, outlayer_name='out',
 inp >> bs.layers.Lstm(100, name='lstm') >> out
 network = bs.Network.from_layer(out)
 
-network.set_memory_handler(PyCudaHandler())
+network.set_memory_handler(PyCudaHandler(init_cudnn=False))
 network.initialize({"default": bs.Gaussian(0.01),
                     "lstm": {'bf': 4, 'bi': 4, 'bo': 4}}, seed=42)
 network.set_gradient_modifiers({"lstm": bs.ClipValues(low=-1., high=1)})
@@ -78,14 +78,14 @@ trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter",
                                           output="out.output",
                                           mask_name="mask",
-                                          name="validation accuracy",
+                                          name="validation",
                                           verbose=True))
-trainer.add_hook(bs.hooks.SaveBestNetwork("validation accuracy",
+trainer.add_hook(bs.hooks.SaveBestNetwork("validation.accuracy",
                                           filename='mnist_lstm_best.hdf5',
                                           name="best weights",
                                           criterion="max"))
-trainer.add_hook(bs.hooks.MonitorLayerParameters('lstm'))
-trainer.add_hook(bs.hooks.MonitorLayerGradients('lstm', timescale='update'))
+trainer.add_hook(bs.hooks.MonitorLayerParameters('lstm',verbose=False))
+trainer.add_hook(bs.hooks.MonitorLayerGradients('lstm', timescale='update',verbose=False))
 
 # -------------------------------- Train ------------------------------------ #
 
