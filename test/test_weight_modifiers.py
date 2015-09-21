@@ -23,4 +23,3 @@ def test_limit_incoming_weights_squared():
             y = handler.create_from_numpy(orig)
             mod(handler, y)
             assert np.allclose(handler.get_numpy_copy(y), out)
-            handler.shutdown()

@@ -5,16 +5,16 @@ import numpy as np
 import warnings
 from pycuda import gpuarray, cumath
 import pycuda.driver as drv
+import pycuda.autoinit
 from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
 from pycuda.curandom import XORWOWRandomNumberGenerator
-from pycuda.tools import DeviceMemoryPool
 import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
-import atexit
 
+culinalg.init()
 
 try:
     import ctypes
@@ -23,42 +23,15 @@ except ImportError:
     warnings.warn("CUDNN libraries are not available.")
 
 
-_pycuda_context, _pycuda_device, _cuda_memory_pool = None, None, None
-
-def _shutdown():
-    global _pycuda_context, _pycuda_device, _cuda_memory_pool
-    from pycuda.tools import clear_context_caches
-    #print(__cuda_memory_pool)
-    _cuda_memory_pool.stop_holding()
-    cumisc.shutdown()
-    clear_context_caches()
-    _pycuda_context.pop()
-    _pycuda_context = None
-    _pycuda_device = None
-    import gc
-    gc.collect()
-
-_softmax_impl = None
-
-
 class PyCudaHandler(Handler):
-    __undescribed__ = {'cublas_handle', 'dtype', 'EMPTY', 'rnd',
-                       'cudnn_handle', 'cudnn_tensor_format',
+    __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd',
+                       'cudnn_context', 'cudnn_tensor_format',
                        'cudnn_data_type', 'cudnn_convmode', 'cudnn_convpref',
                        'cudnn_addmode'}
 
-    def __init__(self, seed=None, gpu_id=0, init_cudnn=True):
-        global _pycuda_context, _pycuda_device, _softmax_impl, \
-               _cuda_memory_pool
-        drv.init()
-        _pycuda_device = drv.Device(gpu_id)
-        _pycuda_context = _pycuda_device.make_context()
-        _cuda_memory_pool = DeviceMemoryPool()
-        atexit.register(_shutdown)
-        cumisc.init(_cuda_memory_pool.allocate)
-
+    def __init__(self, seed=None, init_cudnn=True):
         self.dtype = np.float32
-        self.cublas_handle = cumisc._global_cublas_handle
+        self.context = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
         if seed is None:
             seed = global_rnd.generate_seed()
@@ -69,7 +42,7 @@ class PyCudaHandler(Handler):
         self.rnd = XORWOWRandomNumberGenerator(seed_getter=get_seeds)
         self.init_cudnn = init_cudnn
         if self.init_cudnn:
-            self.cudnn_handle = cudnn.cudnnCreate()
+            self.cudnn_context = cudnn.cudnnCreate()
             self.cudnn_tensor_format = cudnn.cudnnTensorFormat[
                 'CUDNN_TENSOR_NCHW']
             self.cudnn_data_type = cudnn.cudnnDataType[
@@ -82,60 +55,7 @@ class PyCudaHandler(Handler):
                 'CUDNN_CONVOLUTION_FWD_NO_WORKSPACE']
             self.cudnn_addmode = cudnn.cudnnAddMode['CUDNN_ADD_SAME_C']
 
-        _softmax_kernel_code = """
-        #include "float.h"
-
-        __global__ void softmax_kernel(float* mat, float* tmp, float* out,
-                                       unsigned int height, unsigned int width) {
-              __shared__ float max_vals[32];
-            float cur_max = -FLT_MAX;
-            float val = 0;
-
-            for (unsigned int i = threadIdx.x; i < width; i += 32) {
-                val = mat[blockIdx.x * width + i];
-                if (val > cur_max)
-                    cur_max = val;
-            }
-
-            max_vals[threadIdx.x] = cur_max;
-            __syncthreads();
-            if (threadIdx.x == 0) {
-                cur_max = -FLT_MAX;
-                for (unsigned int i = 0; i < 32; i++) {
-                    if (max_vals[i] > cur_max)
-                        cur_max = max_vals[i];
-                }
-                tmp[blockIdx.x] = cur_max;
-            }
-            __syncthreads();
-
-
-            float sum = 0.0;
-            for (unsigned int i = threadIdx.x; i < width; i += 32) {
-                float x =  __expf(mat[blockIdx.x * width + i] - tmp[blockIdx.x]);
-                out[blockIdx.x * width + i] = x;
-                sum += x;
-            }
-            max_vals[threadIdx.x] = sum;
-            __syncthreads();
-            if (threadIdx.x == 0) {
-                sum = 0.0;
-                for (unsigned int i = 0; i < 32; i++)
-                    sum += max_vals[i];
-                tmp[blockIdx.x] = sum;
-            }
-            __syncthreads();
-            for (unsigned int i = threadIdx.x; i < width; i += 32) {
-                out[blockIdx.x * width + i] /= tmp[blockIdx.x];
-            }
-        }
-        """
-        _mod = SourceModule(_softmax_kernel_code)
-        _softmax_impl = _mod.get_function("softmax_kernel")
-
-
-    array_type = gpuarray.GPUArray
-
+    array_type = pycuda.gpuarray.GPUArray
 
     def __init_from_description__(self, description):
         self.__init__()
@@ -307,7 +227,7 @@ class PyCudaHandler(Handler):
 
         # TODO: we hardcode a memory limit of zero for cudnn
         algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
-            self.cudnn_handle, x_desc, w_desc, conv_desc, y_desc,
+            self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
             self.cudnn_convpref, 0)
 
         alpha, beta = 1.0, 0.0
@@ -315,12 +235,12 @@ class PyCudaHandler(Handler):
         w_data = ctypes.c_void_p(int(weights.gpudata))
         b_data = ctypes.c_void_p(int(bias.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
-        cudnn.cudnnConvolutionForward(self.cudnn_handle, alpha, x_desc,
+        cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
                                       x_data, w_desc, w_data, conv_desc, algo,
                                       None, 0, beta, y_desc,
                                       y_data)
         beta = 1.0
-        cudnn.cudnnAddTensor(self.cudnn_handle, self.cudnn_addmode, alpha,
+        cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
                              b_desc, b_data, beta, y_desc, y_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
@@ -328,7 +248,7 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyFilterDescriptor(w_desc)
         cudnn.cudnnDestroyTensorDescriptor(b_desc)
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
-        # cudnn.cudnnDestroy(cudnn_handle)
+        # cudnn.cudnnDestroy(cudnn_context)
 
     def conv2d_backward_batch(self, inputs, weights, padding, stride,
                               in_deltas, out_deltas, weight_deltas,
@@ -369,16 +289,16 @@ class PyCudaHandler(Handler):
         dw_data = ctypes.c_void_p(int(weight_deltas.gpudata))
         db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
 
-        cudnn.cudnnConvolutionBackwardFilter(self.cudnn_handle, alpha,
+        cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
                                              x_desc, x_data, od_desc, od_data,
                                              conv_desc, beta,
                                              dw_desc, dw_data)
 
-        cudnn.cudnnConvolutionBackwardBias(self.cudnn_handle, alpha,
+        cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
                                            od_desc, od_data, beta, db_desc,
                                            db_data)
         beta = 1.0  # Gradients w.r.t. inputs should be added
-        cudnn.cudnnConvolutionBackwardData(self.cudnn_handle, alpha,
+        cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
                                            w_desc, w_data, od_desc, od_data,
                                            conv_desc, beta,
                                            id_desc, id_data)
@@ -438,7 +358,7 @@ class PyCudaHandler(Handler):
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
         alpha, beta = 1.0, 0.0
-        cudnn.cudnnPoolingForward(self.cudnn_handle, pool_desc, alpha,
+        cudnn.cudnnPoolingForward(self.cudnn_context, pool_desc, alpha,
                                   x_desc, x_data, beta, y_desc, y_data)
 
         cudnn.cudnnDestroyTensorDescriptor(x_desc)
@@ -472,7 +392,7 @@ class PyCudaHandler(Handler):
         id_data = ctypes.c_void_p(int(in_deltas.gpudata))
         od_data = ctypes.c_void_p(int(out_deltas.gpudata))
         alpha, beta = 1.0, 1.0
-        cudnn.cudnnPoolingBackward(self.cudnn_handle, pool_desc, alpha,
+        cudnn.cudnnPoolingBackward(self.cudnn_context, pool_desc, alpha,
                                    y_desc, y_data, od_desc, od_data, x_desc,
                                    x_data, beta,
                                    id_desc, id_data)
@@ -635,3 +555,53 @@ index_m_by_v_kernel = ElementwiseKernel(
     "index_m_by_v_kernel"
 )
 
+__softmax_kernel_code = """
+    #include "float.h"
+
+    __global__ void softmax_kernel(float* mat, float* tmp, float* out,
+                                   unsigned int height, unsigned int width) {
+          __shared__ float max_vals[32];
+        float cur_max = -FLT_MAX;
+        float val = 0;
+
+        for (unsigned int i = threadIdx.x; i < width; i += 32) {
+            val = mat[blockIdx.x * width + i];
+            if (val > cur_max)
+                cur_max = val;
+        }
+
+        max_vals[threadIdx.x] = cur_max;
+        __syncthreads();
+        if (threadIdx.x == 0) {
+            cur_max = -FLT_MAX;
+            for (unsigned int i = 0; i < 32; i++) {
+                if (max_vals[i] > cur_max)
+                    cur_max = max_vals[i];
+            }
+            tmp[blockIdx.x] = cur_max;
+        }
+        __syncthreads();
+
+
+        float sum = 0.0;
+        for (unsigned int i = threadIdx.x; i < width; i += 32) {
+            float x =  __expf(mat[blockIdx.x * width + i] - tmp[blockIdx.x]);
+            out[blockIdx.x * width + i] = x;
+            sum += x;
+        }
+        max_vals[threadIdx.x] = sum;
+        __syncthreads();
+        if (threadIdx.x == 0) {
+            sum = 0.0;
+            for (unsigned int i = 0; i < 32; i++)
+                sum += max_vals[i];
+            tmp[blockIdx.x] = sum;
+        }
+        __syncthreads();
+        for (unsigned int i = threadIdx.x; i < width; i += 32) {
+            out[blockIdx.x * width + i] /= tmp[blockIdx.x];
+        }
+    }
+    """
+_mod = SourceModule(__softmax_kernel_code)
+_softmax_impl = _mod.get_function("softmax_kernel")
