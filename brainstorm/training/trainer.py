@@ -49,7 +49,7 @@ class Trainer(Describable):
             print('\n\n', 15 * '- ', "Before Training", 15 * ' -')
         assert set(training_data_getter.data.keys()) == set(
             net.buffer.Input.outputs.keys()), \
-            "The data names provided by the training data iterator {} do not " \
+            "The data names provided by the training data iterator {} do not "\
             "map to the network input names {}".format(
                 training_data_getter.data.keys(),
                 net.buffer.Input.outputs.keys())

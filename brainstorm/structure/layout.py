@@ -438,7 +438,7 @@ def get_forward_closure(node, connections):
         new_sink_set = {end for start, end in connections
                         if start in source_set}
         if len(new_source_set) > len(source_set) or \
-                        len(new_sink_set) > len(sink_set):
+                len(new_sink_set) > len(sink_set):
             growing = True
             source_set = new_source_set
             sink_set = new_sink_set

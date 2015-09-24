@@ -44,7 +44,7 @@ class LstmLayerImpl(LayerBaseImpl):
 
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
-        
+
         parameters = OrderedDict()
         parameters['Wz'] = ShapeTemplate(self.size, in_size)
         parameters['Wi'] = ShapeTemplate(self.size, in_size)

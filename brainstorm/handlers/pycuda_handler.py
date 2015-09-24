@@ -335,10 +335,11 @@ class PyCudaHandler(Handler):
         pool_mode = cudnn.cudnnPoolingMode[
             'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
         self._pool2d_backward_batch(inputs, window, outputs, padding,
-                             stride, None, in_deltas, out_deltas, pool_mode)
+                                    stride, None, in_deltas, out_deltas,
+                                    pool_mode)
 
     def _pool2d_forward_batch(self, inputs, window, outputs, padding,
-                             stride, argmax, pooling_mode):
+                              stride, argmax, pooling_mode):
         pool_desc = cudnn.cudnnCreatePoolingDescriptor()
         cudnn.cudnnSetPooling2dDescriptor(pool_desc, pooling_mode,
                                           window[0], window[1], padding,

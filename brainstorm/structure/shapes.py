@@ -20,7 +20,8 @@ class ShapeTemplate(object):
         else:
             return ShapeTemplate(*shape)
 
-    # def __init__(self, *args, context_size=0, backward_only=False):  # Not python2 compatible
+    # The following signature unfortunately is not python2 compatible:
+    # def __init__(self, *args, context_size=0, backward_only=False):
     def __init__(self, *args, **kwargs):
         self._shape = args
         self.context_size = kwargs.get('context_size', 0)

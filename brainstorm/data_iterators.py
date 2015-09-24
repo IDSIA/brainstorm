@@ -367,7 +367,7 @@ def _assert_correct_data_format(named_data):
     if min(nr_sequences.values()) != max(nr_sequences.values()):
         raise IteratorValidationError(
             'The number of sequences of all inputs must be equal, but got {}'
-                .format(nr_sequences))
+            .format(nr_sequences))
     if min(nr_timesteps.values()) != max(nr_timesteps.values()):
         raise IteratorValidationError(
             'The number of time steps of all inputs must be equal, '

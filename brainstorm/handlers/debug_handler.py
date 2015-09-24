@@ -388,8 +388,8 @@ class DebugHandler(Handler):
         assert isinstance(padding, int) and 0 <= padding, \
             "invalid padding {}".format(padding)
         # TODO: check shapes of inputs, outputs,
-        self.handler.avgpool2d_forward_batch(inputs.array, window, outputs.array,
-                                          padding, stride)
+        self.handler.avgpool2d_forward_batch(inputs.array, window,
+                                             outputs.array, padding, stride)
 
     @check_for_inf_or_nan
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,

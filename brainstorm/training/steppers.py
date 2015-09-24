@@ -18,10 +18,6 @@ class TrainingStep(Describable):
 
     def start(self, net):
         self.net = net
-        self._initialize()
-
-    def _initialize(self):
-        pass
 
     def run(self):
         pass
@@ -161,4 +157,3 @@ class NesterovStep(MomentumStep):
                                      self.net.buffer.gradients,
                                      self.net.buffer.parameters)
         return loss
-

@@ -235,7 +235,6 @@ ids = [f.__name__ for f in layers_to_test]
 
 spec_list = [
     (1, 1, 'tanh'),
-    (3, 2, 'tanh'),
     (5, 1, 'sigmoid'),
     (2, 3, 'rel'),
     (1, 4, 'linear')]

@@ -72,7 +72,8 @@ def run_deltas_test(layer, specs, inputs_name, outputs_name):
     layer.forward_pass(layer_buffers)
     HANDLER.fill(layer_buffers.output_deltas[outputs_name], 1.0)
     layer.backward_pass(layer_buffers)
-    delta_calc = HANDLER.get_numpy_copy(layer_buffers.input_deltas[inputs_name])
+    delta_calc = HANDLER.get_numpy_copy(layer_buffers
+                                        .input_deltas[inputs_name])
     delta_approx = get_approx_deltas(layer, inputs_name,
                                      outputs_name, layer_buffers,
                                      eps).reshape(delta_calc.shape)
@@ -171,4 +172,3 @@ def run_gradients_test(layer, specs, parameter_name, outputs_name):
     print("Difference:\n", grad_calc - grad_approx)
 
     return False
-
