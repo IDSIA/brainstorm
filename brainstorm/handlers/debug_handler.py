@@ -33,17 +33,26 @@ class DebugArray(object):
         return DebugArray(arr=self.array.reshape(new_shape))
 
 
+def _check_for_inf(arg, name):
+    if isinstance(arg, (int, float)) and not np.isfinite(arg):
+        raise ValueError('NaN or Inf encountered in "{}" argument'
+                         .format(name))
+    if isinstance(arg, DebugArray) and \
+            isinstance(arg.array, np.ndarray) and \
+            not np.all(np.isfinite(arg.array)):
+        raise ValueError('NaN or Inf encountered in "{}"'
+                         .format(name))
+
+
 def check_for_inf_or_nan(f):
     def checked_f(*args, **kwargs):
+        result = f(*args, **kwargs)
         for i, arg in enumerate(args, start=1):
-            if isinstance(arg, (np.ndarray, int, float)) and not np.all(np.isfinite(arg)):
-                raise ValueError('NaN or Inf encountered in {}. argument (1 based indexing)'
-                                 .format(i))
+            _check_for_inf(arg, '{}.'.format(i))
         for n, v in kwargs.items():
-            if isinstance(v, (np.ndarray, int, float)) and not np.all(np.isfinite(v)):
-                raise ValueError('NaN or Inf encountered in {} argument'
-                                 .format(n))
-        return f(*args, **kwargs)
+            _check_for_inf(v, n)
+        return result
+
     return checked_f
 
 
