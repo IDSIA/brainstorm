@@ -547,11 +547,8 @@ class VisualiseAccuracy(Hook):
         Input should be of the form <monitorname>.accuracy
     filename : str
         The location to which the .html file containing the accuracy plot should be saved
-    display : boolean
-        If set to true bokeh will launch a tab in your default browser after EVERY timescale
-        and display the intermediate accuracy plot
     """
-    def __init__(self, log_names, filename, display=False, timescale='epoch', interval=1, name=None, verbose=None):
+    def __init__(self, log_names, filename, timescale='epoch', interval=1, name=None, verbose=None):
         super(VisualiseAccuracy, self).__init__(name, timescale, interval, verbose)
 
         self.log_names = log_names
@@ -561,32 +558,41 @@ class VisualiseAccuracy(Hook):
             import bokeh.plotting as bk
 
             self.bk = bk
-            self.bk.output_file(self.filename + ".html", title="Accuracy Monitor", mode="cdn")
             self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset"
             self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua', 'gray']
-            self.display = display
+
+            self.bk.output_server("Accuracy Monitor")
+            self.fig = self.bk.figure(title="Accuracy Monitor", x_axis_label=self.timescale, y_axis_label='accuracy',
+                            tools=self.TOOLS, x_range=(0, 10), y_range=(0, 1))
 
         except ImportError:
             print("bokeh is required for drawing networks but was not found.")
 
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-
-        x_max = 0
-        if self.timescale == 'epoch':
-            x_max = epoch_nr + 3
-        elif self.timescale == 'update':
-            x_max = update_nr + 3
-
-        fig = self.bk.figure(title="Accuracy Monitor", x_axis_label=self.timescale, y_axis_label='accuracy',
-                                  tools=self.TOOLS, x_range=(0, x_max), y_range=(0, 1))
+    def start(self, net, stepper, verbose, monitor_kwargs):
         count = 0
-        for log_name in self.log_names:
-            e = get_by_path(logs, log_name)
 
-            fig.line(range(len(e)), e, legend=log_name[0], line_width=2, color=self.colors[count])
+        # create empty line objects
+        for log_name in self.log_names:
+            self.fig.line([], [], legend=log_name, line_width=2, color=self.colors[count], name=log_name)
             count += 1
 
-        self.bk.save(fig, filename=self.filename + ".html")
+        self.bk.show(self.fig)
+        self.bk.output_file(self.filename + ".html", title="Accuracy Monitor", mode="cdn")
 
-        if self.display:
-            self.bk.show(fig)
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        count = 0
+        for log_name in self.log_names:
+            renderer = self.fig.select(dict(name=log_name))
+
+            datasource = renderer[0].data_source
+            datasource.data["y"] = get_by_path(logs, log_name)
+
+            if self.timescale == 'epoch':
+                datasource.data["x"] = range(epoch_nr)
+            elif self.timescale == 'update':
+                datasource.data["x"] = range(update_nr)
+
+            self.bk.cursession().store_objects(datasource)
+            count += 1
+
+        self.bk.save(self.fig, filename=self.filename + ".html")
