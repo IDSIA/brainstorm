@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-import warnings
 
 try:
     import pycuda
@@ -25,3 +24,5 @@ if has_pycuda:
         has_cudnn = True
     except ImportError:
         pass
+
+__all__ = ['has_pycuda', 'has_cudnn']
