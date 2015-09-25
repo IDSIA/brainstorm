@@ -38,7 +38,7 @@ class PyCudaHandler(Handler):
 
         if init_cudnn:
             if not has_cudnn:
-                raise ImportError("ctypes and cudnn-python-wrappers are "
+                raise ImportError("cudnn-python-wrappers package is "
                                   "required to use cuDNN but could not be "
                                   "imported.")
             self.init_cudnn = init_cudnn

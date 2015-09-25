@@ -3,11 +3,16 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.value_modifiers import ConstrainL2Norm
-from brainstorm.handlers import PyCudaHandler, default_handler
+from brainstorm.handlers import default_handler
+from brainstorm.optional import has_pycuda
+
+non_default_handlers = []
+if has_pycuda:
+    from brainstorm.handlers import PyCudaHandler
+    non_default_handlers.append(PyCudaHandler(init_cudnn=False))
 
 
 def test_limit_incoming_weights_squared():
-    handler = PyCudaHandler()
     for orig in (np.random.rand(4, 5), np.random.randn(3, 5, 4, 6)):
         for limit in [0.00001, 1, 10, 10000]:
             x = orig.reshape(orig.shape[0], orig.size / orig.shape[0]).copy()
@@ -20,6 +25,7 @@ def test_limit_incoming_weights_squared():
             mod(default_handler, y)
             assert np.allclose(y, out)
 
-            y = handler.create_from_numpy(orig)
-            mod(handler, y)
-            assert np.allclose(handler.get_numpy_copy(y), out)
+            for handler in non_default_handlers:
+                y = handler.create_from_numpy(orig)
+                mod(handler, y)
+                assert np.allclose(handler.get_numpy_copy(y), out)
