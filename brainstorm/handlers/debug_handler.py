@@ -177,6 +177,8 @@ class DebugHandler(Handler):
         assert_debug_arrays(v, out)
         assert len(v.shape) == len(out.shape) == 2
         assert v.shape == (out.shape[0], 1)
+        assert self.handler.get_numpy_copy(v.array).min() >= 0
+        assert int(self.handler.get_numpy_copy(v.array).max()) < out.shape[1]
         self.handler.binarize_v(v.array, out.array)
 
     @check_for_inf_or_nan

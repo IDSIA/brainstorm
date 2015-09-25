@@ -3,6 +3,7 @@
 
 from __future__ import division, print_function, unicode_literals
 import numpy as np
+import pytest
 from brainstorm.handlers import NumpyHandler
 from brainstorm.optional import has_cudnn
 
@@ -108,62 +109,61 @@ def test_conv2d_forward_batch_numpy():
                                 assert passed
 
 
-if has_cudnn:
+@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
+def test_conv2d_forward_batch_pycuda():
     from brainstorm.handlers import PyCudaHandler
+    _h = PyCudaHandler(init_cudnn=True)
+    for input_shape in ((3, 3), (5, 4), (4, 9)):
+        for nr_images in (1, 4):
+            for nr_input_maps in (1, 3):
+                for nr_filters in (1, 3):
+                    for kernel_shape in ((1, 1), (2, 2), (3, 2)):
+                        for stride in ((1, 1), (2, 2), (1, 2)):
+                            for padding in (0, 1):
 
-    def test_conv2d_forward_batch_pycuda():
-        _h = PyCudaHandler(init_cudnn=True)
-        for input_shape in ((3, 3), (5, 4), (4, 9)):
-            for nr_images in (1, 4):
-                for nr_input_maps in (1, 3):
-                    for nr_filters in (1, 3):
-                        for kernel_shape in ((1, 1), (2, 2), (3, 2)):
-                            for stride in ((1, 1), (2, 2), (1, 2)):
-                                for padding in (0, 1):
+                                inputs = np.random.rand(nr_images,
+                                                        nr_input_maps,
+                                                        *input_shape)
+                                weights = np.random.rand(nr_filters,
+                                                         nr_input_maps,
+                                                         *kernel_shape)
+                                bias = np.random.rand(nr_filters)
 
-                                    inputs = np.random.rand(nr_images,
-                                                            nr_input_maps,
-                                                            *input_shape)
-                                    weights = np.random.rand(nr_filters,
-                                                             nr_input_maps,
-                                                             *kernel_shape)
-                                    bias = np.random.rand(nr_filters)
+                                output_height = \
+                                    (input_shape[0] + 2 * padding -
+                                     kernel_shape[0]) / stride[0] + 1
+                                output_width = \
+                                    (input_shape[1] + 2 * padding -
+                                     kernel_shape[1]) / stride[1] + 1
 
-                                    output_height = \
-                                        (input_shape[0] + 2 * padding -
-                                         kernel_shape[0]) / stride[0] + 1
-                                    output_width = \
-                                        (input_shape[1] + 2 * padding -
-                                         kernel_shape[1]) / stride[1] + 1
+                                true_outputs = np.zeros((nr_images,
+                                                         nr_filters) +
+                                                        (output_height,
+                                                         output_width))
 
-                                    true_outputs = np.zeros((nr_images,
-                                                             nr_filters) +
-                                                            (output_height,
-                                                             output_width))
+                                _conv2d_forward_batch(inputs, weights,
+                                                      bias, true_outputs,
+                                                      padding, stride)
 
-                                    _conv2d_forward_batch(inputs, weights,
-                                                          bias, true_outputs,
-                                                          padding, stride)
-
-                                    outputs = np.zeros(
-                                        (nr_images, nr_filters) +
-                                        (output_height, output_width))
-                                    i_dev = _h.create_from_numpy(inputs)
-                                    w_dev = _h.create_from_numpy(weights)
-                                    b_dev = _h.create_from_numpy(bias)
-                                    o_dev = _h.create_from_numpy(outputs)
-                                    _h.conv2d_forward_batch(i_dev, w_dev,
-                                                            b_dev, o_dev,
-                                                            padding, stride)
-                                    outputs = _h.get_numpy_copy(o_dev)
-                                    passed = np.allclose(outputs, true_outputs)
-                                    if not passed:
-                                        print("Checking Inputs:",
-                                              (nr_images, nr_input_maps) +
-                                              input_shape)
-                                        print("Filters:",
-                                              (nr_filters, nr_input_maps) +
-                                              kernel_shape)
-                                        print("Stride: ", stride, "padding: ",
-                                              padding)
-                                    assert passed
+                                outputs = np.zeros(
+                                    (nr_images, nr_filters) +
+                                    (output_height, output_width))
+                                i_dev = _h.create_from_numpy(inputs)
+                                w_dev = _h.create_from_numpy(weights)
+                                b_dev = _h.create_from_numpy(bias)
+                                o_dev = _h.create_from_numpy(outputs)
+                                _h.conv2d_forward_batch(i_dev, w_dev,
+                                                        b_dev, o_dev,
+                                                        padding, stride)
+                                outputs = _h.get_numpy_copy(o_dev)
+                                passed = np.allclose(outputs, true_outputs)
+                                if not passed:
+                                    print("Checking Inputs:",
+                                          (nr_images, nr_input_maps) +
+                                          input_shape)
+                                    print("Filters:",
+                                          (nr_filters, nr_input_maps) +
+                                          kernel_shape)
+                                    print("Stride: ", stride, "padding: ",
+                                          padding)
+                                assert passed

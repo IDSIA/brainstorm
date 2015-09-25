@@ -90,8 +90,8 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
 
         # grad_diff_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        grad_diff_fflat = flatten_features(grad_diff)
-        _h.broadcast_features_t(grad_diff_sum, grad_diff_fflat)
+        flat_grad_diff = flatten_features(grad_diff)
+        _h.broadcast_features_t(grad_diff_sum, flat_grad_diff)
 
         # calculate
         _h.subtract_tt(inputs_1, inputs_2, out=tmp)
