@@ -29,7 +29,7 @@ class Handler(Describable):
       context: Context which may be used by this handler for operation.
       EMPTY: An empty array matching this handler's type.
       rnd: A random state maintained by this handler.
-      array_type (None): The type of array object that this handler works with.
+      array_type: The type of array object that this handler works with.
     """
 
     # ------------------------- Allocate new memory ------------------------- #
@@ -189,7 +189,13 @@ class Handler(Describable):
         """Computes the gradients for 2D average-pooling on a batch of images.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            inputs (array_type):
+            window (tuple[int]):
+            outputs (array_type):
+            padding (int):
+            stride (tuple[int]):
+            in_deltas (array_type):
+            out_deltas (array_type):
         Returns:
             None
         """
@@ -197,30 +203,58 @@ class Handler(Describable):
     @abc.abstractmethod
     def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride):
-        """Performs a 2D average-pooling on a batch of images.
+        """Performs 2D average-pooling on a batch of images.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            inputs (array_type):
+            window (tuple[int]):
+            outputs (array_type):
+            padding (int):
+            stride (tuple[int]):
+            argmax (array_type):
         Returns:
             None
         """
 
     @abc.abstractmethod
     def binarize_v(self, v, out):
-        """
+        """Convert a column vector into a matrix of one-hot row vectors.
+
+        Usually used to convert class IDs into one-hot vectors. Therefore,
+        `out[i, j] = 1`, if j equals v[i, 0]
+        `out[i, j] = 0`, otherwise.
+
+        Note that `out` must have enough columns such that all indices in `v`
+        are valid.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            v (array_type): Column vector (2D array with a single column).
+            out (array_type): Matrix (2D array) into which the output is
+                              placed. The number of rows must be the same as
+                              `v` and number of columns must be greater than
+                              the maximum value in v.
         Returns:
             None
         """
 
     @abc.abstractmethod
     def broadcast_features_t(self, a, out):
-        """
+        """Broadcast the right-most dimension of an array by copying elements.
+
+        This function provides a numpy-broadcast-like operation for the
+        right-most dimension of an array. E.g. an array with shape (2, 3, 4, 1)
+        may be broadcasted to shape (2, 3, 4, 5), by copying all the elements
+        5 times.
+        Note that the last dimension of `a` must have size 1.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            a (array_type): Array whose elements should be broadcasted. The
+                            rightmost dimension must be of size 1,
+                            since this is the dimension that is broadcasted.
+            out (array_type): Array into which the output is placed. Must
+                              have same number of dimensions as `a`.
+                              Only the right-most dimension can be
+                              different from `a`.
         Returns:
             None
         """
@@ -249,7 +283,14 @@ class Handler(Describable):
         """Computes the gradients for a 2D convolution on a batch of images.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            inputs (array_type):
+            weights (array_type):
+            padding (int):
+            stride (tuple[int]):
+            in_deltas (array_type):
+            out_deltas (array_type):
+            weight_deltas (array_type):
+            bias_deltas (array_type):
         Returns:
             None
         """
@@ -260,7 +301,12 @@ class Handler(Describable):
         """Performs a 2D convolution on a batch of images.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            inputs (array_type):
+            weights (array_type):
+            bias (array_type):
+            outputs (array_type):
+            padding (int):
+            stride (tuple[int]):
         Returns:
             None
         """
@@ -316,7 +362,7 @@ class Handler(Describable):
 
     @abc.abstractmethod
     def divide_tt(self, a, b, out):
-        """Divide two tensors element-wise,
+        """Divide two tensors element-wise.
 
         Args:
             a (array_type): First array (dividend).
@@ -355,9 +401,21 @@ class Handler(Describable):
 
     @abc.abstractmethod
     def index_m_by_v(self, m, v, out):
-        """
+        """Get elements from a matrix using indices from a vector.
+
+        `v` and `out` must be column vectors of the same size.
+        Elements from the matrix `m` are copied using the indices given by a
+        column vector. From row `i` of the matrix, the entry from column
+        `v[i, 0]` is copied to out, such that `out[i, 0] = m[i, v[i, 0]]`.
+
+        Note that `m` must have enough columns such that all indices in `v`
+        are valid.
 
         Args:
+            m (array_type): Matrix (2D array) whose elements should be copied.
+            v (array_type): Column vector (2D array with a single column) whose
+                            values are used as indices into `m`. The number of
+                            rows must be the same as `m`.
             out (array_type): Array into which the output is placed.
         Returns:
             None
@@ -383,7 +441,14 @@ class Handler(Describable):
         """Computes the gradients for 2D max-pooling on a batch of images.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            inputs (array_type):
+            window (tuple[int]):
+            outputs (array_type):
+            padding (int):
+            stride (tuple[int]):
+            argmax (array_type):
+            in_deltas (array_type):
+            out_deltas (array_type):
         Returns:
             None
         """
@@ -394,7 +459,12 @@ class Handler(Describable):
         """Performs a 2D max-pooling on a batch of images.
 
         Args:
-            out (array_type): Array into which the output is placed.
+            inputs (array_type):
+            window (tuple[int]):
+            outputs (array_type):
+            padding (int):
+            stride (tuple[int]):
+            argmax (array_type):
         Returns:
             None
         """
