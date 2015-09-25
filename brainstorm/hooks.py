@@ -30,7 +30,7 @@ class Hook(Describable):
         self.verbose = verbose
         self.run_verbosity = None
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         if self.verbose is None:
             self.run_verbosity = verbose
         else:
@@ -112,7 +112,7 @@ class MonitorLayerParameters(Hook):
                                                      interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -146,7 +146,7 @@ class MonitorLayerGradients(Hook):
                                                     interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -174,7 +174,7 @@ class MonitorLayerDeltas(Hook):
                                                  interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -219,7 +219,7 @@ class MonitorLayerInOuts(Hook):
                                                  interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -329,10 +329,10 @@ class MonitorLoss(Hook):
         self.iter_name = iter_name
         self.iter = None
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorLoss, self).start(net, stepper, verbose, monitor_kwargs)
-        assert self.iter_name in monitor_kwargs
-        self.iter = monitor_kwargs[self.iter_name]
+    def start(self, net, stepper, verbose, named_data_iters):
+        super(MonitorLoss, self).start(net, stepper, verbose, named_data_iters)
+        assert self.iter_name in named_data_iters
+        self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
@@ -402,15 +402,15 @@ class MonitorAccuracy(Hook):
         self.iter = None
         self.masked = False
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         super(MonitorAccuracy, self).start(net, stepper, verbose,
-                                           monitor_kwargs)
-        assert self.iter_name in monitor_kwargs, \
+                                           named_data_iters)
+        assert self.iter_name in named_data_iters, \
             "{} >> {} is not present in monitor_kwargs. Remember to pass it " \
             "as kwarg to Trainer.train().".format(self.__name__,
                                                   self.iter_name)
         assert self.out_layer in net.layers
-        self.iter = monitor_kwargs[self.iter_name]
+        self.iter = named_data_iters[self.iter_name]
         self.masked = self.mask_name in self.iter.data.keys()
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
@@ -506,12 +506,12 @@ class MonitorHammingScore(Hook):
         self.targets_name = targets_name
         self.iter = None
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         super(MonitorHammingScore, self).start(net, stepper, verbose,
-                                               monitor_kwargs)
-        assert self.iter_name in monitor_kwargs
+                                               named_data_iters)
+        assert self.iter_name in named_data_iters
         assert self.out_layer in net.layers
-        self.iter = monitor_kwargs[self.iter_name]
+        self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         iterator = self.iter(verbose=self.verbose, handler=net.handler)
@@ -568,7 +568,7 @@ class VisualiseAccuracy(Hook):
         except ImportError:
             print("bokeh is required for drawing networks but was not found.")
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         count = 0
 
         # create empty line objects

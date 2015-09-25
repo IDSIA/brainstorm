@@ -44,7 +44,7 @@ class Trainer(Describable):
         self.hooks[hook.__name__] = hook
         hook.priority = max([h.priority for h in self.hooks.values()]) + 1
 
-    def train(self, net, training_data_getter, **hook_kwargs):
+    def train(self, net, training_data_getter, **named_data_iters):
         if self.verbose:
             print('\n\n', 15 * '- ', "Before Training", 15 * ' -')
         assert set(training_data_getter.data.keys()) == set(
@@ -54,7 +54,8 @@ class Trainer(Describable):
                 training_data_getter.data.keys(),
                 net.buffer.Input.outputs.keys())
         self.stepper.start(net)
-        self._start_hooks(net, hook_kwargs)
+        self._start_hooks(net, named_data_iters)
+        self._emit_hooks(net, 'update')
         if self._emit_hooks(net, 'epoch'):
             return
 
@@ -81,6 +82,11 @@ class Trainer(Describable):
             if self._emit_hooks(net, 'epoch'):
                 break
 
+    def evaluate(self, net, **named_data_iters):
+        self._start_hooks(net, named_data_iters)
+        self._emit_hooks(net, 'epoch')
+        self._emit_hooks(net, 'update')
+
     def __init_from_description__(self, description):
         # recover the order of the Hooks from their priorities
         # and set their names
@@ -92,12 +98,13 @@ class Trainer(Describable):
             self.hooks[name] = mon
             mon.__name__ = name
 
-    def _start_hooks(self, net, hook_kwargs):
+    def _start_hooks(self, net, named_data_iters):
         self.logs = {'training_loss': [float('NaN')]}
         for name, hook in self.hooks.items():
             try:
                 if hasattr(hook, 'start'):
-                    hook.start(net, self.stepper, self.verbose, hook_kwargs)
+                    hook.start(net, self.stepper, self.verbose,
+                               named_data_iters)
             except Exception:
                 print('An error occurred while starting the "{}" hook:'
                       .format(name), file=sys.stderr)

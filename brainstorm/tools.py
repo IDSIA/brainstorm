@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm import layers
+from describable import Describable
 
 __all__ = ['get_in_out_layers_for_classification', 'draw_network',
            'print_network_info']
@@ -102,3 +103,83 @@ def print_network_info(network):
             print('\t', view, layer.out_shapes[view].feature_shape, end='\t')
         print()
         print('-' * 80)
+
+from collections import OrderedDict
+from training.trainer import run_network
+import numpy as np
+
+
+class Scorer(Describable):
+    def __init__(self, out_name='', targets_name='targets', mask_name='',
+                 name=None):
+        self.out_name = out_name
+        self.targets_name = targets_name
+        self.mask_name = mask_name
+        self.__name__ = name if name is not None else self.__class__.__name__
+
+    def __call__(self, true_labels, predicted, mask=None):
+        pass
+
+    @staticmethod
+    def aggregate(errors):
+        errors = np.array(errors)
+        assert errors.ndim == 2 and errors.shape[1] == 2
+        return np.sum(errors[:, 1] * errors[:, 0] / np.sum(errors[:, 0]))
+
+
+class Accuracy(Scorer):
+    def __call__(self, true_labels, predicted, mask=None):
+        if predicted.shape[1] > 1:
+            predicted = predicted.argmax(1)
+        correct = predicted == true_labels
+        total = predicted.shape[0]
+        if mask:
+            correct *= mask
+            total = np.sum(mask)
+        return np.sum(correct) / total
+
+
+
+def flatten_all_but_last(a):
+    if not a:
+        return a
+    else:
+        return a.reshape(-1, a.shape[-1])
+
+
+def evaluate(net, iter, scorers=(), out_name='', targets_name='targets',
+             mask_name=None, verbose=True):
+    iterator = iter(verbose=verbose, handler=net.handler)
+    loss = []
+    log = {scorer.__name__: [] for scorer in scorers}
+
+    for _ in run_network(net, iterator):
+        net.forward_pass()
+        loss.append(net.get_loss_value())
+        default_predicted = net.get_output(out_name)
+        default_true_labels = net.get_input(targets_name)
+        default_mask = net.get_input(mask_name) if mask_name else None
+
+        for scorer in scorers:
+            name = scorer.__name__
+            predicted = default_predicted
+            true_labels = default_true_labels
+            mask = default_mask
+            if scorer.out_name:
+                predicted = net.get_output(scorer.out_name)
+            if scorer.targets_name:
+                true_labels = net.get_input(scorer.targets_name)
+            if scorer.mask_name:
+                mask = net.get_input(scorer.mask_name)
+
+            predicted = flatten_all_but_last(predicted)
+            true_labels = flatten_all_but_last(true_labels)
+            mask = flatten_all_but_last(mask)
+            weight = mask.sum() if mask else predicted.shape[0]
+
+            log[name].append(weight, scorer(true_labels, predicted, mask))
+
+    results = OrderedDict()
+    for scorer in scorers:
+        results[scorer.__name__] = scorer.aggregate(log[scorer.__name__])
+    return results
