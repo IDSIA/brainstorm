@@ -2,20 +2,22 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.describable import get_description, create_from_description
-from brainstorm.structure import *
 from brainstorm.randomness import global_rnd
-from brainstorm.initializers import *
-from brainstorm.training import *
-from brainstorm.data_iterators import (AddGaussianNoise, Flip, Pad,
-                                       RandomCrop, Online, Undivided,
-                                       Minibatches)
-from brainstorm.value_modifiers import (
-    ClipValues, MaskValues, FreezeValues, ConstrainL2Norm, L1Decay, L2Decay)
-from brainstorm.tools import *
+from brainstorm.structure import Network, generate_architecture
+from brainstorm.training import Trainer
 
+from brainstorm import initializers
+from brainstorm import data_iterators
+from brainstorm import value_modifiers
+from brainstorm import tools
 from brainstorm import hooks
 from brainstorm import layers
 from brainstorm import handlers
+from brainstorm.training import steppers
 
+__all__ = ['get_description', 'create_from_description', 'global_rnd',
+           'Network', 'generate_architecture', 'Trainer',
+           'initializers', 'data_iterators', 'value_modifiers', 'tools',
+           'hooks', 'layers', 'handlers', 'steppers']
 
 __version__ = '0.1'

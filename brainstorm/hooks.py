@@ -578,7 +578,7 @@ class VisualiseAccuracy(Hook):
             x_max = update_nr + 3
 
         fig = self.bk.figure(title="Accuracy Monitor", x_axis_label=self.timescale, y_axis_label='accuracy',
-                                  tools=self.TOOLS, x_range=(0, x_max), y_range=(0, 1))
+                             tools=self.TOOLS, x_range=(0, x_max), y_range=(0, 1))
         count = 0
         for log_name in self.log_names:
             e = get_by_path(logs, log_name)

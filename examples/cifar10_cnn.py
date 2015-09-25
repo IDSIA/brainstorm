@@ -3,6 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers import PyCudaHandler
 import brainstorm as bs
+from brainstorm.data_iterators import Minibatches
+from brainstorm.initializers import Gaussian
 import h5py
 import os
 bs.global_rnd.set_seed(42)
@@ -12,17 +14,15 @@ bs.global_rnd.set_seed(42)
 data_dir = os.environ.get('BRAINSTORM_DATA_DIR', '../data')
 data_file = os.path.join(data_dir, 'CIFAR-10.hdf5')
 ds = h5py.File(data_file, 'r')['normalized_split']
-x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
-x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
-x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
-getter_tr = bs.Minibatches(100, verbose=True, default=x_tr, targets=y_tr)
-getter_va = bs.Minibatches(100, verbose=True, default=x_va, targets=y_va)
-getter_te = bs.Minibatches(100, verbose=True, default=x_te, targets=y_te)
+getter_tr = Minibatches(100, default=ds['training']['default'][:],
+                        targets=ds['training']['targets'][:])
+getter_va = Minibatches(100, default=ds['validation']['default'][:],
+                        targets=ds['validation']['targets'][:])
 
 # ------------------------------ Set up Network ----------------------------- #
 
-inp, out = bs.get_in_out_layers_for_classification((3, 32, 32), 10)
+inp, out = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
 
 (inp >>
     bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv1') >>
@@ -36,15 +36,15 @@ inp, out = bs.get_in_out_layers_for_classification((3, 32, 32), 10)
 
 network = bs.Network.from_layer(out)
 network.set_memory_handler(PyCudaHandler())
-network.initialize({'conv*': {'W': bs.Gaussian(0.01), 'bias': 0},
-                    'fc': {'W': bs.Gaussian(0.1), 'bias': 0},
-                    'Output': {'W': bs.Gaussian(0.1), 'bias': 0},
-                    })
+network.initialize({'conv*': {'W': Gaussian(0.01), 'bias': 0},
+                    'fc': {'W': Gaussian(0.1), 'bias': 0},
+                    'Output': {'W': Gaussian(0.1), 'bias': 0}})
 
 # ------------------------------ Set up Trainer ----------------------------- #
 
-trainer = bs.Trainer(bs.MomentumStep(learning_rate=0.001, momentum=0.9,
-                                     scale_learning_rate=False),
+trainer = bs.Trainer(bs.steppers.MomentumStep(learning_rate=0.001,
+                                              momentum=0.9,
+                                              scale_learning_rate=False),
                      double_buffering=False)
 trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "Output.output",

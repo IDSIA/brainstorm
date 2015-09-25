@@ -90,10 +90,11 @@ def test_initialize_with_array(net):
 
 def test_initialize_with_initializer(net):
     net.initialize(
-        default=bs.Uniform(0, 1),
-        FullyConnected_1=bs.Uniform(1, 2),
-        FullyConnected_2={'W': bs.Uniform(2, 3)},
-        OutputLayer={'W': bs.Uniform(3, 4), 'bias': bs.Uniform(4, 5)}
+        default=bs.initializers.Uniform(0, 1),
+        FullyConnected_1=bs.initializers.Uniform(1, 2),
+        FullyConnected_2={'W': bs.initializers.Uniform(2, 3)},
+        OutputLayer={'W': bs.initializers.Uniform(3, 4),
+                     'bias': bs.initializers.Uniform(4, 5)}
     )
 
     layer1 = net.buffer.FullyConnected_1.parameters
