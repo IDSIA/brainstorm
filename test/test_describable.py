@@ -389,7 +389,7 @@ def test_describe_trainer():
                 'priority': 2}},
         'stepper': {
             '@type': 'SgdStep',
-            'learning_rate_schedule': 0.7}
+            'learning_rate': 0.7}
     }
 
 
@@ -408,4 +408,4 @@ def test_recreate_trainer_from_description():
     assert list(tr2.hooks.keys()) == ['StopAfterEpoch', 'StopOnNan']
     assert tr2.hooks['StopAfterEpoch'].max_epochs == 23
     assert isinstance(tr2.stepper, bs.SgdStep)
-    assert tr2.stepper.learning_rate_schedule.value == 0.7
+    assert tr2.stepper.learning_rate == 0.7
