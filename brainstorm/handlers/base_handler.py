@@ -152,9 +152,11 @@ class Handler(Describable):
         Args:
             m (array_type): The first array to be added. Must be 2D.
             v (array_type): The second array to be added. Must be 2D with at
-                            least one dimension of size 1 and second dimension
-                            matching the corresponding size of `m`.
-            out (array_type): Array into which the output is placed.
+                            least one dimension of size 1 and the other
+                            dimension matching the corresponding size of
+                            :attr:`m`.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`m`.
         Returns:
             None
         """
@@ -166,7 +168,8 @@ class Handler(Describable):
         Args:
             s (dtype): The scalar value to be added.
             t (array_type): The array to be added.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`t`.
         Returns:
             None
         """
@@ -178,7 +181,8 @@ class Handler(Describable):
         Args:
             a (array_type): First array.
             b (array_type): Second array.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`a` and :attr:`b`.
         Returns:
             None
         """
@@ -224,15 +228,15 @@ class Handler(Describable):
         `out[i, j] = 1`, if j equals v[i, 0]
         `out[i, j] = 0`, otherwise.
 
-        Note that `out` must have enough columns such that all indices in `v`
-        are valid.
+        Note that `out` must have enough columns such that all indices in
+        :attr:`v` are valid.
 
         Args:
             v (array_type): Column vector (2D array with a single column).
             out (array_type): Matrix (2D array) into which the output is
                               placed. The number of rows must be the same as
-                              `v` and number of columns must be greater than
-                              the maximum value in v.
+                              :attr:`v` and number of columns must be greater
+                              than the maximum value in :attr:`v`.
         Returns:
             None
         """
@@ -250,7 +254,7 @@ class Handler(Describable):
             This function supports more general cases, such as broadcasting
             an array of shape (2, 3, 1) to shape (2, 3, 1, 3, 2). However,
             currently it is assumed that this function will be used with
-            both `a` and `out` having the same number of dimensions.
+            both :attr:`a` and :attr:`out` having the same number of dimensions.
 
         Args:
             a (array_type): Array whose elements should be broadcasted. Must
@@ -258,8 +262,8 @@ class Handler(Describable):
                             be of size 1.
             out (array_type): Array into which the output is placed. Must be at
                               at least 3D and have same the number of
-                              dimensions as `a`. Only the right-most
-                              dimension can be different from `a`.
+                              dimensions as :attr:`a`. Only the right-most
+                              dimension can be different from :attr:`a`.
         Returns:
             None
         """
@@ -276,7 +280,8 @@ class Handler(Describable):
             a (array_type): Array containing the elements to clip.
             a_min (dtype): Minimum value.
             a_max (dtype): Maximum value.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`a`.
         Returns:
             None
         """
@@ -324,7 +329,8 @@ class Handler(Describable):
 
         Args:
             a (array_type): First matrix.
-            b (array_type): Second matrix.
+            b (array_type): Second matrix. Must have compatible shape to be
+                            right-multiplied with :attr:`a`.
             out (array_type): Array into which the output is added. Must
                               have correct shape for the product of the two
                               matrices.
@@ -340,7 +346,8 @@ class Handler(Describable):
 
         Args:
             a (array_type): First matrix.
-            b (array_type): Second matrix.
+            b (array_type): Second matrix. Must have compatible shape to be
+                            right-multiplied with :attr:`a`.
             out (array_type): Array into which the output is placed. Must
                               have correct shape for the product of the two
                               matrices.
@@ -359,8 +366,10 @@ class Handler(Describable):
             a (array_type): First array (dividend). Must be 2D.
             b (array_type): Second array (divisor). Must be 2D with at
                             least one dimension of size 1 and second
-                            dimension matching the corresponding size of `m`.
-            out (array_type): Array into which the output is placed.
+                            dimension matching the corresponding size of
+                            :attr:`m`.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`m`.
         Returns:
             None
         """
@@ -371,8 +380,10 @@ class Handler(Describable):
 
         Args:
             a (array_type): First array (dividend).
-            b (array_type): Second array (divisor).
-            out (array_type): Array into which the output is placed.
+            b (array_type): Second array (divisor). Must have the same shape
+                            as :attr:`a`.
+            out (array_type): Array into which the output is placed. Must have
+                              the same shape as :attr:`a` and :attr:`b`.
         Returns:
             None
         """
@@ -395,11 +406,12 @@ class Handler(Describable):
         """Fill an array with zeros and ones.
 
         Fill an array with zeros and ones such that the probability of an
-        entry being one is equal to `probability`.
+        entry being one is equal to :attr:`probability`.
 
         Args:
             mask (array_type): Array to will be filled.
-            probability (float): Probability of an entry of `mask` being one.
+            probability (float): Probability of an entry of :attr:`mask` being
+            equal to one.
         Returns:
             None
         """
@@ -408,21 +420,21 @@ class Handler(Describable):
     def index_m_by_v(self, m, v, out):
         """Get elements from a matrix using indices from a vector.
 
-        `v` and `out` must be column vectors of the same size.
-        Elements from the matrix `m` are copied using the indices given by a
-        column vector. From row `i` of the matrix, the entry from column
+        :attr:`v` and :attr:`out` must be column vectors of the same size.
+        Elements from the matrix :attr:`m` are copied using the indices given
+        by a column vector. From row `i` of the matrix, the entry from column
         `v[i, 0]` is copied to out, such that `out[i, 0] = m[i, v[i, 0]]`.
 
-        Note that `m` must have enough columns such that all indices in `v`
-        are valid.
+        Note that `m` must have enough columns such that all indices in
+        :attr:`v` are valid.
 
         Args:
             m (array_type): Matrix (2D array) whose elements should be copied.
             v (array_type): Column vector (2D array with a single column) whose
-                            values are used as indices into `m`. The number of
-                            rows must be the same as `m`.
+                            values are used as indices into :attr:`m`. The
+                            number of rows must be the same as :attr:`m`.
             out (array_type): Array into which the output is placed. It's shape
-                              must be the same as `v`.
+                              must be the same as :attr:`v`.
         Returns:
             None
         """
@@ -436,7 +448,8 @@ class Handler(Describable):
 
         Args:
             a (array_type): Array whose logarithm is to be computed.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`a`.
         Returns:
             None
         """
@@ -482,7 +495,8 @@ class Handler(Describable):
         Args:
             s (dtype): The scalar value to be multiplied.
             t (array_type): The array to be multiplied.
-            out (array_type): Array into which the product is added.
+            out (array_type): Array into which the product is added. Must have
+                              the same shape as :attr:`t`.
         Returns:
             None
         """
@@ -490,12 +504,14 @@ class Handler(Describable):
 
     @abc.abstractmethod
     def mult_add_tt(self, a, b, out):
-        """Multiply two tensors element-wise and add to a tensor,
+        """Multiply two tensors element-wise and add to a tensor.
 
         Args:
             a (array_type): First array.
-            b (array_type): Second array.
-            out (array_type): Array into which the output is added.
+            b (array_type): Second array. Must have the same shape as
+                            :attr:`a`.
+            out (array_type): Array into which the output is added.  Must have
+                              the same shape as :attr:`a` and :attr:`b`.
         Returns:
             None
         """
@@ -509,11 +525,12 @@ class Handler(Describable):
 
         Args:
             m (array_type): The first array. Must be 2D.
-            v (array_type): The second array, to be multiplied with `a`. Must
-                            be 2D with at least one dimension of size 1 and
-                            second dimension matching the corresponding size of
-                            `m`.
-            out (array_type): Array into which the output is placed.
+            v (array_type): The second array, to be multiplied with :attr:`a`.
+                            Must be 2D with at least one dimension of size 1
+                            and the other dimension matching the corresponding
+                            size of :attr:`m`.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`m`.
         Returns:
             None
         """
@@ -525,7 +542,8 @@ class Handler(Describable):
         Args:
             s (dtype): The scalar value to be multiplied.
             t (array_type): The array to be multiplied.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. Must have
+                              the same shape as :attr:`t`.
         Returns:
             None
         """
@@ -536,8 +554,10 @@ class Handler(Describable):
 
         Args:
             a (array_type): First array.
-            b (array_type): Second array.
-            out (array_type): Array into which the output is placed.
+            b (array_type): Second array. Must have the same shape as
+                            :attr:`a`.
+            out (array_type): Array into which the output is placed. Must have
+                              the same shape as :attr:`a` and :attr:`b`.
         Returns:
             None
         """
@@ -551,7 +571,8 @@ class Handler(Describable):
 
         Args:
             a (array_type): Array whose sign is to be computed.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`a`.
         Returns:
             None
         """
@@ -562,7 +583,8 @@ class Handler(Describable):
 
         Args:
             a (array_type): Array whose square root is to be computed.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`a`.
         Returns:
             None
         """
@@ -573,11 +595,12 @@ class Handler(Describable):
 
         Args:
             m (array_type): The first array. Must be 2D.
-            v (array_type): The second array, to be subtracted from `a`. Must
-                            be 2D with at least one dimension of size 1 and
-                            second dimension matching the corresponding size of
-                            `m`.
-            out (array_type): Array into which the output is placed.
+            v (array_type): The second array, to be subtracted from :attr:`a`.
+                            Must be 2D with at least one dimension of size 1
+                            and second dimension matching the corresponding
+                            size of :attr:`m`.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`m`.
         Returns:
             None
         """
@@ -588,8 +611,11 @@ class Handler(Describable):
 
         Args:
             a (array_type): First array.
-            b (array_type): Second array, to be subtracted from `a`.
-            out (array_type): Array into which the output (a - b) is placed.
+            b (array_type): Second array, to be subtracted from :attr:`a`.
+                            Must have the same shape as :attr:`a`.
+            out (array_type): Array into which the output
+                              (:attr:`a` - :attr:`b`) is placed. Must
+                              have the same shape as :attr:`a` and :attr:`b`.
         Returns:
             None
         """
@@ -599,10 +625,10 @@ class Handler(Describable):
         """Sum the elements of an array along a given axis.
 
         If axis is None, the sum is computed over all elements of the array.
-        Otherwise, it is computed along the specified axis and the output is
-        an array with ndim = a.ndim - 1.
-        NOTE: Only 1D and 2D arrays are currently supported.
+        Otherwise, it is computed along the specified axis.
 
+        Note:
+            Only 1D and 2D arrays are currently supported.
         Args:
             a (array_type): Array to be summed.
             axis (int): Axis over which the summation should be done.
