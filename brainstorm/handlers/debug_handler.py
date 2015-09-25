@@ -2,6 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers.base_handler import Handler
+from brainstorm.optional import has_pycuda
 import numpy as np
 
 
@@ -37,11 +38,18 @@ def _check_for_inf(arg, name):
     if isinstance(arg, (int, float)) and not np.isfinite(arg):
         raise ValueError('NaN or Inf encountered in "{}" argument'
                          .format(name))
-    if isinstance(arg, DebugArray) and \
-            isinstance(arg.array, np.ndarray) and \
+    if isinstance(arg, DebugArray) and isinstance(arg.array, np.ndarray) and \
             not np.all(np.isfinite(arg.array)):
-        raise ValueError('NaN or Inf encountered in "{}"'
-                         .format(name))
+        raise ValueError('NaN or Inf encountered in "{}"'.format(name))
+    if has_pycuda:
+        from pycuda import gpuarray
+        from brainstorm.utils import check_inf_or_nan_kernel
+        if isinstance(arg, DebugArray) and isinstance(arg.array,
+                                                      gpuarray.GPUArray):
+            temp = gpuarray.zeros_like(arg.array)
+            check_inf_or_nan_kernel(arg.array, temp)
+            if not gpuarray.sum(temp).get() == 0:
+                raise ValueError('NaN or Inf encountered in "{}"'.format(name))
 
 
 def check_for_inf_or_nan(f):
