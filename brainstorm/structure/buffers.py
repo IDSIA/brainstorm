@@ -83,8 +83,6 @@ class BufferManager(object):
         if time_size == self.time_size and batch_size == self.batch_size:
             return self.views  # lazy
 
-        N = len(self.hubs)
-
         self.time_size = time_size
         self.batch_size = batch_size
         total_size, slices, shapes = get_total_size_slices_and_shapes(
@@ -95,7 +93,7 @@ class BufferManager(object):
             self.size = total_size
 
         self.buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
-                        for i in range(N)]
+                        for i in range(len(self.hubs))]
 
         parameters = None
         if self.views is not None:

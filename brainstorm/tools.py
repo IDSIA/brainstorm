@@ -42,7 +42,7 @@ def get_in_out_layers_for_regression(in_shape, nr_classes,
     if isinstance(in_shape, int):
         in_shape = (in_shape, )
 
-    fc_layer = layers.FullyConnected(nr_classes, name='fc_'+outlayer_name,
+    fc_layer = layers.FullyConnected(nr_classes, name='fc_' + outlayer_name,
                                      activation_function='linear')
     out_layer = layers.SquaredDifference(name=outlayer_name)
 

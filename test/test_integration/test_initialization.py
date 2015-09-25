@@ -72,9 +72,9 @@ def test_initialize_with_array(net):
     net.initialize(0,
                    FullyConnected_1={'bias': [1, 2]},
                    FullyConnected_2={'bias': np.array([3, 4, 5]),
-                                          'W': [[6, 7],
-                                                [8, 9],
-                                                [10, 11]]},
+                                     'W': [[6, 7],
+                                           [8, 9],
+                                           [10, 11]]},
                    OutputLayer={'bias': [12]})
 
     assert np.all(net.buffer.FullyConnected_1.parameters.W == 0)

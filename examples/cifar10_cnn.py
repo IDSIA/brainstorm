@@ -12,9 +12,9 @@ bs.global_rnd.set_seed(42)
 data_dir = os.environ.get('BRAINSTORM_DATA_DIR', '../data')
 data_file = os.path.join(data_dir, 'CIFAR-10.hdf5')
 ds = h5py.File(data_file, 'r')['normalized_split']
-x_tr, y_tr = ds['training']['default'].value, ds['training']['targets'].value
-x_va, y_va = ds['validation']['default'].value, ds['validation']['targets'].value
-x_te, y_te = ds['test']['default'].value, ds['test']['targets'].value
+x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
+x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
+x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
 getter_tr = bs.Minibatches(100, verbose=True, default=x_tr, targets=y_tr)
 getter_va = bs.Minibatches(100, verbose=True, default=x_va, targets=y_va)
@@ -24,15 +24,15 @@ getter_te = bs.Minibatches(100, verbose=True, default=x_te, targets=y_te)
 
 inp, out = bs.get_in_out_layers_for_classification((3, 32, 32), 10)
 
-inp >> \
-    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv1') >> \
-    bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2), name='pool1') >> \
-    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv2') >> \
-    bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2), name='pool2') >> \
-    bs.layers.Convolution2D(64, kernel_size=(5, 5), padding=2, name='conv3') >> \
-    bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2), name='pool3') >> \
-    bs.layers.FullyConnected(64, name='fc') >> \
-    out
+(inp >>
+    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv1') >>
+    bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2)) >>
+    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv2') >>
+    bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2)) >>
+    bs.layers.Convolution2D(64, kernel_size=(5, 5), padding=2, name='conv3') >>
+    bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2)) >>
+    bs.layers.FullyConnected(64, name='fc') >>
+    out)
 
 network = bs.Network.from_layer(out)
 network.set_memory_handler(PyCudaHandler())
@@ -58,4 +58,5 @@ trainer.add_hook(bs.hooks.SaveBestNetwork("validation.accuracy",
 # --------------------------------- Train ----------------------------------- #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("\nBest validation accuracy: ", max(trainer.logs["validation"]["accuracy"]))
+print("\nBest validation accuracy: ",
+      max(trainer.logs["validation"]["accuracy"]))

@@ -134,8 +134,8 @@ def test_get_forward_closure():
     ([1, 1, 0, 1, 1], False),
 ])
 def test_col_can_be_connected_with_single_buffer(col, expected):
-    assert Hub.can_be_connected_with_single_buffer(np.array(col).reshape(-1, 1))\
-           == expected
+    assert Hub.can_be_connected_with_single_buffer(np.array(col)
+                                                   .reshape(-1, 1)) == expected
 
 
 def test_can_be_connected_with_single_buffer():
@@ -175,6 +175,7 @@ def test_permute_rows1():
         [0, 1, 1, 1, 0],
         [0, 0, 1, 1, 1],
         [0, 0, 1, 1, 1]]))
+
 
 def test_permute_rows2():
     h = Hub([0, 1, 2, [3, 4]], [1, 2, 3, 4, 5], 0)
@@ -741,7 +742,8 @@ def test_create_layout(layers):
                 'H': {'@type': 'array', '@index': 0, '@shape': ('T', 'B', 11),
                       '@hub': 7, '@slice': (0, 11)},
                 'dH': {'@type': 'array', '@index': 1, '@shape': ('T', 'B', 11),
-                       '@hub': 14, '@slice': (0, 11), '@is_backward_only': True}
+                       '@hub': 14, '@slice': (0, 11),
+                       '@is_backward_only': True}
             },
             'input_deltas': {
                 '@type': 'BufferView',

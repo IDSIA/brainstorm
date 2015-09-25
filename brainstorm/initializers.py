@@ -268,18 +268,18 @@ class LstmOptInit(Initializer):
             raise InitializationError("First dim of LstmOpt shape needs to be "
                                       "divisible by 4. But shape was {}"
                                       .format(shape))
-        W = np.zeros(shape)
+        weights = np.zeros(shape)
         n = shape[0] // 4
         sub_shape = (n,) + shape[1:]
-        W[:n] = evaluate_initializer(self.block_input, sub_shape,
-                                     seed=self.rnd.generate_seed())
-        W[n:2 * n] = evaluate_initializer(self.input_gate, sub_shape,
-                                          seed=self.rnd.generate_seed())
-        W[2 * n:3 * n] = evaluate_initializer(self.forget_gate, sub_shape,
-                                              seed=self.rnd.generate_seed())
-        W[3 * n:] = evaluate_initializer(self.output_gate, sub_shape,
-                                         seed=self.rnd.generate_seed())
-        return W
+        weights[:n] = evaluate_initializer(
+            self.block_input, sub_shape, seed=self.rnd.generate_seed())
+        weights[n:2 * n] = evaluate_initializer(
+            self.input_gate, sub_shape, seed=self.rnd.generate_seed())
+        weights[2 * n:3 * n] = evaluate_initializer(
+            self.forget_gate, sub_shape, seed=self.rnd.generate_seed())
+        weights[3 * n:] = evaluate_initializer(
+            self.output_gate, sub_shape, seed=self.rnd.generate_seed())
+        return weights
 
 
 # ########################### helper methods ##################################

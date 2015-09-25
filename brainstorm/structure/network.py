@@ -20,7 +20,7 @@ from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.describable import get_description, create_from_description
-from brainstorm.value_modifiers import ValueModifier, GradientModifier
+from brainstorm.value_modifiers import GradientModifier
 
 __all__ = ['Network']
 

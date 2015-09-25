@@ -27,7 +27,7 @@ def progress_bar(maximum, prefix='[',
 
 def silence():
     while True:
-        _ = yield ''
+        yield ''
 
 
 class DataIterator(object):
@@ -264,7 +264,7 @@ class Undivided(DataIterator):
         :type named_data: dict[unicode, ndarray]
         """
         super(Undivided, self).__init__(named_data)
-        _ = _assert_correct_data_format(named_data)
+        _assert_correct_data_format(named_data)
         self.data = named_data
         self.total_size = int(sum(d.size for d in self.data.values()))
 

@@ -8,7 +8,7 @@ from six import string_types
 from collections import OrderedDict
 from brainstorm.describable import Describable
 from brainstorm.training.trainer import run_network
-from brainstorm.utils import get_by_path, flatten_keys
+from brainstorm.utils import get_by_path
 
 
 class Hook(Describable):

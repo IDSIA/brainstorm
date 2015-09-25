@@ -227,14 +227,14 @@ def get_layout_stub_for_layer(layer):
     layout['inputs'] = {
         k: convert_to_array_json(layer.in_shapes[k], i)
         for i, k in enumerate(sorted(layer.in_shapes))
-        }
+    }
     layout['inputs']['@type'] = 'BufferView'
     layout['inputs']['@index'] = 0
 
     layout['outputs'] = {
         k: convert_to_array_json(layer.out_shapes[k], i)
         for i, k in enumerate(sorted(layer.out_shapes))
-        }
+    }
     layout['outputs']['@type'] = 'BufferView'
     layout['outputs']['@index'] = 1
 
@@ -243,7 +243,7 @@ def get_layout_stub_for_layer(layer):
     layout['parameters'] = {
         k: convert_to_array_json(v, i)
         for i, (k, v) in enumerate(parameters.items())
-        }
+    }
     layout['parameters']['@type'] = 'BufferView'
     layout['parameters']['@index'] = 2
 
@@ -253,14 +253,14 @@ def get_layout_stub_for_layer(layer):
     layout['internals'] = {
         k: convert_to_array_json(v, i)
         for i, (k, v) in enumerate(internals.items())
-        }
+    }
     layout['internals']['@type'] = 'BufferView'
     layout['internals']['@index'] = 3
 
     layout['input_deltas'] = {
         k: convert_to_array_json(layer.in_shapes[k], i)
         for i, k in enumerate(sorted(layer.in_shapes))
-        }
+    }
     for k, v in layout['input_deltas'].items():
         v['@is_backward_only'] = True
     layout['input_deltas']['@type'] = 'BufferView'
@@ -269,7 +269,7 @@ def get_layout_stub_for_layer(layer):
     layout['output_deltas'] = {
         k: convert_to_array_json(layer.out_shapes[k], i)
         for i, k in enumerate(sorted(layer.out_shapes))
-        }
+    }
     for k, v in layout['output_deltas'].items():
         v['@is_backward_only'] = True
     layout['output_deltas']['@type'] = 'BufferView'
@@ -278,7 +278,7 @@ def get_layout_stub_for_layer(layer):
     layout['gradients'] = {
         k: convert_to_array_json(v, i)
         for i, (k, v) in enumerate(parameters.items())
-        }
+    }
     for k, v in layout['gradients'].items():
         v['@is_backward_only'] = True
     layout['gradients']['@type'] = 'BufferView'

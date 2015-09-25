@@ -70,7 +70,7 @@ class Trainer(Describable):
                       15 * ' -')
             iterator = training_data_getter(verbose=self.verbose,
                                             handler=net.handler)
-            for i in run(net, iterator):
+            for _ in run(net, iterator):
                 self.current_update_nr += 1
                 train_loss.append(self.stepper.run())
                 net.apply_weight_modifiers()
@@ -148,7 +148,7 @@ class Trainer(Describable):
                 self._add_log(k, v, verbose, logs[name], indent + 2)
         else:
             if verbose:
-                print(" " * indent + ("{0:%d}: {1}" % (40-indent))
+                print(" " * indent + ("{0:%d}: {1}" % (40 - indent))
                       .format(name, val))
             logs[name] = [] if name not in logs else logs[name]
             logs[name].append(val)
