@@ -137,7 +137,7 @@ class Handler(Describable):
             bool: True if there are no infs or nans, False otherwise.
         """
 
-    # ---------------- Mathematical Operations ---------------- #
+    # ----------------------- Mathematical Operations ----------------------- #
 
     def fill_gaussian(self, mean, std, out):
         """Fill an array with values drawn from a Gaussian distribution.

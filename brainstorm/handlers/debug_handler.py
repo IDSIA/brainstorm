@@ -37,7 +37,7 @@ def _check_for_inf(handler, arg, name):
     if isinstance(arg, (int, float)) and not np.isfinite(arg):
         raise ValueError('NaN or Inf encountered in "{}" argument'
                          .format(name))
-    if isinstance(arg, DebugArray) and not handler.is_fully_finite(arg.array):
+    if isinstance(arg, DebugArray) and not handler.is_fully_finite(arg):
         raise ValueError('NaN or Inf encountered in "{}"'.format(name))
 
 
@@ -111,6 +111,7 @@ class DebugHandler(Handler):
         assert isinstance(arr, np.ndarray)
         return DebugArray(self.handler.create_from_numpy(arr))
 
+    # ---------------------------- Debug helpers ---------------------------- #
     def is_fully_finite(self, a):
         return self.handler.is_fully_finite(a.array)
 

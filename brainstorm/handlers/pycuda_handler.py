@@ -2,10 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function
 import numpy as np
-import warnings
+import pycuda
 from pycuda import gpuarray, cumath
-import pycuda.driver as drv
-import pycuda.autoinit
 from pycuda.elementwise import ElementwiseKernel
 from pycuda.compiler import SourceModule
 from pycuda.curandom import XORWOWRandomNumberGenerator
@@ -13,14 +11,12 @@ import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
-
+from brainstorm.optional import has_cudnn
 culinalg.init()
 
-try:
+if has_cudnn:
     import ctypes
     import libcudnn as cudnn
-except ImportError:
-    warnings.warn("CUDNN libraries are not available.")
 
 
 class PyCudaHandler(Handler):
@@ -38,10 +34,14 @@ class PyCudaHandler(Handler):
 
         def get_seeds(n):
             return gpuarray.to_gpu(np.ones(n, np.int32) * seed)
-
         self.rnd = XORWOWRandomNumberGenerator(seed_getter=get_seeds)
-        self.init_cudnn = init_cudnn
-        if self.init_cudnn:
+
+        if init_cudnn:
+            if not has_cudnn:
+                raise ImportError("ctypes and cudnn-python-wrappers are "
+                                  "required to use cuDNN but could not be "
+                                  "imported.")
+            self.init_cudnn = init_cudnn
             self.cudnn_context = cudnn.cudnnCreate()
             self.cudnn_tensor_format = cudnn.cudnnTensorFormat[
                 'CUDNN_TENSOR_NCHW']
@@ -81,7 +81,7 @@ class PyCudaHandler(Handler):
 
     def copy_to(self, dest, src):
         # Copy data from src to dest (both must be GPUArrays)
-        drv.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
+        pycuda.driver.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 
     def zeros(self, shape):
         return gpuarray.zeros(shape=shape, dtype=self.dtype)
@@ -91,6 +91,7 @@ class PyCudaHandler(Handler):
         self.fill(a, 1.0)
         return a
 
+    # ---------------------------- Debug helpers ---------------------------- #
     def is_fully_finite(self, a):
         temp = gpuarray.zeros_like(a)
         check_inf_or_nan_kernel(a, temp)
