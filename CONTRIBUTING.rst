@@ -107,3 +107,4 @@ Tips
 To run a subset of tests::
 
 	 $ py.test test/test_brainstorm.py
+

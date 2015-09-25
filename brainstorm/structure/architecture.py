@@ -169,7 +169,8 @@ def instantiate_layers_from_architecture(architecture):
     connections = collect_all_connections(architecture)
     for layer_name in get_canonical_layer_order(architecture):
         layer = architecture[layer_name]
-        LayerClass = get_layer_class_from_typename(layer['@type'] + 'LayerImpl')
+        LayerClass = get_layer_class_from_typename(layer['@type'] +
+                                                   'LayerImpl')
         incoming = {c for c in connections if c.end_layer == layer_name}
         outgoing = {c for c in connections if c.start_layer == layer_name}
 

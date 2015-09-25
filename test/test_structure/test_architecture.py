@@ -22,13 +22,19 @@ def test_combine_input_sizes_tuples():
 
 
 def test_combine_input_sizes_tuple_templates():
-    assert combine_input_shapes([ShapeTemplate('B', 4)]) == ShapeTemplate('B', 4)
-    assert combine_input_shapes([ShapeTemplate('B', 4), ShapeTemplate('B', 3)]) == ShapeTemplate('B', 7)
-    assert combine_input_shapes([ShapeTemplate('T', 'B', 4)]) == ShapeTemplate('T', 'B', 4)
-    assert combine_input_shapes([ShapeTemplate('T', 'B', 4), ShapeTemplate('T', 'B', 3)]) == \
-        ShapeTemplate('T', 'B', 7)
-    assert combine_input_shapes([ShapeTemplate('T', 'B', 4, 3, 2), ShapeTemplate('T', 'B', 3, 3, 2)]) ==\
-        ShapeTemplate('T', 'B', 7, 3, 2)
+    assert (combine_input_shapes([ShapeTemplate('B', 4)]) ==
+            ShapeTemplate('B', 4))
+    assert (combine_input_shapes([ShapeTemplate('B', 4),
+                                 ShapeTemplate('B', 3)]) ==
+            ShapeTemplate('B', 7))
+    assert (combine_input_shapes([ShapeTemplate('T', 'B', 4)]) ==
+            ShapeTemplate('T', 'B', 4))
+    assert (combine_input_shapes([ShapeTemplate('T', 'B', 4),
+                                 ShapeTemplate('T', 'B', 3)]) ==
+            ShapeTemplate('T', 'B', 7))
+    assert (combine_input_shapes([ShapeTemplate('T', 'B', 4, 3, 2),
+                                 ShapeTemplate('T', 'B', 3, 3, 2)]) ==
+            ShapeTemplate('T', 'B', 7, 3, 2))
 
 
 @pytest.mark.parametrize('sizes', [

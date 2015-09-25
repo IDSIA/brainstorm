@@ -3,10 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-import numpy as np
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.structure.shapes import ShapeTemplate
-from brainstorm.utils import flatten_time_and_features, flatten_time
 
 
 def Dropout(drop_prob=0.5, name=None):

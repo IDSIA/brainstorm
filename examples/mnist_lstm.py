@@ -84,8 +84,9 @@ trainer.add_hook(bs.hooks.SaveBestNetwork("validation.accuracy",
                                           filename='mnist_lstm_best.hdf5',
                                           name="best weights",
                                           criterion="max"))
-trainer.add_hook(bs.hooks.MonitorLayerParameters('lstm',verbose=False))
-trainer.add_hook(bs.hooks.MonitorLayerGradients('lstm', timescale='update',verbose=False))
+trainer.add_hook(bs.hooks.MonitorLayerParameters('lstm', verbose=False))
+trainer.add_hook(bs.hooks.MonitorLayerGradients('lstm', timescale='update',
+                                                verbose=False))
 
 # -------------------------------- Train ------------------------------------ #
 

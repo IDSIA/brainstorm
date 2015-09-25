@@ -16,9 +16,9 @@ bs.global_rnd.set_seed(42)
 data_dir = os.environ.get('BRAINSTORM_DATA_DIR', '../data')
 data_file = os.path.join(data_dir, 'MNIST.hdf5')
 ds = h5py.File(data_file, 'r')['normalized_split']
-x_tr, y_tr = ds['training']['default'].value, ds['training']['targets'].value
-x_va, y_va = ds['validation']['default'].value, ds['validation']['targets'].value
-x_te, y_te = ds['test']['default'].value, ds['test']['targets'].value
+x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
+x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
+x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
 getter_tr = bs.Minibatches(100, verbose=True, default=x_tr, targets=y_tr)
 getter_va = bs.Minibatches(100, verbose=True, default=x_va, targets=y_va)

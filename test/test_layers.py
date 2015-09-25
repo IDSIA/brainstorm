@@ -133,10 +133,10 @@ def lstm_layer(spec):
 
 def lstm_opt_layer(spec):
     layer = LstmOptLayerImpl('LstmOptLayer',
-                          {'default': ShapeTemplate('T', 'B', 5)},
-                          NO_CON, NO_CON,
-                          size=7,
-                          activation_function=spec['act_func'])
+                             {'default': ShapeTemplate('T', 'B', 5)},
+                             NO_CON, NO_CON,
+                             size=7,
+                             activation_function=spec['act_func'])
     return layer, spec
 
 
@@ -202,10 +202,10 @@ def batch_norm_layer(spec):
 
 
 def elementwise_layer(spec):
-    layer = ElementwiseLayerImpl('Op',
-                        {'default': ShapeTemplate('T', 'B', 3, 2)},
-                        NO_CON, NO_CON,
-                        activation_function=spec['act_func'])
+    layer = ElementwiseLayerImpl('Elementwise',
+                                 {'default': ShapeTemplate('T', 'B', 3, 2)},
+                                 NO_CON, NO_CON,
+                                 activation_function=spec['act_func'])
     return layer, spec
 
 
@@ -235,7 +235,6 @@ ids = [f.__name__ for f in layers_to_test]
 
 spec_list = [
     (1, 1, 'tanh'),
-    (3, 2, 'tanh'),
     (5, 1, 'sigmoid'),
     (2, 3, 'rel'),
     (1, 4, 'linear')]
@@ -312,7 +311,9 @@ def test_layer_forward_pass_insensitive_to_internal_state_init(layer_specs):
         value = layer_buffers.internals[internal]
         if shape_template.scales_with_time:
             # exclude context slice
-            HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
+            HANDLER.set_from_numpy(
+                value[:time_steps],
+                np.random.randn(time_steps, *value.shape[1:]))
         else:
             HANDLER.set_from_numpy(value, np.random.randn(*value.shape))
 
@@ -341,7 +342,9 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         value = layer_buffers.internals[internal]
         if shape_template.scales_with_time:
             # exclude context slice
-            HANDLER.set_from_numpy(value[:time_steps], np.random.randn(time_steps, *value.shape[1:]))
+            HANDLER.set_from_numpy(
+                value[:time_steps],
+                np.random.randn(time_steps, *value.shape[1:]))
         else:
             HANDLER.set_from_numpy(value, np.random.randn(*value.shape))
 
@@ -393,7 +396,7 @@ def test_layer_add_to_deltas(layer_specs):
             print("Adding deltas test failed for {}!".format(key))
             print("Calculated Deltas:\n", value)
             print("Expected Deltas:\n", deltas[key] + 1.0)
-            print("Difference:\n",deltas[key] + 1.0 - value)
+            print("Difference:\n", deltas[key] + 1.0 - value)
         assert passed, key
 
 
@@ -467,14 +470,14 @@ def test_layer_constructor():
 
 def test_nooplayer_raises_on_size_mismatch():
     with pytest.raises(LayerValidationError):
-        l = NoOpLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(),
-                          set(), size=8)
+        l = NoOpLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, NO_CON,
+                          NO_CON, size=8)
 
 
 def test_inputlayer_raises_on_in_size():
     with pytest.raises(LayerValidationError):
-        l = InputLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, set(),
-                           set(), out_shapes={'default': ('T', 'B', 5,)})
+        l = InputLayerImpl('LayerName', {'default': ('T', 'B', 5,)}, NO_CON,
+                           NO_CON, out_shapes={'default': ('T', 'B', 5,)})
 
 
 @pytest.mark.parametrize("LayerClass", [
@@ -482,6 +485,6 @@ def test_inputlayer_raises_on_in_size():
 ])
 def test_raises_on_unexpected_kwargs(LayerClass):
     with pytest.raises(LayerValidationError) as excinfo:
-        l = LayerClass('LayerName', {'default': ShapeTemplate(5,)}, set(), set(),
-                       some_foo=16)
+        l = LayerClass('LayerName', {'default': ShapeTemplate(5,)},
+                       NO_CON, NO_CON, some_foo=16)
     assert 'some_foo' in excinfo.value.args[0]

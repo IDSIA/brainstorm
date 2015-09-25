@@ -33,7 +33,7 @@ def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
                 print(arg)
                 print("\nCheck failed for argument number %d:" % i)
                 print("Reference (expected) array {}:\n{}".format(
-                    ref_arg.shape,ref_arg))
+                    ref_arg.shape, ref_arg))
                 print("\nObtained array {}:\n{}".format(arg_ref.shape,
                                                         arg_ref))
                 d = ref_arg.ravel() - arg_ref.ravel()
@@ -325,9 +325,9 @@ def test_mult_mv():
     list_b = get_random_arrays()
     list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
     for a, b in zip(list_a, list_b):
-        #print('-' * 40)
-        #print("a:\n", a)
-        #print("b:\n", b)
+        # print('-' * 40)
+        # print("a:\n", a)
+        # print("b:\n", b)
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
@@ -424,12 +424,14 @@ def test_conv2d_forward():
             b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
             oh = (x.shape[2] + 2 * padding - w.shape[2]) / stride[0] + 1
             ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
-            out = np.zeros((x.shape[0], w.shape[0])+ (oh, ow), dtype=ref_dtype)
+            out = np.zeros((x.shape[0], w.shape[0]) + (oh, ow),
+                           dtype=ref_dtype)
             ref_args = (x, w, b, out, padding, stride)
 
             passed = operation_check(ref.conv2d_forward_batch,
                                      handler.conv2d_forward_batch,
-                                     ref_args, get_args_from_ref_args(ref_args),
+                                     ref_args,
+                                     get_args_from_ref_args(ref_args),
                                      atol=1e-6)
             if not passed:
                 print(x.shape, w.shape)
@@ -461,7 +463,8 @@ def test_conv2d_backward():
                         o_deltas, w_deltas, b_deltas)
             passed = operation_check(ref.conv2d_backward_batch,
                                      handler.conv2d_backward_batch,
-                                     ref_args, get_args_from_ref_args(ref_args),
+                                     ref_args,
+                                     get_args_from_ref_args(ref_args),
                                      atol=1e-4)
             if not passed:
                 print(x.shape, w.shape)
@@ -497,7 +500,7 @@ def test_maxpool2d_forward():
 
 def test_maxpool2d_backward():
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
-    window_list= [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
+    window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
     list_x = get_random_arrays(img_shapes)
 
@@ -517,7 +520,7 @@ def test_maxpool2d_backward():
 
                     # initialize argmax
                     ref.maxpool2d_forward_batch(x, window, outputs, padding,
-                                             strides, argmax)
+                                                strides, argmax)
                     ref_args = (x, window, outputs, padding, strides, argmax,
                                 i_deltas, o_deltas)
 
@@ -559,7 +562,7 @@ def test_avgpool2d_forward():
 
 def test_avgpool2d_backward():
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
-    window_list= [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
+    window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
     list_x = get_random_arrays(img_shapes)
 
@@ -577,7 +580,7 @@ def test_avgpool2d_backward():
                     i_deltas = np.zeros_like(x, dtype=ref_dtype)
 
                     ref.avgpool2d_forward_batch(x, window, outputs, padding,
-                                             strides)
+                                                strides)
                     ref_args = (x, window, outputs, padding, strides,
                                 i_deltas, o_deltas)
                     passed = operation_check(

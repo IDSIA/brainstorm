@@ -228,6 +228,3 @@ class LayerBaseImpl(object):
                     ' named "{}". Choices are: {}'.format(
                         self.name, out_c, out_c.output_name,
                         list(self.out_shapes.keys())))
-
-
-

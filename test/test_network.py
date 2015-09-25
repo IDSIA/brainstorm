@@ -80,4 +80,3 @@ def test_context_slice_allows_continuing_forward_pass(net_with_context):
             print("Context:\n", x)
             print("Should match:\n", y)
             assert np.allclose(x, y)
-

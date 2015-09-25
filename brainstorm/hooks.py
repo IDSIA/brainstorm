@@ -8,7 +8,7 @@ from six import string_types
 from collections import OrderedDict
 from brainstorm.describable import Describable
 from brainstorm.training.trainer import run_network
-from brainstorm.utils import get_by_path, flatten_keys
+from brainstorm.utils import get_by_path
 
 
 class Hook(Describable):
@@ -532,3 +532,61 @@ class MonitorHammingScore(Hook):
             totals += np.prod(target.shape)
 
         return 1.0 - errors / totals
+
+
+class VisualiseAccuracy(Hook):
+    """
+    Visualises the accuracy using the bokeh.plotting library.
+
+    By default the output saved as a .html file, however a display can be enabled
+
+    Parameters
+    ----------
+    log_names : list, array, or dict
+        Contains the name of the accuracies recorded by the accuracy monitors.
+        Input should be of the form <monitorname>.accuracy
+    filename : str
+        The location to which the .html file containing the accuracy plot should be saved
+    display : boolean
+        If set to true bokeh will launch a tab in your default browser after EVERY timescale
+        and display the intermediate accuracy plot
+    """
+    def __init__(self, log_names, filename, display=False, timescale='epoch', interval=1, name=None, verbose=None):
+        super(VisualiseAccuracy, self).__init__(name, timescale, interval, verbose)
+
+        self.log_names = log_names
+        self.filename = filename
+
+        try:
+            import bokeh.plotting as bk
+
+            self.bk = bk
+            self.bk.output_file(self.filename + ".html", title="Accuracy Monitor", mode="cdn")
+            self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset"
+            self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua', 'gray']
+            self.display = display
+
+        except ImportError:
+            print("bokeh is required for drawing networks but was not found.")
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+
+        x_max = 0
+        if self.timescale == 'epoch':
+            x_max = epoch_nr + 3
+        elif self.timescale == 'update':
+            x_max = update_nr + 3
+
+        fig = self.bk.figure(title="Accuracy Monitor", x_axis_label=self.timescale, y_axis_label='accuracy',
+                                  tools=self.TOOLS, x_range=(0, x_max), y_range=(0, 1))
+        count = 0
+        for log_name in self.log_names:
+            e = get_by_path(logs, log_name)
+
+            fig.line(range(len(e)), e, legend=log_name[0], line_width=2, color=self.colors[count])
+            count += 1
+
+        self.bk.save(fig, filename=self.filename + ".html")
+
+        if self.display:
+            self.bk.show(fig)

@@ -3,8 +3,9 @@
 
 from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers import NumpyHandler
-from brainstorm.utils import get_inheritors, flatten, convert_to_nested_indices, \
-    flatten_time, flatten_time_and_features, flatten_keys
+from brainstorm.utils import (
+    get_inheritors, flatten, convert_to_nested_indices, flatten_time,
+    flatten_time_and_features, flatten_keys)
 import numpy as np
 
 

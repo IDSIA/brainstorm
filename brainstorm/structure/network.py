@@ -20,7 +20,7 @@ from brainstorm.handlers import default_handler
 from brainstorm.utils import NetworkValidationError
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.describable import get_description, create_from_description
-from brainstorm.value_modifiers import ValueModifier, GradientModifier
+from brainstorm.value_modifiers import GradientModifier
 
 __all__ = ['Network']
 
@@ -141,11 +141,12 @@ class Network(Seedable):
         There are two special layer patterns:
 
             3. ``{'default': INIT}``
-               Matches all weights that are not matched by any other path-pattern
+               Matches all weights that are not matched by any other
+               path-pattern
             4. ``{'fallback': INIT}``
                Set a fallback initializer for every weight. It will only be
-               evaluated for the weights for which the regular initializer failed
-               with an InitializationError.
+               evaluated for the weights for which the regular initializer
+               failed with an InitializationError.
 
                `This is useful for initializers that require a certain shape
                of weights and will not work otherwise. The fallback will then

@@ -82,9 +82,9 @@ def test_conv2d_forward_batch_numpy():
                                                    (output_height,
                                                     output_width))
                                 true_outputs = np.zeros((num_images,
-                                                         num_filters)
-                                                        + (output_height,
-                                                           output_width))
+                                                         num_filters) +
+                                                        (output_height,
+                                                         output_width))
 
                                 _h.conv2d_forward_batch(inputs, weights, bias,
                                                         outputs, padding,
@@ -123,7 +123,7 @@ def test_conv2d_forward_batch_pycuda():
                                 weights = np.random.rand(num_filters,
                                                          num_input_maps,
                                                          *kernel_shape)
-                                bias =  np.random.rand(num_filters)
+                                bias = np.random.rand(num_filters)
 
                                 output_height = \
                                     (input_shape[0] + 2 * padding -
@@ -133,9 +133,9 @@ def test_conv2d_forward_batch_pycuda():
                                      kernel_shape[1]) / stride[1] + 1
 
                                 true_outputs = np.zeros((num_images,
-                                                         num_filters)
-                                                        + (output_height,
-                                                           output_width))
+                                                         num_filters) +
+                                                        (output_height,
+                                                         output_width))
 
                                 _conv2d_forward_batch(inputs, weights, bias,
                                                       true_outputs, padding,

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+import json
 import numpy as np
 import pytest
+import brainstorm as bs
 from brainstorm.describable import (Describable, get_description,
                                     create_from_description)
 from brainstorm.handlers.pycuda_handler import PyCudaHandler
@@ -327,8 +329,6 @@ def test_describe_numpy_handler():
     assert nh2.dtype == np.float32
 
 # ################# test describing a Network #################################
-import brainstorm as bs
-import json
 
 arch = generate_architecture(
     bs.layers.Input(out_shapes={'default': ('T', 'B', 7)}) >>

@@ -29,4 +29,3 @@ def test_multistep():
                     values=[0.1, 0.01, 0.001])
     values = [sch() for _ in range(10)]
     assert values == [1.0, 1.0, 1.0, 0.1, 0.1, 0.01, 0.01, 0.01, 0.001, 0.001]
-

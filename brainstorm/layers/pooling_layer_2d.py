@@ -102,8 +102,7 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         t, b, c, h, w = inputs.shape
         flat_inputs = inputs.reshape((t * b, c, h, w))
         flat_in_deltas = in_deltas.reshape((t * b, c, h, w))
-        flat_out_deltas = out_deltas.reshape((t * b,)
-                                             + out_deltas.shape[2:])
+        flat_out_deltas = out_deltas.reshape((t * b,) + out_deltas.shape[2:])
         flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
 
         if self.type == 'max':

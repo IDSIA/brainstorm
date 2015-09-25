@@ -8,8 +8,9 @@ from brainstorm.utils import InitializationError
 
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in [
-    'ArrayInitializer', 'Gaussian', 'Uniform', 'DenseSqrtFanIn', 'DenseSqrtFanInOut',
-    'SparseInputs', 'SparseOutputs', 'EchoState', 'LstmOptInit', 'Identity']]
+    'ArrayInitializer', 'Gaussian', 'Uniform', 'DenseSqrtFanIn',
+    'DenseSqrtFanInOut', 'SparseInputs', 'SparseOutputs', 'EchoState',
+    'LstmOptInit', 'Identity']]
 
 
 # ########################### Support Classes #################################
@@ -70,8 +71,8 @@ class Gaussian(Initializer):
 
 class Uniform(Initializer):
     """
-    Initializes the parameters randomly according to a uniform distribution over
-    the interval [low, high].
+    Initializes the parameters randomly according to a uniform distribution
+    over the interval [low, high].
     """
     __default_values__ = {'low': None}
 
@@ -95,9 +96,9 @@ class Uniform(Initializer):
 
 class DenseSqrtFanIn(Initializer):
     """
-    Initializes the parameters randomly according to a uniform distribution over
-    the interval [-1/sqrt(n), 1/sqrt(n)] where n is the number of inputs to
-    each neuron. Uses scaling = sqrt(6) by default which is appropriate for
+    Initializes the parameters randomly according to a uniform distribution
+    over the interval [-1/sqrt(n), 1/sqrt(n)] where n is the number of inputs
+    to each neuron. Uses scaling = sqrt(6) by default which is appropriate for
     rel units.
     """
 
@@ -115,8 +116,8 @@ class DenseSqrtFanIn(Initializer):
 
 class DenseSqrtFanInOut(Initializer):
     """
-    Initializes the parameters randomly according to a uniform distribution over
-    the interval [-1/sqrt(n1+n2), 1/sqrt(n1+n2)] where n1 is the number of
+    Initializes the parameters randomly according to a uniform distribution
+    over the interval [-1/sqrt(n1+n2), 1/sqrt(n1+n2)] where n1 is the number of
     inputs to each neuron and n2 is the number of neurons in the current layer.
     Use scaling = 4*sqrt(6) for sigmoid units, sqrt(6) for tanh units and
     sqrt(12) for rel units (used by default).
@@ -267,18 +268,18 @@ class LstmOptInit(Initializer):
             raise InitializationError("First dim of LstmOpt shape needs to be "
                                       "divisible by 4. But shape was {}"
                                       .format(shape))
-        W = np.zeros(shape)
+        weights = np.zeros(shape)
         n = shape[0] // 4
         sub_shape = (n,) + shape[1:]
-        W[:n] = evaluate_initializer(self.block_input, sub_shape,
-                                     seed=self.rnd.generate_seed())
-        W[n:2 * n] = evaluate_initializer(self.input_gate, sub_shape,
-                                          seed=self.rnd.generate_seed())
-        W[2 * n:3 * n] = evaluate_initializer(self.forget_gate, sub_shape,
-                                              seed=self.rnd.generate_seed())
-        W[3 * n:] = evaluate_initializer(self.output_gate, sub_shape,
-                                         seed=self.rnd.generate_seed())
-        return W
+        weights[:n] = evaluate_initializer(
+            self.block_input, sub_shape, seed=self.rnd.generate_seed())
+        weights[n:2 * n] = evaluate_initializer(
+            self.input_gate, sub_shape, seed=self.rnd.generate_seed())
+        weights[2 * n:3 * n] = evaluate_initializer(
+            self.forget_gate, sub_shape, seed=self.rnd.generate_seed())
+        weights[3 * n:] = evaluate_initializer(
+            self.output_gate, sub_shape, seed=self.rnd.generate_seed())
+        return weights
 
 
 # ########################### helper methods ##################################
