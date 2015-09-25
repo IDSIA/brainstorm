@@ -116,7 +116,26 @@ class Handler(Describable):
 
     @abc.abstractmethod
     def create_from_numpy(self, arr):
-        """ """
+        """Create a new array with the same entries as a Numpy array.
+
+        Args:
+            arr (numpy.ndarray): Numpy array whose elements should be used
+                                 to fill the new array.
+        Returns:
+            array_type: New array with same shape and entries as the given
+                        Numpy array.
+        """
+
+    # ---------------------------- Debug helpers ---------------------------- #
+    @abc.abstractmethod
+    def is_fully_finite(self, a):
+        """Check if all entries of the array are finite (no nans or infs).
+
+        Args:
+            a (array_type): Input array to check.
+        Returns:
+            bool: True if there are no infs or nans, False otherwise.
+        """
 
     # ---------------- Mathematical Operations ---------------- #
 

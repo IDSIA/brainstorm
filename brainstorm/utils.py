@@ -4,7 +4,6 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 import re
-from brainstorm.optional import has_pycuda
 
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 
@@ -175,12 +174,3 @@ def flatten_keys(dictionary):
         else:
             keys.append(k)
     return keys
-
-if has_pycuda:
-    from pycuda.elementwise import ElementwiseKernel
-
-    check_inf_or_nan_kernel = ElementwiseKernel(
-        b"float* inp, float* result",
-        b"if (isnan(inp[i]) || isinf(inp[i])) result[i] = 1;",
-        b"check_inf_or_nan_kernel"
-    )

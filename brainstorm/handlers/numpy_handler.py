@@ -54,6 +54,9 @@ class NumpyHandler(Handler):
     def ones(self, shape):
         return np.ones(shape=shape, dtype=self.dtype)
 
+    def is_fully_finite(self, a):
+        return np.all(np.isfinite(a))
+
     # ---------------- General mathematical operations ---------------- #
 
     def fill_gaussian(self, mean, std, out):

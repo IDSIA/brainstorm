@@ -2,7 +2,6 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers.base_handler import Handler
-from brainstorm.optional import has_pycuda
 import numpy as np
 
 
@@ -34,31 +33,22 @@ class DebugArray(object):
         return DebugArray(arr=self.array.reshape(new_shape))
 
 
-def _check_for_inf(arg, name):
+def _check_for_inf(handler, arg, name):
     if isinstance(arg, (int, float)) and not np.isfinite(arg):
         raise ValueError('NaN or Inf encountered in "{}" argument'
                          .format(name))
-    if isinstance(arg, DebugArray) and isinstance(arg.array, np.ndarray) and \
-            not np.all(np.isfinite(arg.array)):
+    if isinstance(arg, DebugArray) and not handler.is_fully_finite(arg.array):
         raise ValueError('NaN or Inf encountered in "{}"'.format(name))
-    if has_pycuda:
-        from pycuda import gpuarray
-        from brainstorm.utils import check_inf_or_nan_kernel
-        if isinstance(arg, DebugArray) and isinstance(arg.array,
-                                                      gpuarray.GPUArray):
-            temp = gpuarray.zeros_like(arg.array)
-            check_inf_or_nan_kernel(arg.array, temp)
-            if not gpuarray.sum(temp).get() == 0:
-                raise ValueError('NaN or Inf encountered in "{}"'.format(name))
 
 
 def check_for_inf_or_nan(f):
     def checked_f(*args, **kwargs):
         result = f(*args, **kwargs)
+        handler = args[0]
         for i, arg in enumerate(args, start=1):
-            _check_for_inf(arg, '{}.'.format(i))
+            _check_for_inf(handler, arg, '{}.'.format(i))
         for n, v in kwargs.items():
-            _check_for_inf(v, n)
+            _check_for_inf(handler, v, n)
         return result
 
     return checked_f
@@ -120,6 +110,9 @@ class DebugHandler(Handler):
     def create_from_numpy(self, arr):
         assert isinstance(arr, np.ndarray)
         return DebugArray(self.handler.create_from_numpy(arr))
+
+    def is_fully_finite(self, a):
+        return self.handler.is_fully_finite(a.array)
 
     # ----------------------- Mathematical Operations ----------------------- #
 

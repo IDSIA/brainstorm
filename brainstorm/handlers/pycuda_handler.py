@@ -91,6 +91,11 @@ class PyCudaHandler(Handler):
         self.fill(a, 1.0)
         return a
 
+    def is_fully_finite(self, a):
+        temp = gpuarray.zeros_like(a)
+        check_inf_or_nan_kernel(a, temp)
+        return np.all(temp.get())
+
     # ---------------- General mathematical operations ---------------- #
 
     def fill_gaussian(self, mean, std, out):
@@ -554,6 +559,13 @@ index_m_by_v_kernel = ElementwiseKernel(
     "float* out, float* v, float* m, int nrows, int ncols",
     "out[i] = m[i * ncols + int(v[i])]",
     "index_m_by_v_kernel"
+)
+
+
+check_inf_or_nan_kernel = ElementwiseKernel(
+    b"float* inp, float* result",
+    b"if (isnan(inp[i]) || isinf(inp[i])) result[i] = 1;",
+    b"check_inf_or_nan_kernel"
 )
 
 __softmax_kernel_code = """
