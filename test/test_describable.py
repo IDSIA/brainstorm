@@ -7,7 +7,7 @@ import pytest
 import brainstorm as bs
 from brainstorm.describable import (Describable, get_description,
                                     create_from_description)
-from brainstorm.handlers.pycuda_handler import PyCudaHandler
+from brainstorm.optional import has_pycuda
 from brainstorm.handlers.numpy_handler import NumpyHandler
 
 
@@ -312,7 +312,9 @@ def test_create_from_description_with_invalid_description_raises():
 
 # ################# test describing handler ###################################
 
+@pytest.mark.skipif(has_pycuda is False, reason='requires pycuda and skcuda')
 def test_describe_pycuda_handler():
+    from brainstorm.handlers.pycuda_handler import PyCudaHandler
     pch = PyCudaHandler()
     d = get_description(pch)
     assert d == {'@type': 'PyCudaHandler', 'init_cudnn': True}

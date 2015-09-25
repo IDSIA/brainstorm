@@ -33,6 +33,7 @@ class Handler(Describable):
     """
 
     # ------------------------- Allocate new memory ------------------------- #
+
     @abc.abstractmethod
     def allocate(self, shape):
         """Allocate new memory with given shape but arbitrary content.
@@ -67,6 +68,7 @@ class Handler(Describable):
         """
 
     # ---------------------------- Copy and Fill ---------------------------- #
+
     @abc.abstractmethod
     def copy_to(self, dest, src):
         """Copy the contents of one array to another.
@@ -127,6 +129,7 @@ class Handler(Describable):
         """
 
     # ---------------------------- Debug helpers ---------------------------- #
+
     @abc.abstractmethod
     def is_fully_finite(self, a):
         """Check if all entries of the array are finite (no nans or infs).
@@ -137,7 +140,7 @@ class Handler(Describable):
             bool: True if there are no infs or nans, False otherwise.
         """
 
-    # ----------------------- Mathematical Operations ----------------------- #
+    # ----------------------- Mathematical operations ----------------------- #
 
     @abc.abstractmethod
     def add_mv(self, m, v, out):
@@ -181,9 +184,9 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
-                                stride):
-        """Performs a 2D average-pooling on a batch of images.
+    def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
+                                 stride, in_deltas, out_deltas):
+        """Computes the gradients for 2D average-pooling on a batch of images.
 
         Args:
             out (array_type): Array into which the output is placed.
@@ -192,9 +195,9 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
-                                 stride, in_deltas, out_deltas):
-        """Computes the gradients for 2D average-pooling on a batch of images.
+    def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
+                                stride):
+        """Performs a 2D average-pooling on a batch of images.
 
         Args:
             out (array_type): Array into which the output is placed.
