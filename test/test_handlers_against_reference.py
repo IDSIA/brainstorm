@@ -242,6 +242,14 @@ def test_broadcast_features_t(handler):
     shapes_to_check = [[1, 1, 1], [1, 2, 1], [3, 2, 1], [4, 1, 1]]
 
     list_a = get_random_arrays(shapes_to_check)
+    sizes_to_expand = [1, 3]
+    for a, size in itertools.product(list_a, sizes_to_expand):
+        out = np.zeros(a.shape[:2] + (size,), dtype=ref_dtype)
+        ref_args = (a, out)
+
+    assert operation_check(handler, 'broadcast_features_t', ref_args)
+
+    list_a = get_random_arrays(shapes_to_check)
     shapes_to_add = [(1,), (2, 2), (3, 1, 1)]
 
     for a, shape_to_add in itertools.product(list_a, shapes_to_add):
@@ -318,18 +326,18 @@ def test_mult_mv(handler):
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
-    print("======================================")
-    print("Testing mult_mv() for with row vectors")
-    print("======================================")
+    print("==================================")
+    print("Testing mult_mv() with row vectors")
+    print("==================================")
     for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
         assert operation_check(handler, 'mult_mv', ref_args)
 
-    print("======================================")
-    print("Testing mult_mv() for with column vectors")
-    print("======================================")
+    print("=====================================")
+    print("Testing mult_mv() with column vectors")
+    print("=====================================")
     list_b = get_random_arrays()
     list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
     for a, b in zip(list_a, list_b):
@@ -338,18 +346,25 @@ def test_mult_mv(handler):
         # print("b:\n", b)
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
-
         assert operation_check(handler, 'mult_mv', ref_args)
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
-def test_binarize_v(handler):  # TODO
-    pass
+def test_binarize_v(handler):
+    v = np.random.random_integers(0, 4, (10, 1)).astype(ref_dtype)
+    out = np.random.random_sample((10, 5))
+    ref_args = (v, out)
+    assert operation_check(handler, 'binarize_v', ref_args)
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
-def test_index_m_by_v(handler):  # TODO
-    pass
+def test_index_m_by_v(handler):
+    m_list = get_random_arrays()
+    for m in m_list:
+        v = np.random.random_integers(0, m.shape[1] - 1, (m.shape[0], 1))
+        out = np.random.random_sample(v.shape)
+        ref_args = (m, v, out)
+        assert operation_check(handler, 'index_m_by_v', ref_args)
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)

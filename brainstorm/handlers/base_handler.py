@@ -245,16 +245,21 @@ class Handler(Describable):
         right-most dimension of an array. E.g. an array with shape (2, 3, 4, 1)
         may be broadcasted to shape (2, 3, 4, 5), by copying all the elements
         5 times.
-        Note that the last dimension of `a` must have size 1.
+
+        Note:
+            This function supports more general cases, such as broadcasting
+            an array of shape (2, 3, 1) to shape (2, 3, 1, 3, 2). However,
+            currently it is assumed that this function will be used with
+            both `a` and `out` having the same number of dimensions.
 
         Args:
-            a (array_type): Array whose elements should be broadcasted. The
-                            rightmost dimension must be of size 1,
-                            since this is the dimension that is broadcasted.
-            out (array_type): Array into which the output is placed. Must
-                              have same number of dimensions as `a`.
-                              Only the right-most dimension can be
-                              different from `a`.
+            a (array_type): Array whose elements should be broadcasted. Must
+                            be at least 3D and the rightmost dimension must
+                            be of size 1.
+            out (array_type): Array into which the output is placed. Must be at
+                              at least 3D and have same the number of
+                              dimensions as `a`. Only the right-most
+                              dimension can be different from `a`.
         Returns:
             None
         """
@@ -416,7 +421,8 @@ class Handler(Describable):
             v (array_type): Column vector (2D array with a single column) whose
                             values are used as indices into `m`. The number of
                             rows must be the same as `m`.
-            out (array_type): Array into which the output is placed.
+            out (array_type): Array into which the output is placed. It's shape
+                              must be the same as `v`.
         Returns:
             None
         """

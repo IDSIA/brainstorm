@@ -184,8 +184,16 @@ class DebugHandler(Handler):
     @check_for_inf_or_nan
     def broadcast_features_t(self, a, out):
         assert_debug_arrays(a, out)
-        assert len(a.shape) == len(out.shape)
-        assert a.shape == out.shape[:-1] + (1,)
+        assert len(a.shape) >= 3 and len(out.shape) >= 3
+        assert a.shape[-1] == 1
+        assert len(a.shape) == len(out.shape), \
+            "broadcast_features_t supports broadcasting to multiple " \
+            "dimensions, but we currently assume that layer implementations " \
+            "do not add dimensions. This check can be removed later."
+        assert a.shape == out.shape[:-1] + (1,), \
+            "broadcast_features_t supports broadcasting to multiple " \
+            "dimensions, but we currently assume that layer implementations " \
+            "do not add dimensions. This check can be removed later."
         self.handler.broadcast_features_t(a.array, out.array)
 
     @check_for_inf_or_nan
