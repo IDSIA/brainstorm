@@ -20,9 +20,9 @@ x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
 x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
 x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
-getter_tr = bs.Minibatches(100, verbose=True, default=x_tr, targets=y_tr)
-getter_va = bs.Minibatches(100, verbose=True, default=x_va, targets=y_va)
-getter_te = bs.Minibatches(100, verbose=True, default=x_te, targets=y_te)
+getter_tr = bs.Minibatches(100, default=x_tr, targets=y_tr)
+getter_va = bs.Minibatches(100, default=x_va, targets=y_va)
+getter_te = bs.Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
@@ -47,8 +47,7 @@ trainer = bs.Trainer(bs.MomentumStep(learning_rate=0.1, momentum=0.9),
                      double_buffering=False)
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 trainer.add_hook(bs.hooks.MonitorAccuracy('valid_getter', 'out.output',
-                                          name='validation',
-                                          verbose=True))
+                                          name='validation'))
 trainer.add_hook(bs.hooks.SaveBestNetwork('validation.accuracy',
                                           filename='mnist_pi_best.hdf5',
                                           name='best weights',
@@ -57,5 +56,5 @@ trainer.add_hook(bs.hooks.SaveBestNetwork('validation.accuracy',
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("\nHighest accuracy on the validation set:",
+print("Best validation set accuracy: ",
       max(trainer.logs["validation"]["accuracy"]))

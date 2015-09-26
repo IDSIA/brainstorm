@@ -37,6 +37,11 @@ class Hook(Describable):
         else:
             self.run_verbosity = self.verbose
 
+    def message(self, msg):
+        """Print an output message if :attr:`run_verbosity` is True."""
+        if self.run_verbosity:
+            print("{} >> {}".format(self.__name__, msg))
+
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         pass
 
@@ -82,19 +87,16 @@ class SaveBestNetwork(Hook):
         if best_idx == len(e) - 1:
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
-                if self.run_verbosity:
-                    print("{} >> {} improved. Saving network to {} ...".format(
-                          self.__name__, self.log_name, self.filename))
+                self.message("{} improved. Saving network to {} ...".
+                             format(self.log_name, self.filename))
                 net.save_as_hdf5(self.filename)
             else:
-                if self.run_verbosity:
-                    print("{} >> {} improved. Caching parameters ...".format(
-                          self.__name__, self.log_name))
+                self.message("{} improved. Caching parameters ...".
+                             format(self.log_name))
                 self.parameters = params
         elif self.run_verbosity:
-            print("{} >> Last saved parameters after epoch {} when {} was {}"
-                  "".format(self.__name__, best_idx, self.log_name,
-                            e[best_idx]))
+            self.message("Last saved parameters after epoch {} when {} was {}".
+                         format(best_idx, self.log_name, e[best_idx]))
 
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
@@ -255,8 +257,9 @@ class StopAfterEpoch(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         if epoch_nr >= self.max_epochs:
-            raise StopIteration("Maximum number of epochs ({}) reached."
-                                .format(self.max_epochs))
+            self.message("Stopping because the maximum number of epochs ({}) "
+                         "was reached.".format(self.max_epochs))
+            raise StopIteration()
 
 
 class EarlyStopper(Hook):
@@ -271,8 +274,9 @@ class EarlyStopper(Hook):
         e = get_by_path(logs, self.log_name)
         best_error_idx = np.argmin(e)
         if len(e) > best_error_idx + self.patience:
-            raise StopIteration("Error did not fall for %d epochs! Stopping."
-                                % self.patience)
+            self.message("Stopping because {} did not decrease for {} epochs.".
+                         format(self.log_name, self.patience))
+            raise StopIteration()
 
 
 class StopOnNan(Hook):
@@ -294,18 +298,18 @@ class StopOnNan(Hook):
         for log_name in self.logs_to_check:
             log = get_by_path(logs, log_name)
             if not np.all(np.isfinite(log)):
-                raise StopIteration("{} >> NaN or inf detected in {}"
-                                    .format(self.__name__, log_name))
+                self.message("NaN or inf detected in {}!".format(log_name))
+                raise StopIteration()
         if self.check_parameters:
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if not np.all(np.isfinite(params)):
-                raise StopIteration("{} >> NaN or inf detected in parameters!"
-                                    .format(self.__name__))
+                self.message("NaN or inf detected in parameters!")
+                raise StopIteration()
 
         if self.check_training_loss and logs['training_loss']:
             if not np.all(np.isfinite(logs['training_loss'][1:])):
-                raise StopIteration("{} >> NaN or inf detected in "
-                                    "training_loss!".format(self.__name__))
+                self.message("NaN or inf detected in training_loss!")
+                raise StopIteration()
 
 
 class InfoUpdater(Hook):
@@ -414,7 +418,7 @@ class MonitorAccuracy(Hook):
         self.masked = self.mask_name in self.iter.data.keys()
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        iterator = self.iter(verbose=self.verbose, handler=net.handler)
+        iterator = self.iter(verbose=self.run_verbosity, handler=net.handler)
         _h = net.handler
         errors = 0
         totals = 0
