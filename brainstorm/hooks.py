@@ -413,7 +413,9 @@ class MonitorAccuracy(Hook):
             "{} >> {} is not present in monitor_kwargs. Remember to pass it " \
             "as kwarg to Trainer.train().".format(self.__name__,
                                                   self.iter_name)
-        assert self.out_layer in net.layers
+        assert self.out_layer in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.out_layer, net.layers.keys())
         self.iter = monitor_kwargs[self.iter_name]
         self.masked = self.mask_name in self.iter.data.keys()
 
@@ -513,8 +515,13 @@ class MonitorHammingScore(Hook):
     def start(self, net, stepper, verbose, monitor_kwargs):
         super(MonitorHammingScore, self).start(net, stepper, verbose,
                                                monitor_kwargs)
-        assert self.iter_name in monitor_kwargs
-        assert self.out_layer in net.layers
+        assert self.iter_name in monitor_kwargs, \
+            "{} >> {} is not present in monitor_kwargs. Remember to pass it " \
+            "as kwarg to Trainer.train().".format(self.__name__,
+                                                  self.iter_name)
+        assert self.out_layer in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.out_layer, net.layers.keys())
         self.iter = monitor_kwargs[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
