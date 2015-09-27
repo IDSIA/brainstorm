@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.training.steppers import TrainingStep
 from brainstorm.structure.network import Network
 import numpy as np
 from six import string_types
+import h5py
 
 from collections import OrderedDict
 from brainstorm.describable import Describable
@@ -101,6 +101,25 @@ class SaveBestNetwork(Hook):
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
             else self.parameters
+
+
+class SaveLogs(Hook):
+    def __init__(self, filename, name=None):
+        super(SaveLogs, self).__init__(name, 'epoch', 1, False)
+        self.filename = filename
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        with h5py.File(self.filename, 'w') as f:
+            SaveLogs._save_recursively(f, logs)
+
+    @staticmethod
+    def _save_recursively(group, logs):
+        for name, log in logs.items():
+            if isinstance(log, dict):
+                subgroup = group.create_group(name)
+                SaveLogs._save_recursively(subgroup, log)
+            else:
+                group.create_dataset(name, data=np.array(log))
 
 
 class MonitorLayerParameters(Hook):
@@ -390,87 +409,6 @@ class MonitorScores(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         return evaluate(net, self.iter, self.scorers, verbose=self.verbose)
-
-
-class MonitorHammingScore(Hook):
-    r"""
-    Monitor the Hamming score of a given layer wrt. to given targets
-    using a given data iterator.
-
-    Hamming loss is defined as the fraction of the correct labels to the
-    total number of labels.
-
-
-    Parameters
-    ----------
-    iter_name : str
-        name of the data iterator to use (as specified in the train() call)
-    output : str
-        name of the output to use formatted like this:
-        LAYER_NAME[.OUTPUT_NAME]
-        Where OUTPUT_NAME defaults to 'default'
-    targets_name : str, optional
-        name of the targets (as specified in the Input)
-        defaults to 'targets'
-
-
-    Other Parameters
-    ----------------
-    timescale : {'epoch', 'update'}, optional
-        Specifies whether the Monitor should be called after each epoch or
-        after each update. Default is 'epoch'
-    interval : int, optional
-        This monitor should be called every ``interval`` epochs/updates.
-        Default is 1
-    name: str, optional
-        Name of this monitor. This name is used as a key in the trainer logs.
-        Default is 'MonitorAccuracy'
-    verbose: bool, optional
-        Specifies whether the logs of this monitor should be printed and
-        acts as a fallback verbosity for the used data iterator.
-        If not set it defaults to the verbosity setting of the trainer.
-
-    See Also
-    --------
-    MonitorLoss : monitor the overall loss of the network.
-    MonitorAccuracy : monitor the classification accuracy
-    """
-    def __init__(self, iter_name, output, targets_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
-        super(MonitorHammingScore, self).__init__(name, timescale, interval,
-                                                  verbose)
-        self.iter_name = iter_name
-        self.out_layer, _, self.out_name = output.partition('.')
-        self.out_name = self.out_name or 'default'
-        self.targets_name = targets_name
-        self.iter = None
-
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorHammingScore, self).start(net, stepper, verbose,
-                                               monitor_kwargs)
-        assert self.iter_name in monitor_kwargs
-        assert self.out_layer in net.layers
-        self.iter = monitor_kwargs[self.iter_name]
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        iterator = self.iter(verbose=self.verbose, handler=net.handler)
-        _h = net.handler
-        errors = 0
-        totals = 0
-        for _ in run_network(net, iterator):
-            net.forward_pass()
-            out = _h.get_numpy_copy(net.buffer[self.out_layer]
-                                    .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.Input
-                                       .outputs[self.targets_name])
-
-            out = out.reshape(out.shape[0], out.shape[1], -1)
-            target = target.reshape(target.shape[0], target.shape[1], -1)
-
-            errors += np.sum(np.logical_xor(out >= 0.5, target))
-            totals += np.prod(target.shape)
-
-        return 1.0 - errors / totals
 
 
 class VisualiseAccuracy(Hook):

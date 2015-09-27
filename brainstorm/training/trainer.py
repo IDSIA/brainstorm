@@ -126,7 +126,7 @@ class Trainer(Describable):
 
     def _start_hooks(self, net, named_data_iters):
         """Call the ::attr::`start()` methods for all the hooks."""
-        self.logs = {'training_loss': [float('NaN')]}
+        self.logs = {}
         for name, hook in self.hooks.items():
             try:
                 if hasattr(hook, 'start'):
