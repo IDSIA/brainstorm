@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 import numpy as np
 import h5py
 import json
@@ -347,12 +348,17 @@ class Network(Seedable):
             layer.backward_pass(self.buffer[layer_name])
         self.apply_gradient_modifiers()
 
-    def get_loss_value(self):
+    def get_loss_values(self):
         loss = 0.
+        losses = OrderedDict()
         for loss_layer_name in self.loss_layers:
-            loss += float(self.handler.get_numpy_copy(
+            l = float(self.handler.get_numpy_copy(
                 self.buffer[loss_layer_name].outputs.loss))
-        return loss
+            losses[loss_layer_name] = l
+            loss += l
+        if len(losses) > 1:
+            losses['total_loss'] = loss
+        return losses
 
     def get_context(self):
         return self._buffer_manager.get_context()

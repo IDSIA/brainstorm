@@ -9,6 +9,7 @@ from collections import OrderedDict
 from brainstorm.describable import Describable
 from brainstorm.training.trainer import run_network
 from brainstorm.utils import get_by_path
+from tools import evaluate
 
 
 class Hook(Describable):
@@ -339,118 +340,58 @@ class MonitorLoss(Hook):
         loss = []
         for _ in run_network(net, iterator):
             net.forward_pass()
-            loss.append(net.get_loss_value())
+            loss.append(net.get_loss_values())
         return np.mean(loss)
 
 
-class MonitorAccuracy(Hook):
+class MonitorScores(Hook):
     """
-    Monitor the classification accuracy of a given layer wrt. to given targets
-    using a given data iterator.
+    Monitor the losses and optionally several scores using a given data
+    iterator.
 
-    Parameters
-    ----------
-    iter_name : str
-        name of the data iterator to use (as specified in the train() call)
-    output : str
-        name of the output to use formatted like this:
-        LAYER_NAME[.OUTPUT_NAME]
-        Where OUTPUT_NAME defaults to 'default'
-    targets_name : str, optional
-        name of the targets (as specified in the InputLayer)
-        defaults to 'targets'
+    Args:
+        iter_name (str):
+            name of the data iterator to use (as specified in the train() call)
+        scorers (List[brainstorm.scorers.Scorer]):
+            List of Scorers to evaluate.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'MonitorScores'
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
 
-
-    Other Parameters
-    ----------------
-    timescale : {'epoch', 'update'}, optional
-        Specifies whether the Monitor should be called after each epoch or
-        after each update. Default is 'epoch'
-    interval : int, optional
-        This monitor should be called every ``interval`` epochs/updates.
-        Default is 1
-    name: str, optional
-        Name of this monitor. This name is used as a key in the trainer logs.
-        Default is 'MonitorAccuracy'
-    verbose: bool, optional
-        Specifies whether the logs of this monitor should be printed, and
-        acts as a fallback verbosity for the used data iterator.
-        If not set it defaults to the verbosity setting of the trainer.
-
-    See Also
-    --------
-    MonitorLoss : monitor the overall loss of the network.
-    MonitorHammingScore : monitor the Hamming score which is a generalization
-        of accuracy for multi-label classification tasks.
-
-    Notes
-    -----
-    Can be used both with integer and one-hot targets.
+    See Also:
+        MonitorLoss: monitor the overall loss of the network.
 
     """
-    def __init__(self, iter_name, output, targets_name='targets',
-                 mask_name='mask', timescale='epoch', interval=1,
+    def __init__(self, iter_name, scorers, timescale='epoch', interval=1,
                  name=None, verbose=None):
 
-        super(MonitorAccuracy, self).__init__(name, timescale, interval,
-                                              verbose)
+        super(MonitorScores, self).__init__(name, timescale, interval,
+                                            verbose)
         self.iter_name = iter_name
-        self.out_layer, _, self.out_name = output.partition('.')
-        self.out_name = self.out_name or 'default'
-        self.targets_name = targets_name
-        self.mask_name = mask_name
         self.iter = None
-        self.masked = False
+        self.scorers = scorers
 
     def start(self, net, stepper, verbose, named_data_iters):
-        super(MonitorAccuracy, self).start(net, stepper, verbose,
-                                           named_data_iters)
+        super(MonitorScores, self).start(net, stepper, verbose,
+                                         named_data_iters)
         assert self.iter_name in named_data_iters, \
             "{} >> {} is not present in monitor_kwargs. Remember to pass it " \
             "as kwarg to Trainer.train().".format(self.__name__,
                                                   self.iter_name)
-        assert self.out_layer in net.layers
         self.iter = named_data_iters[self.iter_name]
-        self.masked = self.mask_name in self.iter.data.keys()
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        iterator = self.iter(verbose=self.verbose, handler=net.handler)
-        _h = net.handler
-        errors = 0
-        totals = 0
-        loss = []
-        log = OrderedDict()
-        for _ in run_network(net, iterator):
-            net.forward_pass()
-            loss.append(net.get_loss_value())
-            out = _h.get_numpy_copy(net.buffer[self.out_layer]
-                                    .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.Input
-                                       .outputs[self.targets_name])
-
-            out = out.reshape(out.shape[0], out.shape[1], -1)
-            target = target.reshape(target.shape[0], target.shape[1], -1)
-
-            out_class = np.argmax(out, axis=2)
-            if target.shape[2] > 1:
-                target_class = np.argmax(target, axis=2)
-            else:
-                target_class = target[:, :, 0]
-
-            assert out_class.shape == target_class.shape
-
-            if self.masked:
-                mask = _h.get_numpy_copy(net.buffer.Input
-                                         .outputs[self.mask_name])[:, :, 0]
-                errors += np.sum((out_class != target_class) * mask)
-                totals += np.sum(mask)
-            else:
-                errors += np.sum(out_class != target_class)
-                totals += np.prod(target_class.shape)
-
-        log['accuracy'] = 1.0 - errors / totals
-        log['loss'] = np.mean(loss)
-        return log
+        return evaluate(net, self.iter, self.scorers, verbose=self.verbose)
 
 
 class MonitorHammingScore(Hook):
