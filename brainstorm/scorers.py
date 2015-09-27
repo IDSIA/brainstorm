@@ -44,3 +44,12 @@ class Hamming(Scorer):
         if mask is not None:
             correct *= mask
         return np.sum(correct)
+
+
+class MeanSquaredError(Scorer):
+    def __call__(self, true_labels, predicted, mask=None):
+        errors = (true_labels - predicted) ** 2
+        if mask is not None:
+            errors *= mask
+        return 0.5 * np.sum(errors)
+

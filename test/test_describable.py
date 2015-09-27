@@ -347,7 +347,8 @@ def test_describe_network():
         'handler': {'@type': 'NumpyHandler', 'dtype': 'float32'},
         'initializers': {'default': 1},
         'weight_modifiers': {},
-        'gradient_modifiers': {}
+        'gradient_modifiers': {},
+        'default_output': None
     }
 
 
@@ -389,7 +390,8 @@ def test_describe_trainer():
                 'priority': 2}},
         'stepper': {
             '@type': 'SgdStep',
-            'learning_rate': 0.7}
+            'learning_rate': 0.7},
+        'train_scorers': []
     }
 
 

@@ -392,28 +392,6 @@ class MonitorScores(Hook):
         return evaluate(net, self.iter, self.scorers, verbose=self.verbose)
 
 
-            out_class = np.argmax(out, axis=2)
-            if target.shape[2] > 1:
-                target_class = np.argmax(target, axis=2)
-            else:
-                target_class = target[:, :, 0]
-
-            assert out_class.shape == target_class.shape
-
-            if self.masked:
-                mask = _h.get_numpy_copy(net.buffer.Input
-                                         .outputs[self.mask_name])[:, :, 0]
-                errors += np.sum((out_class != target_class) * mask)
-                totals += np.sum(mask)
-            else:
-                errors += np.sum(out_class != target_class)
-                totals += np.prod(target_class.shape)
-
-        log['accuracy'] = 1.0 - errors / totals
-        log['loss'] = np.mean(loss)
-        return log
-
-
 class MonitorHammingScore(Hook):
     r"""
     Monitor the Hamming score of a given layer wrt. to given targets
