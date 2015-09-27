@@ -14,10 +14,11 @@ from brainstorm import hooks
 from brainstorm import layers
 from brainstorm import handlers
 from brainstorm.training import steppers
+from brainstorm import scorers
 
 __all__ = ['get_description', 'create_from_description', 'global_rnd',
            'Network', 'generate_architecture', 'Trainer',
            'initializers', 'data_iterators', 'value_modifiers', 'tools',
-           'hooks', 'layers', 'handlers', 'steppers']
+           'hooks', 'layers', 'handlers', 'steppers', 'scorers']
 
 __version__ = '0.1'

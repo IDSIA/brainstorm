@@ -61,7 +61,6 @@ class SgdStep(TrainingStep):
     def run(self):
         learning_rate = self.learning_rate_schedule()
         self.net.forward_pass(training_pass=True)
-        loss = self.net.get_loss_value()
         self.net.backward_pass()
         self.net.handler.mult_st(-learning_rate,
                                  self.net.buffer.gradients,
@@ -69,7 +68,6 @@ class SgdStep(TrainingStep):
         self.net.handler.add_tt(self.update,
                                 self.net.buffer.parameters,
                                 out=self.net.buffer.parameters)
-        return loss
 
     def __init_from_description__(self, description):
         self.learning_rate_schedule = get_schedule(self.learning_rate_schedule)
@@ -107,7 +105,6 @@ class MomentumStep(TrainingStep):
             learning_rate *= (1 - momentum)
 
         self.net.forward_pass(training_pass=True)
-        loss = self.net.get_loss_value()
         self.net.backward_pass()
 
         self.net.handler.mult_st(momentum,
@@ -119,7 +116,6 @@ class MomentumStep(TrainingStep):
         self.net.handler.add_tt(self.velocity,
                                 self.net.buffer.parameters,
                                 out=self.net.buffer.parameters)
-        return loss
 
     def __init_from_description__(self, description):
         self.learning_rate_schedule = get_schedule(self.learning_rate_schedule)
@@ -147,7 +143,6 @@ class NesterovStep(MomentumStep):
                                 self.net.buffer.parameters,
                                 out=self.net.buffer.parameters)
         self.net.forward_pass(training_pass=True)
-        loss = self.net.get_loss_value()
         self.net.backward_pass()
 
         self.net.handler.mult_add_st(-learning_rate,
@@ -156,4 +151,3 @@ class NesterovStep(MomentumStep):
         self.net.handler.mult_add_st(-learning_rate,
                                      self.net.buffer.gradients,
                                      self.net.buffer.parameters)
-        return loss

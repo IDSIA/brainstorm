@@ -26,8 +26,21 @@ class Scorer(Describable):
 class Accuracy(Scorer):
     def __call__(self, true_labels, predicted, mask=None):
         if predicted.shape[1] > 1:
-            predicted = predicted.argmax(1)
+            predicted = predicted.argmax(1).reshape(-1, 1)
         correct = predicted == true_labels
         if mask:
+            correct *= mask
+        return np.sum(correct)
+
+
+class Hamming(Scorer):
+    def __init__(self, threshold=0.5, out_name='', targets_name='targets',
+                 mask_name='', name=None):
+        super(Hamming, self).__init__(out_name, targets_name, mask_name, name)
+        self.threshold = threshold
+
+    def __call__(self, true_labels, predicted, mask=None):
+        correct = np.logical_xor(predicted < self.threshold, true_labels)
+        if mask is not None:
             correct *= mask
         return np.sum(correct)

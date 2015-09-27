@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import h5py
 
 import brainstorm as bs
-from brainstorm.handlers import PyCudaHandler
+#from brainstorm.handlers import PyCudaHandler
 from brainstorm.data_iterators import Minibatches
 import os
 
@@ -35,8 +35,8 @@ inp >> \
     bs.layers.Dropout(drop_prob=0.5) >> \
     out
 network = bs.Network.from_layer(out)
-
-network.set_memory_handler(PyCudaHandler(init_cudnn=False))
+network.default_output = 'out.output'
+#network.set_memory_handler(PyCudaHandler(init_cudnn=False))
 network.initialize(bs.initializers.Gaussian(0.01))
 network.set_weight_modifiers({"out": bs.value_modifiers.ConstrainL2Norm(1)})
 
@@ -44,11 +44,12 @@ network.set_weight_modifiers({"out": bs.value_modifiers.ConstrainL2Norm(1)})
 
 trainer = bs.Trainer(bs.steppers.MomentumStep(learning_rate=0.1, momentum=0.9),
                      double_buffering=False)
+trainer.train_scorers = [bs.scorers.Accuracy()]
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
-trainer.add_hook(bs.hooks.MonitorAccuracy('valid_getter', 'out.output',
-                                          name='validation',
-                                          verbose=True))
-trainer.add_hook(bs.hooks.SaveBestNetwork('validation.accuracy',
+trainer.add_hook(bs.hooks.MonitorScores('valid_getter',
+                                        [bs.scorers.Accuracy()],
+                                        name='validation'))
+trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
                                           filename='mnist_pi_best.hdf5',
                                           name='best weights',
                                           criterion='max'))

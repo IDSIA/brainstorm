@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import OrderedDict
 from brainstorm import layers
 from brainstorm.training.trainer import run_network
+from brainstorm.training.utils import (
+    gather_losses_and_scores, aggregate_losses_and_scores)
 
 __all__ = ['get_in_out_layers_for_classification', 'draw_network',
            'print_network_info', 'evaluate']
@@ -106,59 +107,17 @@ def print_network_info(network):
         print('-' * 80)
 
 
-def _flatten_all_but_last(a):
-    if a is None:
-        return None
-    return a.reshape(-1, a.shape[-1])
-
-import numpy as np
-
-
-def _weighted_average(errors):
-    errors = np.array(errors)
-    assert errors.ndim == 2 and errors.shape[1] == 2
-    return np.sum(errors[:, 1]) * errors[:, 0] / np.sum(errors[:, 0])
-
-
 def evaluate(net, iter, scorers=(), out_name='', targets_name='targets',
              mask_name=None, verbose=True):
     iterator = iter(verbose=verbose, handler=net.handler)
-    losses = OrderedDict()
+    scores = {scorer.__name__: [] for scorer in scorers}
     for n in net.get_loss_values():
-        losses[n] = []
+        scores[n] = []
 
-    log = {scorer.__name__: [] for scorer in scorers}
     for _ in run_network(net, iterator):
         net.forward_pass()
-        ls = net.get_loss_values()
-        for name, loss in ls:
-            losses[name].append(net._buffer_manager.batch_size, loss)
+        gather_losses_and_scores(
+            net, scorers, scores, out_name=out_name,
+            targets_name=targets_name, mask_name=mask_name)
 
-        for sc in scorers:
-            name = sc.__name__
-            predicted = net.get_output(sc.out_name) if sc.out_name\
-                else net.get_output(out_name)
-            true_labels = net.get_input(sc.targets_name) if sc.targets_name\
-                else net.get_input(targets_name)
-            mask = net.get_input(sc.mask_name) if sc.mask_name\
-                else (net.get_input(mask_name) if mask_name else None)
-
-            predicted = _flatten_all_but_last(predicted)
-            true_labels = _flatten_all_but_last(true_labels)
-            mask = _flatten_all_but_last(mask)
-            weight = mask.sum() if mask else predicted.shape[0]
-
-            log[name].append(weight, sc(true_labels, predicted, mask))
-
-    results = OrderedDict()
-    if len(losses) == 1:
-        results['loss'] = _weighted_average(list(losses.values())[0])
-    else:
-        results['losses'] = OrderedDict()
-        for name, loss in losses.items():
-            results['losses'][name] = _weighted_average(loss)
-
-    for sc in scorers:
-        results[sc.__name__] = sc.aggregate(log[sc.__name__])
-
-    return results
+    return aggregate_losses_and_scores(scores, net, scorers)

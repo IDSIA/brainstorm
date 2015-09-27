@@ -3,9 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import sys
-import threading
-import numpy as np
 from brainstorm.describable import Describable
+from brainstorm.training.utils import (
+    run_network, run_network_double_buffer, gather_losses_and_scores,
+    aggregate_losses_and_scores)
 
 
 class Trainer(Describable):
@@ -26,6 +27,7 @@ class Trainer(Describable):
         self.verbose = verbose
         self.double_buffering = double_buffering
         self.hooks = OrderedDict()
+        self.train_scorers = []
         self.current_epoch_nr = 0
         self.current_update_nr = 0
         self.logs = dict()
@@ -65,7 +67,9 @@ class Trainer(Describable):
         while True:
             self.current_epoch_nr += 1
             sys.stdout.flush()
-            train_loss = []
+            train_scores = {s.__name__: [] for s in self.train_scorers}
+            train_scores.update({n: [] for n in net.get_loss_values()})
+
             if self.verbose:
                 print('\n\n', 15 * '- ', "Epoch", self.current_epoch_nr,
                       15 * ' -')
@@ -73,12 +77,16 @@ class Trainer(Describable):
                                             handler=net.handler)
             for _ in run(net, iterator):
                 self.current_update_nr += 1
-                train_loss.append(self.stepper.run())
+                self.stepper.run()
+                gather_losses_and_scores(net, self.train_scorers, train_scores)
                 net.apply_weight_modifiers()
                 if self._emit_hooks(net, 'update'):
                     break
 
-            self._add_log('training_loss', np.mean(train_loss))
+            self._add_log('training',
+                          aggregate_losses_and_scores(train_scores, net,
+                                                      self.train_scorers))
+
             if self._emit_hooks(net, 'epoch'):
                 break
 
@@ -159,28 +167,3 @@ class Trainer(Describable):
                       .format(name, val))
             logs[name] = [] if name not in logs else logs[name]
             logs[name].append(val)
-
-
-def run_network_double_buffer(net, iterator):
-    def run_it(it):
-        try:
-            net.provide_external_data(next(it))
-        except StopIteration:
-            run_it.stop = True
-
-    run_it.stop = False
-
-    run_it(iterator)
-    i = 0
-    while not run_it.stop:
-        t = threading.Thread(target=run_it, args=(iterator,))
-        t.start()
-        yield i
-        t.join()
-        i += 1
-
-
-def run_network(net, iterator):
-    for i, data in enumerate(iterator):
-        net.provide_external_data(data)
-        yield i
