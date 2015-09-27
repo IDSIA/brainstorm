@@ -17,6 +17,13 @@ Trainer
     :inherited-members:
     :special-members: __init__
 
+
+Handler
+=======
+.. autoclass:: brainstorm.handlers.base_handler.Handler
+    :members:
+    :inherited-members:
+
 Describables
 ============
 .. automodule:: brainstorm.describable

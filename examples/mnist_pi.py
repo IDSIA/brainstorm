@@ -19,9 +19,9 @@ x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
 x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
 x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
-getter_tr = Minibatches(100, verbose=True, default=x_tr, targets=y_tr)
-getter_va = Minibatches(100, verbose=True, default=x_va, targets=y_va)
-getter_te = Minibatches(100, verbose=True, default=x_te, targets=y_te)
+getter_tr = bs.Minibatches(100, default=x_tr, targets=y_tr)
+getter_va = bs.Minibatches(100, default=x_va, targets=y_va)
+getter_te = bs.Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
@@ -57,5 +57,5 @@ trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("\nHighest accuracy on the validation set:",
+print("Best validation set accuracy: ",
       max(trainer.logs["validation"]["accuracy"]))

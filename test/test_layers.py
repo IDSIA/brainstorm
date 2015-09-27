@@ -109,7 +109,7 @@ def classification_layer(spec):
 
     spec['skip_inputs'] = ['targets']
     spec['skip_outputs'] = ['output']
-    spec['target'] = targets
+    spec['targets'] = targets
     return layer, spec
 
 

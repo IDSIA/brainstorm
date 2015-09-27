@@ -38,7 +38,7 @@ clean-docs:
 	$(MAKE) -C docs clean
 
 lint:
-	flake8 sacred
+	flake8 brainstorm
 
 test: clean-pyc clean-test
 	python setup.py test
@@ -47,7 +47,7 @@ test-all: clean-pyc
 	tox
 
 coverage: clean-pyc
-	coverage run --source sacred setup.py test
+	coverage run --source brainstorm setup.py test
 	coverage report -m
 	coverage html
 	xdg-open htmlcov/index.html

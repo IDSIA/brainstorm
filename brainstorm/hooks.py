@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from brainstorm.training.steppers import TrainingStep
 from brainstorm.structure.network import Network
 import numpy as np
 from six import string_types
@@ -35,6 +36,11 @@ class Hook(Describable):
             self.run_verbosity = verbose
         else:
             self.run_verbosity = self.verbose
+
+    def message(self, msg):
+        """Print an output message if :attr:`run_verbosity` is True."""
+        if self.run_verbosity:
+            print("{} >> {}".format(self.__name__, msg))
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         pass
@@ -81,19 +87,16 @@ class SaveBestNetwork(Hook):
         if best_idx == len(e) - 1:
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
-                if self.run_verbosity:
-                    print("{} >> {} improved. Saving network to {} ...".format(
-                          self.__name__, self.log_name, self.filename))
+                self.message("{} improved. Saving network to {} ...".
+                             format(self.log_name, self.filename))
                 net.save_as_hdf5(self.filename)
             else:
-                if self.run_verbosity:
-                    print("{} >> {} improved. Caching parameters ...".format(
-                          self.__name__, self.log_name))
+                self.message("{} improved. Caching parameters ...".
+                             format(self.log_name))
                 self.parameters = params
         elif self.run_verbosity:
-            print("{} >> Last saved parameters after epoch {} when {} was {}"
-                  "".format(self.__name__, best_idx, self.log_name,
-                            e[best_idx]))
+            self.message("Last saved parameters after epoch {} when {} was {}".
+                         format(best_idx, self.log_name, e[best_idx]))
 
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
@@ -254,8 +257,9 @@ class StopAfterEpoch(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         if epoch_nr >= self.max_epochs:
-            raise StopIteration("Maximum number of epochs ({}) reached."
-                                .format(self.max_epochs))
+            self.message("Stopping because the maximum number of epochs ({}) "
+                         "was reached.".format(self.max_epochs))
+            raise StopIteration()
 
 
 class EarlyStopper(Hook):
@@ -270,8 +274,9 @@ class EarlyStopper(Hook):
         e = get_by_path(logs, self.log_name)
         best_error_idx = np.argmin(e)
         if len(e) > best_error_idx + self.patience:
-            raise StopIteration("Error did not fall for %d epochs! Stopping."
-                                % self.patience)
+            self.message("Stopping because {} did not decrease for {} epochs.".
+                         format(self.log_name, self.patience))
+            raise StopIteration()
 
 
 class StopOnNan(Hook):
@@ -293,18 +298,18 @@ class StopOnNan(Hook):
         for log_name in self.logs_to_check:
             log = get_by_path(logs, log_name)
             if not np.all(np.isfinite(log)):
-                raise StopIteration("{} >> NaN or inf detected in {}"
-                                    .format(self.__name__, log_name))
+                self.message("NaN or inf detected in {}!".format(log_name))
+                raise StopIteration()
         if self.check_parameters:
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if not np.all(np.isfinite(params)):
-                raise StopIteration("{} >> NaN or inf detected in parameters!"
-                                    .format(self.__name__))
+                self.message("NaN or inf detected in parameters!")
+                raise StopIteration()
 
         if self.check_training_loss and logs['training_loss']:
             if not np.all(np.isfinite(logs['training_loss'][1:])):
-                raise StopIteration("{} >> NaN or inf detected in "
-                                    "training_loss!".format(self.__name__))
+                self.message("NaN or inf detected in training_loss!")
+                raise StopIteration()
 
 
 class InfoUpdater(Hook):
@@ -312,7 +317,6 @@ class InfoUpdater(Hook):
     def __init__(self, run, name=None):
         super(InfoUpdater, self).__init__(name, 'epoch', 1)
         self.run = run
-        self.__name__ = self.__class__.__name__ if name is None else name
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         info = self.run.info
@@ -386,6 +390,109 @@ class MonitorScores(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         return evaluate(net, self.iter, self.scorers, verbose=self.verbose)
+
+
+            out_class = np.argmax(out, axis=2)
+            if target.shape[2] > 1:
+                target_class = np.argmax(target, axis=2)
+            else:
+                target_class = target[:, :, 0]
+
+            assert out_class.shape == target_class.shape
+
+            if self.masked:
+                mask = _h.get_numpy_copy(net.buffer.Input
+                                         .outputs[self.mask_name])[:, :, 0]
+                errors += np.sum((out_class != target_class) * mask)
+                totals += np.sum(mask)
+            else:
+                errors += np.sum(out_class != target_class)
+                totals += np.prod(target_class.shape)
+
+        log['accuracy'] = 1.0 - errors / totals
+        log['loss'] = np.mean(loss)
+        return log
+
+
+class MonitorHammingScore(Hook):
+    r"""
+    Monitor the Hamming score of a given layer wrt. to given targets
+    using a given data iterator.
+
+    Hamming loss is defined as the fraction of the correct labels to the
+    total number of labels.
+
+
+    Parameters
+    ----------
+    iter_name : str
+        name of the data iterator to use (as specified in the train() call)
+    output : str
+        name of the output to use formatted like this:
+        LAYER_NAME[.OUTPUT_NAME]
+        Where OUTPUT_NAME defaults to 'default'
+    targets_name : str, optional
+        name of the targets (as specified in the Input)
+        defaults to 'targets'
+
+
+    Other Parameters
+    ----------------
+    timescale : {'epoch', 'update'}, optional
+        Specifies whether the Monitor should be called after each epoch or
+        after each update. Default is 'epoch'
+    interval : int, optional
+        This monitor should be called every ``interval`` epochs/updates.
+        Default is 1
+    name: str, optional
+        Name of this monitor. This name is used as a key in the trainer logs.
+        Default is 'MonitorAccuracy'
+    verbose: bool, optional
+        Specifies whether the logs of this monitor should be printed and
+        acts as a fallback verbosity for the used data iterator.
+        If not set it defaults to the verbosity setting of the trainer.
+
+    See Also
+    --------
+    MonitorLoss : monitor the overall loss of the network.
+    MonitorAccuracy : monitor the classification accuracy
+    """
+    def __init__(self, iter_name, output, targets_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        super(MonitorHammingScore, self).__init__(name, timescale, interval,
+                                                  verbose)
+        self.iter_name = iter_name
+        self.out_layer, _, self.out_name = output.partition('.')
+        self.out_name = self.out_name or 'default'
+        self.targets_name = targets_name
+        self.iter = None
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(MonitorHammingScore, self).start(net, stepper, verbose,
+                                               monitor_kwargs)
+        assert self.iter_name in monitor_kwargs
+        assert self.out_layer in net.layers
+        self.iter = monitor_kwargs[self.iter_name]
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        iterator = self.iter(verbose=self.verbose, handler=net.handler)
+        _h = net.handler
+        errors = 0
+        totals = 0
+        for _ in run_network(net, iterator):
+            net.forward_pass()
+            out = _h.get_numpy_copy(net.buffer[self.out_layer]
+                                    .outputs[self.out_name])
+            target = _h.get_numpy_copy(net.buffer.Input
+                                       .outputs[self.targets_name])
+
+            out = out.reshape(out.shape[0], out.shape[1], -1)
+            target = target.reshape(target.shape[0], target.shape[1], -1)
+
+            errors += np.sum(np.logical_xor(out >= 0.5, target))
+            totals += np.prod(target.shape)
+
+        return 1.0 - errors / totals
 
 
 class VisualiseAccuracy(Hook):
