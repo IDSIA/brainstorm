@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 import numpy as np
 import h5py
 import json
+import re
 
 from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
@@ -94,6 +96,33 @@ class Network(Seedable):
         self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
+        self.default_output = None
+
+    def get_output(self, out_name=''):
+        out_name = out_name if out_name else self.default_output
+        if not out_name:
+            raise KeyError(
+                'No output specified. Either pass an out_name to this function'
+                ' or set network.default_output to fix this.')
+        if not re.match(r'\w+\.\w+', out_name):
+            raise ValueError('Invalid out_name "{}". Should be of the form '
+                             '"LAYERNAME.OUT_NAME"'.format(out_name))
+        layername, _, output_name = out_name.partition('.')
+        if layername not in self.layers:
+            raise KeyError('Invalid layer name "{}". Available names are: {}'
+                           .format(layername, list(self.layers.keys())))
+        layer_buffer = self.buffer[layername]
+        if output_name not in layer_buffer.outputs:
+            raise KeyError('Invalid view name "{}". Available names are: {}'
+                           .format(output_name,
+                                   list(layer_buffer.outputs.keys())))
+
+        return self.handler.get_numpy_copy(layer_buffer.outputs[output_name])
+
+    def get_input(self, input_name):
+        return self.handler.get_numpy_copy(
+            self.buffer.Input.outputs[input_name])
+
 
     # -------------------------- Setup Methods --------------------------------
 
@@ -319,12 +348,17 @@ class Network(Seedable):
             layer.backward_pass(self.buffer[layer_name])
         self.apply_gradient_modifiers()
 
-    def get_loss_value(self):
+    def get_loss_values(self):
         loss = 0.
+        losses = OrderedDict()
         for loss_layer_name in self.loss_layers:
-            loss += float(self.handler.get_numpy_copy(
+            l = float(self.handler.get_numpy_copy(
                 self.buffer[loss_layer_name].outputs.loss))
-        return loss
+            losses[loss_layer_name] = l
+            loss += l
+        if len(losses) > 1:
+            losses['total_loss'] = loss
+        return losses
 
     def get_context(self):
         return self._buffer_manager.get_context()
