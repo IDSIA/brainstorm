@@ -6,7 +6,7 @@ import sys
 from brainstorm.utils import get_inheritors
 from brainstorm.structure.construction import ConstructionWrapper
 
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.layers.batch_normalization_layer import BatchNorm
 from brainstorm.layers.binomial_cross_entropy_layer import BinomialCrossEntropy
 from brainstorm.layers.classification_layer import Classification
@@ -38,7 +38,7 @@ def construction_layer_for(layer_impl):
     return partial(ConstructionWrapper.create, layer_name)
 
 
-for Layer in get_inheritors(LayerBaseImpl):
+for Layer in get_inheritors(BaseLayerImpl):
     layer_name = Layer.__name__[:-9]
     if layer_name not in CONSTRUCTION_LAYERS:
         CONSTRUCTION_LAYERS[layer_name] = construction_layer_for(Layer)

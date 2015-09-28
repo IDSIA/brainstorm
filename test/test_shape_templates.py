@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import pytest
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate
 from brainstorm.utils import ShapeValidationError
 
 
@@ -25,40 +25,40 @@ scales_with_batch_size_1 = [False, False, True, True, True, True]
 
 @pytest.mark.parametrize('shape, nr_dims', zip(shapes_1, nr_dims_1))
 def test_shape_templates1_nr_dims(shape, nr_dims):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.nr_dims == nr_dims
 
 
 @pytest.mark.parametrize('shape, nr_feature_dims',
                          zip(shapes_1, nr_feature_dims_1))
 def test_shape_templates1_nr_feature_dims(shape, nr_feature_dims):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.nr_feature_dims == nr_feature_dims
 
 
 @pytest.mark.parametrize('shape, feature_dims',
                          zip(shapes_1, feature_dims_1))
 def test_shape_templates1_nr_feature_dims(shape, feature_dims):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.feature_shape == feature_dims
 
 
 @pytest.mark.parametrize('shape, feature_size', zip(shapes_1, feature_size_1))
 def test_shape_templates1_feature_size(shape, feature_size):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.feature_size == feature_size
 
 
 @pytest.mark.parametrize('shape, scales_t', zip(shapes_1, scales_with_time_1))
 def test_shape_templates1_scales_with_time(shape, scales_t):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.scales_with_time == scales_t
 
 
 @pytest.mark.parametrize('shape, scales_b',
                          zip(shapes_1, scales_with_batch_size_1))
 def test_shape_templates1_scales_with_time(shape, scales_b):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.scales_with_batch_size == scales_b
 
 
@@ -78,34 +78,34 @@ scales_with_batch_size_2 = [False, False, True, True, True, True]
 
 @pytest.mark.parametrize('shape, nr_dims', zip(shapes_2, nr_dims_2))
 def test_shape_templates2_nr_dims(shape, nr_dims):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.nr_dims == nr_dims
 
 
 @pytest.mark.parametrize('shape, nr_feature_dims',
                          zip(shapes_2, nr_feature_dims_2))
 def test_shape_templates2_nr_feature_dims(shape, nr_feature_dims):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.nr_feature_dims == nr_feature_dims
 
 
 @pytest.mark.parametrize('shape', shapes_2)
 def test_shape_templates2_feature_size(shape):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     with pytest.raises(TypeError):
         _ = st.feature_size
 
 
 @pytest.mark.parametrize('shape, scales_t', zip(shapes_2, scales_with_time_2))
 def test_shape_templates2_scales_with_time(shape, scales_t):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.scales_with_time == scales_t
 
 
 @pytest.mark.parametrize('shape, scales_b',
                          zip(shapes_2, scales_with_batch_size_2))
 def test_shape_templates2_scales_with_time(shape, scales_b):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.scales_with_batch_size == scales_b
 
 
@@ -120,35 +120,35 @@ scales_with_batch_size_3 = [False, True, True]
 
 @pytest.mark.parametrize('shape', shapes_3)
 def test_shape_templates3_nr_dims(shape):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     with pytest.raises(TypeError):
         _ = st.nr_dims
 
 
 @pytest.mark.parametrize('shape', shapes_3)
 def test_shape_templates3_nr_feature_dims(shape):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     with pytest.raises(TypeError):
         _ = st.nr_feature_dims
 
 
 @pytest.mark.parametrize('shape', shapes_3)
 def test_shape_templates3_feature_size(shape):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     with pytest.raises(TypeError):
         _ = st.feature_size
 
 
 @pytest.mark.parametrize('shape, scales_t', zip(shapes_3, scales_with_time_3))
 def test_shape_templates3_scales_with_time(shape, scales_t):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.scales_with_time == scales_t
 
 
 @pytest.mark.parametrize('shape, scales_b',
                          zip(shapes_3, scales_with_batch_size_3))
 def test_shape_templates3_scales_with_time(shape, scales_b):
-    st = ShapeTemplate(*shape)
+    st = StructureTemplate(*shape)
     assert st.scales_with_batch_size == scales_b
 
 
@@ -183,7 +183,7 @@ illegal_shapes = [
 @pytest.mark.parametrize('shape', illegal_shapes)
 def test_illegal_shape_template_raise(shape):
     with pytest.raises(ShapeValidationError):
-        st = ShapeTemplate(*shape)
+        st = StructureTemplate(*shape)
 
 
 @pytest.mark.parametrize('shape, expected', [
@@ -199,7 +199,7 @@ def test_illegal_shape_template_raise(shape):
     [(), False],
 ])
 def test_shape_template_matches1(shape, expected):
-    st = ShapeTemplate('T', 'B', 1, 3)
+    st = StructureTemplate('T', 'B', 1, 3)
     assert st.matches(shape) == expected
 
 
@@ -217,10 +217,10 @@ def test_shape_template_matches1(shape, expected):
     [(), False],
 ])
 def test_shape_template_matches2(shape, expected):
-    st = ShapeTemplate('T', 'B', 'F', 'F')
+    st = StructureTemplate('T', 'B', 'F', 'F')
     assert st.matches(shape) == expected
     try:
-        assert st.matches(ShapeTemplate(*shape)) == expected
+        assert st.matches(StructureTemplate(*shape)) == expected
     except ShapeValidationError:
         pass
 
@@ -239,10 +239,10 @@ def test_shape_template_matches2(shape, expected):
     [(), False],
 ])
 def test_shape_template_matches3(shape, expected):
-    st = ShapeTemplate('T', 'B', '...')
+    st = StructureTemplate('T', 'B', '...')
     assert st.matches(shape) == expected
     try:
-        assert st.matches(ShapeTemplate(*shape)) == expected
+        assert st.matches(StructureTemplate(*shape)) == expected
     except ShapeValidationError:
         pass
 
@@ -258,9 +258,9 @@ def test_shape_template_matches3(shape, expected):
     [(), False],
 ])
 def test_shape_template_matches4(shape, expected):
-    st = ShapeTemplate(1, 2, 7)
+    st = StructureTemplate(1, 2, 7)
     assert st.matches(shape) == expected
     try:
-        assert st.matches(ShapeTemplate(*shape)) == expected
+        assert st.matches(StructureTemplate(*shape)) == expected
     except ShapeValidationError:
         pass
