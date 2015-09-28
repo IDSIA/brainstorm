@@ -4,21 +4,30 @@
 from __future__ import division, print_function, unicode_literals
 import itertools
 import numpy as np
-from brainstorm.handlers import NumpyHandler, PyCudaHandler
+import pytest
+from brainstorm.optional import has_pycuda, has_cudnn
+from brainstorm.handlers import NumpyHandler
+
+non_default_handlers = []
+handler_ids = []
+if has_pycuda:
+    from brainstorm.handlers import PyCudaHandler
+    non_default_handlers.append(PyCudaHandler(init_cudnn=has_cudnn))
+    handler_ids.append("PyCudaHandler")
 
 # np.random.seed(1234)
 ref_dtype = np.float32
-ref = NumpyHandler(np.float32)
-handler = PyCudaHandler()
+ref = NumpyHandler(ref_dtype)
 some_2d_shapes = ((1, 1), (4, 1), (1, 4), (5, 5), (3, 4), (4, 3))
 some_nd_shapes = ((1, 1, 4), (1, 1, 3, 3), (3, 4, 2, 1))
 
 np.set_printoptions(linewidth=150)
 
 
-def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
-    ref_op(*ref_args)
-    op(*args)
+def operation_check(handler, op_name, ref_args, ignored_args=(), atol=1e-8):
+    args = get_args_from_ref_args(handler, ref_args)
+    getattr(ref, op_name)(*ref_args)
+    getattr(handler, op_name)(*args)
     check_list = []
     for i, (ref_arg, arg) in enumerate(zip(ref_args, args)):
         if i in ignored_args:
@@ -44,9 +53,9 @@ def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
             if not check:
                 print("-" * 40)
                 print(arg)
-                print("Check failed for argument number", i)
-                print("\nReference (expected) array:\n", ref_arg)
-                print("\nObtained array:\n", arg)
+                print("Check failed for argument number %d:" % i)
+                print("\nReference (expected) value:\n", ref_arg)
+                print("\nObtained value:\n", arg)
                 d = ref_arg.ravel() - arg_ref.ravel()
                 print("Frobenius Norm of differences: ", np.sum(d*d))
         # print("Check was ", check)
@@ -56,7 +65,7 @@ def operation_check(ref_op, op, ref_args, args, ignored_args=(), atol=1e-8):
         return True
 
 
-def get_args_from_ref_args(ref_args):
+def get_args_from_ref_args(handler, ref_args):
     args = []
     for ref_arg in ref_args:
         if type(ref_arg) is ref.array_type:
@@ -74,7 +83,8 @@ def get_random_arrays(shapes=some_2d_shapes, dtype=ref_dtype):
     return arrays
 
 
-def test_sum_t():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_sum_t(handler):
     list_a = get_random_arrays()
     list_axis = [0, 1, None]
     for a, axis in itertools.product(list_a, list_axis):
@@ -86,11 +96,11 @@ def test_sum_t():
             out = np.array([0.], dtype=ref_dtype).reshape(tuple())
         ref_args = (a, axis, out)
 
-        assert operation_check(ref.sum_t, handler.sum_t, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'sum_t', ref_args)
 
 
-def test_dot_mm():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_dot_mm(handler):
     list_a = get_random_arrays()
     list_b = get_random_arrays()
     list_b = [b.T.copy() for b in list_b]
@@ -99,11 +109,11 @@ def test_dot_mm():
         out = np.zeros((a.shape[0], a.shape[0]), dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.dot_mm, handler.dot_mm, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'dot_mm', ref_args)
 
 
-def test_dot_add_mm():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_dot_add_mm(handler):
     list_a = get_random_arrays()
     list_b = get_random_arrays()
     list_b = [b.T.copy() for b in list_b]
@@ -112,11 +122,11 @@ def test_dot_add_mm():
         out = np.random.randn(a.shape[0], a.shape[0]).astype(ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.dot_add_mm, handler.dot_add_mm, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'dot_add_mm', ref_args)
 
 
-def test_mult_tt():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_mult_tt(handler):
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -124,11 +134,11 @@ def test_mult_tt():
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.mult_tt, handler.mult_tt, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'mult_tt', ref_args)
 
 
-def test_mult_add_tt():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_mult_add_tt(handler):
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -136,11 +146,11 @@ def test_mult_add_tt():
         out = np.random.randn(*a.shape).astype(ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.mult_add_tt, handler.mult_add_tt, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'mult_add_tt', ref_args)
 
 
-def test_mult_st():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_mult_st(handler):
     list_a = [0, 0.5, -1]
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -148,11 +158,11 @@ def test_mult_st():
         out = np.zeros_like(b, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.mult_st, handler.mult_st, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'mult_st', ref_args)
 
 
-def test_mult_add_st():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_mult_add_st(handler):
     list_a = [0, 0.5, -1]
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -160,11 +170,11 @@ def test_mult_add_st():
         out = np.random.randn(*b.shape).astype(ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.mult_add_st, handler.mult_add_st, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'mult_add_st', ref_args)
 
 
-def test_add_tt():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_add_tt(handler):
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -172,11 +182,11 @@ def test_add_tt():
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.add_tt, handler.add_tt, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'add_tt', ref_args)
 
 
-def test_add_st():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_add_st(handler):
     list_a = [0, 0.5, -1]
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -184,11 +194,11 @@ def test_add_st():
         out = np.zeros_like(b, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.add_st, handler.add_st, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'add_st', ref_args)
 
 
-def test_subtract_tt():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_subtract_tt(handler):
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -196,11 +206,11 @@ def test_subtract_tt():
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.subtract_tt, handler.subtract_tt, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'subtract_tt', ref_args)
 
 
-def test_subtract_mv():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_subtract_mv(handler):
     # Only checking with row vectors
     list_a = get_random_arrays()
     list_b = get_random_arrays()
@@ -210,11 +220,11 @@ def test_subtract_mv():
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.subtract_mv, handler.subtract_mv, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'subtract_mv', ref_args)
 
 
-def test_add_mv():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_add_mv(handler):
     # Only checking with row vectors
     list_a = get_random_arrays()
     list_b = get_random_arrays()
@@ -224,12 +234,20 @@ def test_add_mv():
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.add_mv, handler.add_mv, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'add_mv', ref_args)
 
 
-def test_broadcast_features_t():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_broadcast_features_t(handler):
     shapes_to_check = [[1, 1, 1], [1, 2, 1], [3, 2, 1], [4, 1, 1]]
+
+    list_a = get_random_arrays(shapes_to_check)
+    sizes_to_expand = [1, 3]
+    for a, size in itertools.product(list_a, sizes_to_expand):
+        out = np.zeros(a.shape[:2] + (size,), dtype=ref_dtype)
+        ref_args = (a, out)
+
+    assert operation_check(handler, 'broadcast_features_t', ref_args)
 
     list_a = get_random_arrays(shapes_to_check)
     shapes_to_add = [(1,), (2, 2), (3, 1, 1)]
@@ -238,12 +256,11 @@ def test_broadcast_features_t():
         out = np.zeros(a.shape + shape_to_add, dtype=ref_dtype)
         ref_args = (a, out)
 
-        assert operation_check(ref.broadcast_features_t,
-                               handler.broadcast_features_t, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'broadcast_features_t', ref_args)
 
 
-def test_clip_t():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_clip_t(handler):
     list_a = get_random_arrays(some_nd_shapes)
     list_clip_min = [-0.4, 0, 0.2]
     list_clip_max = [-0.1, 0, 0.3]
@@ -253,32 +270,32 @@ def test_clip_t():
         if clip_max >= clip_min:
             out = np.zeros_like(a, dtype=ref_dtype)
             ref_args = (a, clip_min, clip_max, out)
-            assert operation_check(ref.clip_t, handler.clip_t, ref_args,
-                                   get_args_from_ref_args(ref_args))
+            assert operation_check(handler, 'clip_t', ref_args)
 
 
-def test_log_t():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_log_t(handler):
     list_a = get_random_arrays(some_nd_shapes)
 
     for a in list_a:
         a += 10  # to remove negatives
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, out)
-        assert operation_check(ref.log_t, handler.log_t, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'log_t', ref_args)
 
 
-def test_sign_t():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_sign_t(handler):
     list_a = get_random_arrays(some_nd_shapes)
     list_a += [np.random.random_integers(-2, 2, (3, 3))]
     for a in list_a:
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, out)
-        assert operation_check(ref.sign_t, handler.sign_t, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'sign_t', ref_args)
 
 
-def test_divide_tt():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_divide_tt(handler):
     list_a = get_random_arrays(some_2d_shapes + some_nd_shapes)
     list_b = get_random_arrays(some_2d_shapes + some_nd_shapes)
 
@@ -286,11 +303,11 @@ def test_divide_tt():
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.divide_tt, handler.divide_tt, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'divide_tt', ref_args)
 
 
-def test_divide_mv():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_divide_mv(handler):
     # Only checking with row vectors
     list_a = get_random_arrays()
     list_b = get_random_arrays()
@@ -300,28 +317,27 @@ def test_divide_mv():
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.divide_mv, handler.divide_mv, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'divide_mv', ref_args)
 
 
-def test_mult_mv():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_mult_mv(handler):
     list_a = get_random_arrays()
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
-    print("======================================")
-    print("Testing mult_mv() for with row vectors")
-    print("======================================")
+    print("==================================")
+    print("Testing mult_mv() with row vectors")
+    print("==================================")
     for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(ref.mult_mv, handler.mult_mv, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'mult_mv', ref_args)
 
-    print("======================================")
-    print("Testing mult_mv() for with column vectors")
-    print("======================================")
+    print("=====================================")
+    print("Testing mult_mv() with column vectors")
+    print("=====================================")
     list_b = get_random_arrays()
     list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
     for a, b in zip(list_a, list_b):
@@ -330,30 +346,39 @@ def test_mult_mv():
         # print("b:\n", b)
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
-
-        assert operation_check(ref.mult_mv, handler.mult_mv, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'mult_mv', ref_args)
 
 
-def test_binarize_v():  # TODO
-    pass
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_binarize_v(handler):
+    v = np.random.random_integers(0, 4, (10, 1)).astype(ref_dtype)
+    out = np.random.random_sample((10, 5))
+    ref_args = (v, out)
+    assert operation_check(handler, 'binarize_v', ref_args)
 
 
-def test_index_m_by_v():  # TODO
-    pass
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_index_m_by_v(handler):
+    m_list = get_random_arrays()
+    for m in m_list:
+        v = np.random.random_integers(0, m.shape[1] - 1, (m.shape[0], 1))
+        out = np.random.random_sample(v.shape)
+        ref_args = (m, v, out)
+        assert operation_check(handler, 'index_m_by_v', ref_args)
 
 
-def test_sigmoid():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_sigmoid(handler):
     list_a = get_random_arrays(some_nd_shapes)
 
     for a in list_a:
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, out)
-        assert operation_check(ref.sigmoid, handler.sigmoid, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'sigmoid', ref_args)
 
 
-def test_sigmoid_deriv():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_sigmoid_deriv(handler):
     list_x = get_random_arrays(some_nd_shapes)
     list_y = get_random_arrays(some_nd_shapes)
     list_dy = get_random_arrays(some_nd_shapes)
@@ -361,21 +386,21 @@ def test_sigmoid_deriv():
     for x, y, dy in zip(list_x, list_y, list_dy):
         dx = np.zeros_like(x, dtype=ref_dtype)
         ref_args = (x, y, dy, dx)
-        assert operation_check(ref.sigmoid_deriv, handler.sigmoid_deriv,
-                               ref_args, get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'sigmoid_deriv', ref_args)
 
 
-def test_tanh():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_tanh(handler):
     list_a = get_random_arrays(some_nd_shapes)
 
     for a in list_a:
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, out)
-        assert operation_check(ref.tanh, handler.tanh, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'tanh', ref_args)
 
 
-def test_tanh_deriv():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_tanh_deriv(handler):
     list_x = get_random_arrays(some_nd_shapes)
     list_y = get_random_arrays(some_nd_shapes)
     list_dy = get_random_arrays(some_nd_shapes)
@@ -383,21 +408,21 @@ def test_tanh_deriv():
     for x, y, dy in zip(list_x, list_y, list_dy):
         dx = np.zeros_like(x, dtype=ref_dtype)
         ref_args = (x, y, dy, dx)
-        assert operation_check(ref.tanh_deriv, handler.tanh_deriv,
-                               ref_args, get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'tanh_deriv', ref_args)
 
 
-def test_rel():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_rel(handler):
     list_a = get_random_arrays(some_nd_shapes)
 
     for a in list_a:
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, out)
-        assert operation_check(ref.rel, handler.rel, ref_args,
-                               get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'rel', ref_args)
 
 
-def test_rel_deriv():
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_rel_deriv(handler):
     list_x = get_random_arrays(some_nd_shapes)
     list_y = get_random_arrays(some_nd_shapes)
     list_dy = get_random_arrays(some_nd_shapes)
@@ -405,11 +430,12 @@ def test_rel_deriv():
     for x, y, dy in zip(list_x, list_y, list_dy):
         dx = np.zeros_like(x, dtype=ref_dtype)
         ref_args = (x, y, dy, dx)
-        assert operation_check(ref.rel_deriv, handler.rel_deriv,
-                               ref_args, get_args_from_ref_args(ref_args))
+        assert operation_check(handler, 'rel_deriv', ref_args)
 
 
-def test_conv2d_forward():
+@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_conv2d_forward(handler):
     img_shapes = [(1, 1, 3, 3), (3, 1, 32, 32), (2, 3, 6, 4), (1, 2, 3, 4)]
     w_shapes = [(1, 1, 1), (3, 3, 3), (6, 2, 2), (2, 1, 3)]
 
@@ -428,17 +454,16 @@ def test_conv2d_forward():
                            dtype=ref_dtype)
             ref_args = (x, w, b, out, padding, stride)
 
-            passed = operation_check(ref.conv2d_forward_batch,
-                                     handler.conv2d_forward_batch,
-                                     ref_args,
-                                     get_args_from_ref_args(ref_args),
+            passed = operation_check(handler, 'conv2d_forward_batch', ref_args,
                                      atol=1e-6)
             if not passed:
                 print(x.shape, w.shape)
             assert passed
 
 
-def test_conv2d_backward():
+@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_conv2d_backward(handler):
     img_shapes = [(1, 1, 3, 3), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 3, 4)]
     w_shapes = [(3, 3, 3), (6, 4, 5), (2, 5, 3)]
 
@@ -461,17 +486,16 @@ def test_conv2d_backward():
 
             ref_args = (x, w, padding, stride, i_deltas,
                         o_deltas, w_deltas, b_deltas)
-            passed = operation_check(ref.conv2d_backward_batch,
-                                     handler.conv2d_backward_batch,
-                                     ref_args,
-                                     get_args_from_ref_args(ref_args),
-                                     atol=1e-4)
+            passed = operation_check(handler, 'conv2d_backward_batch',
+                                     ref_args, atol=1e-4)
             if not passed:
                 print(x.shape, w.shape)
             assert passed
 
 
-def test_maxpool2d_forward():
+@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_maxpool2d_forward(handler):
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
     window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
@@ -488,17 +512,17 @@ def test_maxpool2d_forward():
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
                     argmax = np.zeros(out_shape + (2, ), dtype=ref_dtype)
                     ref_args = (x, window, outputs, padding, strides, argmax)
-                    passed = operation_check(
-                        ref.maxpool2d_forward_batch,
-                        handler.maxpool2d_forward_batch,
-                        ref_args, get_args_from_ref_args(ref_args),
-                        ignored_args=[5])
+                    passed = operation_check(handler,
+                                             'maxpool2d_forward_batch',
+                                             ref_args, ignored_args=[5])
                     if not passed:
                         print(x.shape, window, outputs.shape, padding, strides)
                     assert passed
 
 
-def test_maxpool2d_backward():
+@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_maxpool2d_backward(handler):
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
     window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
@@ -524,17 +548,18 @@ def test_maxpool2d_backward():
                     ref_args = (x, window, outputs, padding, strides, argmax,
                                 i_deltas, o_deltas)
 
-                    passed = operation_check(
-                        ref.maxpool2d_backward_batch,
-                        handler.maxpool2d_backward_batch,
-                        ref_args, get_args_from_ref_args(ref_args),
-                        ignored_args=[5], atol=1e-6)
+                    passed = operation_check(handler,
+                                             'maxpool2d_backward_batch',
+                                             ref_args, ignored_args=[5],
+                                             atol=1e-6)
                     if not passed:
                         print(x.shape, window, outputs.shape, padding, strides)
                     assert passed
 
 
-def test_avgpool2d_forward():
+@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_avgpool2d_forward(handler):
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
     window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
@@ -550,17 +575,17 @@ def test_avgpool2d_forward():
                         (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
                     ref_args = (x, window, outputs, padding, strides)
-                    passed = operation_check(
-                        ref.avgpool2d_forward_batch,
-                        handler.avgpool2d_forward_batch,
-                        ref_args, get_args_from_ref_args(ref_args),
-                        atol=1e-6)
+                    passed = operation_check(handler,
+                                             'avgpool2d_forward_batch',
+                                             ref_args, atol=1e-6)
                     if not passed:
                         print(x.shape, window, outputs.shape, padding, strides)
                     assert passed
 
 
-def test_avgpool2d_backward():
+@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_avgpool2d_backward(handler):
     img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
     window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
@@ -583,11 +608,9 @@ def test_avgpool2d_backward():
                                                 strides)
                     ref_args = (x, window, outputs, padding, strides,
                                 i_deltas, o_deltas)
-                    passed = operation_check(
-                        ref.avgpool2d_backward_batch,
-                        handler.avgpool2d_backward_batch,
-                        ref_args, get_args_from_ref_args(ref_args),
-                        atol=1e-6)
+                    passed = operation_check(handler,
+                                             'avgpool2d_backward_batch',
+                                             ref_args, atol=1e-6)
                     if not passed:
                         print(x.shape, window, outputs.shape, padding, strides)
                     assert passed

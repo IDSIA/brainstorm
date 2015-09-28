@@ -11,7 +11,7 @@ from brainstorm.describable import Describable
 class Trainer(Describable):
     """
     Trainer objects organize the process of training a network. They can employ
-    different training methods (Steppers) and call Hooks.
+    different training methods (``Steppers``) and call ``Hooks``.
     """
     __undescribed__ = {
         'current_epoch_nr': 0,
@@ -22,6 +22,13 @@ class Trainer(Describable):
     __default_values__ = {'verbose': True}
 
     def __init__(self, stepper, verbose=True, double_buffering=True):
+        """Create a new Trainer.
+
+        Args:
+            stepper (object[brainstorm.training.steppers.TrainingStep]):
+            verbose (bool):
+            double_buffering (bool):
+        """
         self.stepper = stepper
         self.verbose = verbose
         self.double_buffering = double_buffering
@@ -33,11 +40,19 @@ class Trainer(Describable):
     def add_hook(self, hook):
         """Add a hook to this trainer.
 
-        Note that hooks will be called in the order that they are added.
+        Hooks add a variety of functionality to the trainer and can be
+        called after every specified number of parameter updates or epochs.
+        See documentation for ::class::`Hook` for more details.
 
-        :param hook: Any Hook object that should be called by this trainer.
-        :type hook: brainstorm.hooks.Hook
-        :raises ValueError: If a hook with the same name has already been added
+        Note:
+            During training, hooks will be called in the same order that they
+            were added. This should be kept in mind when using a hook which
+            relies on another hook having been called.
+        Args:
+            hook (brainstorm.hooks.Hook): Any ::class::`Hook` object that
+                                          should be called by this trainer.
+        Raises:
+            ValueError: If a hook with the same name has already been added.
         """
         if hook.__name__ in self.hooks:
             raise ValueError("Hook '{}' already exists.".format(hook.__name__))
@@ -45,8 +60,9 @@ class Trainer(Describable):
         hook.priority = max([h.priority for h in self.hooks.values()]) + 1
 
     def train(self, net, training_data_getter, **hook_kwargs):
+        """Train a network using a data iterator and hook arguments."""
         if self.verbose:
-            print('\n\n', 15 * '- ', "Before Training", 15 * ' -')
+            print('\n\n', 10 * '- ', "Before Training", 10 * ' -')
         assert set(training_data_getter.data.keys()) == set(
             net.buffer.Input.outputs.keys()), \
             "The data names provided by the training data iterator {} do not "\
@@ -55,7 +71,7 @@ class Trainer(Describable):
                 net.buffer.Input.outputs.keys())
         self.stepper.start(net)
         self._start_hooks(net, hook_kwargs)
-        if self._emit_hooks(net, 'epoch'):
+        if self._emit_hooks(net, 'epoch') or self._emit_hooks(net, 'update'):
             return
 
         run = (run_network_double_buffer if self.double_buffering else
@@ -66,8 +82,8 @@ class Trainer(Describable):
             sys.stdout.flush()
             train_loss = []
             if self.verbose:
-                print('\n\n', 15 * '- ', "Epoch", self.current_epoch_nr,
-                      15 * ' -')
+                print('\n\n', 12 * '- ', "Epoch", self.current_epoch_nr,
+                      12 * ' -')
             iterator = training_data_getter(verbose=self.verbose,
                                             handler=net.handler)
             for _ in run(net, iterator):
@@ -82,8 +98,7 @@ class Trainer(Describable):
                 break
 
     def __init_from_description__(self, description):
-        # recover the order of the Hooks from their priorities
-        # and set their names
+        """Recover the hooks in order of priority and set their names."""
         def get_priority(x):
             return getattr(x[1], 'priority', 0)
         ordered_mon = sorted(self.hooks.items(), key=get_priority)
@@ -93,6 +108,7 @@ class Trainer(Describable):
             mon.__name__ = name
 
     def _start_hooks(self, net, hook_kwargs):
+        """Call the ::attr::`start()` methods for all the hooks."""
         self.logs = {'training_loss': [float('NaN')]}
         for name, hook in self.hooks.items():
             try:
@@ -104,6 +120,7 @@ class Trainer(Describable):
                 raise
 
     def _emit_hooks(self, net, timescale):
+        """Call the hooks which should be called at this timescale."""
         should_stop = False
         count = self.current_epoch_nr if timescale == 'epoch' else \
             self.current_update_nr
@@ -119,20 +136,21 @@ class Trainer(Describable):
         return should_stop
 
     def _call_hook(self, hook, net):
+        """Call a hook and check if raises a stopping signal."""
         try:
             return hook(epoch_nr=self.current_epoch_nr,
                         update_nr=self.current_update_nr,
                         net=net,
                         stepper=self.stepper, logs=self.logs), False
         except StopIteration as err:
-            print(">> Stopping because:", err)
             return getattr(err, 'value', None), True
-        except Exception:
+        except Exception as e:
             print('An error occurred while calling the "{}" hook:'
                   .format(hook.__name__), file=sys.stderr)
-            raise
+            raise e
 
     def _add_log(self, name, val, verbose=None, logs=None, indent=0):
+        """Accumulate the logs (possibly a nested dictionary) recursively."""
         if val is None:
             return
 
