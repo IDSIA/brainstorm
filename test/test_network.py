@@ -2,7 +2,8 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm import Network, Gaussian
+from brainstorm import Network
+from brainstorm.initializers import Gaussian
 from brainstorm.layers import Input, Rnn, Lstm
 import numpy as np
 import pytest

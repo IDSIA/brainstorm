@@ -3,7 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 import pytest
-from brainstorm import (Network, Gaussian, Trainer, SgdStep, Undivided)
+from brainstorm import Network
+from brainstorm.training import Trainer, SgdStep
+from brainstorm.initializers import Gaussian
+from brainstorm.data_iterators import Undivided
 from brainstorm.layers import *
 from brainstorm.hooks import StopAfterEpoch
 # from brainstorm.handlers.pycuda_handler import PyCudaHandler
@@ -48,4 +51,4 @@ def test_learn_xor_function():
     print('Rounded output:', np.round(out.flatten()))
     print('Targets       :', targets.flatten())
     assert np.all(np.round(out) == targets)
-    assert min(tr.logs['training_loss'][1:]) < 0.5
+    assert min(tr.logs['training']['Loss']) < 0.5
