@@ -347,7 +347,8 @@ def test_describe_network():
         'handler': {'@type': 'NumpyHandler', 'dtype': 'float32'},
         'initializers': {'default': 1},
         'weight_modifiers': {},
-        'gradient_modifiers': {}
+        'gradient_modifiers': {},
+        'default_output': None
     }
 
 
@@ -366,7 +367,7 @@ def test_get_network_from_description():
 # ################# test describing a Trainer #################################
 
 def test_describe_trainer():
-    tr = bs.Trainer(bs.steppers.SgdStep(learning_rate=0.7),
+    tr = bs.Trainer(bs.training.SgdStep(learning_rate=0.7),
                     double_buffering=False, verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
@@ -389,12 +390,13 @@ def test_describe_trainer():
                 'priority': 2}},
         'stepper': {
             '@type': 'SgdStep',
-            'learning_rate': 0.7}
+            'learning_rate': 0.7},
+        'train_scorers': []
     }
 
 
 def test_recreate_trainer_from_description():
-    tr = bs.Trainer(bs.steppers.SgdStep(learning_rate=0.7),
+    tr = bs.Trainer(bs.training.SgdStep(learning_rate=0.7),
                     double_buffering=False, verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
@@ -407,5 +409,5 @@ def test_recreate_trainer_from_description():
     assert tr2.double_buffering is False
     assert list(tr2.hooks.keys()) == ['StopAfterEpoch', 'StopOnNan']
     assert tr2.hooks['StopAfterEpoch'].max_epochs == 23
-    assert isinstance(tr2.stepper, bs.steppers.SgdStep)
+    assert isinstance(tr2.stepper, bs.training.SgdStep)
     assert tr2.stepper.learning_rate == 0.7

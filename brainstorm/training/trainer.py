@@ -3,9 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import sys
-import threading
-import numpy as np
 from brainstorm.describable import Describable
+from brainstorm.training.utils import run_network, run_network_double_buffer
+from brainstorm.scorers import (
+    gather_losses_and_scores, aggregate_losses_and_scores)
 
 
 class Trainer(Describable):
@@ -17,6 +18,7 @@ class Trainer(Describable):
         'current_epoch_nr': 0,
         'current_update_nr': 0,
         'logs': {},
+        'results': {},
         'failed_hooks': {}
     }
     __default_values__ = {'verbose': True}
@@ -33,9 +35,11 @@ class Trainer(Describable):
         self.verbose = verbose
         self.double_buffering = double_buffering
         self.hooks = OrderedDict()
+        self.train_scorers = []
         self.current_epoch_nr = 0
         self.current_update_nr = 0
-        self.logs = dict()
+        self.logs = {}
+        self.results = {}
 
     def add_hook(self, hook):
         """Add a hook to this trainer.
@@ -59,8 +63,11 @@ class Trainer(Describable):
         self.hooks[hook.__name__] = hook
         hook.priority = max([h.priority for h in self.hooks.values()]) + 1
 
-    def train(self, net, training_data_getter, **hook_kwargs):
-        """Train a network using a data iterator and hook arguments."""
+    def train(self, net, training_data_getter, **named_data_iters):
+        """
+        Train a network using a data iterator and further named data
+        iterators.
+        """
         if self.verbose:
             print('\n\n', 10 * '- ', "Before Training", 10 * ' -')
         assert set(training_data_getter.data.keys()) == set(
@@ -70,17 +77,21 @@ class Trainer(Describable):
                 training_data_getter.data.keys(),
                 net.buffer.Input.outputs.keys())
         self.stepper.start(net)
-        self._start_hooks(net, hook_kwargs)
-        if self._emit_hooks(net, 'epoch') or self._emit_hooks(net, 'update'):
+        self._start_hooks(net, named_data_iters)
+        self._emit_hooks(net, 'update')
+        if self._emit_hooks(net, 'epoch'):
             return
 
         run = (run_network_double_buffer if self.double_buffering else
                run_network)
 
-        while True:
+        should_stop = False
+        while not should_stop:
             self.current_epoch_nr += 1
             sys.stdout.flush()
-            train_loss = []
+            train_scores = {s.__name__: [] for s in self.train_scorers}
+            train_scores.update({n: [] for n in net.get_loss_values()})
+
             if self.verbose:
                 print('\n\n', 12 * '- ', "Epoch", self.current_epoch_nr,
                       12 * ' -')
@@ -88,14 +99,24 @@ class Trainer(Describable):
                                             handler=net.handler)
             for _ in run(net, iterator):
                 self.current_update_nr += 1
-                train_loss.append(self.stepper.run())
+                self.stepper.run()
+                gather_losses_and_scores(net, self.train_scorers, train_scores)
                 net.apply_weight_modifiers()
                 if self._emit_hooks(net, 'update'):
+                    should_stop = True
                     break
 
-            self._add_log('training_loss', np.mean(train_loss))
-            if self._emit_hooks(net, 'epoch'):
-                break
+            self._add_log('rolling_training',
+                          aggregate_losses_and_scores(train_scores, net,
+                                                      self.train_scorers))
+
+            should_stop |= self._emit_hooks(net, 'epoch')
+
+    def evaluate(self, net, **named_data_iters):
+        self._start_hooks(net, named_data_iters)
+        self._emit_hooks(net, 'epoch', logs=self.results)
+        self._emit_hooks(net, 'update', logs=self.results)
+        return self.results
 
     def __init_from_description__(self, description):
         """Recover the hooks in order of priority and set their names."""
@@ -107,19 +128,19 @@ class Trainer(Describable):
             self.hooks[name] = mon
             mon.__name__ = name
 
-    def _start_hooks(self, net, hook_kwargs):
+    def _start_hooks(self, net, named_data_iters):
         """Call the ::attr::`start()` methods for all the hooks."""
-        self.logs = {'training_loss': [float('NaN')]}
         for name, hook in self.hooks.items():
             try:
                 if hasattr(hook, 'start'):
-                    hook.start(net, self.stepper, self.verbose, hook_kwargs)
+                    hook.start(net, self.stepper, self.verbose,
+                               named_data_iters)
             except Exception:
                 print('An error occurred while starting the "{}" hook:'
                       .format(name), file=sys.stderr)
                 raise
 
-    def _emit_hooks(self, net, timescale):
+    def _emit_hooks(self, net, timescale, logs=None):
         """Call the hooks which should be called at this timescale."""
         should_stop = False
         count = self.current_epoch_nr if timescale == 'epoch' else \
@@ -131,7 +152,7 @@ class Trainer(Describable):
 
             hook_log, stop = self._call_hook(hook, net)
             should_stop |= stop
-            self._add_log(name, hook_log, hook.verbose)
+            self._add_log(name, hook_log, hook.verbose, logs=logs)
 
         return should_stop
 
@@ -170,28 +191,3 @@ class Trainer(Describable):
                       .format(name, val))
             logs[name] = [] if name not in logs else logs[name]
             logs[name].append(val)
-
-
-def run_network_double_buffer(net, iterator):
-    def run_it(it):
-        try:
-            net.provide_external_data(next(it))
-        except StopIteration:
-            run_it.stop = True
-
-    run_it.stop = False
-
-    run_it(iterator)
-    i = 0
-    while not run_it.stop:
-        t = threading.Thread(target=run_it, args=(iterator,))
-        t.start()
-        yield i
-        t.join()
-        i += 1
-
-
-def run_network(net, iterator):
-    for i, data in enumerate(iterator):
-        net.provide_external_data(data)
-        yield i

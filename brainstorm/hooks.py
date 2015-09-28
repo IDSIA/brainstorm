@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.training.steppers import TrainingStep
 from brainstorm.structure.network import Network
 import numpy as np
 from six import string_types
+import h5py
 
 from collections import OrderedDict
 from brainstorm.describable import Describable
-from brainstorm.training.trainer import run_network
 from brainstorm.utils import get_by_path
+from tools import evaluate
 
 
 class Hook(Describable):
@@ -31,7 +31,7 @@ class Hook(Describable):
         self.verbose = verbose
         self.run_verbosity = None
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         if self.verbose is None:
             self.run_verbosity = verbose
         else:
@@ -103,6 +103,25 @@ class SaveBestNetwork(Hook):
             else self.parameters
 
 
+class SaveLogs(Hook):
+    def __init__(self, filename, name=None, timescale='epoch', interval=1):
+        super(SaveLogs, self).__init__(name, timescale, interval)
+        self.filename = filename
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        with h5py.File(self.filename, 'w') as f:
+            SaveLogs._save_recursively(f, logs)
+
+    @staticmethod
+    def _save_recursively(group, logs):
+        for name, log in logs.items():
+            if isinstance(log, dict):
+                subgroup = group.create_group(name)
+                SaveLogs._save_recursively(subgroup, log)
+            else:
+                group.create_dataset(name, data=np.array(log))
+
+
 class MonitorLayerParameters(Hook):
     """
     Monitor some properties of a layer.
@@ -115,7 +134,7 @@ class MonitorLayerParameters(Hook):
                                                      interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -149,7 +168,7 @@ class MonitorLayerGradients(Hook):
                                                     interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -177,7 +196,7 @@ class MonitorLayerDeltas(Hook):
                                                  interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -222,7 +241,7 @@ class MonitorLayerInOuts(Hook):
                                                  interval, verbose)
         self.layer_name = layer_name
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         assert self.layer_name in net.layers.keys(), \
             "{} >> No layer named {} present in network. Available layers " \
             "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
@@ -306,22 +325,28 @@ class StopOnNan(Hook):
                 self.message("NaN or inf detected in parameters!")
                 raise StopIteration()
 
-        if self.check_training_loss and logs['training_loss']:
-            if not np.all(np.isfinite(logs['training_loss'][1:])):
-                self.message("NaN or inf detected in training_loss!")
+        if self.check_training_loss and logs['rolling_training']:
+            rtrain = logs['rolling_training']
+            if 'total_loss' in rtrain:
+                loss = rtrain['total_loss']
+            else:
+                loss = list(rtrain.values())[0]
+            if not np.all(np.isfinite(loss)):
+                self.message("NaN or inf detected in rolling training loss!")
                 raise StopIteration()
 
 
 class InfoUpdater(Hook):
     """ Save the information from logs to the Sacred custom info dict"""
-    def __init__(self, run, name=None):
-        super(InfoUpdater, self).__init__(name, 'epoch', 1)
+    def __init__(self, run, name=None, timescale='epoch', interval=1):
+        super(InfoUpdater, self).__init__(name, timescale, interval)
         self.run = run
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         info = self.run.info
-        info['epoch'] = epoch_nr
-        info['monitor'] = logs
+        info['epoch_nr'] = epoch_nr
+        info['update_nr'] = update_nr
+        info['logs'] = logs
         if 'nr_parameters' not in info:
             info['nr_parameters'] = net.buffer.parameters.size
 
@@ -333,239 +358,66 @@ class MonitorLoss(Hook):
         self.iter_name = iter_name
         self.iter = None
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorLoss, self).start(net, stepper, verbose, monitor_kwargs)
-        assert self.iter_name in monitor_kwargs
-        self.iter = monitor_kwargs[self.iter_name]
+    def start(self, net, stepper, verbose, named_data_iters):
+        super(MonitorLoss, self).start(net, stepper, verbose, named_data_iters)
+        if self.iter_name not in named_data_iters:
+            raise KeyError("{} >> {} is not present in named_data_iters. "
+                           "Remember to pass it  as a kwarg to Trainer.train()"
+                           .format(self.__name__, self.iter_name))
+        self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        iterator = self.iter(verbose=self.verbose, handler=net.handler)
-        loss = []
-        for _ in run_network(net, iterator):
-            net.forward_pass()
-            loss.append(net.get_loss_value())
-        return np.mean(loss)
+        return evaluate(net, self.iter, scorers=[], verbose=self.verbose)
 
 
-class MonitorAccuracy(Hook):
+class MonitorScores(Hook):
     """
-    Monitor the classification accuracy of a given layer wrt. to given targets
-    using a given data iterator.
+    Monitor the losses and optionally several scores using a given data
+    iterator.
 
-    Parameters
-    ----------
-    iter_name : str
-        name of the data iterator to use (as specified in the train() call)
-    output : str
-        name of the output to use formatted like this:
-        LAYER_NAME[.OUTPUT_NAME]
-        Where OUTPUT_NAME defaults to 'default'
-    targets_name : str, optional
-        name of the targets (as specified in the InputLayer)
-        defaults to 'targets'
+    Args:
+        iter_name (str):
+            name of the data iterator to use (as specified in the train() call)
+        scorers (List[brainstorm.scorers.Scorer]):
+            List of Scorers to evaluate.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'MonitorScores'
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
 
-
-    Other Parameters
-    ----------------
-    timescale : {'epoch', 'update'}, optional
-        Specifies whether the Monitor should be called after each epoch or
-        after each update. Default is 'epoch'
-    interval : int, optional
-        This monitor should be called every ``interval`` epochs/updates.
-        Default is 1
-    name: str, optional
-        Name of this monitor. This name is used as a key in the trainer logs.
-        Default is 'MonitorAccuracy'
-    verbose: bool, optional
-        Specifies whether the logs of this monitor should be printed, and
-        acts as a fallback verbosity for the used data iterator.
-        If not set it defaults to the verbosity setting of the trainer.
-
-    See Also
-    --------
-    MonitorLoss : monitor the overall loss of the network.
-    MonitorHammingScore : monitor the Hamming score which is a generalization
-        of accuracy for multi-label classification tasks.
-
-    Notes
-    -----
-    Can be used both with integer and one-hot targets.
+    See Also:
+        MonitorLoss: monitor the overall loss of the network.
 
     """
-    def __init__(self, iter_name, output, targets_name='targets',
-                 mask_name='mask', timescale='epoch', interval=1,
+    def __init__(self, iter_name, scorers, timescale='epoch', interval=1,
                  name=None, verbose=None):
 
-        super(MonitorAccuracy, self).__init__(name, timescale, interval,
-                                              verbose)
+        super(MonitorScores, self).__init__(name, timescale, interval,
+                                            verbose)
         self.iter_name = iter_name
-        self.out_layer, _, self.out_name = output.partition('.')
-        self.out_name = self.out_name or 'default'
-        self.targets_name = targets_name
-        self.mask_name = mask_name
         self.iter = None
-        self.masked = False
+        self.scorers = scorers
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorAccuracy, self).start(net, stepper, verbose,
-                                           monitor_kwargs)
-        assert self.iter_name in monitor_kwargs, \
-            "{} >> {} is not present in monitor_kwargs. Remember to pass it " \
-            "as kwarg to Trainer.train().".format(self.__name__,
-                                                  self.iter_name)
-        assert self.out_layer in net.layers.keys(), \
-            "{} >> No layer named {} present in network. Available layers " \
-            "are {}.".format(self.__name__, self.out_layer, net.layers.keys())
-        self.iter = monitor_kwargs[self.iter_name]
-        self.masked = self.mask_name in self.iter.data.keys()
+    def start(self, net, stepper, verbose, named_data_iters):
+        super(MonitorScores, self).start(net, stepper, verbose,
+                                         named_data_iters)
+        if self.iter_name not in named_data_iters:
+            raise KeyError("{} >> {} is not present in named_data_iters. "
+                           "Remember to pass it  as a kwarg to Trainer.train()"
+                           .format(self.__name__, self.iter_name))
+        self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        iterator = self.iter(verbose=self.run_verbosity, handler=net.handler)
-        _h = net.handler
-        errors = 0
-        totals = 0
-        loss = []
-        log = OrderedDict()
-        for _ in run_network(net, iterator):
-            net.forward_pass()
-            loss.append(net.get_loss_value())
-            out = _h.get_numpy_copy(net.buffer[self.out_layer]
-                                    .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.Input
-                                       .outputs[self.targets_name])
-
-            out = out.reshape(out.shape[0], out.shape[1], -1)
-            target = target.reshape(target.shape[0], target.shape[1], -1)
-
-            out_class = np.argmax(out, axis=2)
-            if target.shape[2] > 1:
-                target_class = np.argmax(target, axis=2)
-            else:
-                target_class = target[:, :, 0]
-
-            assert out_class.shape == target_class.shape
-
-            if self.masked:
-                mask = _h.get_numpy_copy(net.buffer.Input
-                                         .outputs[self.mask_name])[:, :, 0]
-                errors += np.sum((out_class != target_class) * mask)
-                totals += np.sum(mask)
-            else:
-                errors += np.sum(out_class != target_class)
-                totals += np.prod(target_class.shape)
-
-        log['accuracy'] = 1.0 - errors / totals
-        log['loss'] = np.mean(loss)
-        return log
-
-
-class MonitorHammingScore(Hook):
-    r"""
-    Monitor the Hamming score of a given layer wrt. to given targets
-    using a given data iterator.
-
-    Hamming loss is defined as the fraction of the correct labels to the
-    total number of labels.
-
-
-    Parameters
-    ----------
-    iter_name : str
-        name of the data iterator to use (as specified in the train() call)
-    output : str
-        name of the output to use formatted like this:
-        LAYER_NAME[.OUTPUT_NAME]
-        Where OUTPUT_NAME defaults to 'default'
-    targets_name : str, optional
-        name of the targets (as specified in the Input)
-        defaults to 'targets'
-
-
-    Other Parameters
-    ----------------
-    timescale : {'epoch', 'update'}, optional
-        Specifies whether the Monitor should be called after each epoch or
-        after each update. Default is 'epoch'
-    interval : int, optional
-        This monitor should be called every ``interval`` epochs/updates.
-        Default is 1
-    name: str, optional
-        Name of this monitor. This name is used as a key in the trainer logs.
-        Default is 'MonitorAccuracy'
-    verbose: bool, optional
-        Specifies whether the logs of this monitor should be printed and
-        acts as a fallback verbosity for the used data iterator.
-        If not set it defaults to the verbosity setting of the trainer.
-
-    See Also
-    --------
-    MonitorLoss : monitor the overall loss of the network.
-    MonitorAccuracy : monitor the classification accuracy
-    """
-    def __init__(self, iter_name, output, targets_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
-        super(MonitorHammingScore, self).__init__(name, timescale, interval,
-                                                  verbose)
-        self.iter_name = iter_name
-        self.out_layer, _, self.out_name = output.partition('.')
-        self.out_name = self.out_name or 'default'
-        self.targets_name = targets_name
-        self.iter = None
-
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(MonitorHammingScore, self).start(net, stepper, verbose,
-                                               monitor_kwargs)
-        assert self.iter_name in monitor_kwargs, \
-            "{} >> {} is not present in monitor_kwargs. Remember to pass it " \
-            "as kwarg to Trainer.train().".format(self.__name__,
-                                                  self.iter_name)
-        assert self.out_layer in net.layers.keys(), \
-            "{} >> No layer named {} present in network. Available layers " \
-            "are {}.".format(self.__name__, self.out_layer, net.layers.keys())
-        self.iter = monitor_kwargs[self.iter_name]
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        iterator = self.iter(verbose=self.verbose, handler=net.handler)
-        _h = net.handler
-        errors = 0
-        totals = 0
-        for _ in run_network(net, iterator):
-            net.forward_pass()
-            out = _h.get_numpy_copy(net.buffer[self.out_layer]
-                                    .outputs[self.out_name])
-            target = _h.get_numpy_copy(net.buffer.Input
-                                       .outputs[self.targets_name])
-
-            out = out.reshape(out.shape[0], out.shape[1], -1)
-            target = target.reshape(target.shape[0], target.shape[1], -1)
-
-            errors += np.sum(np.logical_xor(out >= 0.5, target))
-            totals += np.prod(target.shape)
-
-        return 1.0 - errors / totals
-
-
-class ModifyStepperAttribute(Hook):
-    """ Save the information from logs to the Sacred custom info dict"""
-    def __init__(self, schedule, attr_name='learning_rate',
-                 timescale='epoch', interval=1, name=None, verbose=None):
-        super(ModifyStepperAttribute, self).__init__(name, timescale,
-                                                     interval, verbose)
-        self.schedule = schedule
-        self.attr_name = attr_name
-
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(ModifyStepperAttribute, self).start(net, stepper, verbose,
-                                                  monitor_kwargs)
-        assert isinstance(stepper, TrainingStep)
-        assert hasattr(stepper, self.attr_name), \
-            "The stepper {} does not have the attribute {}".format(
-                stepper.__class__.__name__, self.attr_name)
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        setattr(stepper, self.attr_name,
-                self.schedule(epoch_nr, update_nr, self.timescale,
-                              self.interval, net, stepper, logs))
+        return evaluate(net, self.iter, self.scorers, verbose=self.verbose)
 
 
 class VisualiseAccuracy(Hook):
@@ -602,7 +454,7 @@ class VisualiseAccuracy(Hook):
         except ImportError:
             print("bokeh is required for drawing networks but was not found.")
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
+    def start(self, net, stepper, verbose, named_data_iters):
         count = 0
 
         # create empty line objects

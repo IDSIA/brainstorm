@@ -2,9 +2,12 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm import layers
+from brainstorm.training.trainer import run_network
+from brainstorm.scorers import (
+    gather_losses_and_scores, aggregate_losses_and_scores)
 
 __all__ = ['get_in_out_layers_for_classification', 'draw_network',
-           'print_network_info']
+           'print_network_info', 'evaluate']
 
 
 def get_in_out_layers_for_classification(in_shape, nr_classes,
@@ -102,3 +105,19 @@ def print_network_info(network):
             print('\t', view, layer.out_shapes[view].feature_shape, end='\t')
         print()
         print('-' * 80)
+
+
+def evaluate(net, iter, scorers=(), out_name='', targets_name='targets',
+             mask_name=None, verbose=True):
+    iterator = iter(verbose=verbose, handler=net.handler)
+    scores = {scorer.__name__: [] for scorer in scorers}
+    for n in net.get_loss_values():
+        scores[n] = []
+
+    for _ in run_network(net, iterator):
+        net.forward_pass()
+        gather_losses_and_scores(
+            net, scorers, scores, out_name=out_name,
+            targets_name=targets_name, mask_name=mask_name)
+
+    return aggregate_losses_and_scores(scores, net, scorers)
