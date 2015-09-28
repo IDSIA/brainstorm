@@ -1,41 +1,38 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def Highway(name=None):
+    """Create a Highway layer."""
     return ConstructionWrapper.create('Highway', name=name)
 
 
 class HighwayLayerImpl(LayerBaseImpl):
-    inputs = {'H': ShapeTemplate('T', 'B', '...'),
-              'T': ShapeTemplate('T', 'B', '...'),
-              'x': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    expected_inputs = {'H': StructureTemplate('T', 'B', '...'),
+                       'T': StructureTemplate('T', 'B', '...'),
+                       'x': StructureTemplate('T', 'B', '...')}
 
-    def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B',
-                                         *self.in_shapes['x'].feature_shape)}
-
-    def _validate_in_shapes(self):
-        """Ensure self.in_shapes are valid.
-
-         Raise LayerValidationError otherwise."""
-        super(HighwayLayerImpl, self)._validate_in_shapes()
-
+    def setup(self, kwargs, in_shapes):
         # 'H', 'T' and 'x' must have the same shape
-        if self.in_shapes['H'] != self.in_shapes['T']:
+        if in_shapes['H'] != in_shapes['T']:
             raise LayerValidationError(
                 "{}: H and T must have the same shape but got {} and {}"
-                .format(self.name, self.in_shapes['H'], self.in_shapes['T']))
-        if self.in_shapes['H'] != self.in_shapes['x']:
+                .format(self.name, in_shapes['H'], in_shapes['T']))
+        if in_shapes['H'] != in_shapes['x']:
             raise LayerValidationError(
                 "{}: H and x must have the same shape but got {} and {}"
-                .format(self.name, self.in_shapes['H'], self.in_shapes['x']))
+                .format(self.name, in_shapes['H'], in_shapes['x']))
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure(
+            'T', 'B', *self.in_shapes['x'].feature_shape)
+        return outputs, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

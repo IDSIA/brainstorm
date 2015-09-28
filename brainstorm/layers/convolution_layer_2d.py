@@ -4,12 +4,13 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 from brainstorm.utils import flatten_time
 
 
 def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                   activation_function='rel', name=None):
+    """Create a 2D Convolution layer."""
     return ConstructionWrapper.create('Convolution2D',
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
@@ -20,23 +21,22 @@ def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
 
 
 class Convolution2DLayerImpl(LayerBaseImpl):
+
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'padding',
                        'activation_function'}
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
 
-    def _setup_hyperparameters(self):
+    def setup(self, kwargs, in_shapes):
         self.act_func = None
         self.act_func_deriv = None
-        self.kwargs = self.kwargs
-        assert 'num_filters' in self.kwargs, "num_filters must be specified " \
-                                             " for ConvolutionLayer"
-        assert 'kernel_size' in self.kwargs, "kernel_size must be specified " \
-                                             "for ConvolutionLayer"
-        self.num_filters = self.kwargs['num_filters']
-        self.kernel_size = self.kwargs['kernel_size']
-        self.stride = self.kwargs.get('stride', (1, 1))
-        self.padding = self.kwargs.get('padding', 0)
+        assert 'num_filters' in kwargs, "num_filters must be specified " \
+                                        " for ConvolutionLayer"
+        assert 'kernel_size' in kwargs, "kernel_size must be specified " \
+                                        "for ConvolutionLayer"
+        self.num_filters = kwargs['num_filters']
+        self.kernel_size = kwargs['kernel_size']
+        self.stride = kwargs.get('stride', (1, 1))
+        self.padding = kwargs.get('padding', 0)
         assert type(self.padding) is int and self.padding >= 0, \
             "Invalid padding: {}".format(self.padding)
         assert type(self.kernel_size) in [list, tuple] and \
@@ -45,8 +45,36 @@ class Convolution2DLayerImpl(LayerBaseImpl):
                                         self.kernel_size)
         assert type(self.stride) in [list, tuple] and len(self.stride) == 2, \
             "Stride must be list or tuple of length 2: {}".format(self.stride)
+        in_shape = self.in_shapes['default'].feature_shape
         assert self.stride[0] >= 0 and self.stride[1] >= 0, \
             "Invalid stride: {}".format(self.stride)
+        assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
+            "ConvolutionLayer2D must have 3 dimensional input but input " \
+            "shape was %s" % in_shape
+        num_input_maps = in_shape[0]
+        num_filters = self.num_filters
+        kernel_x, kernel_y = self.kernel_size
+        padding, stride = self.padding, self.stride
+        output_height = ((in_shape[1] + 2 * padding - kernel_x) //
+                         stride[0]) + 1
+        output_width = ((in_shape[2] + 2 * padding - kernel_y) //
+                        stride[1]) + 1
+        out_shape = (num_filters, output_height, output_width)
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', *out_shape)
+
+        parameters = OrderedDict()
+        parameters['W'] = BufferStructure(num_filters, num_input_maps,
+                                          kernel_x, kernel_y)
+        parameters['bias'] = BufferStructure(num_filters)
+
+        internals = OrderedDict()
+        internals['H'] = BufferStructure('T', 'B', *out_shape)
+        internals['dH'] = BufferStructure('T', 'B', *out_shape,
+                                          is_backward_only=True)
+
+        return outputs, parameters, internals
 
     def set_handler(self, new_handler):
         super(Convolution2DLayerImpl, self).set_handler(new_handler)
@@ -62,45 +90,6 @@ class Convolution2DLayerImpl(LayerBaseImpl):
 
         self.act_func, self.act_func_deriv = activation_functions[
             self.kwargs.get('activation_function', 'rel')]
-
-    def get_parameter_structure(self):
-        in_shape = self.in_shapes['default'].feature_shape
-        num_input_maps = in_shape[0]
-        num_filters = self.num_filters
-        kernel_x = self.kernel_size[0]
-        kernel_y = self.kernel_size[1]
-
-        parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(num_filters, num_input_maps,
-                                        kernel_x, kernel_y)
-        parameters['bias'] = ShapeTemplate(num_filters)
-        return parameters
-
-    def get_internal_structure(self):
-        output_shape = self.out_shapes['default'].feature_shape
-
-        internals = OrderedDict()
-        internals['H'] = ShapeTemplate('T', 'B', *output_shape)
-        internals['dH'] = ShapeTemplate('T', 'B', *output_shape,
-                                        is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        kernel_size = self.kernel_size
-        padding = self.padding
-        stride = self.stride
-        num_filters = self.num_filters
-        in_shape = self.in_shapes['default'].feature_shape
-        assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
-            "ConvolutionLayer2D must have 3 dimensional input but input " \
-            "shape was %s" % in_shape
-
-        output_height = ((in_shape[1] + 2 * padding - kernel_size[0]) //
-                         stride[0]) + 1
-        output_width = ((in_shape[2] + 2 * padding - kernel_size[1]) //
-                        stride[1]) + 1
-        output_shape = (num_filters, output_height, output_width)
-        return {'default': ShapeTemplate('T', 'B', *output_shape)}
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

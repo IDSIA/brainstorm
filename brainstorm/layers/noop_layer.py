@@ -1,25 +1,27 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate
 
 
 def NoOp(name=None):
+    """Create a NoOp layer.
+
+    This layer just copies its input into its output.
+    """
     return ConstructionWrapper.create('NoOp', name=name)
 
 
 class NoOpLayerImpl(LayerBaseImpl):
-    """
-    This layer just copies its input into its output.
-    """
-    expected_kwargs = {}
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
 
-    def _get_output_shapes(self):
-        return self.in_shapes
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
+    expected_kwargs = {}
+
+    def setup(self, kwargs, in_shapes):
+        return self.in_shapes, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         self.handler.copy_to(buffers.outputs.default,

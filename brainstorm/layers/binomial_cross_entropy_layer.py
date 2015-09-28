@@ -8,16 +8,12 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError, flatten_time_and_features, \
     flatten_time
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def BinomialCrossEntropy(name=None):
-    return ConstructionWrapper.create('BinomialCrossEntropy',
-                                      name=name)
+    """Create a Binomial Cross Entropy Layer.
 
-
-class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
-    """
     Calculate the Binomial Cross Entropy between outputs and **binary** targets
 
     Cross entropy is by definition asymmetric, therefore the inputs are named
@@ -28,34 +24,33 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
     For outputs outside that range or non-binary targets the result is
     undefined.
     """
+    return ConstructionWrapper.create('BinomialCrossEntropy', name=name)
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...'),
-              'targets': ShapeTemplate('T', 'B', '...')}
 
-    outputs = {'default': ShapeTemplate('T', 'B', 1)}
+class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
+
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
+                       'targets': StructureTemplate('T', 'B', '...')}
 
     expected_kwargs = {}
 
-    def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', 1)}
-
-    def get_internal_structure(self):
-        feature_shape = self.in_shapes['default'].feature_shape
-        internals = OrderedDict()
-        internals['cee'] = ShapeTemplate('T', 'B', *feature_shape)
-        internals['ceed'] = ShapeTemplate('T', 'B', *feature_shape,
-                                          is_backward_only=True)
-        return internals
-
-    def _validate_in_shapes(self):
-        super(BinomialCrossEntropyLayerImpl, self)._validate_in_shapes()
-
-        if self.in_shapes['default'] != self.in_shapes['targets']:
+    def setup(self, kwargs, in_shapes):
+        if in_shapes['default'] != in_shapes['targets']:
             raise LayerValidationError("{}: default and targets must have the "
                                        "same shapes but got {} and {}"
                                        .format(self.name,
-                                               self.in_shapes['default'],
-                                               self.in_shapes['targets']))
+                                               in_shapes['default'],
+                                               in_shapes['targets']))
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', 1)
+
+        feature_shape = in_shapes['default'].feature_shape
+        internals = OrderedDict()
+        internals['cee'] = BufferStructure('T', 'B', *feature_shape)
+        internals['ceed'] = BufferStructure('T', 'B', *feature_shape,
+                                            is_backward_only=True)
+
+        return outputs, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

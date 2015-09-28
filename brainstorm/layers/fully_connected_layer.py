@@ -6,28 +6,41 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def FullyConnected(size, activation_function='rel', name=None):
-    return ConstructionWrapper.create('FullyConnected',
-                                      size=size,
-                                      name=name,
+    """Create a Fully Connected (inner product) layer."""
+    return ConstructionWrapper.create('FullyConnected', size=size, name=name,
                                       activation_function=activation_function)
 
 
 class FullyConnectedLayerImpl(LayerBaseImpl):
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
+
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation_function'}
 
-    def _setup_hyperparameters(self):
+    def setup(self, kwargs, in_shapes):
         self.act_func = None
         self.act_func_deriv = None
-        self.size = self.kwargs.get('size',
-                                    self.in_shapes['default'].feature_size)
+        self.size = kwargs.get('size', self.in_shapes['default'].feature_size)
         if not isinstance(self.size, int):
             raise LayerValidationError('size must be int but was {}'.
                                        format(self.size))
+        in_size = in_shapes['default'].feature_size
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', self.size)
+
+        parameters = OrderedDict()
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['bias'] = BufferStructure(self.size)
+
+        internals = OrderedDict()
+        internals['H'] = BufferStructure('T', 'B', self.size)
+        internals['dH'] = BufferStructure('T', 'B', self.size,
+                                          is_backward_only=True)
+        return outputs, parameters, internals
 
     def set_handler(self, new_handler):
         super(FullyConnectedLayerImpl, self).set_handler(new_handler)
@@ -43,24 +56,6 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
 
         self.act_func, self.act_func_deriv = activation_functions[
             self.kwargs.get('activation_function', 'rel')]
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-
-        parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(self.size, in_size)
-        parameters['bias'] = ShapeTemplate(self.size)
-        return parameters
-
-    def get_internal_structure(self):
-        internals = OrderedDict()
-        internals['H'] = ShapeTemplate('T', 'B', self.size)
-        internals['dH'] = ShapeTemplate('T', 'B', self.size,
-                                        is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', self.size)}
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

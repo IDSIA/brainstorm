@@ -1,24 +1,27 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate
 from brainstorm.utils import flatten_time_and_features, flatten_time
 
 
 def Mask(name=None):
+    """Create a Mask layer."""
     return ConstructionWrapper.create('Mask', name=name)
 
 
 class MaskLayerImpl(LayerBaseImpl):
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...'),
-              'mask': ShapeTemplate('T', 'B', 1)}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
+                       'mask': StructureTemplate('T', 'B', 1)}
 
-    def _get_output_shapes(self):
-        return {'default': self.in_shapes['default']}
+    def setup(self, kwargs, in_shapes):
+        outputs = OrderedDict()
+        outputs['default'] = in_shapes['default']
+        return outputs, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         _h = self.handler

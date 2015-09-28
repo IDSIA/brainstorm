@@ -4,34 +4,32 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate
 
 
 def Dropout(drop_prob=0.5, name=None):
+    """Create a Dropout layer.
+
+    drop_prob is the probability of a unit being dropped, i.e. 0
+    """
     return ConstructionWrapper.create('Dropout', drop_prob=drop_prob,
                                       name=name)
 
 
 class DropoutLayerImpl(LayerBaseImpl):
-    """
-    drop_prob is the probability of a unit being dropped, i.e. 0
-    """
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
 
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
-
+    expectedinputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'drop_prob'}
 
-    def _get_output_shapes(self):
-        return {'default': self.in_shapes['default']}
+    def setup(self, kwargs, in_shapes):
+        self.drop_prob = kwargs.get('drop_prob', 0.5)
 
-    def _setup_hyperparameters(self):
-        self.drop_prob = self.kwargs.get('drop_prob', 0.5)
+        outputs = OrderedDict()
+        outputs['default'] = in_shapes['default']
 
-    def get_internal_structure(self):
         internals = OrderedDict()
         internals['mask'] = self.in_shapes['default']
-        return internals
+        return outputs, OrderedDict(), internals
 
     def forward_pass(self, buffers, training_pass=True):
         _h = self.handler

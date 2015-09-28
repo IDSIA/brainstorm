@@ -1,28 +1,25 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate
 
 
 def Elementwise(activation_function='rel', name=None):
-    return ConstructionWrapper.create('Elementwise',
-                                      name=name,
+    """Create an Elementwise layer.
+
+    This layer just applies a unit-wise function to its inputs.
+    """
+    return ConstructionWrapper.create('Elementwise', name=name,
                                       activation_function=activation_function)
 
 
 class ElementwiseLayerImpl(LayerBaseImpl):
-    """
-    This layer just applies an activation function to its inputs.
-    """
-    expected_kwargs = {'activation_function'}
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
 
-    def _setup_hyperparameters(self):
-        self.act_func = None
-        self.act_func_deriv = None
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
+    expected_kwargs = {'activation_function'}
 
     def set_handler(self, new_handler):
         super(ElementwiseLayerImpl, self).set_handler(new_handler)
@@ -39,8 +36,10 @@ class ElementwiseLayerImpl(LayerBaseImpl):
         self.act_func, self.act_func_deriv = activation_functions[
             self.kwargs.get('activation_function', 'rel')]
 
-    def _get_output_shapes(self):
-        return self.in_shapes
+    def setup(self, kwargs, in_shapes):
+        self.act_func = None
+        self.act_func_deriv = None
+        return in_shapes, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         self.act_func(buffers.inputs.default, buffers.outputs.default)

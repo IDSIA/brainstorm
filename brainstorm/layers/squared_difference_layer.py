@@ -6,57 +6,42 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features, flatten_features
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def SquaredDifference(name=None):
-    return ConstructionWrapper.create('SquaredDifference',
-                                      name=name)
+    """Create a Squared Difference layer.
 
-
-class SquaredDifferenceLayerImpl(LayerBaseImpl):
-    """
     A layer that computes half of the squared differences between two inputs,
     and sums them over feature dimensions.
     """
-    inputs = {'inputs_1': ShapeTemplate('T', 'B', '...'),
-              'inputs_2': ShapeTemplate('T', 'B', '...')}
+    return ConstructionWrapper.create('SquaredDifference', name=name)
 
-    outputs = {'default': ShapeTemplate('T', 'B', 1)}
 
+class SquaredDifferenceLayerImpl(LayerBaseImpl):
+
+    expected_inputs = {'inputs_1': StructureTemplate('T', 'B', '...'),
+                       'inputs_2': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {}
 
-    def get_internal_structure(self):
-        """
-        Returns a dictionary describing the 'squared_diff' internal-state.
-        """
-        feature_shape = self.in_shapes['inputs_1'].feature_shape
-
-        internals = OrderedDict()
-        internals['squared_diff'] = ShapeTemplate('T', 'B', *feature_shape)
-        internals['grad_diff'] = ShapeTemplate('T', 'B', *feature_shape,
-                                               is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        """
-        Sets the shape of the 'default' output using in_shapes['inputs_1']
-        """
-        return {'default': ShapeTemplate('T', 'B', 1)}
-
-    def _validate_in_shapes(self):
-        """Ensure self.in_shapes are all valid.
-
-         Raise LayerValidationError otherwise."""
-        super(SquaredDifferenceLayerImpl, self)._validate_in_shapes()
-
+    def setup(self, kwargs, in_shapes):
         # 'inputs_1' and 'inputs_2' must have same shape
-        if self.in_shapes['inputs_1'] != self.in_shapes['inputs_2']:
+        if in_shapes['inputs_1'] != in_shapes['inputs_2']:
             raise LayerValidationError("{}: inputs_1 and inputs_2 must have "
                                        "same shape but got {} and {}"
                                        .format(self.name,
-                                               self.in_shapes['inputs_1'],
-                                               self.in_shapes['inputs_2']))
+                                               in_shapes['inputs_1'],
+                                               in_shapes['inputs_2']))
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', 1)
+
+        internals = OrderedDict()
+        feature_shape = self.in_shapes['inputs_1'].feature_shape
+        internals['squared_diff'] = BufferStructure('T', 'B', *feature_shape)
+        internals['grad_diff'] = BufferStructure('T', 'B', *feature_shape,
+                                                 is_backward_only=True)
+        return outputs, OrderedDict(), internals
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

@@ -1,30 +1,33 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def Loss(importance=1.0, name=None):
+    """Create a Loss layer."""
     return ConstructionWrapper.create('Loss', importance=importance, name=name)
 
 
 class LossLayerImpl(LayerBaseImpl):
-    inputs = {'default': ShapeTemplate('...')}
-    outputs = {'loss': ShapeTemplate(1)}
+
+    inputs = {'default': StructureTemplate('...')}
     expected_kwargs = {'importance'}
 
-    def _setup_hyperparameters(self):
-        self.importance = self.kwargs.get('importance', 1.0)
+    def setup(self, kwargs, in_shapes):
+        self.importance = kwargs.get('importance', 1.0)
         self.batch_index = None
-        if self.in_shapes['default'].scales_with_time:
+        if in_shapes['default'].scales_with_time:
             self.batch_index = 1
-        elif self.in_shapes['default'].scales_with_batch_size:
+        elif in_shapes['default'].scales_with_batch_size:
             self.batch_index = 0
 
-    def _get_output_shapes(self):
-        return {'loss': ShapeTemplate(1)}
+        outputs = OrderedDict()
+        outputs['loss'] = BufferStructure(1)
+        return outputs, OrderedDict, OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         if self.batch_index is None:

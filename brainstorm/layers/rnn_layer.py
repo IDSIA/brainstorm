@@ -5,27 +5,45 @@ from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def Rnn(size, activation_function='tanh', name=None):
-    return ConstructionWrapper.create('Rnn',
-                                      size=size,
-                                      name=name,
+    """Create a Simple Recurrent layer."""
+    return ConstructionWrapper.create('Rnn', size=size, name=name,
                                       activation_function=activation_function)
 
 
 class RnnLayerImpl(LayerBaseImpl):
+
+    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation_function'}
 
-    def _setup_hyperparameters(self):
+    def setup(self, kwargs, in_shapes):
         self.act_func = None
         self.act_func_deriv = None
-        self.size = self.kwargs.get('size',
-                                    self.in_shapes['default'].feature_size)
+        self.size = kwargs.get('size', self.in_shapes['default'].feature_size)
         if not isinstance(self.size, int):
             raise LayerValidationError('size must be int but was {}'.
                                        format(self.size))
+
+        in_size = self.in_shapes['default'].feature_size
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', self.size,
+                                             context_size=1)
+        parameters = OrderedDict()
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['R'] = BufferStructure(self.size, self.size)
+        parameters['bias'] = BufferStructure(self.size)
+
+        internals = OrderedDict()
+        internals['Ha'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['dHa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dHb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        return outputs, parameters, internals
 
     def set_handler(self, new_handler):
         super(RnnLayerImpl, self).set_handler(new_handler)
@@ -41,27 +59,7 @@ class RnnLayerImpl(LayerBaseImpl):
 
         self.act_func, self.act_func_deriv = activation_functions[
             self.kwargs.get('activation_function', 'tanh')]
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-        parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(self.size, in_size)
-        parameters['R'] = ShapeTemplate(self.size, self.size)
-        parameters['bias'] = ShapeTemplate(self.size)
-        return parameters
-
-    def get_internal_structure(self):
-        internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['dHa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dHb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', self.size, context_size=1)}
-
+    
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
