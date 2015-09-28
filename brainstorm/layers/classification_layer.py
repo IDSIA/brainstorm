@@ -30,38 +30,34 @@ class ClassificationLayerImpl(LayerBaseImpl):
     and it also does not use the deltas coming in from the 'outputs'.
     """
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...'),
-              'targets': ShapeTemplate('T', 'B', 1)
-              }
-
-    outputs = {'output': ShapeTemplate('T', 'B', 'F'),
-               'loss': ShapeTemplate('T', 'B', 1)}
+    expected_inputs = {'default': StructureTemplate('T', 'B', 'F', '...'),
+                       'targets': StructureTemplate('T', 'B', 1)}
 
     expected_kwargs = {'size'}
 
-    def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes.get('default').feature_size)
-        if not isinstance(s, int):
+    def setup_hyperparameters(self):
+        """Performs initial setup for a layer."""
+        self.size = self.kwargs.get('size',
+                                    self.in_shapes.get('default').feature_size)
+        if not isinstance(self.size, int):
             raise LayerValidationError('size must be int but was {}'.format(s))
 
-        return {'output': ShapeTemplate('T', 'B', s),
-                'loss': ShapeTemplate('T', 'B', 1)}
-
-    def get_internal_structure(self):
-        internals = OrderedDict()
-        size = self.out_shapes['output'].feature_size
-        internals['Ha'] = ShapeTemplate('T', 'B', size)
-        internals['dHa'] = ShapeTemplate('T', 'B', size, is_backward_only=True)
-        return internals
-
-    def get_parameter_structure(self):
+    def get_buffer_structures(self):
         in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['output'].feature_size
+
+        outputs = OrderedDict()
+        outputs['output'] = BufferStructure('T', 'B', self.size)
+        outputs['loss'] = BufferStructure('T', 'B', 1)
+
+        internals = OrderedDict()
+        internals['Ha'] = BufferStructure('T', 'B', self.size)
+        internals['dHa'] = BufferStructure('T', 'B', self.size, is_backward_only=True)
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(out_size, in_size)
-        parameters['bias'] = ShapeTemplate(out_size)
-        return parameters
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['bias'] = BufferStructure(self.size)
+
+        return outputs, internals, parameters
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare
