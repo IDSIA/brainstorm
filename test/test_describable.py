@@ -366,8 +366,8 @@ def test_get_network_from_description():
 # ################# test describing a Trainer #################################
 
 def test_describe_trainer():
-    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
-                    verbose=False)
+    tr = bs.Trainer(bs.steppers.SgdStep(learning_rate=0.7),
+                    double_buffering=False, verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
@@ -394,8 +394,8 @@ def test_describe_trainer():
 
 
 def test_recreate_trainer_from_description():
-    tr = bs.Trainer(bs.SgdStep(learning_rate=0.7), double_buffering=False,
-                    verbose=False)
+    tr = bs.Trainer(bs.steppers.SgdStep(learning_rate=0.7),
+                    double_buffering=False, verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
@@ -407,5 +407,5 @@ def test_recreate_trainer_from_description():
     assert tr2.double_buffering is False
     assert list(tr2.hooks.keys()) == ['StopAfterEpoch', 'StopOnNan']
     assert tr2.hooks['StopAfterEpoch'].max_epochs == 23
-    assert isinstance(tr2.stepper, bs.SgdStep)
+    assert isinstance(tr2.stepper, bs.steppers.SgdStep)
     assert tr2.stepper.learning_rate == 0.7

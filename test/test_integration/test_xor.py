@@ -3,7 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 import pytest
-from brainstorm import (Network, Gaussian, Trainer, SgdStep, Undivided)
+from brainstorm import Network, Trainer
+from brainstorm.data_iterators import Undivided
+from brainstorm.training.steppers import SgdStep
+from brainstorm.initializers import Gaussian
 from brainstorm.layers import *
 from brainstorm.hooks import StopAfterEpoch
 # from brainstorm.handlers.pycuda_handler import PyCudaHandler
