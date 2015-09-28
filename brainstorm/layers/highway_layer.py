@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
@@ -13,7 +13,7 @@ def Highway(name=None):
     return ConstructionWrapper.create('Highway', name=name)
 
 
-class HighwayLayerImpl(LayerBaseImpl):
+class HighwayLayerImpl(BaseLayerImpl):
     expected_inputs = {'H': StructureTemplate('T', 'B', '...'),
                        'T': StructureTemplate('T', 'B', '...'),
                        'x': StructureTemplate('T', 'B', '...')}

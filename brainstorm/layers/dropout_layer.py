@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.shapes import StructureTemplate
 
 
@@ -16,9 +16,9 @@ def Dropout(drop_prob=0.5, name=None):
                                       name=name)
 
 
-class DropoutLayerImpl(LayerBaseImpl):
+class DropoutLayerImpl(BaseLayerImpl):
 
-    expectedinputs = {'default': StructureTemplate('T', 'B', '...')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'drop_prob'}
 
     def setup(self, kwargs, in_shapes):

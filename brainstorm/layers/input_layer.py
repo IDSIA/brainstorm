@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import LayerValidationError
 from brainstorm.structure.shapes import BufferStructure
 
@@ -19,7 +19,7 @@ def Input(out_shapes, name=None):
                                       out_shapes=out_shapes)
 
 
-class InputLayerImpl(LayerBaseImpl):
+class InputLayerImpl(BaseLayerImpl):
 
     expected_inputs = {}
     expected_kwargs = {'out_shapes'}

@@ -5,7 +5,7 @@ from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
@@ -15,10 +15,25 @@ def FullyConnected(size, activation_function='rel', name=None):
                                       activation_function=activation_function)
 
 
-class FullyConnectedLayerImpl(LayerBaseImpl):
+class FullyConnectedLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation_function'}
+
+    def set_handler(self, new_handler):
+        super(FullyConnectedLayerImpl, self).set_handler(new_handler)
+
+        # Assign act_func and act_dunc_derivs
+        activation_functions = {
+            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
+            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
+            'linear': (lambda x, y: self.handler.copy_to(y, x),
+                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'rel': (self.handler.rel, self.handler.rel_deriv)
+        }
+
+        self.act_func, self.act_func_deriv = activation_functions[
+            self.kwargs.get('activation_function', 'rel')]
 
     def setup(self, kwargs, in_shapes):
         self.act_func = None
@@ -41,21 +56,6 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         internals['dH'] = BufferStructure('T', 'B', self.size,
                                           is_backward_only=True)
         return outputs, parameters, internals
-
-    def set_handler(self, new_handler):
-        super(FullyConnectedLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_dunc_derivs
-        activation_functions = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'rel')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

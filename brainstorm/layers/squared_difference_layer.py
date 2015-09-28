@@ -10,45 +10,17 @@ from brainstorm.structure.shapes import BufferStructure, StructureTemplate
 
 
 def SquaredDifference(name=None):
-    """Create a Squared Difference layer.
+    """Create a Squared Difference layer."""
+    return ConstructionWrapper.create('SquaredDifference', name=name)
 
 
-class SquaredDifferenceLayerImpl(LayerBaseImpl):
-    """
-    A layer that computes half of the squared differences between two inputs,
-    and sums them over feature dimensions.
-    """
-    inputs = {'inputs_1': ShapeTemplate('T', 'B', '...'),
-              'inputs_2': ShapeTemplate('T', 'B', '...')}
+class SquaredDifferenceLayerImpl(BaseLayerImpl):
 
-    outputs = {'default': ShapeTemplate('T', 'B', 1)}
-
+    expected_inputs = {'inputs_1': StructureTemplate('T', 'B', '...'),
+                       'inputs_2': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {}
 
-    def get_internal_structure(self):
-        """
-        Returns a dictionary describing the 'squared_diff' internal-state.
-        """
-        feature_shape = self.in_shapes['inputs_1'].feature_shape
-
-        internals = OrderedDict()
-        internals['squared_diff'] = ShapeTemplate('T', 'B', *feature_shape)
-        internals['grad_diff'] = ShapeTemplate('T', 'B', *feature_shape,
-                                               is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        """
-        Sets the shape of the 'default' output using in_shapes['inputs_1']
-        """
-        return {'default': ShapeTemplate('T', 'B', 1)}
-
-    def _validate_in_shapes(self):
-        """Ensure self.in_shapes are all valid.
-
-         Raise LayerValidationError otherwise."""
-        super(SquaredDifferenceLayerImpl, self)._validate_in_shapes()
-
+    def setup(self, kwargs, in_shapes):
         # 'inputs_1' and 'inputs_2' must have same shape
         if in_shapes['inputs_1'] != in_shapes['inputs_2']:
             raise LayerValidationError("{}: inputs_1 and inputs_2 must have "

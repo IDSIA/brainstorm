@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.shapes import StructureTemplate
 from brainstorm.utils import flatten_time_and_features, flatten_time
 
@@ -13,7 +13,7 @@ def Mask(name=None):
     return ConstructionWrapper.create('Mask', name=name)
 
 
-class MaskLayerImpl(LayerBaseImpl):
+class MaskLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
                        'mask': StructureTemplate('T', 'B', 1)}

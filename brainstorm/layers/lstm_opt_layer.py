@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
@@ -15,10 +15,25 @@ def LstmOpt(size, activation_function='tanh', name=None):
 
 
 # noinspection PyPep8Naming
-class LstmOptLayerImpl(LayerBaseImpl):
+class LstmOptLayerImpl(BaseLayerImpl):
     
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation_function'}
+
+    def set_handler(self, new_handler):
+        super(LstmOptLayerImpl, self).set_handler(new_handler)
+
+        # Assign act_func and act_func_derivs
+        activation_functions = {
+            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
+            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
+            'linear': (lambda x, y: self.handler.copy_to(y, x),
+                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'rel': (self.handler.rel, self.handler.rel_deriv)
+        }
+
+        self.act_func, self.act_func_deriv = activation_functions[
+            self.kwargs.get('activation_function', 'tanh')]
 
     def setup(self, kwargs, in_shapes):
         self.act_func = lambda x, y: None
@@ -48,21 +63,6 @@ class LstmOptLayerImpl(LayerBaseImpl):
         internals['dCb'] = BufferStructure('T', 'B', self.size, context_size=1,
                                            is_backward_only=True)
         return outputs, parameters, internals
-
-    def set_handler(self, new_handler):
-        super(LstmOptLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_func_derivs
-        activation_functions = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

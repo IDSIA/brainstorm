@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
@@ -12,9 +12,9 @@ def Loss(importance=1.0, name=None):
     return ConstructionWrapper.create('Loss', importance=importance, name=name)
 
 
-class LossLayerImpl(LayerBaseImpl):
+class LossLayerImpl(BaseLayerImpl):
 
-    inputs = {'default': StructureTemplate('...')}
+    expected_inputs = {'default': StructureTemplate('...')}
     expected_kwargs = {'importance'}
 
     def setup(self, kwargs, in_shapes):
@@ -25,8 +25,9 @@ class LossLayerImpl(LayerBaseImpl):
         elif in_shapes['default'].scales_with_batch_size:
             self.batch_index = 0
 
-    def _get_output_shapes(self):
-        return {'loss': ShapeTemplate(1)}
+        outputs = OrderedDict()
+        outputs['loss'] = BufferStructure(1)
+        return outputs, OrderedDict, OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         if self.batch_index is None:

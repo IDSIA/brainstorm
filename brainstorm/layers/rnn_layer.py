@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
@@ -14,7 +14,7 @@ def Rnn(size, activation_function='tanh', name=None):
                                       activation_function=activation_function)
 
 
-class RnnLayerImpl(LayerBaseImpl):
+class RnnLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation_function'}
