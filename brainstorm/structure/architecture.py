@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict, namedtuple
 from copy import copy
 from six import string_types
-from brainstorm.structure.shapes import combine_input_shapes
+from brainstorm.structure.shapes import combine_buffer_structures
 from brainstorm.structure.construction import ConstructionWrapper
 
 from brainstorm.utils import (NetworkValidationError,
@@ -182,7 +182,7 @@ def instantiate_layers_from_architecture(architecture):
                     get_normalized_path('outputs', c.output_name))
                 for c in incoming if c.input_name == input_name]
 
-            in_shapes[input_name] = combine_input_shapes(incoming_out_shapes)
+            in_shapes[input_name] = combine_buffer_structures(incoming_out_shapes)
 
         layers[layer_name] = LayerClass(layer_name, in_shapes, incoming,
                                         outgoing, **get_kwargs(layer))

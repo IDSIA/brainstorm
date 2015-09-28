@@ -9,70 +9,55 @@ class StructureTemplate(object):
     # The following signature unfortunately is not python2 compatible:
     # def __init__(self, *args, context_size=0, backward_only=False):
     def __init__(self, *args, **kwargs):
-        self._shape = args
+        self.shape = args
         self.context_size = kwargs.get('context_size', 0)
         expected_kwargs = {'context_size', 'is_backward_only'}
         if not set(kwargs.keys()) <= expected_kwargs:
             raise TypeError('Unexpected keyword argument {}'
                             .format(set(kwargs.keys()) - expected_kwargs))
 
-        if 'T' in self._shape:
-            self.buffer_type = 2
-        elif 'B' in self._shape:
-            self.buffer_type = 1
+        if 'T' in self.shape:
+            self.first_feature_dim = 2
+        elif 'B' in self.shape:
+            self.first_feature_dim = 1
         else:
-            self.buffer_type = 0
-        self.first_feature_dim = self.buffer_type
+            self.first_feature_dim = 0
 
         self.is_backward_only = kwargs.get('is_backward_only', False)
         self.validate()
 
     @property
-    def scales_with_time(self):
-        return 'T' in self._shape
-
-    @property
-    def scales_with_batch_size(self):
-        return 'B' in self._shape
-
-    @property
     def feature_shape(self):
-        return self._shape[self.first_feature_dim:]
-
-    @property
-    def nr_dims(self):
-        if '...' in self._shape:
-            raise TypeError('nr dimensions not fixed')
-        return len(self._shape)
+        return self.shape[self.first_feature_dim:]
 
     def validate(self):
-        if len(self._shape) == 0:
+        if len(self.shape) == 0:
             raise ShapeValidationError("shape must be non-empty (nr dims > 0)")
 
-        if self.scales_with_time and self._shape[:2] != ('T', 'B'):
+        if 'T' in self.shape and self.shape[:2] != ('T', 'B'):
             raise ShapeValidationError(
                 "Shapes that scale with time need to start with ('T', 'B')"
-                "(but started with {})".format(self._shape[:2]))
+                "(but started with {})".format(self.shape[:2]))
 
-        if not self.scales_with_time and self.scales_with_batch_size and \
-                self._shape[:1] != ('B',):
+        if 'T' not in self.shape and 'B' in self.shape and \
+                self.shape[:1] != ('B',):
             raise ShapeValidationError(
                 "Shapes that scale with batch-size need to start with 'B'"
-                "(but started with {})".format(self._shape[:1]))
+                "(but started with {})".format(self.shape[:1]))
 
         # validate feature dimensions
-        if len(self._shape) < self.first_feature_dim:
+        if len(self.shape) < self.first_feature_dim:
             raise ShapeValidationError(
                 "need at least one feature dimension"
-                "(but shape was {})".format(self._shape))
+                "(but shape was {})".format(self.shape))
 
-        if '...' in self._shape:
+        if '...' in self.shape:
             if self.feature_shape != ('...',):
                 raise ShapeValidationError(
                     'Wildcard-shapes can ONLY have a single feature dimension'
                     ' entry "...". (But had {})'.format(self.feature_shape))
 
-        elif 'F' in self._shape:
+        elif 'F' in self.shape:
             # TODO: Is this condition necessary?
             if not all([f == 'F' for f in self.feature_shape]):
                 raise ShapeValidationError(
@@ -91,18 +76,22 @@ class StructureTemplate(object):
                 "context_size has to be a non-negative integer, but was {}"
                 .format(self.context_size))
 
-        if self.context_size and not self.scales_with_time:
+        if self.context_size and 'T' not in self.shape:
             raise ShapeValidationError("context_size is only available for "
                                        "shapes that scale with time.")
 
     def matches(self, shape):
-        if '...' not in self._shape and len(shape) != self.nr_dims:
+        assert isinstance(shape, BufferStructure)
+
+        if '...' not in self.shape and shape.nr_dims != len(self.shape):
             return False
-        if '...' in self._shape and len(shape) < len(self._shape):
+        if '...' in self.shape and shape.nr_dims < len(self.shape):
             return False
 
-        for s, t in zip(shape, self._shape):
-            if t in ['T', 'B', 'F'] and isinstance(s, int):
+        for s, t in zip(shape.shape, self.shape):
+            if t == s:
+                continue
+            if t == 'F' and isinstance(s, int):
                 continue
             if t == '...':
                 continue
@@ -110,19 +99,8 @@ class StructureTemplate(object):
                 return False
         return True
 
-    def __eq__(self, other):
-        if not isinstance(other, StructureTemplate):
-            return False
-        return self._shape == other._shape
-
-    def __ne__(self, other):
-        return not self == other
-
-    def __hash__(self):
-        return hash(self._shape)
-
     def __repr__(self):
-        return "<<<{}>>>".format(self._shape)
+        return "<<<{}>>>".format(self.shape)
 
 
 class BufferStructure(object):
@@ -138,35 +116,35 @@ class BufferStructure(object):
             raise TypeError('Unexpected keyword argument {}'
                             .format(set(kwargs.keys()) - expected_kwargs))
 
-        self._shape = args
+        self.shape = args
         self.context_size = kwargs.get('context_size', 0)
         self.is_backward_only = kwargs.get('is_backward_only', False)
 
-        if 'T' in self._shape:
+        if 'T' in self.shape:
             self.buffer_type = 2
-        if 'B' in self._shape:
+        elif 'B' in self.shape:
             self.buffer_type = 1
         else:
             self.buffer_type = 0
-        self.first_feature_dim = self.buffer_type + 1
+        self.first_feature_dim = self.buffer_type
 
         self.validate()
 
     @property
     def scales_with_time(self):
-        return 'T' in self._shape
+        return 'T' in self.shape
 
     @property
     def scales_with_batch_size(self):
-        return 'B' in self._shape
+        return 'B' in self.shape
 
     @property
     def scaling_shape(self):
-        return self._shape[:self.first_feature_dim]
+        return self.shape[:self.first_feature_dim]
 
     @property
     def feature_shape(self):
-        return self._shape[self.first_feature_dim:]
+        return self.shape[self.first_feature_dim:]
 
     @property
     def feature_size(self):
@@ -174,28 +152,28 @@ class BufferStructure(object):
 
     @property
     def nr_dims(self):
-        return len(self._shape)
+        return len(self.shape)
 
     def validate(self):
-        if len(self._shape) == 0:
+        if len(self.shape) == 0:
             raise ShapeValidationError("shape must be non-empty (nr dims > 0)")
 
-        if self.scales_with_time and self._shape[:2] != ('T', 'B'):
+        if self.scales_with_time and self.shape[:2] != ('T', 'B'):
             raise ShapeValidationError(
                 "Shapes that scale with time need to start with ('T', 'B')"
-                "(but started with {})".format(self._shape[:2]))
+                "(but started with {})".format(self.shape[:2]))
 
         if not self.scales_with_time and self.scales_with_batch_size and \
-                self._shape[:1] != ('B',):
+                self.shape[:1] != ('B',):
             raise ShapeValidationError(
                 "Shapes that scale with batch-size need to start with 'B'"
-                "(but started with {})".format(self._shape[:1]))
+                "(but started with {})".format(self.shape[:1]))
 
         # validate feature dimensions
-        if len(self._shape) <= self.first_feature_dim:
+        if len(self.shape) <= self.first_feature_dim:
             raise ShapeValidationError(
                 "need at least one feature dimension"
-                "(but shape was {})".format(self._shape))
+                "(but shape was {})".format(self.shape))
 
         if not all([isinstance(f, int) for f in self.feature_shape]):
                 raise ShapeValidationError(
@@ -214,7 +192,7 @@ class BufferStructure(object):
 
     def to_json(self, i):
         descr = {
-            '@shape': self._shape,
+            '@shape': self.shape,
             '@index': i,
             '@type': 'array'
         }
@@ -227,19 +205,19 @@ class BufferStructure(object):
     def __eq__(self, other):
         if not isinstance(other, BufferStructure):
             return False
-        return self._shape == other._shape
+        return self.shape == other.shape
 
     def __ne__(self, other):
         return not self == other
 
     def __hash__(self):
-        return hash(self._shape)
+        return hash(self.shape)
 
     def __repr__(self):
-        return "<{}>".format(self._shape)
+        return "<{}>".format(self.shape)
 
 
-def combine_input_shapes(shapes):
+def combine_buffer_structures(shapes):
     """
     Concatenate buffer structures on the last feature dimension.
 
