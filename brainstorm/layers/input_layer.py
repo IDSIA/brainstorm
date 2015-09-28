@@ -2,9 +2,9 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import LayerValidationError
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import BufferStructure
 
 
 def Input(out_shapes, name=None):
@@ -13,7 +13,7 @@ def Input(out_shapes, name=None):
                                       out_shapes=out_shapes)
 
 
-class InputLayerImpl(LayerBaseImpl):
+class InputLayerImpl(BaseLayerImpl):
     """
     Special input layer type, that provides access to external data.
 
@@ -28,7 +28,7 @@ class InputLayerImpl(LayerBaseImpl):
         if 'out_shapes' not in self.kwargs:
             raise LayerValidationError("InputLayer requires 'out_shapes'")
 
-        return {n: ShapeTemplate.from_tuple(s)
+        return {n: BufferStructure.from_tuple(s)
                 for n, s in self.kwargs['out_shapes'].items()}
 
     def _validate_in_shapes(self):

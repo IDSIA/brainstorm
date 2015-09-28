@@ -5,10 +5,10 @@ from __future__ import division, print_function, unicode_literals
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import LayerValidationError, flatten_time_and_features, \
     flatten_time
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def BinomialCrossEntropy(name=None):
@@ -16,7 +16,7 @@ def BinomialCrossEntropy(name=None):
                                       name=name)
 
 
-class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
+class BinomialCrossEntropyLayerImpl(BaseLayerImpl):
     """
     Calculate the Binomial Cross Entropy between outputs and **binary** targets
 
@@ -29,21 +29,19 @@ class BinomialCrossEntropyLayerImpl(LayerBaseImpl):
     undefined.
     """
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...'),
-              'targets': ShapeTemplate('T', 'B', '...')}
-
-    outputs = {'default': ShapeTemplate('T', 'B', 1)}
+    inputs = {'default': StructureTemplate('T', 'B', '...'),
+              'targets': StructureTemplate('T', 'B', '...')}
 
     expected_kwargs = {}
 
     def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', 1)}
+        return {'default': BufferStructure('T', 'B', 1)}
 
     def get_internal_structure(self):
         feature_shape = self.in_shapes['default'].feature_shape
         internals = OrderedDict()
-        internals['cee'] = ShapeTemplate('T', 'B', *feature_shape)
-        internals['ceed'] = ShapeTemplate('T', 'B', *feature_shape,
+        internals['cee'] = BufferStructure('T', 'B', *feature_shape)
+        internals['ceed'] = BufferStructure('T', 'B', *feature_shape,
                                           is_backward_only=True)
         return internals
 

@@ -2,8 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 from brainstorm.utils import flatten_time_and_features, flatten_time
 
 
@@ -11,11 +11,10 @@ def Mask(name=None):
     return ConstructionWrapper.create('Mask', name=name)
 
 
-class MaskLayerImpl(LayerBaseImpl):
+class MaskLayerImpl(BaseLayerImpl):
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...'),
-              'mask': ShapeTemplate('T', 'B', 1)}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    inputs = {'default': StructureTemplate('T', 'B', '...'),
+              'mask': StructureTemplate('T', 'B', 1)}
 
     def _get_output_shapes(self):
         return {'default': self.in_shapes['default']}

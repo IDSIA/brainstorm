@@ -3,23 +3,22 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import BufferStructure, StructureTemplate
 
 
 def Highway(name=None):
     return ConstructionWrapper.create('Highway', name=name)
 
 
-class HighwayLayerImpl(LayerBaseImpl):
-    inputs = {'H': ShapeTemplate('T', 'B', '...'),
-              'T': ShapeTemplate('T', 'B', '...'),
-              'x': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+class HighwayLayerImpl(BaseLayerImpl):
+    inputs = {'H': StructureTemplate('T', 'B', '...'),
+              'T': StructureTemplate('T', 'B', '...'),
+              'x': StructureTemplate('T', 'B', '...')}
 
     def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B',
-                                         *self.in_shapes['x'].feature_shape)}
+        return {'default': BufferStructure('T', 'B',
+                                           *self.in_shapes['x'].feature_shape)}
 
     def _validate_in_shapes(self):
         """Ensure self.in_shapes are valid.

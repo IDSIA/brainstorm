@@ -5,8 +5,8 @@ from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def FullyConnected(size, activation_function='rel', name=None):
@@ -16,8 +16,8 @@ def FullyConnected(size, activation_function='rel', name=None):
                                       activation_function=activation_function)
 
 
-class FullyConnectedLayerImpl(LayerBaseImpl):
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
+class FullyConnectedLayerImpl(BaseLayerImpl):
+    inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation_function'}
 
     def _setup_hyperparameters(self):
@@ -48,19 +48,19 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
         in_size = self.in_shapes['default'].feature_size
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(self.size, in_size)
-        parameters['bias'] = ShapeTemplate(self.size)
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['bias'] = BufferStructure(self.size)
         return parameters
 
     def get_internal_structure(self):
         internals = OrderedDict()
-        internals['H'] = ShapeTemplate('T', 'B', self.size)
-        internals['dH'] = ShapeTemplate('T', 'B', self.size,
-                                        is_backward_only=True)
+        internals['H'] = BufferStructure('T', 'B', self.size)
+        internals['dH'] = BufferStructure('T', 'B', self.size,
+                                          is_backward_only=True)
         return internals
 
     def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', self.size)}
+        return {'default': BufferStructure('T', 'B', self.size)}
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

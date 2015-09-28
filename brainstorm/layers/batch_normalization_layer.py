@@ -3,8 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 from brainstorm.utils import flatten_time_and_features
 
 
@@ -13,10 +13,10 @@ def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
                                       epsilon=epsilon)
 
 
-class BatchNormLayerImpl(LayerBaseImpl):
+class BatchNormLayerImpl(BaseLayerImpl):
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    inputs = {'default': StructureTemplate('T', 'B', '...')}
+    outputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'decay', 'epsilon'}
 
     def _setup_hyperparameters(self):
@@ -29,7 +29,7 @@ class BatchNormLayerImpl(LayerBaseImpl):
 
     def get_parameter_structure(self):
         parameters = OrderedDict()
-        feature_shape = ShapeTemplate(self.in_shapes['default'].feature_size)
+        feature_shape = BufferStructure(self.in_shapes['default'].feature_size)
         parameters['gamma'] = feature_shape
         parameters['beta'] = feature_shape
         parameters['mu'] = feature_shape
@@ -38,7 +38,7 @@ class BatchNormLayerImpl(LayerBaseImpl):
 
     def get_internal_structure(self):
         internals = OrderedDict()
-        feature_shape = ShapeTemplate(self.in_shapes['default'].feature_size)
+        feature_shape = BufferStructure(self.in_shapes['default'].feature_size)
         internals['sigma_b'] = feature_shape
         internals['centered'] = self.in_shapes['default']
         internals['x_hat'] = self.in_shapes['default']

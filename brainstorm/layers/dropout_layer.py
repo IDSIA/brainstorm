@@ -3,8 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import StructureTemplate
 
 
 def Dropout(drop_prob=0.5, name=None):
@@ -12,13 +12,11 @@ def Dropout(drop_prob=0.5, name=None):
                                       name=name)
 
 
-class DropoutLayerImpl(LayerBaseImpl):
+class DropoutLayerImpl(BaseLayerImpl):
     """
     drop_prob is the probability of a unit being dropped, i.e. 0
     """
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    inputs = {'default': StructureTemplate('T', 'B', '...')}
 
     expected_kwargs = {'drop_prob'}
 

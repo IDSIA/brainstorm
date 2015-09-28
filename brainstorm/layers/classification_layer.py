@@ -3,10 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def Classification(size, name=None):
@@ -15,7 +15,7 @@ def Classification(size, name=None):
                                       name=name)
 
 
-class ClassificationLayerImpl(LayerBaseImpl):
+class ClassificationLayerImpl(BaseLayerImpl):
     """
     Softmax layer with integrated Multinomial-Cross-Entropy.
 
@@ -30,7 +30,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
     and it also does not use the deltas coming in from the 'outputs'.
     """
 
-    expected_inputs = {'default': StructureTemplate('T', 'B', 'F', '...'),
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
                        'targets': StructureTemplate('T', 'B', 1)}
 
     expected_kwargs = {'size'}

@@ -4,8 +4,8 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import BufferStructure, StructureTemplate
 
 
 def Rnn(size, activation_function='tanh', name=None):
@@ -15,7 +15,7 @@ def Rnn(size, activation_function='tanh', name=None):
                                       activation_function=activation_function)
 
 
-class RnnLayerImpl(LayerBaseImpl):
+class RnnLayerImpl(BaseLayerImpl):
     expected_kwargs = {'size', 'activation_function'}
 
     def _setup_hyperparameters(self):
@@ -45,22 +45,22 @@ class RnnLayerImpl(LayerBaseImpl):
     def get_parameter_structure(self):
         in_size = self.in_shapes['default'].feature_size
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(self.size, in_size)
-        parameters['R'] = ShapeTemplate(self.size, self.size)
-        parameters['bias'] = ShapeTemplate(self.size)
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['R'] = BufferStructure(self.size, self.size)
+        parameters['bias'] = BufferStructure(self.size)
         return parameters
 
     def get_internal_structure(self):
         internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['dHa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dHb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+        internals['Ha'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['dHa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dHb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
         return internals
 
     def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', self.size, context_size=1)}
+        return {'default': BufferStructure('T', 'B', self.size, context_size=1)}
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

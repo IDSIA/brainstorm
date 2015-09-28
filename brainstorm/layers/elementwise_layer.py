@@ -2,8 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import StructureTemplate
 
 
 def Elementwise(activation_function='rel', name=None):
@@ -12,13 +12,12 @@ def Elementwise(activation_function='rel', name=None):
                                       activation_function=activation_function)
 
 
-class ElementwiseLayerImpl(LayerBaseImpl):
+class ElementwiseLayerImpl(BaseLayerImpl):
     """
     This layer just applies an activation function to its inputs.
     """
     expected_kwargs = {'activation_function'}
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    inputs = {'default': StructureTemplate('T', 'B', '...')}
 
     def _setup_hyperparameters(self):
         self.act_func = None

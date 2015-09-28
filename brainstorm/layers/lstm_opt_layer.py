@@ -4,8 +4,8 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 
 
 def LstmOpt(size, activation_function='tanh', name=None):
@@ -16,7 +16,7 @@ def LstmOpt(size, activation_function='tanh', name=None):
 
 
 # noinspection PyPep8Naming
-class LstmOptLayerImpl(LayerBaseImpl):
+class LstmOptLayerImpl(BaseLayerImpl):
 
     expected_kwargs = {'size', 'activation_function'}
 
@@ -49,9 +49,9 @@ class LstmOptLayerImpl(LayerBaseImpl):
         out_size = self.out_shapes['default'].feature_size
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(out_size * 4, in_size)
-        parameters['R'] = ShapeTemplate(out_size * 4, out_size)
-        parameters['b'] = ShapeTemplate(out_size * 4)
+        parameters['W'] = BufferStructure(out_size * 4, in_size)
+        parameters['R'] = BufferStructure(out_size * 4, out_size)
+        parameters['b'] = BufferStructure(out_size * 4)
 
         return parameters
 
@@ -59,15 +59,15 @@ class LstmOptLayerImpl(LayerBaseImpl):
         out_size = self.out_shapes['default'].feature_size
         internals = OrderedDict()
 
-        internals['S'] = ShapeTemplate('T', 'B', out_size * 4, context_size=1)
-        internals['Ca'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Cb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['dS'] = ShapeTemplate('T', 'B', out_size * 4, context_size=1,
-                                        is_backward_only=True)
-        internals['dCa'] = ShapeTemplate('T', 'B', out_size, context_size=1,
-                                         is_backward_only=True)
-        internals['dCb'] = ShapeTemplate('T', 'B', out_size, context_size=1,
-                                         is_backward_only=True)
+        internals['S'] = BufferStructure('T', 'B', out_size * 4, context_size=1)
+        internals['Ca'] = BufferStructure('T', 'B', out_size, context_size=1)
+        internals['Cb'] = BufferStructure('T', 'B', out_size, context_size=1)
+        internals['dS'] = BufferStructure('T', 'B', out_size * 4, context_size=1,
+                                          is_backward_only=True)
+        internals['dCa'] = BufferStructure('T', 'B', out_size, context_size=1,
+                                           is_backward_only=True)
+        internals['dCb'] = BufferStructure('T', 'B', out_size, context_size=1,
+                                           is_backward_only=True)
 
         return internals
 
@@ -76,7 +76,7 @@ class LstmOptLayerImpl(LayerBaseImpl):
         if not isinstance(s, int):
             raise LayerValidationError('size must be int but was {}'.format(s))
 
-        return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
+        return {'default': BufferStructure('T', 'B', s, context_size=1)}
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

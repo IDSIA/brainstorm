@@ -17,11 +17,12 @@ class StructureTemplate(object):
                             .format(set(kwargs.keys()) - expected_kwargs))
 
         if 'T' in self._shape:
-            self.first_feature_dim = self.buffer_type = 2
-        if 'B' in self._shape:
-            self.first_feature_dim = self.buffer_type = 1
+            self.buffer_type = 2
+        elif 'B' in self._shape:
+            self.buffer_type = 1
         else:
-            self.first_feature_dim = self.buffer_type = 0
+            self.buffer_type = 0
+        self.first_feature_dim = self.buffer_type
 
         self.is_backward_only = kwargs.get('is_backward_only', False)
         self.validate()
@@ -60,14 +61,13 @@ class StructureTemplate(object):
                 "(but started with {})".format(self._shape[:1]))
 
         # validate feature dimensions
-        if len(self._shape) <= self.first_feature_dim:
+        if len(self._shape) < self.first_feature_dim:
             raise ShapeValidationError(
                 "need at least one feature dimension"
                 "(but shape was {})".format(self._shape))
 
         if '...' in self._shape:
-            if len(self._shape) > self.first_feature_dim + 1 or\
-                    self.feature_shape != ('...',):
+            if self.feature_shape != ('...',):
                 raise ShapeValidationError(
                     'Wildcard-shapes can ONLY have a single feature dimension'
                     ' entry "...". (But had {})'.format(self.feature_shape))
@@ -143,11 +143,12 @@ class BufferStructure(object):
         self.is_backward_only = kwargs.get('is_backward_only', False)
 
         if 'T' in self._shape:
-            self.first_feature_dim = self.buffer_type = 2
+            self.buffer_type = 2
         if 'B' in self._shape:
-            self.first_feature_dim = self.buffer_type = 1
+            self.buffer_type = 1
         else:
-            self.first_feature_dim = self.buffer_type = 0
+            self.buffer_type = 0
+        self.first_feature_dim = self.buffer_type + 1
 
         self.validate()
 

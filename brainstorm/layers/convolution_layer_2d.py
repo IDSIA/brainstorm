@@ -3,8 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import StructureTemplate, BufferStructure
 from brainstorm.utils import flatten_time
 
 
@@ -19,11 +19,10 @@ def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                                       name=name)
 
 
-class Convolution2DLayerImpl(LayerBaseImpl):
+class Convolution2DLayerImpl(BaseLayerImpl):
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'padding',
                        'activation_function'}
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    inputs = {'default': StructureTemplate('T', 'B', '...')}
 
     def _setup_hyperparameters(self):
         self.act_func = None
@@ -71,17 +70,17 @@ class Convolution2DLayerImpl(LayerBaseImpl):
         kernel_y = self.kernel_size[1]
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(num_filters, num_input_maps,
+        parameters['W'] = BufferStructure(num_filters, num_input_maps,
                                         kernel_x, kernel_y)
-        parameters['bias'] = ShapeTemplate(num_filters)
+        parameters['bias'] = BufferStructure(num_filters)
         return parameters
 
     def get_internal_structure(self):
         output_shape = self.out_shapes['default'].feature_shape
 
         internals = OrderedDict()
-        internals['H'] = ShapeTemplate('T', 'B', *output_shape)
-        internals['dH'] = ShapeTemplate('T', 'B', *output_shape,
+        internals['H'] = BufferStructure('T', 'B', *output_shape)
+        internals['dH'] = BufferStructure('T', 'B', *output_shape,
                                         is_backward_only=True)
         return internals
 
@@ -100,7 +99,7 @@ class Convolution2DLayerImpl(LayerBaseImpl):
         output_width = ((in_shape[2] + 2 * padding - kernel_size[1]) //
                         stride[1]) + 1
         output_shape = (num_filters, output_height, output_width)
-        return {'default': ShapeTemplate('T', 'B', *output_shape)}
+        return {'default': BufferStructure('T', 'B', *output_shape)}
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

@@ -2,17 +2,16 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import BufferStructure, StructureTemplate
 
 
 def Loss(importance=1.0, name=None):
     return ConstructionWrapper.create('Loss', importance=importance, name=name)
 
 
-class LossLayerImpl(LayerBaseImpl):
-    inputs = {'default': ShapeTemplate('...')}
-    outputs = {'loss': ShapeTemplate(1)}
+class LossLayerImpl(BaseLayerImpl):
+    inputs = {'default': StructureTemplate('...')}
     expected_kwargs = {'importance'}
 
     def _setup_hyperparameters(self):
@@ -24,7 +23,7 @@ class LossLayerImpl(LayerBaseImpl):
             self.batch_index = 0
 
     def _get_output_shapes(self):
-        return {'loss': ShapeTemplate(1)}
+        return {'loss': BufferStructure(1)}
 
     def forward_pass(self, buffers, training_pass=True):
         if self.batch_index is None:

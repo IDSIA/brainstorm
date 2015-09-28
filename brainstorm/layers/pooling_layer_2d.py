@@ -3,8 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.shapes import BufferStructure, StructureTemplate
 
 
 def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
@@ -16,11 +16,10 @@ def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
                                       name=name)
 
 
-class Pooling2DLayerImpl(LayerBaseImpl):
+class Pooling2DLayerImpl(BaseLayerImpl):
     expected_kwargs = {'kernel_size', 'type', 'stride',
                        'padding', 'activation_function'}
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    inputs = {'default': StructureTemplate('T', 'B', '...')}
 
     def _setup_hyperparameters(self):
         assert 'kernel_size' in self.kwargs, "kernel_size must be specified " \
@@ -47,7 +46,7 @@ class Pooling2DLayerImpl(LayerBaseImpl):
         argmax_shape = self.out_shapes['default'].feature_shape + (2, )
         internals = OrderedDict()
         if self.type == 'max':
-            internals['argmax'] = ShapeTemplate('T', 'B', *argmax_shape)
+            internals['argmax'] = BufferStructure('T', 'B', *argmax_shape)
         return internals
 
     def _get_output_shapes(self):

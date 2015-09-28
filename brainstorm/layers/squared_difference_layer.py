@@ -3,10 +3,10 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
+from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features, flatten_features
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import BufferStructure, StructureTemplate
 
 
 def SquaredDifference(name=None):
@@ -14,15 +14,13 @@ def SquaredDifference(name=None):
                                       name=name)
 
 
-class SquaredDifferenceLayerImpl(LayerBaseImpl):
+class SquaredDifferenceLayerImpl(BaseLayerImpl):
     """
     A layer that computes half of the squared differences between two inputs,
     and sums them over feature dimensions.
     """
-    inputs = {'inputs_1': ShapeTemplate('T', 'B', '...'),
-              'inputs_2': ShapeTemplate('T', 'B', '...')}
-
-    outputs = {'default': ShapeTemplate('T', 'B', 1)}
+    inputs = {'inputs_1': StructureTemplate('T', 'B', '...'),
+              'inputs_2': StructureTemplate('T', 'B', '...')}
 
     expected_kwargs = {}
 
@@ -33,16 +31,16 @@ class SquaredDifferenceLayerImpl(LayerBaseImpl):
         feature_shape = self.in_shapes['inputs_1'].feature_shape
 
         internals = OrderedDict()
-        internals['squared_diff'] = ShapeTemplate('T', 'B', *feature_shape)
-        internals['grad_diff'] = ShapeTemplate('T', 'B', *feature_shape,
-                                               is_backward_only=True)
+        internals['squared_diff'] = BufferStructure('T', 'B', *feature_shape)
+        internals['grad_diff'] = BufferStructure('T', 'B', *feature_shape,
+                                                 is_backward_only=True)
         return internals
 
     def _get_output_shapes(self):
         """
         Sets the shape of the 'default' output using in_shapes['inputs_1']
         """
-        return {'default': ShapeTemplate('T', 'B', 1)}
+        return {'default': BufferStructure('T', 'B', 1)}
 
     def _validate_in_shapes(self):
         """Ensure self.in_shapes are all valid.
