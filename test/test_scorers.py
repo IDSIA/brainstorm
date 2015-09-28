@@ -70,4 +70,3 @@ def test_scorer_with_mask(scorer_test_case):
     errors2 = [(3, scorer(true_labels, predictions, mask=mask))]
 
     assert scorer.aggregate(errors1) == scorer.aggregate(errors2)
-
