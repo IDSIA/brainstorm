@@ -344,8 +344,9 @@ class InfoUpdater(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         info = self.run.info
-        info['epoch'] = epoch_nr
-        info['monitor'] = logs
+        info['epoch_nr'] = epoch_nr
+        info['update_nr'] = update_nr
+        info['logs'] = logs
         if 'nr_parameters' not in info:
             info['nr_parameters'] = net.buffer.parameters.size
 
@@ -359,7 +360,10 @@ class MonitorLoss(Hook):
 
     def start(self, net, stepper, verbose, named_data_iters):
         super(MonitorLoss, self).start(net, stepper, verbose, named_data_iters)
-        assert self.iter_name in named_data_iters
+        if self.iter_name not in named_data_iters:
+            raise KeyError("{} >> {} is not present in named_data_iters. "
+                           "Remember to pass it  as a kwarg to Trainer.train()"
+                           .format(self.__name__, self.iter_name))
         self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):

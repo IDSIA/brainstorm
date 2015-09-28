@@ -116,6 +116,7 @@ class Trainer(Describable):
         self._start_hooks(net, named_data_iters)
         self._emit_hooks(net, 'epoch', logs=self.results)
         self._emit_hooks(net, 'update', logs=self.results)
+        return self.results
 
     def __init_from_description__(self, description):
         """Recover the hooks in order of priority and set their names."""
