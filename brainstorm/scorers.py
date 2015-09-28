@@ -28,7 +28,7 @@ class Accuracy(Scorer):
         if predicted.shape[1] > 1:
             predicted = predicted.argmax(1).reshape(-1, 1)
         correct = predicted == true_labels
-        if mask:
+        if mask is not None:
             correct *= mask
         return np.sum(correct)
 
@@ -43,7 +43,7 @@ class Hamming(Scorer):
         correct = np.logical_xor(predicted < self.threshold, true_labels)
         if mask is not None:
             correct *= mask
-        return np.sum(correct)
+        return np.sum(correct) / true_labels.shape[1]
 
 
 class MeanSquaredError(Scorer):
