@@ -18,6 +18,7 @@ class Trainer(Describable):
         'current_epoch_nr': 0,
         'current_update_nr': 0,
         'logs': {},
+        'results': {},
         'failed_hooks': {}
     }
     __default_values__ = {'verbose': True}
@@ -37,7 +38,8 @@ class Trainer(Describable):
         self.train_scorers = []
         self.current_epoch_nr = 0
         self.current_update_nr = 0
-        self.logs = dict()
+        self.logs = {}
+        self.results = {}
 
     def add_hook(self, hook):
         """Add a hook to this trainer.
@@ -83,7 +85,8 @@ class Trainer(Describable):
         run = (run_network_double_buffer if self.double_buffering else
                run_network)
 
-        while True:
+        should_stop = False
+        while not should_stop:
             self.current_epoch_nr += 1
             sys.stdout.flush()
             train_scores = {s.__name__: [] for s in self.train_scorers}
@@ -100,19 +103,19 @@ class Trainer(Describable):
                 gather_losses_and_scores(net, self.train_scorers, train_scores)
                 net.apply_weight_modifiers()
                 if self._emit_hooks(net, 'update'):
+                    should_stop = True
                     break
 
-            self._add_log('training',
+            self._add_log('rolling_training',
                           aggregate_losses_and_scores(train_scores, net,
                                                       self.train_scorers))
 
-            if self._emit_hooks(net, 'epoch'):
-                break
+            should_stop |= self._emit_hooks(net, 'epoch')
 
     def evaluate(self, net, **named_data_iters):
         self._start_hooks(net, named_data_iters)
-        self._emit_hooks(net, 'epoch')
-        self._emit_hooks(net, 'update')
+        self._emit_hooks(net, 'epoch', logs=self.results)
+        self._emit_hooks(net, 'update', logs=self.results)
 
     def __init_from_description__(self, description):
         """Recover the hooks in order of priority and set their names."""
@@ -126,7 +129,6 @@ class Trainer(Describable):
 
     def _start_hooks(self, net, named_data_iters):
         """Call the ::attr::`start()` methods for all the hooks."""
-        self.logs = {}
         for name, hook in self.hooks.items():
             try:
                 if hasattr(hook, 'start'):
@@ -137,7 +139,7 @@ class Trainer(Describable):
                       .format(name), file=sys.stderr)
                 raise
 
-    def _emit_hooks(self, net, timescale):
+    def _emit_hooks(self, net, timescale, logs=None):
         """Call the hooks which should be called at this timescale."""
         should_stop = False
         count = self.current_epoch_nr if timescale == 'epoch' else \
@@ -149,7 +151,7 @@ class Trainer(Describable):
 
             hook_log, stop = self._call_hook(hook, net)
             should_stop |= stop
-            self._add_log(name, hook_log, hook.verbose)
+            self._add_log(name, hook_log, hook.verbose, logs=logs)
 
         return should_stop
 

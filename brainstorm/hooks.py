@@ -325,16 +325,21 @@ class StopOnNan(Hook):
                 self.message("NaN or inf detected in parameters!")
                 raise StopIteration()
 
-        if self.check_training_loss and logs['training_loss']:
-            if not np.all(np.isfinite(logs['training_loss'][1:])):
-                self.message("NaN or inf detected in training_loss!")
+        if self.check_training_loss and logs['rolling_training']:
+            rtrain = logs['rolling_training']
+            if 'total_loss' in rtrain:
+                loss = rtrain['total_loss']
+            else:
+                loss = list(rtrain.values())[0]
+            if not np.all(np.isfinite(loss)):
+                self.message("NaN or inf detected in rolling training loss!")
                 raise StopIteration()
 
 
 class InfoUpdater(Hook):
     """ Save the information from logs to the Sacred custom info dict"""
-    def __init__(self, run, name=None):
-        super(InfoUpdater, self).__init__(name, 'epoch', 1)
+    def __init__(self, run, name=None, timescale='epoch', interval=1):
+        super(InfoUpdater, self).__init__(name, timescale, interval)
         self.run = run
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
