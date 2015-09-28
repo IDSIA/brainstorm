@@ -407,8 +407,6 @@ def test_elementwise_act_func_gradients():
     test_shape = (3, 2, 4)
 
     for fwd, bwd in pairs_to_test:
-        print("------------------")
-        print("Testing", fwd.__name__)
         inputs = HANDLER.create_from_numpy(np.random.randn(*test_shape))
         outputs = HANDLER.zeros(test_shape)
         doutputs = HANDLER.ones(test_shape)
@@ -431,6 +429,8 @@ def test_elementwise_act_func_gradients():
 
         close = np.allclose(grad_approx, grad_calc, rtol=1e-4, atol=1e-4)
         if not close:
+            print("-----------------------------")
+            print("Testing", fwd.__name__)
             print('-- Approximated Gradient ----')
             print(grad_approx)
             print('---- Calculated Gradient ----')
