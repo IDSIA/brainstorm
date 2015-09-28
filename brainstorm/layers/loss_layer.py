@@ -25,9 +25,8 @@ class LossLayerImpl(LayerBaseImpl):
         elif in_shapes['default'].scales_with_batch_size:
             self.batch_index = 0
 
-        outputs = OrderedDict()
-        outputs['loss'] = BufferStructure(1)
-        return outputs, OrderedDict, OrderedDict()
+    def _get_output_shapes(self):
+        return {'loss': ShapeTemplate(1)}
 
     def forward_pass(self, buffers, training_pass=True):
         if self.batch_index is None:

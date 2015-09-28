@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import OrderedDict
 from brainstorm.utils import get_inheritors, LayerValidationError, get_by_path
-from brainstorm.structure.shapes import ShapeTemplate
 
 
 def get_layer_class_from_typename(typename):
-    layer_classes = get_inheritors(LayerBaseImpl)
+    layer_classes = get_inheritors(BaseLayerImpl)
     for layer_class in layer_classes:
         if typename == layer_class.__name__:
             return layer_class
@@ -15,7 +13,7 @@ def get_layer_class_from_typename(typename):
         raise TypeError("Layer-type '{}' unknown!".format(typename))
 
 
-class LayerBaseImpl(object):
+class BaseLayerImpl(object):
     """
     The base-class of all layer types defined in Python.
 
@@ -34,7 +32,7 @@ class LayerBaseImpl(object):
     expected_kwargs = {}
     """Set of all kwargs that this layer accepts"""
 
-    expected_inputs = {'default': ShapeTemplate('T', 'B', 'F')}
+    expected_inputs = {}
     """Names and shape-templates for all inputs of this layer"""
 
     def __init__(self, name, in_shapes, incoming_connections,
@@ -116,32 +114,34 @@ class LayerBaseImpl(object):
         if category not in categories:
             raise ValueError("Category '{}' for path '{}' not found. Choices "
                              "are {}".format(category, path, categories))
-        if category == 'parameters':
-            parameters = self.get_parameter_structure()
-            return get_by_path(parameters, subpath)
-        if category == 'internals':
-            internals = self.get_internal_structure()
-            return get_by_path(internals, subpath)
-        if category == 'inputs':
-            return get_by_path(self.in_shapes, subpath)
-        if category == 'outputs':
-            return get_by_path(self.out_shapes, subpath)
+        category_shapes = {
+            'parameters': self.parameter_shapes,
+            'internals': self.internal_shapes,
+            'inputs': self.in_shapes,
+            'outputs': self.out_shapes
+        }
+        return get_by_path(category_shapes[category], subpath)
 
     def _validate_kwargs(self):
         """Ensure self.kwargs are all sound.
 
-        Raise LayerValidationError otherwise."""
+        Raises:
+            LayerValidationError: if there are unexpected kwargs."""
         unexpected_kwargs = set(self.kwargs) - set(self.expected_kwargs)
         if unexpected_kwargs:
             raise LayerValidationError("{}: Unexpected kwargs: {}".format(
                 self.name, unexpected_kwargs))
 
     def _validate_in_shapes(self):
-        """Ensure self.in_shapes are all valid.
+        """Ensure all in_shapes are valid by comparing to `expected_inputs`.
 
-         Raise LayerValidationError otherwise."""
+        Raises:
+            LayerValidationError: if there are unrecognized inputs, missing
+                                  inputs or inputs that don't match the
+                                  `StructureTemplate` from `expected_inputs`.
+        """
         in_shape_names = set(self.in_shapes.keys())
-        input_names = set(self.inputs.keys())
+        input_names = set(self.expected_inputs.keys())
 
         if not in_shape_names.issubset(input_names):
             raise LayerValidationError(
@@ -155,37 +155,21 @@ class LayerBaseImpl(object):
                 .format(self.name, input_names - in_shape_names))
 
         for input_name, in_shape in self.in_shapes.items():
-            if not self.inputs[input_name].matches(in_shape):
+            if not self.expected_inputs[input_name].matches(in_shape):
                 raise LayerValidationError(
-                    "{}: in_shape ({}) for {} doesn't match shape-template {}"
-                    .format(self.name, in_shape, input_name,
-                            self.inputs[input_name]))
-
-    def _validate_out_shapes(self):
-        """Ensure self.out_shapes are all valid.
-
-        Raise LayerValidationError otherwise."""
-        out_shape_names = set(self.out_shapes.keys())
-        output_names = set(self.outputs.keys())
-
-        if not out_shape_names.issubset(output_names):
-            raise LayerValidationError(
-                'Invalid out_shapes. {} has no output(s) named "{}". Choices '
-                'are: {}'.format(self.name, out_shape_names - output_names,
-                                 output_names))
-
-        for output_name, out_shape in self.out_shapes.items():
-            if not self.outputs[output_name].matches(out_shape):
-                raise LayerValidationError(
-                    "{}: out_shape ({}) for {} doesn't match shape-template {}"
-                    .format(self.name, out_shape, output_name,
-                            self.outputs[output_name]))
+                    "{}: in_shape ({}) for {} doesn't match StructureTemplate "
+                    "{}".format(self.name, in_shape, input_name,
+                                self.expected_inputs[input_name]))
 
     def _validate_connections(self):
         """
-        Ensure all connections from self.incoming and self.outgoing are valid.
+        Ensure all incoming and outgoing connections are valid.
 
-        Raise LayerValidationError otherwise.
+        Raises:
+            LayerValidationError: if there is any:
+                * incoming connection to a non-existent input
+                * outgoing connection from a non-existent output, parameter
+                  or internal buffer
         """
         for in_c in self.incoming:
             if in_c.input_name not in self.in_shapes:

@@ -7,8 +7,7 @@ import itertools
 
 import numpy as np
 
-from brainstorm.structure.shapes import (
-    get_feature_size, validate_shape_template, ShapeTemplate)
+from brainstorm.structure.shapes import BufferStructure
 from brainstorm.utils import (NetworkValidationError, flatten,
                               convert_to_nested_indices, sort_by_index_key,
                               get_normalized_path)
@@ -17,26 +16,23 @@ from brainstorm.utils import (NetworkValidationError, flatten,
 class Hub(object):
     @staticmethod
     def create(source_set, sink_set, layout, connections):
+        def ensure_uniform(l):
+            assert min(l) == max(l)
+            return l[0]
+
         # get buffer type for hub and assert its uniform
-        btypes = [validate_shape_template(get_by_path(s, layout)['@shape'])
-                  for s in flatten(source_set)]
-        assert min(btypes) == max(btypes)
-        btype = btypes[0]
+        structs = [BufferStructure.from_tuple(get_by_path(s, layout)['@shape'])
+                   for s in flatten(source_set)]
+        btype = ensure_uniform([s.buffer_type for s in structs])
         # max context size
-        context_size = max([get_by_path(s, layout).get('@context_size', 0)
-                            for s in flatten(source_set)])
+        context_size = max([s.context_size for s in structs])
 
         hub = Hub(sorted(source_set), sorted(sink_set), btype, context_size)
         hub.setup(connections)
-        hub.sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
-                     for s in hub.sources]
+        hub.sizes = [structs[i].feature_size for i in hub.perm]
         hub.size = sum(hub.sizes)
-
-        is_backward_only = [get_by_path(s, layout).get('@is_backward_only',
-                                                       False)
-                            for s in hub.sources]
-        assert min(is_backward_only) == max(is_backward_only)
-        hub.is_backward_only = is_backward_only[0]
+        hub.is_backward_only = ensure_uniform([structs[i].is_backward_only
+                                               for i in hub.perm])
         return hub
 
     def __init__(self, sources, sinks, btype, context_size=0):
@@ -47,6 +43,7 @@ class Hub(object):
         self.connection_table = []
         self.sizes = []
         self.size = -1
+        self.perm = None
 
     def get_shape(self, time_size=1, batch_size=1):
         full_shape = (time_size + self.context_size,
@@ -83,11 +80,11 @@ class Hub(object):
         nested_indices = convert_to_nested_indices(self.sources)
         # systematically try all permutations until one satisfies the condition
         for perm in itertools.permutations(nested_indices):
-            perm = list(flatten(perm))
+            self.perm = list(flatten(perm))
             ct = np.atleast_2d(self.connection_table[perm])
             if Hub.can_be_connected_with_single_buffer(ct):
                 self.connection_table = ct
-                self.sources = [flat_sources[i] for i in perm]
+                self.sources = [flat_sources[i] for i in self.perm]
                 return
 
         raise NetworkValidationError("Failed to lay out buffers. "
@@ -225,15 +222,14 @@ def get_layout_stub_for_layer(layer):
     layout = {}
 
     layout['inputs'] = {
-        k: convert_to_array_json(layer.in_shapes[k], i)
+        k: layer.in_shapes[k].to_json(i)
         for i, k in enumerate(sorted(layer.in_shapes))
     }
     layout['inputs']['@type'] = 'BufferView'
     layout['inputs']['@index'] = 0
 
     layout['outputs'] = {
-        k: convert_to_array_json(layer.out_shapes[k], i)
-        for i, k in enumerate(sorted(layer.out_shapes))
+        k: v.to_json(i) for i, (k, v) in enumerate(layer.out_shapes.items())
     }
     layout['outputs']['@type'] = 'BufferView'
     layout['outputs']['@index'] = 1
@@ -241,8 +237,7 @@ def get_layout_stub_for_layer(layer):
     parameters = layer.get_parameter_structure()
     assert isinstance(parameters, OrderedDict)
     layout['parameters'] = {
-        k: convert_to_array_json(v, i)
-        for i, (k, v) in enumerate(parameters.items())
+        k: v.to_json(i) for i, (k, v) in enumerate(parameters.items())
     }
     layout['parameters']['@type'] = 'BufferView'
     layout['parameters']['@index'] = 2
@@ -251,14 +246,13 @@ def get_layout_stub_for_layer(layer):
     assert isinstance(parameters, OrderedDict)
 
     layout['internals'] = {
-        k: convert_to_array_json(v, i)
-        for i, (k, v) in enumerate(internals.items())
+        k: v.to_json(i) for i, (k, v) in enumerate(internals.items())
     }
     layout['internals']['@type'] = 'BufferView'
     layout['internals']['@index'] = 3
 
     layout['input_deltas'] = {
-        k: convert_to_array_json(layer.in_shapes[k], i)
+        k: layer.in_shapes[k].to_json(i)
         for i, k in enumerate(sorted(layer.in_shapes))
     }
     for k, v in layout['input_deltas'].items():
@@ -267,8 +261,7 @@ def get_layout_stub_for_layer(layer):
     layout['input_deltas']['@index'] = 4
 
     layout['output_deltas'] = {
-        k: convert_to_array_json(layer.out_shapes[k], i)
-        for i, k in enumerate(sorted(layer.out_shapes))
+        k: v.to_json(i) for i, (k, v) in enumerate(layer.out_shapes.items())
     }
     for k, v in layout['output_deltas'].items():
         v['@is_backward_only'] = True
@@ -276,8 +269,7 @@ def get_layout_stub_for_layer(layer):
     layout['output_deltas']['@index'] = 5
 
     layout['gradients'] = {
-        k: convert_to_array_json(v, i)
-        for i, (k, v) in enumerate(parameters.items())
+        k: v.to_json(i) for i, (k, v) in enumerate(parameters.items())
     }
     for k, v in layout['gradients'].items():
         v['@is_backward_only'] = True
@@ -285,14 +277,6 @@ def get_layout_stub_for_layer(layer):
     layout['gradients']['@index'] = 6
 
     return layout
-
-
-def convert_to_array_json(shape_template, i):
-    assert isinstance(shape_template, ShapeTemplate)
-    d = shape_template.to_json()
-    d['@type'] = 'array'
-    d['@index'] = i
-    return d
 
 
 def get_by_path(path, layout):

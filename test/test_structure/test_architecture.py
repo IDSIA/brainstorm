@@ -2,50 +2,50 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import pytest
-from brainstorm.structure.architecture import combine_input_shapes, \
+from brainstorm.structure.architecture import combine_buffer_structures, \
     validate_architecture, get_canonical_layer_order
 from brainstorm.utils import NetworkValidationError
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.shapes import StructureTemplate
 
 
 def test_combine_input_sizes_tuples():
-    assert combine_input_shapes([ShapeTemplate(1, 4)]) == ShapeTemplate(1, 4)
+    assert combine_buffer_structures([StructureTemplate(1, 4)]) == StructureTemplate(1, 4)
 
-    assert combine_input_shapes([ShapeTemplate(1, 4),
-                                ShapeTemplate(3, 4),
-                                ShapeTemplate(6, 4)]) == ShapeTemplate(10, 4)
+    assert combine_buffer_structures([StructureTemplate(1, 4),
+                                StructureTemplate(3, 4),
+                                StructureTemplate(6, 4)]) == StructureTemplate(10, 4)
 
-    assert combine_input_shapes([ShapeTemplate(2, 3, 4),
-                                ShapeTemplate(3, 3, 4),
-                                ShapeTemplate(2, 3, 4)]) == \
-        ShapeTemplate(7, 3, 4)
+    assert combine_buffer_structures([StructureTemplate(2, 3, 4),
+                                StructureTemplate(3, 3, 4),
+                                StructureTemplate(2, 3, 4)]) == \
+        StructureTemplate(7, 3, 4)
 
 
 def test_combine_input_sizes_tuple_templates():
-    assert (combine_input_shapes([ShapeTemplate('B', 4)]) ==
-            ShapeTemplate('B', 4))
-    assert (combine_input_shapes([ShapeTemplate('B', 4),
-                                 ShapeTemplate('B', 3)]) ==
-            ShapeTemplate('B', 7))
-    assert (combine_input_shapes([ShapeTemplate('T', 'B', 4)]) ==
-            ShapeTemplate('T', 'B', 4))
-    assert (combine_input_shapes([ShapeTemplate('T', 'B', 4),
-                                 ShapeTemplate('T', 'B', 3)]) ==
-            ShapeTemplate('T', 'B', 7))
-    assert (combine_input_shapes([ShapeTemplate('T', 'B', 4, 3, 2),
-                                 ShapeTemplate('T', 'B', 3, 3, 2)]) ==
-            ShapeTemplate('T', 'B', 7, 3, 2))
+    assert (combine_buffer_structures([StructureTemplate('B', 4)]) ==
+            StructureTemplate('B', 4))
+    assert (combine_buffer_structures([StructureTemplate('B', 4),
+                                 StructureTemplate('B', 3)]) ==
+            StructureTemplate('B', 7))
+    assert (combine_buffer_structures([StructureTemplate('T', 'B', 4)]) ==
+            StructureTemplate('T', 'B', 4))
+    assert (combine_buffer_structures([StructureTemplate('T', 'B', 4),
+                                 StructureTemplate('T', 'B', 3)]) ==
+            StructureTemplate('T', 'B', 7))
+    assert (combine_buffer_structures([StructureTemplate('T', 'B', 4, 3, 2),
+                                 StructureTemplate('T', 'B', 3, 3, 2)]) ==
+            StructureTemplate('T', 'B', 7, 3, 2))
 
 
 @pytest.mark.parametrize('sizes', [
-    [ShapeTemplate(2, 3), ShapeTemplate(2, 2)],
-    [ShapeTemplate(2), ShapeTemplate(1, 2)],
-    [ShapeTemplate(2, 1, 3), ShapeTemplate(3, 1, 3), ShapeTemplate(2, 2, 3)],
-    [ShapeTemplate(2, 1, 3), ShapeTemplate(3, 1, 3), ShapeTemplate(1, 1, 2)]
+    [StructureTemplate(2, 3), StructureTemplate(2, 2)],
+    [StructureTemplate(2), StructureTemplate(1, 2)],
+    [StructureTemplate(2, 1, 3), StructureTemplate(3, 1, 3), StructureTemplate(2, 2, 3)],
+    [StructureTemplate(2, 1, 3), StructureTemplate(3, 1, 3), StructureTemplate(1, 1, 2)]
 ])
 def test_combine_input_sizes_mismatch(sizes):
     with pytest.raises(ValueError):
-        combine_input_shapes(sizes)
+        combine_buffer_structures(sizes)
 
 
 def test_validate_architecture_minimal():

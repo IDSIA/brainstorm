@@ -5,32 +5,33 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from brainstorm.handlers import default_handler
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.structure.layout import validate_shape_template
 from brainstorm.utils import sort_by_index_key
+from brainstorm.structure.shapes import BufferStructure
 
 
 def create_buffer_views_from_layout(layout, buffers, hubs, existing_view=None):
     if '@slice' in layout:
         buffer_nr = layout['@hub']
         start, stop = layout['@slice']
-        shape = layout['@shape']
+        structure = BufferStructure.from_tuple(layout['@shape'])
 
         cutoff = hubs[buffer_nr].context_size - layout.get('@context_size', 0)
         t_slice = slice(0, -cutoff if cutoff else None)
-        buffer_type = validate_shape_template(shape)
+
+        buffer_type = structure.buffer_type
         if buffer_type == 0:
             full_buffer = buffers[buffer_nr][start:stop]
-            full_buffer = full_buffer.reshape(shape[buffer_type:])
+            full_buffer = full_buffer.reshape(structure.feature_shape)
         elif buffer_type == 1:
             full_buffer = buffers[buffer_nr][:, start:stop]
             full_buffer = full_buffer.reshape(full_buffer.shape[:1] +
-                                              shape[buffer_type:])
+                                              structure.feature_shape)
         else:  # buffer_type == 2
             full_buffer = buffers[buffer_nr][t_slice, :, start:stop]
             full_buffer = full_buffer.reshape(
                 (full_buffer.shape[0],
                  full_buffer.shape[1]) +
-                shape[buffer_type:])
+                 structure.feature_shape)
     else:
         full_buffer = None
 
