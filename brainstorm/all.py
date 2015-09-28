@@ -11,7 +11,7 @@ from brainstorm.structure import Network, generate_architecture
 
 from brainstorm.layers import *
 from brainstorm.hooks import *
-from brainstorm.training.steppers import *
+from brainstorm.training import *
 from brainstorm.handlers import *
 from brainstorm.tools import *
 from brainstorm.initializers import *

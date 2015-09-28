@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from brainstorm import Network, Trainer
 from brainstorm.data_iterators import Undivided
-from brainstorm.training.steppers import SgdStep
+from brainstorm.training import SgdStep
 from brainstorm.initializers import Gaussian
 from brainstorm.layers import *
 from brainstorm.hooks import StopAfterEpoch
