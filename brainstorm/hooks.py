@@ -104,8 +104,8 @@ class SaveBestNetwork(Hook):
 
 
 class SaveLogs(Hook):
-    def __init__(self, filename, name=None):
-        super(SaveLogs, self).__init__(name, 'epoch', 1, False)
+    def __init__(self, filename, name=None, timescale='epoch', interval=1):
+        super(SaveLogs, self).__init__(name, timescale, interval)
         self.filename = filename
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
