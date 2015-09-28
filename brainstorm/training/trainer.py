@@ -4,9 +4,9 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import sys
 from brainstorm.describable import Describable
-from brainstorm.training.utils import (
-    run_network, run_network_double_buffer, gather_losses_and_scores,
-    aggregate_losses_and_scores)
+from brainstorm.training.utils import run_network, run_network_double_buffer
+from brainstorm.scorers import (
+    gather_losses_and_scores, aggregate_losses_and_scores)
 
 
 class Trainer(Describable):

@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm import layers
 from brainstorm.training.trainer import run_network
-from brainstorm.training.utils import (
+from brainstorm.scorers import (
     gather_losses_and_scores, aggregate_losses_and_scores)
 
 __all__ = ['get_in_out_layers_for_classification', 'draw_network',
