@@ -71,7 +71,7 @@ def test_deltas_finite_differences(net, input_data):
         for t in range(diff.shape[0]):
             print("======== t=%d =========" % t)
             print(diff[t])
-    print("Checking Deltas = %0.4f" % mse)
+    # print("Checking Deltas = %0.4f" % mse)
 
     assert mse < 1e-4
 
@@ -106,5 +106,5 @@ def test_gradient_finite_differences(net, input_data):
                 print("------------- {} -------------".format(view_name))
                 print(net.buffer[layer_name].gradients[view_name])
 
-    print(">> Checking Gradient = %0.4f" % mse)
+    # print(">> Checking Gradient = %0.4f" % mse)
     assert mse < 1e-4

@@ -326,18 +326,18 @@ def test_mult_mv(handler):
     list_b = get_random_arrays()
     list_b = [b[0, :].reshape((1, -1)).copy() for b in list_b]
 
-    print("==================================")
-    print("Testing mult_mv() with row vectors")
-    print("==================================")
+    # print("==================================")
+    # print("Testing mult_mv() with row vectors")
+    # print("==================================")
     for a, b in zip(list_a, list_b):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, b, out)
 
         assert operation_check(handler, 'mult_mv', ref_args)
 
-    print("=====================================")
-    print("Testing mult_mv() with column vectors")
-    print("=====================================")
+    # print("=====================================")
+    # print("Testing mult_mv() with column vectors")
+    # print("=====================================")
     list_b = get_random_arrays()
     list_b = [b[:, 0].reshape((-1, 1)).copy() for b in list_b]
     for a, b in zip(list_a, list_b):
