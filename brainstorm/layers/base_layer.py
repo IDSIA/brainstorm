@@ -19,29 +19,26 @@ class LayerBaseImpl(object):
     """
     The base-class of all layer types defined in Python.
 
-    Each layer has a set of named sinks (inputs) and sources (outputs).
+    Each layer has a set of named inputs and outputs.
+
+    Args:
+        in_shapes (dict[str, BufferStructure]):
+             A dictionary of input buffer structures for all named inputs
+        outgoing_connections (set[Connections]):
+            Set of all outgoing connections
+        incoming_connections (set[Connections]):
+            Set of all incoming connections
+        kwargs (dict):
+            any further arguments passed to this layer
     """
-
-    inputs = {'default': ShapeTemplate('T', 'B', 'F')}
-    """Names and shape-templates for all inputs of this layer"""
-
-    outputs = {'default': ShapeTemplate('T', 'B', 'F')}
-    """Names and shape-templates for all outputs of this layer"""
-
     expected_kwargs = {}
     """Set of all kwargs that this layer accepts"""
 
+    expected_inputs = {'default': ShapeTemplate('T', 'B', 'F')}
+    """Names and shape-templates for all inputs of this layer"""
+
     def __init__(self, name, in_shapes, incoming_connections,
                  outgoing_connections, **kwargs):
-        """
-        :param in_shapes: A dictionary of input shapes for all named sinks
-        :type in_shapes: dict[str, ShapeTemplate]
-        :param outgoing_connections: Set of all outgoing connections
-        :type outgoing_connections: set[Connection]
-        :param incoming_connections: Set of all incoming connections
-        :type incoming_connections: set[Connection]
-        :param kwargs: all further parameters for this layer
-        """
         self.name = name
         """ The name of this layer as specified in the architecture"""
 
@@ -49,7 +46,7 @@ class LayerBaseImpl(object):
         """ Additional options or hyperparameters for this layer"""
 
         self.in_shapes = in_shapes
-        """ Dictionary of shape tuples for every sink (input). """
+        """ Dictionary of `BufferStructure`s for each input. """
 
         self.incoming = incoming_connections
         """ List of incoming connections """
@@ -59,17 +56,43 @@ class LayerBaseImpl(object):
 
         self.handler = None
         self._validate_kwargs()
-        self._setup_hyperparameters()
-
-        """ Dictionary of shape tuples for every source (output). """
-        self.out_shapes = self._get_output_shapes()
         self._validate_in_shapes()
-        self._validate_out_shapes()
+        out, param, intern = self.setup(kwargs, in_shapes)
+
+        self.out_shapes = out
+        """ Dictionary of `BufferStructure`s for each output. """
+
+        self.parameter_shapes = param
+        """ Dictionary of `BufferStructure`s for each parameter. """
+
+        self.internal_shapes = intern
+        """ Dictionary of `BufferStructure`s for each internal buffer. """
+
         self._validate_connections()
 
-    def _setup_hyperparameters(self):
-        """Performs initial setup for a layer."""
-        pass
+    def setup(self, kwargs, in_shapes):
+        """
+        Setup the layer and the buffer structures it uses.
+
+        Each layer implementation needs to override this function.
+
+        Args:
+            kwargs (dict):
+                any keyword arguments passed to this layer during construction
+            in_shapes (dict[str, BufferStructure]):
+                A dictionary of input buffer structures for all inputs
+
+        Returns:
+            (tuple): tuple containing:
+                out_shapes (dict): A dictionary of buffer structures for all
+                                   outputs of this layer
+                parameter_shapes (dict): A dictionary of buffer structures for
+                                         all parameters of this layer
+                internal_shapes (dict): A dictionary of buffer structures for
+                                        all internal buffers of this layer
+        """
+        raise NotImplementedError('LayerImplementations need to implement '
+                                  'the setup() method.')
 
     def set_handler(self, new_handler):
         """Set the handler of this layer to a new one.
@@ -80,33 +103,6 @@ class LayerBaseImpl(object):
         It may also be used to restrict the layer to certain handlers.
         """
         self.handler = new_handler
-
-    def get_parameter_structure(self):
-        """Return a OrderedDict mapping parameter names to ShapeTemplates.
-
-        :return: OrderedDict describing parameter buffers
-        :rtype: OrderedDict[str, ShapeTemplate]
-        """
-        return OrderedDict()
-
-    def get_internal_structure(self):
-        """Return a OrderedDict internal-state names to to ShapeTemplate.
-
-        :return: OrderedDict describing internals
-        :rtype: OrderedDict[str, ShapeTemplate]
-        """
-        return OrderedDict()
-
-    def _get_output_shapes(self):
-        """ Determines the output-shape of this layer.
-
-        Default behaviour is to look for 'shape' in kwargs. If that is not
-        found try to use 'default' in_shape.
-
-        Should be overridden by derived classes to customize this behaviour
-        """
-        raise NotImplementedError('LayerImplementations need to implement '
-                                  'the _get_output_shapes method.')
 
     def forward_pass(self, buffers, training_pass=True):
         pass
@@ -207,7 +203,7 @@ class LayerBaseImpl(object):
                         "['parameters', 'internals']".format(self.name, out_c,
                                                              category))
                 if category == 'parameters':
-                    parameters = self.get_parameter_structure()
+                    parameters = self.parameter_shapes
                     if substruct not in parameters:
                         raise LayerValidationError(
                             "{}: Invalid outgoing connection ({}). Parameter"
@@ -215,7 +211,7 @@ class LayerBaseImpl(object):
                                 self.name, out_c, list(parameters.keys())))
 
                 if category == 'internals':
-                    internals = self.get_internal_structure()
+                    internals = self.internal_shapes
                     if substruct not in internals:
                         raise LayerValidationError(
                             "{}: Invalid outgoing connection ({}). Internal"
