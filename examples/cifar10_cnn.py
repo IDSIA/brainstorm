@@ -42,14 +42,14 @@ network.initialize({'conv*': {'W': Gaussian(0.01), 'bias': 0},
 
 # ------------------------------ Set up Trainer ----------------------------- #
 
-trainer = bs.Trainer(bs.steppers.MomentumStep(learning_rate=0.001,
+trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.001,
                                               momentum=0.9,
                                               scale_learning_rate=False),
                      double_buffering=False)
 trainer.add_hook(bs.hooks.StopAfterEpoch(20))
-trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "Output.output",
-                                          name="validation",
-                                          verbose=True))
+scorers = [bs.scorers.Accuracy(out_name='Output.output')]
+trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
+                                        name='validation'))
 trainer.add_hook(bs.hooks.SaveBestNetwork("validation.accuracy",
                                           filename='cifar10_cnn_best.hdf5',
                                           name="best weights",
