@@ -25,8 +25,7 @@ getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
-inp, out = bs.tools.get_in_out_layers_for_classification(784, 10,
-                                                         outlayer_name='out')
+inp, out = bs.tools.get_in_out_layers_for_classification(784, 10)
 network = bs.Network.from_layer(
     inp >>
     bs.layers.Dropout(drop_prob=0.2) >>
@@ -39,15 +38,14 @@ network = bs.Network.from_layer(
 
 network.set_memory_handler(PyCudaHandler(init_cudnn=False))
 network.initialize(bs.initializers.Gaussian(0.01))
-network.set_weight_modifiers({"out": bs.value_modifiers.ConstrainL2Norm(1)})
+network.set_weight_modifiers({"Output": bs.value_modifiers.ConstrainL2Norm(1)})
 
 # ----------------------------- Set up Trainer ------------------------------ #
-scorers = [bs.scorers.Accuracy(out_name='out.output')]
 
 trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.1, momentum=0.9),
                      double_buffering=False)
-trainer.train_scorers = scorers
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
+scorers = [bs.scorers.Accuracy(out_name='Output.output')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
 trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
@@ -58,5 +56,5 @@ trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("Best validation set accuracy: ",
-      max(trainer.logs["validation"]["accuracy"]))
+print("Best validation set accuracy:",
+      max(trainer.logs["validation"]["Accuracy"]))
