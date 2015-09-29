@@ -20,14 +20,18 @@ class Hub(object):
             assert min(l) == max(l)
             return l[0]
 
+        sorted_sources = sorted(source_set)
+        flat_sources = list(flatten(sorted_sources))
+        nesting = convert_to_nested_indices(sorted_sources)
+
         # get buffer type for hub and assert its uniform
-        structs = [BufferStructure.from_tuple(get_by_path(s, layout)['@shape'])
-                   for s in flatten(source_set)]
+        structs = [BufferStructure.from_layout(get_by_path(s, layout))
+                   for s in flat_sources]
         btype = ensure_uniform([s.buffer_type for s in structs])
         # max context size
         context_size = max([s.context_size for s in structs])
 
-        hub = Hub(sorted(source_set), sorted(sink_set), btype, context_size)
+        hub = Hub(flat_sources, nesting, sorted(sink_set), btype, context_size)
         hub.setup(connections)
         hub.sizes = [structs[i].feature_size for i in hub.perm]
         hub.size = sum(hub.sizes)
@@ -35,8 +39,9 @@ class Hub(object):
                                                for i in hub.perm])
         return hub
 
-    def __init__(self, sources, sinks, btype, context_size=0):
-        self.sources = sources
+    def __init__(self, flat_sources, nesting, sinks, btype, context_size=0):
+        self.flat_sources = flat_sources
+        self.nesting = nesting
         self.sinks = sinks
         self.btype = btype
         self.context_size = context_size
@@ -62,11 +67,10 @@ class Hub(object):
         :rtype: np.ndarray
         """
         # set up connection table
-        flat_sources = list(flatten(self.sources))
-        self.connection_table = np.zeros((len(flat_sources), len(self.sinks)))
+        self.connection_table = np.zeros((len(self.flat_sources), len(self.sinks)))
         for start, stop in connections:
-            if start in flat_sources and stop in self.sinks:
-                start_idx = flat_sources.index(start)
+            if start in self.flat_sources and stop in self.sinks:
+                start_idx = self.flat_sources.index(start)
                 stop_idx = self.sinks.index(stop)
                 self.connection_table[start_idx, stop_idx] = 1
 
@@ -76,15 +80,13 @@ class Hub(object):
         the sources, such that they can be connected to the sinks via a single
         buffer.
         """
-        flat_sources = list(flatten(self.sources))
-        nested_indices = convert_to_nested_indices(self.sources)
         # systematically try all permutations until one satisfies the condition
-        for perm in itertools.permutations(nested_indices):
+        for perm in itertools.permutations(self.nesting):
             self.perm = list(flatten(perm))
             ct = np.atleast_2d(self.connection_table[self.perm])
             if Hub.can_be_connected_with_single_buffer(ct):
                 self.connection_table = ct
-                self.sources = [flat_sources[i] for i in self.perm]
+                self.flat_sources = [self.flat_sources[i] for i in self.perm]
                 return
 
         raise NetworkValidationError("Failed to lay out buffers. "
@@ -116,7 +118,7 @@ class Hub(object):
 
     def get_indices(self):
         idxs = np.cumsum([0] + self.sizes)
-        for source_name, start, stop in zip(self.sources, idxs, idxs[1:]):
+        for source_name, start, stop in zip(self.flat_sources, idxs, idxs[1:]):
             yield source_name, (int(start), int(stop))
 
         for i, sink_name in enumerate(self.sinks):
@@ -133,8 +135,7 @@ def create_layout(layers):
 
     # create a stub layout
     layout = create_layout_stub(layers)
-    all_sinks, all_sources = get_all_sinks_and_sources(forced_orders,
-                                                       connections, layout)
+    all_sources = get_all_sources(forced_orders, connections, layout)
 
     # group into hubs and lay them out
     hubs = group_into_hubs(all_sources, forced_orders, connections, layout)
@@ -167,9 +168,9 @@ def layout_hubs(hubs, layout):
             buffer_layout['@hub'] = hub_nr
 
 
-def get_all_sinks_and_sources(forced_orders, connections, layout):
-    """Gather all sinks and sources while preserving order of the sources."""
-    all_sinks = sorted(list(zip(*connections))[1]) if connections else []
+def get_all_sources(forced_orders, connections, layout):
+    """Gather all sources while preserving order of the sources."""
+    all_sinks = sorted(set(list(zip(*connections))[1])) if connections else []
     all_sources = list()
     for s in gather_array_nodes(layout):
         if s in all_sinks + ['parameters', 'gradients']:
@@ -183,7 +184,7 @@ def get_all_sinks_and_sources(forced_orders, connections, layout):
         else:
             all_sources.append(s)
 
-    return all_sinks, all_sources
+    return all_sources
 
 
 def get_forced_orders(layers):

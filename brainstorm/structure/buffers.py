@@ -13,7 +13,7 @@ def create_buffer_views_from_layout(layout, buffers, hubs, existing_view=None):
     if '@slice' in layout:
         buffer_nr = layout['@hub']
         feature_slice = slice(*layout['@slice'])
-        structure = BufferStructure.from_tuple(layout['@shape'])
+        structure = BufferStructure.from_layout(layout)
         full_buffer = structure.create_from_buffer_hub(
             buffers[buffer_nr], hubs[buffer_nr], feature_slice)
     else:

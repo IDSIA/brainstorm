@@ -108,6 +108,14 @@ class BufferStructure(object):
     def from_tuple(cls, shape):
         return cls(*shape)
 
+    @classmethod
+    def from_layout(cls, layout):
+        shape = layout['@shape']
+        context_size = layout.get('@context_size', 0)
+        is_backward_only = layout.get('@is_backward_only', False)
+        return cls(*shape, context_size=context_size,
+                   is_backward_only=is_backward_only)
+
     # The following signature unfortunately is not python2 compatible:
     # def __init__(self, *args, context_size=0, backward_only=False):
     def __init__(self, *args, **kwargs):

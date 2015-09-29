@@ -7,7 +7,7 @@ import pytest
 from brainstorm.structure.layout import (
     create_layout_stub, get_order, get_parameter_order,
     get_forced_orders, get_connections, merge_connections, get_forward_closure,
-    create_layout, gather_array_nodes, Hub)
+    create_layout, gather_array_nodes, Hub, get_all_sources)
 
 
 def test_get_order():
@@ -83,8 +83,42 @@ def test_get_connections(layers):
         ('Input.output_deltas.default', 'B.input_deltas.default'),
         ('Input.outputs.default', 'A.inputs.default'),
         ('Input.outputs.default', 'B.inputs.default')
-
     ]
+
+
+def test_get_all_sinks_and_sources(layers):
+    forced_orders = get_forced_orders(layers)
+    connections = get_connections(layers)
+    layout = create_layout_stub(layers)
+    all_sources = get_all_sources(forced_orders, connections, layout)
+
+    assert all_sources == [
+        'Input.outputs.default',
+        'Input.output_deltas.default',
+        'A.outputs.default',
+        ('A.parameters.W', 'A.parameters.bias'),
+        'A.internals.H',
+        'A.internals.dH',
+        'A.output_deltas.default',
+        ('A.gradients.W', 'A.gradients.bias'),
+        'B.outputs.default',
+        ('B.parameters.W', 'B.parameters.bias'),
+        'B.internals.H',
+        'B.internals.dH',
+        'B.output_deltas.default',
+        ('B.gradients.W', 'B.gradients.bias'),
+        'C.outputs.default',
+        ('C.parameters.W', 'C.parameters.bias'),
+        'C.internals.H',
+        'C.internals.dH',
+        'C.output_deltas.default',
+        ('C.gradients.W', 'C.gradients.bias'),
+        'D.outputs.default',
+        ('D.parameters.W', 'D.parameters.bias'),
+        'D.internals.H',
+        'D.internals.dH',
+        'D.output_deltas.default',
+        ('D.gradients.W', 'D.gradients.bias')]
 
 
 def test_merge_connections():
@@ -158,7 +192,7 @@ def test_can_be_connected_with_single_buffer():
 
 
 def test_permute_rows1():
-    h = Hub([0, 1, 2, [3, 4]], [1, 2, 3, 4, 5], 0)
+    h = Hub([0, 1, 2, 3, 4], [0, 1, 2, [3, 4]], [1, 2, 3, 4, 5], 0)
 
     h.connection_table = np.array([
         [1, 1, 0, 0, 0],
@@ -167,7 +201,8 @@ def test_permute_rows1():
         [0, 0, 1, 1, 1],
         [0, 0, 1, 1, 1]])
     h.permute_rows()
-    assert h.sources == [0, 2, 1, 3, 4]
+    assert h.flat_sources == [0, 2, 1, 3, 4]
+    assert h.perm == [0, 2, 1, 3, 4]
     # noinspection PyTypeChecker
     assert np.all(h.connection_table == np.array([
         [1, 1, 0, 0, 0],
@@ -178,7 +213,7 @@ def test_permute_rows1():
 
 
 def test_permute_rows2():
-    h = Hub([0, 1, 2, [3, 4]], [1, 2, 3, 4, 5], 0)
+    h = Hub([0, 1, 2, 3, 4], [0, 1, 2, [3, 4]], [1, 2, 3, 4, 5], 0)
 
     h.connection_table = np.array([
         [1, 1, 0, 0, 0],
@@ -187,7 +222,8 @@ def test_permute_rows2():
         [0, 1, 1, 1, 0],
         [0, 0, 1, 1, 1]])
     h.permute_rows()
-    assert h.sources == [0, 1, 3, 4, 2]
+    assert h.flat_sources == [0, 1, 3, 4, 2]
+    assert h.perm == [0, 1, 3, 4, 2]
     # noinspection PyTypeChecker
     assert np.all(h.connection_table == np.array([
         [1, 1, 0, 0, 0],
