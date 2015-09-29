@@ -111,7 +111,7 @@ def test_illegal_structure_template_raise(shape):
 ])
 def test_structure_template_matches1(shape, expected):
     st = StructureTemplate('T', 'B', 1, 3)
-    assert st.matches(BufferStructure.from_tuple(shape)) == expected
+    assert st.matches(BufferStructure(*shape)) == expected
 
 
 @pytest.mark.parametrize('shape, expected', [
@@ -128,7 +128,7 @@ def test_structure_template_matches1(shape, expected):
 ])
 def test_structure_template_matches2(shape, expected):
     st = StructureTemplate('T', 'B', 'F', 'F')
-    struct = BufferStructure.from_tuple(shape)
+    struct = BufferStructure(*shape)
     assert st.matches(struct) == expected
 
 
@@ -145,7 +145,7 @@ def test_structure_template_matches2(shape, expected):
 ])
 def test_structure_template_matches3(shape, expected):
     st = StructureTemplate('T', 'B', '...')
-    struct = BufferStructure.from_tuple(shape)
+    struct = BufferStructure(*shape)
     assert st.matches(struct) == expected
 
 
@@ -164,7 +164,7 @@ def test_structure_template_matches3(shape, expected):
 ])
 def test_structure_template_matches4(shape, expected):
     st = StructureTemplate(1, 2, 7)
-    struct = BufferStructure.from_tuple(shape)
+    struct = BufferStructure(*shape)
     assert st.matches(struct) == expected
 
 

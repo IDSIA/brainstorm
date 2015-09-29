@@ -105,10 +105,6 @@ class StructureTemplate(object):
 
 class BufferStructure(object):
     @classmethod
-    def from_tuple(cls, shape):
-        return cls(*shape)
-
-    @classmethod
     def from_layout(cls, layout):
         shape = layout['@shape']
         context_size = layout.get('@context_size', 0)

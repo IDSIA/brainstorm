@@ -34,7 +34,7 @@ class InputLayerImpl(BaseLayerImpl):
 
         outputs = OrderedDict()
         for n, s in self.kwargs['out_shapes'].items():
-            outputs[n] = BufferStructure.from_tuple(s)
+            outputs[n] = BufferStructure(*s)
         return outputs, OrderedDict(), OrderedDict()
 
     def _validate_connections(self):
