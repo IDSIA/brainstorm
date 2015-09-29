@@ -5,7 +5,8 @@ from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import flatten_time_and_features
-from brainstorm.structure.shapes import StructureTemplate, BufferStructure
+from brainstorm.structure.buffer_structure import (StructureTemplate,
+                                                   BufferStructure)
 
 
 def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):

@@ -4,7 +4,8 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import BaseLayerImpl
-from brainstorm.structure.shapes import StructureTemplate, BufferStructure
+from brainstorm.structure.buffer_structure import (StructureTemplate,
+                                                   BufferStructure)
 
 
 def Loss(importance=1.0, name=None):

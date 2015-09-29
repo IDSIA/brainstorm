@@ -5,7 +5,8 @@ from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
 from brainstorm.layers.base_layer import BaseLayerImpl
-from brainstorm.structure.shapes import StructureTemplate, BufferStructure
+from brainstorm.structure.buffer_structure import (StructureTemplate,
+                                                   BufferStructure)
 
 
 def Highway(name=None):

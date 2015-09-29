@@ -8,7 +8,8 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.utils import LayerValidationError, flatten_time_and_features, \
     flatten_time
-from brainstorm.structure.buffer_structure import StructureTemplate, BufferStructure
+from brainstorm.structure.buffer_structure import (StructureTemplate,
+                                                   BufferStructure)
 
 
 def BinomialCrossEntropy(name=None):
