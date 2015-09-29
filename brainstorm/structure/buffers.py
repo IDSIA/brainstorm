@@ -6,32 +6,16 @@ import numpy as np
 from brainstorm.handlers import default_handler
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.utils import sort_by_index_key
-from brainstorm.structure.shapes import BufferStructure
+from brainstorm.structure.buffer_structure import BufferStructure
 
 
 def create_buffer_views_from_layout(layout, buffers, hubs, existing_view=None):
     if '@slice' in layout:
         buffer_nr = layout['@hub']
-        start, stop = layout['@slice']
+        feature_slice = slice(*layout['@slice'])
         structure = BufferStructure.from_tuple(layout['@shape'])
-
-        cutoff = hubs[buffer_nr].context_size - layout.get('@context_size', 0)
-        t_slice = slice(0, -cutoff if cutoff else None)
-
-        buffer_type = structure.buffer_type
-        if buffer_type == 0:
-            full_buffer = buffers[buffer_nr][start:stop]
-            full_buffer = full_buffer.reshape(structure.feature_shape)
-        elif buffer_type == 1:
-            full_buffer = buffers[buffer_nr][:, start:stop]
-            full_buffer = full_buffer.reshape(full_buffer.shape[:1] +
-                                              structure.feature_shape)
-        else:  # buffer_type == 2
-            full_buffer = buffers[buffer_nr][t_slice, :, start:stop]
-            full_buffer = full_buffer.reshape(
-                (full_buffer.shape[0],
-                 full_buffer.shape[1]) +
-                 structure.feature_shape)
+        full_buffer = structure.create_from_buffer_hub(
+            buffers[buffer_nr], hubs[buffer_nr], feature_slice)
     else:
         full_buffer = None
 

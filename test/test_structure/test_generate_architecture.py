@@ -7,7 +7,7 @@ from brainstorm.structure.architecture import (
     instantiate_layers_from_architecture)
 from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
-from brainstorm.structure.shapes import StructureTemplate
+from brainstorm.structure.buffer_structure import StructureTemplate
 
 
 def test_get_layer_description():

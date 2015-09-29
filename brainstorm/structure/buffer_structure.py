@@ -202,6 +202,40 @@ class BufferStructure(object):
             descr['@is_backward_only'] = True
         return descr
 
+    def get_shape(self, time_size, batch_size):
+        full_shape = ((time_size + self.context_size, batch_size) +
+                      self.feature_shape)
+        return full_shape[2-self.buffer_type:]
+
+    def create_from_buffer_hub(self, buffer, hub, feature_slice):
+        """
+        Args:
+            buffer (array_type):
+                The buffer that has been allocated for the given hub.
+            hub (brainstorm.structure.layout.Hub):
+                Hub object detailing this buffer hub.
+            feature_slice (slice):
+                The slice of the feature dimension for this buffer
+        Returns:
+            array_type:
+                The sliced and reshaped sub-buffer corresponding to this
+                BufferStructure.
+        """
+        t = b = 0
+        if self.buffer_type == 0:
+            sub_buffer = buffer[feature_slice]
+        elif self.buffer_type == 1:
+            b = buffer.shape[0]
+            sub_buffer = buffer[:, feature_slice]
+        else:  # self.buffer_type == 2
+            t = buffer.shape[0] - hub.context_size
+            b = buffer.shape[1]
+            cutoff = hub.context_size - self.context_size
+            t_slice = slice(0, -cutoff if cutoff else None)
+            sub_buffer = buffer[t_slice, :, feature_slice]
+
+        return sub_buffer.reshape(self.get_shape(t, b))
+
     def __eq__(self, other):
         if not isinstance(other, BufferStructure):
             return False
@@ -250,6 +284,6 @@ def combine_buffer_structures(shapes):
 
     summed_shape = sum(s.feature_shape[-1] for s in shapes)
     final_shape = (some_shape.scaling_shape +
-                   (summed_shape,) +
-                   fixed_feature_shape)
+                   fixed_feature_shape +
+                   (summed_shape,))
     return BufferStructure(*final_shape)

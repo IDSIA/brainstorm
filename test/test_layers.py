@@ -18,7 +18,7 @@ from brainstorm.layers.binomial_cross_entropy_layer import \
 from .helpers import run_gradients_test, run_deltas_test, set_up_layer, \
     HANDLER, approx_fprime
 import numpy as np
-from brainstorm.structure.shapes import StructureTemplate
+from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.layers.rnn_layer import RnnLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl

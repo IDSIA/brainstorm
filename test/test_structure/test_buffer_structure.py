@@ -2,7 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import pytest
-from brainstorm.structure.shapes import BufferStructure, StructureTemplate
+from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate, \
+    combine_buffer_structures
 from brainstorm.utils import ShapeValidationError
 
 
@@ -165,3 +166,47 @@ def test_structure_template_matches4(shape, expected):
     st = StructureTemplate(1, 2, 7)
     struct = BufferStructure.from_tuple(shape)
     assert st.matches(struct) == expected
+
+
+def test_combine_input_sizes_tuples():
+    assert combine_buffer_structures([BufferStructure(1, 4)]) == \
+           BufferStructure(1, 4)
+
+    assert combine_buffer_structures([BufferStructure(4, 1),
+                                      BufferStructure(4, 3),
+                                      BufferStructure(4, 6)])\
+        == BufferStructure(4, 10)
+
+    assert combine_buffer_structures([BufferStructure(4, 3, 2),
+                                      BufferStructure(4, 3, 3),
+                                      BufferStructure(4, 3, 2)]) == \
+        BufferStructure(4, 3, 7)
+
+
+def test_combine_input_sizes_tuple_templates():
+    assert (combine_buffer_structures([BufferStructure('B', 4)]) ==
+            BufferStructure('B', 4))
+    assert (combine_buffer_structures([BufferStructure('B', 4),
+                                       BufferStructure('B', 3)]) ==
+            BufferStructure('B', 7))
+    assert (combine_buffer_structures([BufferStructure('T', 'B', 4)]) ==
+            BufferStructure('T', 'B', 4))
+    assert (combine_buffer_structures([BufferStructure('T', 'B', 4),
+                                       BufferStructure('T', 'B', 3)]) ==
+            BufferStructure('T', 'B', 7))
+    assert (combine_buffer_structures([BufferStructure('T', 'B', 3, 2, 4),
+                                       BufferStructure('T', 'B', 3, 2, 3)]) ==
+            BufferStructure('T', 'B', 3, 2, 7))
+
+
+@pytest.mark.parametrize('sizes', [
+    [BufferStructure(3, 2), BufferStructure(2, 2)],
+    [BufferStructure(2), BufferStructure(1, 2)],
+    [BufferStructure(2, 1, 3), BufferStructure(2, 1, 3),
+     BufferStructure(2, 2, 3)],
+    [BufferStructure(2, 1, 3), BufferStructure(2, 1, 1),
+     BufferStructure(1, 1, 3)]
+])
+def test_combine_input_sizes_mismatch(sizes):
+    with pytest.raises(ValueError):
+        combine_buffer_structures(sizes)

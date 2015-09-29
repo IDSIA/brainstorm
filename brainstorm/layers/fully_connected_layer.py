@@ -6,7 +6,7 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time, \
     flatten_time_and_features
 from brainstorm.layers.base_layer import BaseLayerImpl
-from brainstorm.structure.shapes import StructureTemplate, BufferStructure
+from brainstorm.structure.buffer_structure import StructureTemplate, BufferStructure
 
 
 def FullyConnected(size, activation_function='rel', name=None):

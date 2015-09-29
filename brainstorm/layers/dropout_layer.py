@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.layers.base_layer import BaseLayerImpl
-from brainstorm.structure.shapes import StructureTemplate
+from brainstorm.structure.buffer_structure import StructureTemplate
 
 
 def Dropout(drop_prob=0.5, name=None):

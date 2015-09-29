@@ -7,7 +7,7 @@ import itertools
 
 import numpy as np
 
-from brainstorm.structure.shapes import BufferStructure
+from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.utils import (NetworkValidationError, flatten,
                               convert_to_nested_indices, sort_by_index_key,
                               get_normalized_path)
