@@ -51,7 +51,7 @@ class BinomialCrossEntropyLayerImpl(BaseLayerImpl):
         internals['ceed'] = BufferStructure('T', 'B', *feature_shape,
                                             is_backward_only=True)
 
-        return outputs, OrderedDict(), OrderedDict()
+        return outputs, OrderedDict(), internals
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

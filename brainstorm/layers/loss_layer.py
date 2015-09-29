@@ -28,7 +28,7 @@ class LossLayerImpl(BaseLayerImpl):
 
         outputs = OrderedDict()
         outputs['loss'] = BufferStructure(1)
-        return outputs, OrderedDict, OrderedDict()
+        return outputs, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
         if self.batch_index is None:

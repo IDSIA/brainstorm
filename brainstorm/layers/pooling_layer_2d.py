@@ -62,7 +62,7 @@ class Pooling2DLayerImpl(BaseLayerImpl):
 
         internals = OrderedDict()
         if self.type == 'max':
-            argmax_shape = self.out_shapes['default'].feature_shape + (2, )
+            argmax_shape = outputs['default'].feature_shape + (2, )
             internals['argmax'] = BufferStructure('T', 'B', *argmax_shape)
         return outputs, OrderedDict(), internals
 

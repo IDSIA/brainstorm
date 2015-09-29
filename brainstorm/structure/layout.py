@@ -81,7 +81,7 @@ class Hub(object):
         # systematically try all permutations until one satisfies the condition
         for perm in itertools.permutations(nested_indices):
             self.perm = list(flatten(perm))
-            ct = np.atleast_2d(self.connection_table[perm])
+            ct = np.atleast_2d(self.connection_table[self.perm])
             if Hub.can_be_connected_with_single_buffer(ct):
                 self.connection_table = ct
                 self.sources = [flat_sources[i] for i in self.perm]
@@ -234,7 +234,7 @@ def get_layout_stub_for_layer(layer):
     layout['outputs']['@type'] = 'BufferView'
     layout['outputs']['@index'] = 1
 
-    parameters = layer.get_parameter_structure()
+    parameters = layer.parameter_shapes
     assert isinstance(parameters, OrderedDict)
     layout['parameters'] = {
         k: v.to_json(i) for i, (k, v) in enumerate(parameters.items())
@@ -242,7 +242,7 @@ def get_layout_stub_for_layer(layer):
     layout['parameters']['@type'] = 'BufferView'
     layout['parameters']['@index'] = 2
 
-    internals = layer.get_internal_structure()
+    internals = layer.internal_shapes
     assert isinstance(parameters, OrderedDict)
 
     layout['internals'] = {
@@ -312,7 +312,7 @@ def get_backward_connection(start, stop, layer):
 
     if start_category == 'internals':
         dstart_buffer = 'd' + start_buffer
-        if dstart_buffer not in layer.get_internal_structure():
+        if dstart_buffer not in layer.internal_shapes:
             raise KeyError('Missing delta buffer {} for the internal buffer {}'
                            '.'.format(dstart_buffer, start_buffer))
         new_start = '.'.join([start_layer, 'internals', dstart_buffer])
@@ -339,7 +339,7 @@ def get_connections(layers):
 
     # add connections to implicit 'parameters', and 'gradients'-layer
     for layer_name, layer in layers.items():
-        for param_name in layer.get_parameter_structure():
+        for param_name in layer.parameter_shapes:
             start = get_normalized_path(layer_name, 'parameters', param_name)
             end = 'parameters'
             connections.append((start, end))
@@ -357,12 +357,12 @@ def get_order(structure):
 
 def get_parameter_order(layer_name, layer):
     return tuple([get_normalized_path(layer_name, 'parameters', o)
-                  for o in layer.get_parameter_structure()])
+                  for o in layer.parameter_shapes])
 
 
 def get_gradient_order(layer_name, layer):
     return tuple([get_normalized_path(layer_name, 'gradients', o)
-                  for o in layer.get_parameter_structure()])
+                  for o in layer.parameter_shapes])
 
 
 def merge_connections(connections, forced_orders):

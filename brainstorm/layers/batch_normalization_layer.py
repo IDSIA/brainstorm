@@ -17,7 +17,7 @@ def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
 
 class BatchNormLayerImpl(BaseLayerImpl):
 
-    inputs = {'default': StructureTemplate('T', 'B', '...')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'decay', 'epsilon'}
 
     def setup(self, kwargs, in_shapes):
