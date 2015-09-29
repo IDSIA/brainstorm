@@ -25,4 +25,12 @@ if has_pycuda:
     except ImportError:
         pass
 
-__all__ = ['has_pycuda', 'has_cudnn']
+try:
+    import pycuda
+    import pycuda.autoinit
+    from nervanagpu import NervanaGPU
+    has_nervanagpu = True
+except ImportError:
+    has_nervanagpu = False
+
+__all__ = ['has_pycuda', 'has_cudnn', 'has_nervanagpu']
