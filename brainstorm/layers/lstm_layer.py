@@ -20,21 +20,6 @@ class LstmLayerImpl(BaseLayerImpl):
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation_function'}
 
-    def set_handler(self, new_handler):
-        super(LstmLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_dunc_derivs
-        activation_functions = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
-
     def setup(self, kwargs, in_shapes):
         self.act_func = lambda x, y: None
         self.act_func_deriv = lambda x, y, dy, dx: None
@@ -94,6 +79,21 @@ class LstmLayerImpl(BaseLayerImpl):
         internals['dCb'] = BufferStructure('T', 'B', self.size, context_size=1,
                                            is_backward_only=True)
         return outputs, parameters, internals
+
+    def set_handler(self, new_handler):
+        super(LstmLayerImpl, self).set_handler(new_handler)
+
+        # Assign act_func and act_dunc_derivs
+        activation_functions = {
+            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
+            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
+            'linear': (lambda x, y: self.handler.copy_to(y, x),
+                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'rel': (self.handler.rel, self.handler.rel_deriv)
+        }
+
+        self.act_func, self.act_func_deriv = activation_functions[
+            self.kwargs.get('activation_function', 'tanh')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare
