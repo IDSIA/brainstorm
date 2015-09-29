@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 import sys
+import traceback
 from brainstorm.describable import Describable
 from brainstorm.training.utils import run_network, run_network_double_buffer
 from brainstorm.scorers import (
@@ -168,6 +169,7 @@ class Trainer(Describable):
         except Exception as e:
             print('An error occurred while calling the "{}" hook:'
                   .format(hook.__name__), file=sys.stderr)
+            print(traceback.format_exc())
             raise e
 
     def _add_log(self, name, val, verbose=None, logs=None, indent=0):
