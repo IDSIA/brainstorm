@@ -70,6 +70,8 @@ def test_random_crop_dict_mismatch_raises():
         _ = RandomCrop(inner, shape_dict={'default': 10})
     with pytest.raises(IteratorValidationError):
             _ = RandomCrop(inner, shape_dict={'default': (1, 1, 1)})
+    with pytest.raises(IteratorValidationError):
+            _ = RandomCrop(inner, shape_dict={'default': (10, 10)})
 
 
 def test_random_crop():
@@ -97,6 +99,18 @@ def test_crop_images_operation():
 
 
 # ######################## Common Validation Tests ###########################
+
+def test_non5d_data_raises():
+    with pytest.raises(IteratorValidationError):
+        _ = Flip(Undivided(default=np.random.randn(2, 3, 1, 2)),
+                 prob_dict={'default': 1})
+    with pytest.raises(IteratorValidationError):
+        _ = Pad(Undivided(default=np.random.randn(2, 3, 1, 2)),
+                size_dict={'default': 1})
+    with pytest.raises(IteratorValidationError):
+        _ = RandomCrop(Undivided(default=np.random.randn(2, 3, 1, 2)),
+                       shape_dict={'default': (1, 1)})
+
 
 @pytest.mark.parametrize('iterator', [Undivided, Online, Minibatches])
 def test_data_iterator_with_wrong_input_type_raises(iterator):
