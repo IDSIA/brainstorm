@@ -47,6 +47,7 @@ trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.01,
                                               momentum=0.9),
                      double_buffering=False)
 trainer.train_scorers = scorers
+trainer.add_hook(bs.hooks.ProgressBar())
 trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))

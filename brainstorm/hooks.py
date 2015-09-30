@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.structure.network import Network
+from collections import OrderedDict
+import math
+import sys
+import h5py
 import numpy as np
 from six import string_types
-import h5py
-
-from collections import OrderedDict
+from brainstorm.structure.network import Network
 from brainstorm.describable import Describable
-from brainstorm.utils import get_by_path
+from brainstorm.utils import get_by_path, progress_bar
 from brainstorm.tools import evaluate
 
 
@@ -367,7 +368,7 @@ class MonitorLoss(Hook):
         self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        return evaluate(net, self.iter, scorers=[], verbose=self.verbose)
+        return evaluate(net, self.iter, scorers=[])
 
 
 class MonitorScores(Hook):
@@ -417,7 +418,7 @@ class MonitorScores(Hook):
         self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        return evaluate(net, self.iter, self.scorers, verbose=self.verbose)
+        return evaluate(net, self.iter, self.scorers)
 
 
 class VisualiseAccuracy(Hook):
@@ -482,3 +483,27 @@ class VisualiseAccuracy(Hook):
             count += 1
 
         self.bk.save(self.fig, filename=self.filename + ".html")
+
+
+class ProgressBar(Hook):
+    def __init__(self):
+        super(ProgressBar, self).__init__(None, 'update', 1)
+        self.length = None
+        self.bar = None
+
+    def start(self, net, stepper, verbose, named_data_iters):
+        assert 'training_data_iter' in named_data_iters
+        self.length = named_data_iters['training_data_iter'].length
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        assert epoch_nr == 0 or math.ceil(update_nr / self.length) == epoch_nr
+        if update_nr % self.length == 1:
+            self.bar = progress_bar(self.length)
+            print(next(self.bar), end='')
+            sys.stdout.flush()
+        elif update_nr % self.length == 0:
+            if self.bar:
+                print(self.bar.send(self.length))
+        else:
+            print(self.bar.send(update_nr % self.length), end='')
+            sys.stdout.flush()
