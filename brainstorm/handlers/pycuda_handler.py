@@ -435,7 +435,7 @@ class PyCudaHandler(Handler):
         tanh_deriv_kernel(x, y, dy, dx)
 
 
-# -------------------------- Activation functions --------------------------- #
+# -------------------------------- Kernels ---------------------------------- #
 
 add_mm_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",

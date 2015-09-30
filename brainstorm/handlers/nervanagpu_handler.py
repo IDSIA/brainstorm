@@ -4,6 +4,7 @@ from __future__ import division, print_function
 import numpy as np
 import nervanagpu
 from nervanagpu import NervanaGPU
+from pycuda import gpuarray
 from pycuda.elementwise import ElementwiseKernel
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
@@ -58,6 +59,11 @@ class NervanaGPUHandler(Handler):
                                                                arr.shape)
         mem.set(arr.astype(self.dtype))
 
+    def as_gpuarray(self, mem):
+        """Get a GPUArray reference to memory."""
+        return gpuarray.GPUArray(shape=mem.shape, dtype=mem.dtype,
+                                 gpudata=mem.gpudata)
+
     # ---------------------------- Debug helpers ---------------------------- #
 
     def is_fully_finite(self, a):
@@ -91,10 +97,8 @@ class NervanaGPUHandler(Handler):
         assert len(a.shape) == 3
         assert a.shape[2] == 1
         assert len(out.shape) > 2
-        print(a.shape, out.shape)
-
-        a_flat = a.reshape(a.size)
-        out_flat = out.reshape(out.size)
+        a_flat = self.as_gpuarray(a.reshape(a.size))
+        out_flat = self.as_gpuarray(out.reshape(out.size))
         broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
 
     def clip_t(self, a, a_min, a_max, out):
@@ -132,13 +136,9 @@ class NervanaGPUHandler(Handler):
         pass
 
     def index_m_by_v(self, m, v, out):
-        print("m:\n", m.get())
-        print("v:\n", v.get())
-        onehot = self.context.zeros(m.shape, dtype=np.int32)
-        self.binarize_v(v, onehot)
-        print("onehot:\n", onehot.get())
-        out[:] = m[onehot]
-        print("out:\n", out.get())
+        index_m_by_v_kernel(self.as_gpuarray(out),
+                            self.as_gpuarray(v), self.as_gpuarray(m),
+                            m.shape[0], m.shape[1])
 
     def log_t(self, a, out):
         self.context.log(a, out)
@@ -219,3 +219,16 @@ class NervanaGPUHandler(Handler):
     def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
 
+# -------------------------------- Kernels ---------------------------------- #
+
+broadcast_features_kernel = ElementwiseKernel(
+    "float* out, float* a, unsigned int broadcast_size",
+    "out[i] = a[i / broadcast_size]",
+    "bc_features_kernel"
+)
+
+index_m_by_v_kernel = ElementwiseKernel(
+    "float* out, float* v, float* m, int nrows, int ncols",
+    "out[i] = m[i * ncols + int(v[i])]",
+    "index_m_by_v_kernel"
+)

@@ -150,7 +150,7 @@ def test_mult_add_tt(handler):
         out = np.random.randn(*a.shape).astype(ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(handler, 'mult_add_tt', ref_args)
+        assert operation_check(handler, 'mult_add_tt', ref_args, atol=1e-7)
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
