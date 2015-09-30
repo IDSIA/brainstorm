@@ -85,9 +85,8 @@ class NumpyHandler(Handler):
         _cpuop.avgpool_forward(inputs, window, outputs, padding, stride)
 
     def binarize_v(self, v, out):
-        out[:] = 0.
-        for i in range(v.shape[0]):
-            out[i, int(v[i])] = 1.0
+        tmp = np.eye(out.shape[1], dtype=out.dtype)
+        out[:] = tmp[v.squeeze().astype(np.int)]
 
     def broadcast_features_t(self, a, out):
         num_extra_dims = len(out.shape) - 3
@@ -265,8 +264,9 @@ class NumpyHandler(Handler):
         return im2col_map
 
     def index_m_by_v(self, m, v, out):
-        for i in range(m.shape[0]):
-            out[i] = m[i, int(v[i])]
+        cols = v.astype(np.int32)
+        rows = np.arange(m.shape[0]).reshape((m.shape[0], 1))
+        out[:] = m[rows, cols]
 
     def log_t(self, a, out):
         np.log(a, out)
