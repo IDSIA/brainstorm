@@ -575,6 +575,8 @@ class Handler(Describable):
                               have the same shape as :attr:`a`.
         Returns:
             None
+        Note:
+            The NervanaGPUHandler returns 1 for zero elements.
         """
 
     @abc.abstractmethod

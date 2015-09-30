@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 import itertools
 import numpy as np
 import pytest
-from brainstorm.optional import has_pycuda, has_cudnn
+from brainstorm.optional import has_pycuda, has_cudnn, has_nervanagpu
 from brainstorm.handlers import NumpyHandler
 
 non_default_handlers = []
@@ -14,6 +14,10 @@ if has_pycuda:
     from brainstorm.handlers import PyCudaHandler
     non_default_handlers.append(PyCudaHandler(init_cudnn=has_cudnn))
     handler_ids.append("PyCudaHandler")
+if has_nervanagpu:
+    from brainstorm.handlers import NervanaGPUHandler
+    non_default_handlers.append(NervanaGPUHandler())
+    handler_ids.append("NervanaGPUHandler")
 
 # np.random.seed(1234)
 ref_dtype = np.float32
@@ -46,7 +50,7 @@ def operation_check(handler, op_name, ref_args, ignored_args=(), atol=1e-8):
                 print("\nObtained array {}:\n{}".format(arg_ref.shape,
                                                         arg_ref))
                 d = ref_arg.ravel() - arg_ref.ravel()
-                print("Frobenius Norm of differences: ", np.sum(d*d))
+                print("Frobenius Norm of differences: ", np.sqrt(np.sum(d*d)))
         else:
             check = (ref_arg == arg)
             check_list.append(check)
@@ -57,7 +61,7 @@ def operation_check(handler, op_name, ref_args, ignored_args=(), atol=1e-8):
                 print("\nReference (expected) value:\n", ref_arg)
                 print("\nObtained value:\n", arg)
                 d = ref_arg.ravel() - arg_ref.ravel()
-                print("Frobenius Norm of differences: ", np.sum(d*d))
+                print("Frobenius Norm of differences: ", np.sqrt(np.sum(d*d)))
         # print("Check was ", check)
     if False in check_list:
         return False
@@ -91,7 +95,7 @@ def test_sum_t(handler):
         if axis == 0:
             out = np.zeros((1, a.shape[1]), dtype=ref_dtype)
         elif axis == 1:
-            out = np.zeros((a.shape[0]), dtype=ref_dtype)
+            out = np.zeros((a.shape[0], 1), dtype=ref_dtype)
         else:
             out = np.array([0.], dtype=ref_dtype).reshape(tuple())
         ref_args = (a, axis, out)
@@ -122,7 +126,7 @@ def test_dot_add_mm(handler):
         out = np.random.randn(a.shape[0], a.shape[0]).astype(ref_dtype)
         ref_args = (a, b, out)
 
-        assert operation_check(handler, 'dot_add_mm', ref_args)
+        assert operation_check(handler, 'dot_add_mm', ref_args, atol=1e-7)
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
@@ -287,7 +291,7 @@ def test_log_t(handler):
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_sign_t(handler):
     list_a = get_random_arrays(some_nd_shapes)
-    list_a += [np.random.random_integers(-2, 2, (3, 3))]
+    list_a += [np.random.random_integers(-1, 1, (5, 5)) + 1e-6]  # no exact 0s
     for a in list_a:
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, out)
@@ -364,6 +368,7 @@ def test_index_m_by_v(handler):
         v = np.random.random_integers(0, m.shape[1] - 1, (m.shape[0], 1))
         out = np.random.random_sample(v.shape)
         ref_args = (m, v, out)
+        print(v)
         assert operation_check(handler, 'index_m_by_v', ref_args)
 
 

@@ -40,11 +40,10 @@ class NervanaGPUHandler(Handler):
     # ---------------------------- Copy and Fill ---------------------------- #
 
     def copy_to(self, dest, src):
-        """Copy data from src to dest (both must be GPUTensors)."""
         dest.fill(src)
 
     def create_from_numpy(self, arr):
-        return self.context.array(arr)
+        return self.context.array(arr, dtype=self.dtype)
 
     def fill(self, mem, val):
         mem.fill(val)
@@ -84,12 +83,16 @@ class NervanaGPUHandler(Handler):
         pass
 
     def binarize_v(self, v, out):
-        binarize_v_kernel(out, v, out.shape[0], out.shape[1])
+        tmp = self.context.zeros((v.size, 1), dtype=np.int32)
+        tmp[:] = v
+        self.context.onehot(tmp, axis=1, out=out)
 
     def broadcast_features_t(self, a, out):
         assert len(a.shape) == 3
         assert a.shape[2] == 1
         assert len(out.shape) > 2
+        print(a.shape, out.shape)
+
         a_flat = a.reshape(a.size)
         out_flat = out.reshape(out.size)
         broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
@@ -129,7 +132,13 @@ class NervanaGPUHandler(Handler):
         pass
 
     def index_m_by_v(self, m, v, out):
-        pass
+        print("m:\n", m.get())
+        print("v:\n", v.get())
+        onehot = self.context.zeros(m.shape, dtype=np.int32)
+        self.binarize_v(v, onehot)
+        print("onehot:\n", onehot.get())
+        out[:] = m[onehot]
+        print("out:\n", out.get())
 
     def log_t(self, a, out):
         self.context.log(a, out)
@@ -170,13 +179,12 @@ class NervanaGPUHandler(Handler):
         out[:] = a - b
 
     def sum_t(self, a, axis, out):
-        if axis is not None and len(out.shape) == len(a.shape):
-            keepdims = True
-        else:
-            keepdims = False
         assert len(a.shape) == 2
         if axis is None:
-            self.context.sum(self.context.sum(a, axis=0), axis=1, out=out)
+            tmp = out.reshape((1, 1))
+            self.context.sum(a.reshape((a.size, 1)), axis=0, out=tmp)
+        else:
+            self.context.sum(a, axis=axis, out=out)
 
     def _pool2d_forward_batch(self, inputs, window, outputs, padding,
                               stride, argmax, pooling_mode):
@@ -211,8 +219,3 @@ class NervanaGPUHandler(Handler):
     def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
 
-binarize_v_kernel = ElementwiseKernel(
-    "float* out, float* v, int nrows, int ncols",
-    "out[i] = v[i / ncols] == (i % ncols) ? 1.0f : 0.0f",
-    "binarize_v_kernel"
-)
