@@ -9,7 +9,7 @@ import h5py
 from collections import OrderedDict
 from brainstorm.describable import Describable
 from brainstorm.utils import get_by_path
-from tools import evaluate
+from brainstorm.tools import evaluate
 
 
 class Hook(Describable):
