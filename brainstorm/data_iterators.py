@@ -9,7 +9,23 @@ from brainstorm.handlers._cpuop import _crop_images
 
 
 class DataIterator(object):
-    """BaseClass for Data Iterators."""
+    """BaseClass for Data Iterators.
+
+    Attributes:
+        names (List[str]):
+            list of input names that this iterator provides
+        length (int | None):
+            for how many iterations this iterator will run
+    """
+
+    def __init__(self, names, length):
+        """
+        Args:
+            names (List[str]): list of input names that this iterator provides
+            length (int | None): for how many iterations this iterator will run
+        """
+        self.names = names
+        self.length = length
 
     def __call__(self, handler):
         pass
@@ -27,18 +43,16 @@ class AddGaussianNoise(DataIterator, Seedable):
 
     def __init__(self, iter, std_dict, mean_dict=None, seed=None):
         Seedable.__init__(self, seed=seed)
+        DataIterator.__init__(self, iter.names, iter.length)
         if mean_dict is not None:
             assert set(mean_dict.keys()) == set(std_dict.keys()), \
                 "means and standard deviations must be provided for " \
                 "the same data names"
         for key in std_dict.keys():
-            if key not in iter.data.keys():
+            if key not in iter.names:
                 raise IteratorValidationError(
                     "key {} is not present in iterator. Available keys: {"
-                    "}".format(key, iter.data.keys()))
-            if not isinstance(iter.data[key], np.ndarray):
-                raise IteratorValidationError(
-                    "data with name {} is not a numpy.ndarray".format(key))
+                    "}".format(key, iter.names))
 
         self.mean_dict = {} if mean_dict is None else mean_dict
         self.std_dict = std_dict
@@ -49,6 +63,9 @@ class AddGaussianNoise(DataIterator, Seedable):
             for key in self.std_dict.keys():
                 mean = self.mean_dict.get(key, 0.0)
                 std = self.std_dict.get(key)
+                if not isinstance(data[key], np.ndarray):
+                    raise IteratorValidationError(
+                        "data with name {} is not a numpy.ndarray".format(key))
                 data[key] = data[key] + std * self.rnd.standard_normal(
                     data[key].shape) + mean
             yield data
@@ -76,25 +93,28 @@ class Flip(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
+        DataIterator.__init__(self, iter.names, iter.length)
         prob_dict = {'default': 0.5} if prob_dict is None else prob_dict
         for key in prob_dict.keys():
-            if key not in iter.data.keys():
+            if key not in iter.names:
+                # TODO: Is validation really needed here?
                 raise IteratorValidationError(
                     "key {} is not present in iterator. Available keys: {"
-                    "}".format(key, iter.data.keys()))
+                    "}".format(key, iter.names))
             if prob_dict[key] > 1.0 or prob_dict[key] < 0.0:
                 raise IteratorValidationError("Invalid probability")
-            if not isinstance(iter.data[key], np.ndarray):
-                raise IteratorValidationError(
-                    "data with name {} is not a numpy.ndarray".format(key))
-            if len(iter.data[key].shape) != 5:
-                raise IteratorValidationError("Only 5D data is supported")
         self.prob_dict = prob_dict
         self.iter = iter
 
     def __call__(self, handler):
         for data in self.iter(handler):
             for name in self.prob_dict.keys():
+                # TODO: Is validation really needed here?
+                if not isinstance(data[name], np.ndarray):
+                    raise IteratorValidationError(
+                        "data with name {} is not a numpy array".format(name))
+                if len(data[name].shape) != 5:
+                    raise IteratorValidationError("Only 5D data is supported")
                 if self.rnd.random_sample() < self.prob_dict[name]:
                     data[name] = data[name][..., ::-1]
             yield data
@@ -122,21 +142,17 @@ class Pad(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
+        DataIterator.__init__(self, iter.names, iter.length)
         if value_dict is not None:
             if set(size_dict.keys()) != set(value_dict.keys()):
                 raise IteratorValidationError(
                     "padding sizes and values must be provided for the same "
                     "data names")
         for key in size_dict.keys():
-            if key not in iter.data.keys():
+            if key not in iter.names:
                 raise IteratorValidationError(
                     "key {} is not present in iterator. Available keys: {"
-                    "}".format(key, iter.data.keys()))
-            if not isinstance(iter.data[key], np.ndarray):
-                raise IteratorValidationError(
-                    "data with name {} is not a numpy.ndarray".format(key))
-            if len(iter.data[key].shape) != 5:
-                raise IteratorValidationError("Only 5D data is supported")
+                    "}".format(key, iter.names))
         self.value_dict = {} if value_dict is None else value_dict
         self.size_dict = size_dict
         self.iter = iter
@@ -144,6 +160,13 @@ class Pad(DataIterator, Seedable):
     def __call__(self, handler):
         for data in self.iter(handler):
             for name in self.size_dict.keys():
+                # TODO: Is validation really needed here?
+                if not isinstance(data[name], np.ndarray):
+                    raise IteratorValidationError(
+                        "data with name {} is not a numpy array".format(name))
+                if len(data[name].shape) != 5:
+                    raise IteratorValidationError("Only 5D data is supported")
+
                 t, b, c, h, w = data[name].shape
                 size = self.size_dict[name]
                 val = self.value_dict.get(name, 0.0)
@@ -173,29 +196,30 @@ class RandomCrop(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
+        DataIterator.__init__(self, iter.names, iter.length)
         for key, val in shape_dict.items():
-            if key not in iter.data.keys():
+            if key not in iter.names:
                 raise IteratorValidationError(
                     "key {} is not present in iterator. Available keys: {"
-                    "}".format(key, iter.data.keys()))
-            if not isinstance(iter.data[key], np.ndarray):
-                raise IteratorValidationError(
-                    "data with name {} is not a numpy.ndarray".format(key))
-            if len(iter.data[key].shape) != 5:
-                raise IteratorValidationError("Only 5D data is supported")
+                    "}".format(key, iter.names))
             if not (isinstance(val, tuple) and len(val) == 2):
                 raise IteratorValidationError("Shape must be a size 2 tuple")
-            data_shape = iter.data[key].shape
-            if val[0] > data_shape[3] or val[0] < 0:
-                raise IteratorValidationError("Invalid crop height")
-            if val[1] > data_shape[4] or val[1] < 0:
-                raise IteratorValidationError("Invalid crop width")
+            if val[0] < 0 or val[1] < 0:
+                raise IteratorValidationError("Invalid crop size for {}: {}"
+                                              .format(key, val))
         self.shape_dict = shape_dict
         self.iter = iter
 
     def __call__(self, handler):
         for data in self.iter(handler):
             for name in self.shape_dict.keys():
+                # TODO: Is validation really needed here?
+                if not isinstance(data[name], np.ndarray):
+                    raise IteratorValidationError(
+                        "data with name {} is not a numpy array".format(name))
+                if len(data[name].shape) != 5:
+                    raise IteratorValidationError("Only 5D data is supported")
+
                 crop_h, crop_w = self.shape_dict[name]
                 batch_size = data[name].shape[1]
                 max_r = data[name].shape[3] - crop_h
@@ -219,6 +243,7 @@ class Undivided(DataIterator):
         :param named_data: named arrays with 3+ dimensions ('T', 'B', ...)
         :type named_data: dict[unicode, ndarray]
         """
+        DataIterator.__init__(self, list(named_data.keys()), 1)
         _assert_correct_data_format(named_data)
         self.data = named_data
         self.total_size = int(sum(d.size for d in self.data.values()))
@@ -234,14 +259,13 @@ class Online(DataIterator, Seedable):
 
     def __init__(self, shuffle=True, seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
-        self.nr_sequences = _assert_correct_data_format(named_data)
+        nr_sequences = int(_assert_correct_data_format(named_data))
+        DataIterator.__init__(self, list(named_data.keys()), nr_sequences)
         self.data = named_data
         self.shuffle = shuffle
-        self.sample_size = int(sum(d.shape[0] * np.prod(d.shape[2:])
-                                   for d in self.data.values()))
 
     def __call__(self, handler):
-        indices = np.arange(self.nr_sequences)
+        indices = np.arange(self.length)
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
@@ -260,7 +284,9 @@ class Minibatches(DataIterator, Seedable):
 
     def __init__(self, batch_size=10, shuffle=True, seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
-        self.nr_sequences = _assert_correct_data_format(named_data)
+        nr_sequences = _assert_correct_data_format(named_data)
+        nr_batches = int(math.ceil(nr_sequences / batch_size))
+        DataIterator.__init__(self, list(named_data.keys()), nr_batches)
         self.data = named_data
         self.shuffle = shuffle
         self.batch_size = batch_size
@@ -269,8 +295,7 @@ class Minibatches(DataIterator, Seedable):
                 for d in self.data.values()))
 
     def __call__(self, handler):
-        indices = np.arange(
-            int(math.ceil(self.nr_sequences / self.batch_size)))
+        indices = np.arange(self.length)
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
