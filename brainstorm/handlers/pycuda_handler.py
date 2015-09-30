@@ -427,7 +427,6 @@ class PyCudaHandler(Handler):
         tmp = gpuarray.empty((1, n), dtype=m.dtype)
         _softmax_impl(m, tmp.gpudata, out, np.int32(n),
                       np.int32(k), block=(32, 1, 1), grid=(n, 1, 1))
-        return out
 
     def tanh(self, x, y):
         tanh_kernel(x, y)
