@@ -3,26 +3,11 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 import pytest
-from brainstorm.data_iterators import progress_bar, Online, Undivided, \
-    Minibatches, AddGaussianNoise, Pad, Flip, RandomCrop
+from brainstorm.data_iterators import (
+    Online, Undivided, Minibatches, AddGaussianNoise, Pad, Flip, RandomCrop)
 from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.utils import IteratorValidationError
 from brainstorm.handlers import default_handler
-
-
-# ########################### Progress Bar ####################################
-
-def test_progress_bar():
-    prefix = '<<'
-    bar = '1234567890'
-    suffix = '>>'
-    p = progress_bar(10, prefix, bar, suffix)
-    assert next(p) == prefix
-    assert p.send(4) == '1234'
-    assert p.send(4) == ''
-    assert p.send(9) == '56789'
-    assert p.send(9.999) == ''
-    assert p.send(10) == '0' + suffix
 
 
 # ######################### Nested Iterators ##################################

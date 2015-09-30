@@ -96,8 +96,7 @@ class Trainer(Describable):
             if self.verbose:
                 print('\n\n', 12 * '- ', "Epoch", self.current_epoch_nr,
                       12 * ' -')
-            iterator = training_data_getter(verbose=self.verbose,
-                                            handler=net.handler)
+            iterator = training_data_getter(handler=net.handler)
             for _ in run(net, iterator):
                 self.current_update_nr += 1
                 self.stepper.run()

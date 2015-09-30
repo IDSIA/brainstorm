@@ -1,46 +1,17 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from datetime import datetime
 import math
 import numpy as np
-import sys
 from brainstorm.randomness import Seedable
 from brainstorm.utils import IteratorValidationError
 from brainstorm.handlers._cpuop import _crop_images
 
 
-def progress_bar(maximum, prefix='[',
-                 bar='====1====2====3====4====5====6====7====8====9====0',
-                 suffix='] Took: {0}\n'):
-    i = 0
-    start_time = datetime.utcnow()
-    out = prefix
-    while i < len(bar):
-        progress = yield out
-        j = math.trunc(progress / maximum * len(bar))
-        out = bar[i: j]
-        i = j
-    elapsed_str = str(datetime.utcnow() - start_time)[: -5]
-    yield out + suffix.format(elapsed_str)
-
-
-def silence():
-    while True:
-        yield ''
-
-
 class DataIterator(object):
-    def __init__(self, data):
-        """
-        BaseClass for Data Iterators.
+    """BaseClass for Data Iterators."""
 
-        :param data: Named data items to iterate over.
-        :type data: dict[unicode, np.ndarray]
-        """
-        self.data = data
-
-    def __call__(self, handler, verbose=False):
+    def __call__(self, handler):
         pass
 
 
@@ -55,19 +26,7 @@ class AddGaussianNoise(DataIterator, Seedable):
     """
 
     def __init__(self, iter, std_dict, mean_dict=None, seed=None):
-        """
-        :param iter: any DataIterator to which noise is to be added
-        :type iter: DataIterator
-        :param std_dict: specifies the standard deviation of noise added to
-        each named data item
-        :type std_dict: dict[unicode, int]
-        :param mean_dict: specifies the mean of noise added to each named
-        data item
-        :type mean_dict: dict[unicode, int]
-        :param seed: random seed
-        """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data)
         if mean_dict is not None:
             assert set(mean_dict.keys()) == set(std_dict.keys()), \
                 "means and standard deviations must be provided for " \
@@ -85,8 +44,8 @@ class AddGaussianNoise(DataIterator, Seedable):
         self.std_dict = std_dict
         self.iter = iter
 
-    def __call__(self, handler, verbose=False):
-        for data in self.iter(handler, verbose=verbose):
+    def __call__(self, handler):
+        for data in self.iter(handler):
             for key in self.std_dict.keys():
                 mean = self.mean_dict.get(key, 0.0)
                 std = self.std_dict.get(key)
@@ -117,7 +76,6 @@ class Flip(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data)
         prob_dict = {'default': 0.5} if prob_dict is None else prob_dict
         for key in prob_dict.keys():
             if key not in iter.data.keys():
@@ -134,8 +92,8 @@ class Flip(DataIterator, Seedable):
         self.prob_dict = prob_dict
         self.iter = iter
 
-    def __call__(self, handler, verbose=False):
-        for data in self.iter(handler, verbose=verbose):
+    def __call__(self, handler):
+        for data in self.iter(handler):
             for name in self.prob_dict.keys():
                 if self.rnd.random_sample() < self.prob_dict[name]:
                     data[name] = data[name][..., ::-1]
@@ -164,7 +122,6 @@ class Pad(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data)
         if value_dict is not None:
             if set(size_dict.keys()) != set(value_dict.keys()):
                 raise IteratorValidationError(
@@ -184,8 +141,8 @@ class Pad(DataIterator, Seedable):
         self.size_dict = size_dict
         self.iter = iter
 
-    def __call__(self, handler, verbose=False):
-        for data in self.iter(handler, verbose=verbose):
+    def __call__(self, handler):
+        for data in self.iter(handler):
             for name in self.size_dict.keys():
                 t, b, c, h, w = data[name].shape
                 size = self.size_dict[name]
@@ -216,7 +173,6 @@ class RandomCrop(DataIterator, Seedable):
         :param seed: random seed
         """
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, iter.data)
         for key, val in shape_dict.items():
             if key not in iter.data.keys():
                 raise IteratorValidationError(
@@ -237,8 +193,8 @@ class RandomCrop(DataIterator, Seedable):
         self.shape_dict = shape_dict
         self.iter = iter
 
-    def __call__(self, handler, verbose=False):
-        for data in self.iter(handler, verbose=verbose):
+    def __call__(self, handler):
+        for data in self.iter(handler):
             for name in self.shape_dict.keys():
                 crop_h, crop_w = self.shape_dict[name]
                 batch_size = data[name].shape[1]
@@ -263,12 +219,11 @@ class Undivided(DataIterator):
         :param named_data: named arrays with 3+ dimensions ('T', 'B', ...)
         :type named_data: dict[unicode, ndarray]
         """
-        super(Undivided, self).__init__(named_data)
         _assert_correct_data_format(named_data)
         self.data = named_data
         self.total_size = int(sum(d.size for d in self.data.values()))
 
-    def __call__(self, handler, verbose=False):
+    def __call__(self, handler):
         yield self.data
 
 
@@ -277,24 +232,15 @@ class Online(DataIterator, Seedable):
     Online (one sample at a time) iterator for inputs and targets.
     """
 
-    def __init__(self, shuffle=True, verbose=None, seed=None, **named_data):
+    def __init__(self, shuffle=True, seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, named_data)
         self.nr_sequences = _assert_correct_data_format(named_data)
         self.data = named_data
         self.shuffle = shuffle
-        self.verbose = verbose
         self.sample_size = int(sum(d.shape[0] * np.prod(d.shape[2:])
                                    for d in self.data.values()))
 
-    def __call__(self, handler, verbose=False):
-        if (self.verbose is None and verbose) or self.verbose:
-            p_bar = progress_bar(self.nr_sequences)
-        else:
-            p_bar = silence()
-
-        print(next(p_bar), end='')
-        sys.stdout.flush()
+    def __call__(self, handler):
         indices = np.arange(self.nr_sequences)
         if self.shuffle:
             self.rnd.shuffle(indices)
@@ -302,8 +248,6 @@ class Online(DataIterator, Seedable):
             data = {k: v[:, idx: idx + 1]
                     for k, v in self.data.items()}
             yield data
-            print(p_bar.send(i + 1), end='')
-            sys.stdout.flush()
 
 
 class Minibatches(DataIterator, Seedable):
@@ -314,27 +258,17 @@ class Minibatches(DataIterator, Seedable):
     minibatches.
     """
 
-    def __init__(self, batch_size=10, shuffle=True, verbose=None,
-                 seed=None, **named_data):
+    def __init__(self, batch_size=10, shuffle=True, seed=None, **named_data):
         Seedable.__init__(self, seed=seed)
-        DataIterator.__init__(self, named_data)
         self.nr_sequences = _assert_correct_data_format(named_data)
         self.data = named_data
         self.shuffle = shuffle
-        self.verbose = verbose
         self.batch_size = batch_size
         self.sample_size = int(
             sum(d.shape[0] * np.prod(d.shape[2:]) * batch_size
                 for d in self.data.values()))
 
-    def __call__(self, handler, verbose=False):
-        if (self.verbose is None and verbose) or self.verbose:
-            p_bar = progress_bar(self.nr_sequences)
-        else:
-            p_bar = silence()
-
-        print(next(p_bar), end='')
-        sys.stdout.flush()
+    def __call__(self, handler):
         indices = np.arange(
             int(math.ceil(self.nr_sequences / self.batch_size)))
         if self.shuffle:
@@ -345,8 +279,6 @@ class Minibatches(DataIterator, Seedable):
 
             data = {k: v[chunk] for k, v in self.data.items()}
             yield data
-            print(p_bar.send((i + 1) * self.batch_size), end='')
-            sys.stdout.flush()
 
 
 def _assert_correct_data_format(named_data):
