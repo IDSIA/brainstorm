@@ -28,7 +28,7 @@ if has_pycuda:
 try:
     import pycuda
     import pycuda.autoinit
-    from nervanagpu import NervanaGPU
+    from neon.backends.nervanagpu import NervanaGPU
     has_nervanagpu = True
 except ImportError:
     has_nervanagpu = False

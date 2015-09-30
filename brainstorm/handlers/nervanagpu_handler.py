@@ -2,27 +2,30 @@
 # coding=utf-8
 from __future__ import division, print_function
 import numpy as np
-import nervanagpu
-from nervanagpu import NervanaGPU
+from neon.backends.nervanagpu import NervanaGPU, GPUTensor
 from pycuda import gpuarray
 from pycuda.elementwise import ElementwiseKernel
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
 
+import skcuda.linalg as culinalg
+import skcuda.misc as cumisc
+culinalg.init()
 
 class NervanaGPUHandler(Handler):
     __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd'}
 
     def __init__(self, seed=None):
         self.dtype = np.float32
-        self.context = NervanaGPU(default_dtype=np.float32)
+        self.context = NervanaGPU(default_dtype=np.float32,
+                                  stochastic_round=False)
         self.EMPTY = self.context.empty((), dtype=self.dtype)
         if seed is None:
             seed = global_rnd.generate_seed()
 
         self.rnd = None
 
-    array_type = nervanagpu.nervanagpu.GPUTensor
+    array_type = GPUTensor
 
     def __init_from_description__(self, description):
         self.__init__()
@@ -82,11 +85,11 @@ class NervanaGPUHandler(Handler):
 
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, in_deltas, out_deltas):
-        pass
+        raise NotImplementedError
 
     def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride):
-        pass
+        raise NotImplementedError
 
     def binarize_v(self, v, out):
         tmp = self.context.zeros((v.size, 1), dtype=np.int32)
@@ -107,21 +110,21 @@ class NervanaGPUHandler(Handler):
     def conv2d_backward_batch(self, inputs, weights, padding, stride,
                               in_deltas, out_deltas, weight_deltas,
                               bias_deltas):
-        pass
+        raise NotImplementedError
 
     def conv2d_forward_batch(self, inputs, weights, bias, outputs,
                              padding, stride):
-        pass
+        raise NotImplementedError
 
     def dot_add_mm(self, a, b, out, transa=False, transb=False):
-        a = a.T if transa else a
-        b = b.T if transb else b
-        self.context.dot(a, b, out, beta=1.0)
+        x = a.T if transa else a
+        y = b.T if transb else b
+        self.context.compound_dot(x, y, out, beta=1.0)
 
     def dot_mm(self, a, b, out, transa=False, transb=False):
-        a = a.T if transa else a
-        b = b.T if transb else b
-        self.context.dot(a, b, out)
+        x = a.T if transa else a
+        y = b.T if transb else b
+        self.context.dot(x, y, out)
 
     def divide_mv(self, m, v, out):
         out[:] = m / v
@@ -130,10 +133,10 @@ class NervanaGPUHandler(Handler):
         out[:] = a / b
 
     def fill_gaussian(self, mean, std, out):
-        pass
+        raise NotImplementedError
 
     def generate_probability_mask(self, mask, probability):
-        pass
+        raise NotImplementedError
 
     def index_m_by_v(self, m, v, out):
         index_m_by_v_kernel(self.as_gpuarray(out),
@@ -145,11 +148,11 @@ class NervanaGPUHandler(Handler):
 
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, argmax, in_deltas, out_deltas):
-        pass
+        raise NotImplementedError
 
     def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride, argmax):
-        pass
+        raise NotImplementedError
 
     def mult_add_st(self, a, b, out):
         out[:] += a * b
@@ -188,11 +191,11 @@ class NervanaGPUHandler(Handler):
 
     def _pool2d_forward_batch(self, inputs, window, outputs, padding,
                               stride, argmax, pooling_mode):
-        pass
+        raise NotImplementedError
 
     def _pool2d_backward_batch(self, inputs, window, outputs, padding, stride,
                                argmax, in_deltas, out_deltas, pooling_mode):
-        pass
+        raise NotImplementedError
 
     # ------------------------ Activation functions ------------------------- #
 

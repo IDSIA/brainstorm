@@ -368,7 +368,6 @@ def test_index_m_by_v(handler):
         v = np.random.random_integers(0, m.shape[1] - 1, (m.shape[0], 1))
         out = np.random.random_sample(v.shape)
         ref_args = (m, v, out)
-        print(v)
         assert operation_check(handler, 'index_m_by_v', ref_args)
 
 
