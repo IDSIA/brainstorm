@@ -64,7 +64,7 @@ class AddGaussianNoise(DataIterator):
                 "means and standard deviations must be provided for " \
                 "the same data names"
         for key in std_dict.keys():
-            if key not in iter.data_shape:
+            if key not in iter.data_shapes:
                 raise IteratorValidationError(
                     "key {} is not present in iterator. Available keys: {"
                     "}".format(key, iter.data_shapes.keys()))
