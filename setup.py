@@ -9,6 +9,17 @@ from setuptools.command.test import test as TestCommand
 from setuptools import Extension
 from Cython.Build import cythonize
 
+try:
+    from brainstorm import __about__
+    about = __about__.__dict__
+except ImportError:
+    # installing - dependencies are not there yet
+    ext_modules = []
+    # Manually extract the __about__
+    about = dict()
+    exec(open("brainstorm/__about__.py").read(), about)
+
+
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
     sys.exit()
@@ -43,12 +54,11 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 setup(
     name='brainstorm',
-    version='0.1.0',
+    version=about['__version__'],
     description='A fresh start for the pylstm RNN library',
     long_description=readme + '\n\n' + doclink + '\n\n' + history,
-    author='Klaus Greff',
-    author_email='qwlouse@gmail.com',
-    url='https://github.com/Qwlouse/brainstorm',
+    author=about['__author__'],
+    url=about['__url__'],
     packages=['brainstorm',
               'brainstorm.structure',
               'brainstorm.layers',
@@ -57,7 +67,7 @@ setup(
     install_requires=['six', 'numpy', 'h5py'],
     tests_requires=['pytest', 'mock'],
     cmdclass={'test': PyTest},
-    license='MIT',
+    license=about['__license__'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
