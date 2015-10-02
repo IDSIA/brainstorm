@@ -4,6 +4,7 @@ from __future__ import division, print_function
 import numpy as np
 from neon.backends.nervanagpu import NervanaGPU, GPUTensor
 from pycuda import gpuarray
+import pycuda
 from pycuda.elementwise import ElementwiseKernel
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
@@ -17,12 +18,11 @@ class NervanaGPUHandler(Handler):
 
     def __init__(self, seed=None):
         self.dtype = np.float32
-        self.context = NervanaGPU(default_dtype=np.float32,
-                                  stochastic_round=False)
-        self.EMPTY = self.context.empty((), dtype=self.dtype)
         if seed is None:
             seed = global_rnd.generate_seed()
-
+        self.context = NervanaGPU(rng_seed=seed, default_dtype=np.float32,
+                                  stochastic_round=False)
+        self.EMPTY = self.context.empty((), dtype=self.dtype)
         self.rnd = None
 
     array_type = GPUTensor
@@ -57,6 +57,9 @@ class NervanaGPUHandler(Handler):
         return mem.get()
 
     def set_from_numpy(self, mem, arr):
+        if len(arr.shape) == 1 and mem.shape == (arr.shape[0], 1):
+            mem.set(arr.reshape((arr.shape[0], 1)).astype(self.dtype))
+            return
         assert mem.shape == arr.shape, "Shape of destination ({}) != Shape " \
                                        "of source ({})".format(mem.shape,
                                                                arr.shape)
@@ -122,9 +125,14 @@ class NervanaGPUHandler(Handler):
         self.context.compound_dot(x, y, out, beta=1.0)
 
     def dot_mm(self, a, b, out, transa=False, transb=False):
-        x = a.T if transa else a
-        y = b.T if transb else b
-        self.context.dot(x, y, out)
+        # x = a.T if transa else a
+        # y = b.T if transb else b
+        # self.context.compound_dot(x, y, out)
+        transa = 'T' if transa else 'N'
+        transb = 'T' if transb else 'N'
+        culinalg.dot(self.as_gpuarray(a), self.as_gpuarray(b), transa=transa,
+                     transb=transb,
+                     out=self.as_gpuarray(out))
 
     def divide_mv(self, m, v, out):
         out[:] = m / v
@@ -182,12 +190,20 @@ class NervanaGPUHandler(Handler):
         out[:] = a - b
 
     def sum_t(self, a, axis, out):
-        assert len(a.shape) == 2
-        if axis is None:
-            tmp = out.reshape((1, 1))
-            self.context.sum(a.reshape((a.size, 1)), axis=0, out=tmp)
+        # assert len(a.shape) == 2
+        # if axis is None:
+        #     tmp = out.reshape((1, 1))
+        #     self.context.sum(a.reshape((a.size, 1)), axis=0, out=tmp)
+        # else:
+        #     self.context.sum(a, axis=axis, out=out)
+        a = self.as_gpuarray(a)
+        out = self.as_gpuarray(out)
+        if len(a.shape) < 3 and (axis == 0 or axis == 1):
+            cumisc.sum(a, axis, out)
+        elif axis is None:
+            pycuda.driver.memcpy_dtod(out.gpudata, cumisc.sum(a).gpudata, out.nbytes)
         else:
-            self.context.sum(a, axis=axis, out=out)
+            raise NotImplementedError
 
     def _pool2d_forward_batch(self, inputs, window, outputs, padding,
                               stride, argmax, pooling_mode):
