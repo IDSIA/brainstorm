@@ -226,7 +226,7 @@ def evaluate(network, iter, scorers=(), out_name='', targets_name='targets',
 
 
 def save_features(network, iter, file_name, feat_name):
-    """Save the features produced by a network to an HDF5 file.
+    """Save the features/outputs produced by a network to an HDF5 file.
 
     Args:
         net (brainstorm.structure.Network): Network using which the features
@@ -244,7 +244,7 @@ def save_features(network, iter, file_name, feat_name):
     first_pass = True
     num_items = 0
     with h5py.File(file_name, 'w') as f:
-        for _ in run_network(network, iterator):
+        for _ in run_network(network, iterator, all_inputs=False):
             network.forward_pass()
             data = network.handler.get_numpy_copy(get_by_path(network.buffer,
                                                               feat_name))

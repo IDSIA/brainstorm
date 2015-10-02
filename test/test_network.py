@@ -4,7 +4,9 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm import Network
 from brainstorm.initializers import Gaussian
-from brainstorm.layers import Input, Rnn, Lstm
+from brainstorm.layers import Input, Rnn, Lstm, Classification
+from brainstorm.training.utils import run_network
+from brainstorm.data_iterators import Undivided
 import numpy as np
 import pytest
 from .helpers import HANDLER
@@ -83,3 +85,21 @@ def test_context_slice_allows_continuing_forward_pass(net_with_context):
             # print("Context:\n", x)
             # print("Should match:\n", y)
             assert np.allclose(x, y)
+
+
+inp = Input(out_shapes={'default': ('T', 'B', 4),
+                        'targets': ('T', 'B', 1)})
+out = Classification(2, name='Output')
+(inp - 'targets' >> 'targets' - out)
+simple_net = Network.from_layer(inp >> out)
+
+
+def test_forward_pass_with_missing_data():
+    it = Undivided(default=np.random.randn(3, 2, 4))(simple_net.handler)
+
+    with pytest.raises(KeyError):
+        for _ in run_network(simple_net, it):
+            pass
+
+    for _ in run_network(simple_net, it, all_inputs=False):
+        pass
