@@ -25,19 +25,19 @@ getter_va = Minibatches(100, default=ds['validation']['default'][:],
 inp, out = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
 
 (inp >>
-    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv1') >>
+    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='Conv1') >>
     bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2)) >>
-    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='conv2') >>
+    bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='Conv2') >>
     bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2)) >>
-    bs.layers.Convolution2D(64, kernel_size=(5, 5), padding=2, name='conv3') >>
+    bs.layers.Convolution2D(64, kernel_size=(5, 5), padding=2, name='Conv3') >>
     bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2)) >>
-    bs.layers.FullyConnected(64, name='fc') >>
+    bs.layers.FullyConnected(64, name='FC') >>
     out)
 
 network = bs.Network.from_layer(out)
 network.set_memory_handler(PyCudaHandler())
-network.initialize({'conv*': {'W': Gaussian(0.01), 'bias': 0},
-                    'fc': {'W': Gaussian(0.1), 'bias': 0},
+network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
+                    'FC': {'W': Gaussian(0.1), 'bias': 0},
                     'Output': {'W': Gaussian(0.1), 'bias': 0}})
 
 # ------------------------------ Set up Trainer ----------------------------- #
@@ -48,13 +48,13 @@ trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.01,
                      double_buffering=False)
 trainer.train_scorers = scorers
 trainer.add_hook(bs.hooks.ProgressBar())
-trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
 trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
                                           filename='cifar10_cnn_best.hdf5',
                                           name='best weights',
                                           criterion='max'))
+trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 
 # --------------------------------- Train ----------------------------------- #
 
