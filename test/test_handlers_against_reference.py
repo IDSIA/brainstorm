@@ -618,3 +618,13 @@ def test_avgpool2d_backward(handler):
                     if not passed:
                         print(x.shape, window, outputs.shape, padding, strides)
                     assert passed
+
+
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_softmax_m(handler):
+    list_a = get_random_arrays(some_2d_shapes)
+
+    for m in list_a:
+        out = np.zeros_like(m, dtype=ref_dtype)
+        ref_args = (m, out)
+        assert operation_check(handler, 'softmax_m', ref_args)

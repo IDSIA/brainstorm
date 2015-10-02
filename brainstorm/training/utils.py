@@ -4,10 +4,10 @@ from __future__ import division, print_function, unicode_literals
 import threading
 
 
-def run_network_double_buffer(net, iterator):
+def run_network_double_buffer(net, iterator, all_inputs=True):
     def run_it(it):
         try:
-            net.provide_external_data(next(it))
+            net.provide_external_data(next(it), all_inputs=all_inputs)
         except StopIteration:
             run_it.stop = True
 
@@ -23,7 +23,7 @@ def run_network_double_buffer(net, iterator):
         i += 1
 
 
-def run_network(net, iterator):
+def run_network(net, iterator, all_inputs=True):
     for i, data in enumerate(iterator):
-        net.provide_external_data(data)
+        net.provide_external_data(data, all_inputs=all_inputs)
         yield i

@@ -24,6 +24,13 @@ Handler
     :members:
     :inherited-members:
 
+
+Tools
+=====
+.. automodule:: brainstorm.tools
+    :members:
+
+
 Describables
 ============
 .. automodule:: brainstorm.describable

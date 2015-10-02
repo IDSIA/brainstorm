@@ -57,9 +57,7 @@ class ConstrainL2Norm(ValueModifier):
     which weights to affect.
     """
 
-    __default_values__ = {'limit': 1.0}
-
-    def __init__(self, limit=1.0):
+    def __init__(self, limit):
         super(ConstrainL2Norm, self).__init__()
         self.limit = limit
 
@@ -180,7 +178,7 @@ class L1Decay(GradientModifier):
     New gradients = gradients + factor * sign(parameters)
     """
 
-    def __init__(self, factor=0):
+    def __init__(self, factor):
         super(L1Decay, self).__init__()
         self.factor = factor
 
@@ -198,7 +196,7 @@ class L2Decay(GradientModifier):
     New gradients = gradients + factor * parameters
     """
 
-    def __init__(self, factor=0):
+    def __init__(self, factor):
         super(L2Decay, self).__init__()
         self.factor = factor
 

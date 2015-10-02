@@ -123,7 +123,6 @@ class Network(Seedable):
         return self.handler.get_numpy_copy(
             self.buffer.Input.outputs[input_name])
 
-
     # -------------------------- Setup Methods --------------------------------
 
     def initialize(self, default_or_init_dict=None, seed=None, **kwargs):
@@ -324,10 +323,12 @@ class Network(Seedable):
 
     # -------------------------- Running Methods ------------------------------
 
-    def provide_external_data(self, data):
+    def provide_external_data(self, data, all_inputs=True):
         time_size, batch_size = data[next(iter(data))].shape[: 2]
         self.buffer = self._buffer_manager.resize(time_size, batch_size)
         for name, buf in self.buffer.Input.outputs.items():
+            if name not in data.keys() and all_inputs is False:
+                continue
             if isinstance(data[name], self.handler.array_type):
                 self.handler.copy_to(buf, data[name])
             else:

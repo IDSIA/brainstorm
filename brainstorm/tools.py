@@ -8,7 +8,8 @@ from brainstorm.utils import get_by_path
 from brainstorm.scorers import (
     gather_losses_and_scores, aggregate_losses_and_scores)
 
-__all__ = ['get_in_out_layers_for_classification', 'draw_network',
+__all__ = ['get_in_out_layers_for_classification',
+           'get_in_out_layers_for_regression', 'draw_network',
            'print_network_info', 'evaluate', 'save_features']
 
 
@@ -17,6 +18,38 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
                                          targets_name='targets',
                                          outlayer_name="Output",
                                          mask_name=None):
+    """Prepare input and output layers for building a multi-class classifier.
+
+    This is a helper function for quickly building a typical multi-class
+    classifier. The output layer is a ``Classification`` layer.
+
+    Example:
+        >>> from brainstorm import tools, Network, layers
+        >>> inp, out = tools.get_in_out_layers_for_classification(784, 10)
+        >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
+    Args:
+        in_shape (tuple[int]): Shape of the input data.
+        nr_classes (int): Number of possible classes.
+        data_name (Optional[str]):
+            Name of the input data which will be provided by a data iterator.
+            Defaults to 'default'.
+        targets_name (Optional[str]):
+            Name of the ground-truth target data which will be provided by a
+            data iterator. Defaults to 'targets'.
+        outlayer_name (Optional[str]):
+            Name for the output layer.
+        mask_name (Optional[str]):
+            Name of the mask data which will be provided by a data iterator.
+            Defaults to None.
+
+            The mask is needed if error should be injected
+            only at certain time steps (for sequential data).
+    Returns:
+        tuple: An input and an output layer.
+    NOTE:
+        This tool provides the output layer for `multi-class` classification,
+        not `multi-label` classification.
+    """
     if isinstance(in_shape, int):
         in_shape = (in_shape, )
 
@@ -39,16 +72,46 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
     return inp_layer, out_layer
 
 
-def get_in_out_layers_for_regression(in_shape, nr_classes,
+def get_in_out_layers_for_regression(in_shape, nr_outputs,
                                      data_name='default',
                                      targets_name='targets',
                                      outlayer_name="Output",
                                      mask_name=None):
+    """Prepare input and output layers for building a multi-class classifier.
+
+    This is a helper function for quickly building a typical network for a
+    regression task with Mean Squared Loss. The output layer is a
+    ``FullyConnected`` layer with linear activation.
+
+    Example:
+        >>> from brainstorm import tools, Network, layers
+        >>> inp, out = tools.get_in_out_layers_for_regression(100, 10)
+        >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
+    Args:
+        in_shape (tuple[int]): Shape of the input data.
+        nr_classes (int): Number of outputs.
+        data_name (Optional[str]):
+            Name of the input data which will be provided by a data iterator.
+            Defaults to 'default'.
+        targets_name (Optional[str]):
+            Name of the ground-truth target data which will be provided by a
+            data iterator. Defaults to 'targets'.
+        outlayer_name (Optional[str]):
+            Name for the output layer.
+        mask_name (Optional[str]):
+            Name of the mask data which will be provided by a data iterator.
+            Defaults to None.
+
+            The mask is needed if error should be injected
+            only at certain time steps (for sequential data).
+    Returns:
+        tuple: An input and an output layer.
+    """
     if isinstance(in_shape, int):
         in_shape = (in_shape, )
 
     fc_layer = layers.FullyConnected(nr_classes, name='fc_' + outlayer_name,
-                                     activation='linear')
+                                     activation_function='linear')
     out_layer = layers.SquaredDifference(name=outlayer_name)
 
     if mask_name is None:
@@ -70,7 +133,17 @@ def get_in_out_layers_for_regression(in_shape, nr_classes,
     return inp_layer, fc_layer, out_layer
 
 
-def draw_network(network, filename='network.png'):
+def draw_network(network, file_name='network.png'):
+    """Write a diagram for a network to a file.
+
+    Args:
+        network (brainstorm.structure.Network): Network to be drawn.
+        file_name (Optional[str]): Defaults to 'network.png'.
+    Note:
+        This tool requires the pygraphviz library to be installed.
+    Raises:
+        ImportError: If pygraphviz can not be imported.
+    """
 
     try:
         import pygraphviz as pgv
@@ -80,13 +153,23 @@ def draw_network(network, filename='network.png'):
                     for dest in dest_list:
                         graph.add_edge(k, dest.split('.')[0])
 
-        graph.draw(filename, prog='dot')
-        print('Network drawing saved as {}'.format(filename))
+        graph.draw(file_name, prog='dot')
+        print('Network drawing saved as {}'.format(file_name))
     except ImportError:
         print("pygraphviz is required for drawing networks but was not found.")
 
 
 def print_network_info(network):
+    """Print detailed information about the network.
+
+    This tools prints the input, output and parameter shapes for all the
+    layers. It also prints the total number of parameters in each layer and
+    in the full network.
+
+    Args:
+        network (brainstorm.structure.Network):
+            A network for which the details are printed.
+    """
     print('=' * 30, "Network information", '=' * 30)
     print('total number of parameters: ', network.buffer.parameters.size)
     for layer in network.layers.values():
@@ -109,32 +192,62 @@ def print_network_info(network):
         print('-' * 80)
 
 
-def evaluate(net, iter, scorers=(), out_name='', targets_name='targets',
+def evaluate(network, iter, scorers=(), out_name='', targets_name='targets',
              mask_name=None):
-    iterator = iter(handler=net.handler)
+    """Evaluate one or more scores for a network.
+
+    This tool can be used to evaluate scores of a trained network on test
+    data.
+
+    Args:
+        net (brainstorm.structure.Network): Network to be evaluated.
+        iter (brainstorm.DataIterator): A data iterator which produces the
+                                        data on which the scores are computed.
+        scorers (tuple[brainstorm.scorers.Scorer]): A list or tuple of Scorers.
+        out_name (Optional[str]): Name of the network output which is scored
+                                  against the targets.
+        targets_name (Optional[str]): Name of the targets data provided by the
+                                      data iterator (``iter``).
+        mask_name (Optional[str]): Name of the mask data  provided by the
+                                   data iterator (``iter``).
+    """
+    iterator = iter(handler=network.handler)
     scores = {scorer.__name__: [] for scorer in scorers}
-    for n in net.get_loss_values():
+    for n in network.get_loss_values():
         scores[n] = []
 
-    for _ in run_network(net, iterator):
-        net.forward_pass()
+    for _ in run_network(network, iterator):
+        network.forward_pass()
         gather_losses_and_scores(
-            net, scorers, scores, out_name=out_name,
+            network, scorers, scores, out_name=out_name,
             targets_name=targets_name, mask_name=mask_name)
 
-    return aggregate_losses_and_scores(scores, net, scorers)
+    return aggregate_losses_and_scores(scores, network, scorers)
 
 
-def save_features(net, iter, file_name, feat_name, verbose=True):
-    iterator = iter(verbose=verbose, handler=net.handler)
+def save_features(network, iter, file_name, feat_name):
+    """Save the features/outputs produced by a network to an HDF5 file.
+
+    Args:
+        net (brainstorm.structure.Network): Network using which the features
+                                            should be generated.
+        iter (brainstorm.DataIterator): A data iterator which produces the
+                                        data on which the features are
+                                        computed.
+        file_name (str): Name of the hdf5 file (including extension) in
+                         which the features should be saved.
+        feat_name (str): Name of the feature view to saved in dotted
+                         notation. See example.
+    """
+    iterator = iter(handler=network.handler)
 
     first_pass = True
     num_items = 0
     with h5py.File(file_name, 'w') as f:
-        for _ in run_network(net, iterator):
-            net.forward_pass()
-            data = net.handler.get_numpy_copy(get_by_path(net.buffer,
-                                                          feat_name))
+        for _ in run_network(network, iterator, all_inputs=False):
+            network.forward_pass()
+            data = network.handler.get_numpy_copy(get_by_path(network.buffer,
+                                                              feat_name))
             num_items += data.shape[1]
             if first_pass:
                 ds = f.create_dataset(
@@ -145,4 +258,3 @@ def save_features(net, iter, file_name, feat_name, verbose=True):
             else:
                 ds.resize(size=num_items, axis=1)
                 ds[:, num_items - data.shape[1]:num_items, ...] = data
-
