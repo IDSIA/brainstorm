@@ -14,14 +14,16 @@ def Classification(size, name=None):
     """Create a softmax layer with integrated Multinomial Loss.
 
     Operates like a FullyConnectedLayer with softmax activation function
-    on 'default' input and puts results in 'output'.
+    on 'default' input and puts results (per-class probabilities) in
+    'probabilities'.
 
     It also takes class numbers as the 'targets' input, and computes the
     multinomial cross-entropy loss. The resulting losses are stored in the
     'loss' output.
 
-    WARNING: This layer does not compute derivatives wrt the 'targets' input
-    and it also does not use the deltas coming in from the 'outputs'.
+    WARNING:
+        This layer does not compute derivatives wrt the 'targets' input.
+        It also does not use the deltas coming in from the 'probabilities'.
     """
     return ConstructionWrapper.create('Classification', size=size, name=name)
 
@@ -41,7 +43,7 @@ class ClassificationLayerImpl(BaseLayerImpl):
                                        'but was {}'.format(self.size))
 
         outputs = OrderedDict()
-        outputs['output'] = BufferStructure('T', 'B', self.size)
+        outputs['probabilities'] = BufferStructure('T', 'B', self.size)
         outputs['loss'] = BufferStructure('T', 'B', 1)
 
         parameters = OrderedDict()
@@ -60,13 +62,13 @@ class ClassificationLayerImpl(BaseLayerImpl):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         targets = buffers.inputs.targets
-        outputs = buffers.outputs.output
+        probabilities = buffers.outputs.probabilities
         loss = buffers.outputs.loss
         Ha = buffers.internals.Ha
 
         # reshape
         flat_input = flatten_time_and_features(inputs)
-        flat_output = flatten_time(outputs)
+        flat_probs = flatten_time(probabilities)
         flat_Ha = flatten_time(Ha)
         flat_loss = flatten_time(loss)
         flat_targets = flatten_time(targets)
@@ -76,13 +78,13 @@ class ClassificationLayerImpl(BaseLayerImpl):
         _h.add_mv(flat_Ha, bias.reshape((1, bias.shape[0])), flat_Ha)
 
         # softmax
-        _h.softmax_m(flat_Ha, flat_output)
+        _h.softmax_m(flat_Ha, flat_probs)
 
         # the multinomial cross entropy error is given by
         # - sum over i: p_i * ln(y_i)
         # now our targets are indices so all p_i = 0 except for i=t
         _h.fill(loss, 0.)
-        _h.index_m_by_v(flat_output, flat_targets, flat_loss)
+        _h.index_m_by_v(flat_probs, flat_targets, flat_loss)
         _h.clip_t(flat_loss, 1e-6, 1.0, flat_loss)
         _h.log_t(loss, loss)
         _h.mult_st(-1, loss, loss)
@@ -93,7 +95,7 @@ class ClassificationLayerImpl(BaseLayerImpl):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         targets = buffers.inputs.targets
-        outputs = buffers.outputs.output
+        probs = buffers.outputs.probabilities
 
         dW, dbias = buffers.gradients
         dinputs = buffers.input_deltas.default
@@ -102,7 +104,7 @@ class ClassificationLayerImpl(BaseLayerImpl):
 
         # reshape
         flat_inputs = flatten_time_and_features(inputs)
-        flat_outputs = flatten_time(outputs)
+        flat_probs = flatten_time(probs)
         flat_targets = flatten_time(targets)
         flat_dHa = flatten_time(dHa)
         flat_dloss = flatten_time(dloss)
@@ -112,7 +114,7 @@ class ClassificationLayerImpl(BaseLayerImpl):
         # y - t
         _h.binarize_v(flat_targets, flat_dHa)
         _h.mult_st(-1, flat_dHa, flat_dHa)
-        _h.add_tt(flat_dHa, flat_outputs, flat_dHa)
+        _h.add_tt(flat_dHa, flat_probs, flat_dHa)
         _h.mult_mv(flat_dHa, flat_dloss, flat_dHa)
 
         # calculate in_deltas and gradients

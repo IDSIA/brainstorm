@@ -123,7 +123,6 @@ class Network(Seedable):
         return self.handler.get_numpy_copy(
             self.buffer.Input.outputs[input_name])
 
-
     # -------------------------- Setup Methods --------------------------------
 
     def initialize(self, default_or_init_dict=None, seed=None, **kwargs):

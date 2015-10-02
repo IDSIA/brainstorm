@@ -42,7 +42,7 @@ network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
 
 # ------------------------------ Set up Trainer ----------------------------- #
 
-scorers = [bs.scorers.Accuracy(out_name='Output.output')]
+scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
 trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.01,
                                               momentum=0.9),
                      double_buffering=False)
