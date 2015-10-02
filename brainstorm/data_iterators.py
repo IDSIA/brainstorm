@@ -250,45 +250,29 @@ class Undivided(DataIterator):
         yield self.data
 
 
-class Online(DataIterator):
-    """
-    Online (one sample at a time) iterator for inputs and targets.
-    """
-
-    def __init__(self, shuffle=True, **named_data):
-        """
-        Args:
-            **named_data (dict[str, np.ndarray]):
-                named arrays with 3+ dimensions ('T', 'B', ...)
-            shuffle (Optional[bool]):
-                Determines if the data should be shuffled. Defaults to True.
-        """
-        nr_sequences = _assert_correct_data_format(named_data)
-        data_shapes = {n: v.shape for n, v in named_data.items()}
-        super(Online, self).__init__(data_shapes, nr_sequences)
-        self.data = named_data
-        self.shuffle = shuffle
-
-    def __call__(self, handler):
-        indices = np.arange(self.length)
-        if self.shuffle:
-            self.rnd.shuffle(indices)
-        for i, idx in enumerate(indices):
-            data = {k: v[:, idx: idx + 1]
-                    for k, v in self.data.items()}
-            yield data
-
-
 class Minibatches(DataIterator):
     """
     Minibatch iterator for inputs and targets.
 
+    Args:
+        batch_size (int): The number of data instances per batch. Defaults
+                          to 1.
+
+                          Brainstorm assumes that the second dimension (from
+                          the left) of the data indexes independent data
+                          items.
+        shuffle (Optional[bool]): Flag indicating whether the order of
+                                  batches should be randomized at the
+                                  beginning of every pass through
+                                  the data.
+        **named_data (dict[str, np.ndarray]):
+                named arrays with 3+ dimensions ('T', 'B', ...)
     Note:
-        If shuffle is true it still only randomizes the order of minibatches,
-        doesn't shuffle individual samples.
+        When shuffle is true, this iterator only randomizes the order of
+        minibatches, but doesn't re-shuffle instances across batches.
     """
 
-    def __init__(self, batch_size, shuffle=True, **named_data):
+    def __init__(self, batch_size=1, shuffle=True, **named_data):
         """
         Args:
             **named_data (dict[str, np.ndarray]):
