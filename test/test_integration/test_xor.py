@@ -20,8 +20,8 @@ def test_learn_xor_function():
     error_func = BinomialCrossEntropy()
 
     (inp >>
-     FullyConnected(2, activation_function='sigmoid') >>
-     FullyConnected(1, activation_function='sigmoid', name='OutLayer') >>
+     FullyConnected(2, activation='sigmoid') >>
+     FullyConnected(1, activation='sigmoid', name='OutLayer') >>
      error_func >>
      Loss())
 

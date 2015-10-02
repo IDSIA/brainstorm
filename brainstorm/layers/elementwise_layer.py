@@ -7,25 +7,25 @@ from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.buffer_structure import StructureTemplate
 
 
-def Elementwise(activation_function='rel', name=None):
+def Elementwise(activation='rel', name=None):
     """Create an Elementwise layer.
 
     This layer just applies a unit-wise function to its inputs.
     """
     return ConstructionWrapper.create('Elementwise', name=name,
-                                      activation_function=activation_function)
+                                      activation=activation)
 
 
 class ElementwiseLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
-    expected_kwargs = {'activation_function'}
+    expected_kwargs = {'activation'}
 
     def set_handler(self, new_handler):
         super(ElementwiseLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -33,8 +33,8 @@ class ElementwiseLayerImpl(BaseLayerImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'rel')]
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'rel')]
 
     def setup(self, kwargs, in_shapes):
         self.act_func = None
