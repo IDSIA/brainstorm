@@ -9,16 +9,16 @@ from brainstorm.structure.buffer_structure import (StructureTemplate,
                                                    BufferStructure)
 
 
-def Lstm(size, activation_function='tanh', name=None):
+def Lstm(size, activation='tanh', name=None):
     """Create an LSTM layer."""
     return ConstructionWrapper.create('Lstm', size=size, name=name,
-                                      activation_function=activation_function)
+                                      activation=activation)
 
 
 class LstmLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
-    expected_kwargs = {'size', 'activation_function'}
+    expected_kwargs = {'size', 'activation'}
 
     def setup(self, kwargs, in_shapes):
         self.act_func = lambda x, y: None
@@ -84,7 +84,7 @@ class LstmLayerImpl(BaseLayerImpl):
         super(LstmLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -92,8 +92,8 @@ class LstmLayerImpl(BaseLayerImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'tanh')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

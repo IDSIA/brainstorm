@@ -29,9 +29,9 @@ inp, out = bs.tools.get_in_out_layers_for_classification(784, 10)
 network = bs.Network.from_layer(
     inp >>
     bs.layers.Dropout(drop_prob=0.2) >>
-    bs.layers.FullyConnected(1200, name='Hid1', activation_function='rel') >>
+    bs.layers.FullyConnected(1200, name='Hid1', activation='rel') >>
     bs.layers.Dropout(drop_prob=0.5) >>
-    bs.layers.FullyConnected(1200, name='Hid2', activation_function='rel') >>
+    bs.layers.FullyConnected(1200, name='Hid2', activation='rel') >>
     bs.layers.Dropout(drop_prob=0.5) >>
     out
 )

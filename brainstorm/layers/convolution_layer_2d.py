@@ -10,14 +10,14 @@ from brainstorm.utils import flatten_time
 
 
 def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
-                  activation_function='rel', name=None):
+                  activation='rel', name=None):
     """Create a 2D Convolution layer."""
     return ConstructionWrapper.create('Convolution2D',
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
                                       stride=stride,
                                       padding=padding,
-                                      activation_function=activation_function,
+                                      activation=activation,
                                       name=name)
 
 
@@ -25,7 +25,7 @@ class Convolution2DLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'padding',
-                       'activation_function'}
+                       'activation'}
 
     def setup(self, kwargs, in_shapes):
         self.act_func = None
@@ -81,7 +81,7 @@ class Convolution2DLayerImpl(BaseLayerImpl):
         super(Convolution2DLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -89,8 +89,8 @@ class Convolution2DLayerImpl(BaseLayerImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'rel')]
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'rel')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

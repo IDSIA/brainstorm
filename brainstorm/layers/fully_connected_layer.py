@@ -10,22 +10,22 @@ from brainstorm.structure.buffer_structure import (StructureTemplate,
                                                    BufferStructure)
 
 
-def FullyConnected(size, activation_function='rel', name=None):
+def FullyConnected(size, activation='rel', name=None):
     """Create a Fully Connected (inner product) layer."""
     return ConstructionWrapper.create('FullyConnected', size=size, name=name,
-                                      activation_function=activation_function)
+                                      activation=activation)
 
 
 class FullyConnectedLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
-    expected_kwargs = {'size', 'activation_function'}
+    expected_kwargs = {'size', 'activation'}
 
     def set_handler(self, new_handler):
         super(FullyConnectedLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -33,8 +33,8 @@ class FullyConnectedLayerImpl(BaseLayerImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'rel')]
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'rel')]
 
     def setup(self, kwargs, in_shapes):
         self.act_func = None
