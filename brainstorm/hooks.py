@@ -326,12 +326,12 @@ class StopOnNan(Hook):
                 self.message("NaN or inf detected in parameters!")
                 raise StopIteration()
 
-        if self.check_training_loss and logs['rolling_training']:
+        if self.check_training_loss and 'rolling_training' in logs:
             rtrain = logs['rolling_training']
             if 'total_loss' in rtrain:
                 loss = rtrain['total_loss']
             else:
-                loss = list(rtrain.values())[0]
+                loss = rtrain['Loss']
             if not np.all(np.isfinite(loss)):
                 self.message("NaN or inf detected in rolling training loss!")
                 raise StopIteration()
