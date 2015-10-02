@@ -19,7 +19,7 @@ from .helpers import run_gradients_test, run_deltas_test, set_up_layer, \
     HANDLER, approx_fprime
 import numpy as np
 from brainstorm.structure.buffer_structure import BufferStructure
-from brainstorm.layers.rnn_layer import RnnLayerImpl
+from brainstorm.layers.rnn_layer import RecurrentLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
@@ -114,7 +114,7 @@ def classification_layer(spec):
 
 
 def rnn_layer(spec):
-    layer = RnnLayerImpl('RnnLayer',
+    layer = RecurrentLayerImpl('RnnLayer',
                          {'default': BufferStructure('T', 'B', 5)},
                          NO_CON, NO_CON,
                          size=7,

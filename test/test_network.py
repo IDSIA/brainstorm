@@ -4,7 +4,7 @@
 from __future__ import division, print_function, unicode_literals
 from brainstorm import Network
 from brainstorm.initializers import Gaussian
-from brainstorm.layers import Input, Rnn, Lstm, Classification
+from brainstorm.layers import Input, Recurrent, Lstm, Classification
 from brainstorm.training.utils import run_network
 from brainstorm.data_iterators import Undivided
 import numpy as np
@@ -18,7 +18,7 @@ NO_CON = set()
 
 def simple_recurrent_net():
     inp = Input(out_shapes={'default': ('T', 'B', 2)})
-    net = Network.from_layer(inp >> Rnn(3, name='out'))
+    net = Network.from_layer(inp >> Recurrent(3, name='out'))
     return net
 
 
