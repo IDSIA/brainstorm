@@ -3,26 +3,11 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 import pytest
-from brainstorm.data_iterators import progress_bar, Online, Undivided, \
-    Minibatches, AddGaussianNoise, Pad, Flip, RandomCrop
+from brainstorm.data_iterators import (
+    Online, Undivided, Minibatches, AddGaussianNoise, Pad, Flip, RandomCrop)
 from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.utils import IteratorValidationError
 from brainstorm.handlers import default_handler
-
-
-# ########################### Progress Bar ####################################
-
-def test_progress_bar():
-    prefix = '<<'
-    bar = '1234567890'
-    suffix = '>>'
-    p = progress_bar(10, prefix, bar, suffix)
-    assert next(p) == prefix
-    assert p.send(4) == '1234'
-    assert p.send(4) == ''
-    assert p.send(9) == '56789'
-    assert p.send(9.999) == ''
-    assert p.send(10) == '0' + suffix
 
 
 # ######################### Nested Iterators ##################################
@@ -112,8 +97,8 @@ def test_crop_images_operation():
     assert np.allclose(out[:, 0, ...], a[:, 0, :, 0:3, 0:3])
     assert np.allclose(out[:, 1, ...], a[:, 1, :, 1:4, 2:5])
 
-# ######################## Common Validation Tests ###########################
 
+# ######################## Common Validation Tests ###########################
 
 def test_non5d_data_raises():
     with pytest.raises(IteratorValidationError):

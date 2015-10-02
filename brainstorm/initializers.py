@@ -227,8 +227,8 @@ class Identity(Initializer):
     Initialize a matrix to the (scaled) identity matrix + some noise.
     """
 
-    def __init__(self, scale=1.0, std=0.01, enforce_square=True, seed=None):
-        super(Identity, self).__init__(seed=seed)
+    def __init__(self, scale=1.0, std=0.01, enforce_square=True):
+        super(Identity, self).__init__()
         self.scale = scale
         self.std = std
         self.enforce_square = enforce_square

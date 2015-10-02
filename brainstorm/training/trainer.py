@@ -28,7 +28,7 @@ class Trainer(Describable):
         """Create a new Trainer.
 
         Args:
-            stepper (object[brainstorm.training.steppers.TrainingStep]):
+            stepper (brainstorm.training.steppers.TrainingStep):
             verbose (bool):
             double_buffering (bool):
         """
@@ -64,20 +64,21 @@ class Trainer(Describable):
         self.hooks[hook.__name__] = hook
         hook.priority = max([h.priority for h in self.hooks.values()]) + 1
 
-    def train(self, net, training_data_getter, **named_data_iters):
+    def train(self, net, training_data_iter, **named_data_iters):
         """
         Train a network using a data iterator and further named data
         iterators.
         """
         if self.verbose:
             print('\n\n', 10 * '- ', "Before Training", 10 * ' -')
-        assert set(training_data_getter.data.keys()) == set(
+        assert set(training_data_iter.data_shapes.keys()) == set(
             net.buffer.Input.outputs.keys()), \
             "The data names provided by the training data iterator {} do not "\
             "map to the network input names {}".format(
-                training_data_getter.data.keys(),
+                training_data_iter.data_shapes.keys(),
                 net.buffer.Input.outputs.keys())
         self.stepper.start(net)
+        named_data_iters['training_data_iter'] = training_data_iter
         self._start_hooks(net, named_data_iters)
         self._emit_hooks(net, 'update')
         if self._emit_hooks(net, 'epoch'):
@@ -96,8 +97,7 @@ class Trainer(Describable):
             if self.verbose:
                 print('\n\n', 12 * '- ', "Epoch", self.current_epoch_nr,
                       12 * ' -')
-            iterator = training_data_getter(verbose=self.verbose,
-                                            handler=net.handler)
+            iterator = training_data_iter(handler=net.handler)
             for _ in run(net, iterator):
                 self.current_update_nr += 1
                 self.stepper.run()

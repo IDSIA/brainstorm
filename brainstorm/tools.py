@@ -110,8 +110,8 @@ def print_network_info(network):
 
 
 def evaluate(net, iter, scorers=(), out_name='', targets_name='targets',
-             mask_name=None, verbose=True):
-    iterator = iter(verbose=verbose, handler=net.handler)
+             mask_name=None):
+    iterator = iter(handler=net.handler)
     scores = {scorer.__name__: [] for scorer in scorers}
     for n in net.get_loss_values():
         scores[n] = []

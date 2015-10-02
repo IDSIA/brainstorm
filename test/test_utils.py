@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 from brainstorm.handlers import NumpyHandler
 from brainstorm.utils import (
     get_inheritors, flatten, convert_to_nested_indices, flatten_time,
-    flatten_time_and_features, flatten_keys)
+    flatten_time_and_features, flatten_keys, progress_bar)
 import numpy as np
 
 
@@ -75,3 +75,16 @@ def test_flatten_keys():
          }
     assert set(flatten_keys(d)) == {'default', 'a', 'b.i', 'b.j', 'b.k.x',
                                     'b.k.y'}
+
+
+def test_progress_bar():
+    prefix = '<<'
+    bar = '1234567890'
+    suffix = '>>'
+    p = progress_bar(10, prefix, bar, suffix)
+    assert next(p) == prefix
+    assert p.send(4) == '1234'
+    assert p.send(4) == ''
+    assert p.send(9) == '56789'
+    assert p.send(9.999) == ''
+    assert p.send(10) == '0' + suffix
