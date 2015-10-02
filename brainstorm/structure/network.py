@@ -292,9 +292,9 @@ class Network(Seedable):
         So for example:
 
         >>> net.set_gradient_modifiers(
-        ...    default=bs.ClipValues(-1, 1)
-        ...    FullyConnectedLayer={'W': [bs.ClipValues(),
-        ...                               bs.MaskValues(my_mask)]}
+        ...    default=bs.value_modifiers.ClipValues(-1, 1)
+        ...    FullyConnectedLayer={'W': [bs.value_modifiers.ClipValues(),
+        ...                               bs.value_modifiers.MaskValues(my_mask)]}
         ...    )
 
         .. Note:: The order in which ValueModifiers appear in the list matters,

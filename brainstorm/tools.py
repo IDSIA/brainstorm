@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+import h5py
 from brainstorm import layers
 from brainstorm.training.trainer import run_network
+from brainstorm.utils import get_by_path
 from brainstorm.scorers import (
     gather_losses_and_scores, aggregate_losses_and_scores)
 
 __all__ = ['get_in_out_layers_for_classification', 'draw_network',
-           'print_network_info', 'evaluate']
+           'print_network_info', 'evaluate', 'save_features']
 
 
 def get_in_out_layers_for_classification(in_shape, nr_classes,
@@ -108,8 +110,8 @@ def print_network_info(network):
 
 
 def evaluate(net, iter, scorers=(), out_name='', targets_name='targets',
-             mask_name=None, verbose=True):
-    iterator = iter(verbose=verbose, handler=net.handler)
+             mask_name=None):
+    iterator = iter(handler=net.handler)
     scores = {scorer.__name__: [] for scorer in scorers}
     for n in net.get_loss_values():
         scores[n] = []
@@ -121,3 +123,26 @@ def evaluate(net, iter, scorers=(), out_name='', targets_name='targets',
             targets_name=targets_name, mask_name=mask_name)
 
     return aggregate_losses_and_scores(scores, net, scorers)
+
+
+def save_features(net, iter, file_name, feat_name, verbose=True):
+    iterator = iter(verbose=verbose, handler=net.handler)
+
+    first_pass = True
+    num_items = 0
+    with h5py.File(file_name, 'w') as f:
+        for _ in run_network(net, iterator):
+            net.forward_pass()
+            data = net.handler.get_numpy_copy(get_by_path(net.buffer,
+                                                          feat_name))
+            num_items += data.shape[1]
+            if first_pass:
+                ds = f.create_dataset(
+                    feat_name, data.shape, data.dtype, chunks=data.shape,
+                    maxshape=(data.shape[0], None) + data.shape[2:])
+                ds[:] = data
+                first_pass = False
+            else:
+                ds.resize(size=num_items, axis=1)
+                ds[:, num_items - data.shape[1]:num_items, ...] = data
+

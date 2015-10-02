@@ -2,6 +2,8 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+from datetime import datetime
+import math
 import numpy as np
 import re
 
@@ -174,3 +176,23 @@ def flatten_keys(dictionary):
         else:
             keys.append(k)
     return keys
+
+
+def progress_bar(maximum, prefix='[',
+                 bar='====1====2====3====4====5====6====7====8====9====0',
+                 suffix='] Took: {0}\n'):
+    i = 0
+    start_time = datetime.utcnow()
+    out = prefix
+    while i < len(bar):
+        progress = yield out
+        j = math.trunc(progress / maximum * len(bar))
+        out = bar[i: j]
+        i = j
+    elapsed_str = str(datetime.utcnow() - start_time)[: -5]
+    yield out + suffix.format(elapsed_str)
+
+
+def silence():
+    while True:
+        yield ''
