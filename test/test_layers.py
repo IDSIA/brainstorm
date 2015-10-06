@@ -30,6 +30,7 @@ from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
 from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
 from brainstorm.layers.l1_decay import L1DecayLayerImpl
+from brainstorm.layers.l2_decay import L2DecayLayerImpl
 
 import pytest
 
@@ -217,6 +218,13 @@ def l1_decay_layer(spec):
     return layer, spec
 
 
+def l2_decay_layer(spec):
+    layer = L2DecayLayerImpl('L2Decay',
+                             {'default': BufferStructure('T', 'B', 3, 2)},
+                             NO_CON, NO_CON)
+    return layer, spec
+
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -237,7 +245,8 @@ layers_to_test = [
     avgpooling_layer_2d,
     batch_norm_layer,
     elementwise_layer,
-    l1_decay_layer
+    l1_decay_layer,
+    l2_decay_layer
 ]
 
 ids = [f.__name__ for f in layers_to_test]

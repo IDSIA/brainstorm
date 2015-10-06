@@ -10,12 +10,12 @@ from brainstorm.structure.buffer_structure import (StructureTemplate,
 from brainstorm.handlers.base_handler import Handler
 
 
-def L1Decay(name=None):
-    """Add L1 regularization to the activations of a layer."""
-    return ConstructionWrapper.create('L1Decay', name=name)
+def L2Decay(name=None):
+    """Add L2 regularization to the activations of a layer."""
+    return ConstructionWrapper.create('L2Decay', name=name)
 
 
-class L1DecayLayerImpl(BaseLayerImpl):
+class L2DecayLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {}
@@ -27,6 +27,8 @@ class L1DecayLayerImpl(BaseLayerImpl):
         parameters = OrderedDict()
         internals = OrderedDict()
         internals['tmp'] = in_shapes['default']
+        internals['dsq_activations'] = BufferStructure(
+            *in_shapes['default'].shape, is_backward_only=True)
 
         return outputs, parameters, internals
 
@@ -44,7 +46,8 @@ class L1DecayLayerImpl(BaseLayerImpl):
         flat_outputs = flatten_time(outputs)
 
         # compute
-        _h.abs_t(flat_inputs, flat_tmp)
+        _h.mult_tt(flat_inputs, flat_inputs, flat_tmp)
+        _h.mult_st(0.5, flat_tmp, flat_tmp)
         _h.sum_t(flat_tmp, 1, flat_outputs)
 
     def backward_pass(self, buffers):
@@ -62,6 +65,5 @@ class L1DecayLayerImpl(BaseLayerImpl):
         flat_input_deltas = flatten_time_and_features(input_deltas)
 
         # compute
-        _h.sign_t(flat_inputs, flat_tmp)
-        _h.mult_mv(flat_tmp, flat_output_deltas, flat_tmp)
+        _h.mult_mv(flat_inputs, flat_output_deltas, flat_tmp)
         _h.add_tt(flat_tmp, flat_input_deltas, flat_input_deltas)
