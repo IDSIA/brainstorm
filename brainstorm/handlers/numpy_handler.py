@@ -65,6 +65,9 @@ class NumpyHandler(Handler):
 
     # ----------------------- Mathematical operations ----------------------- #
 
+    def abs_t(self, a, out):
+        np.abs(a, out=out)
+
     def add_mv(self, m, v, out):
         out[:] = m + v
 

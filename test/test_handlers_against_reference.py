@@ -285,6 +285,16 @@ def test_log_t(handler):
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_abs_t(handler):
+    list_a = get_random_arrays(some_nd_shapes)
+
+    for a in list_a:
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, out)
+        assert operation_check(handler, 'abs_t', ref_args)
+
+
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_sign_t(handler):
     list_a = get_random_arrays(some_nd_shapes)
     list_a += [np.random.random_integers(-2, 2, (3, 3))]

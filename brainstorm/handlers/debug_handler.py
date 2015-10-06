@@ -118,6 +118,11 @@ class DebugHandler(Handler):
 
     # ----------------------- Mathematical operations ----------------------- #
 
+    def abs_t(self, a, out):
+        assert_debug_arrays(a, out)
+        assert_shapes_equal(a, out)
+        self.handler.abs_t(a.array, out.array)
+
     @check_for_inf_or_nan
     def add_mv(self, m, v, out):
         assert_debug_arrays(m, v, out)

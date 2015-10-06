@@ -104,6 +104,9 @@ class PyCudaHandler(Handler):
 
     # ----------------------- Mathematical operations ----------------------- #
 
+    def abs_t(self, a, out):
+        cumath.fabs(a, out=out)
+
     def add_mv(self, m, v, out):
         cumisc.add_matvec(m, v, out=out)
 

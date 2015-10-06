@@ -143,6 +143,18 @@ class Handler(Describable):
     # ----------------------- Mathematical operations ----------------------- #
 
     @abc.abstractmethod
+    def abs_t(self, a, out):
+        """Compute the element-wise absolute value.
+
+        Args:
+            a (array_type): Array whose absolute values are to be computed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`a`.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
     def add_mv(self, m, v, out):
         """Add a matrix to a vector with broadcasting.
 
