@@ -307,8 +307,8 @@ class PyCudaHandler(Handler):
         self._pool2d_forward_batch(inputs, window, outputs, padding,
                                    stride, argmax, pool_mode)
 
-    def mult_add_st(self, a, b, out):
-        mult_add_st_kernel(a, b, out)
+    def mult_add_st(self, s, t, out):
+        mult_add_st_kernel(s, t, out)
 
     def mult_add_tt(self, a, b, out):
         mult_add_kernel(a, b, out)
@@ -319,8 +319,8 @@ class PyCudaHandler(Handler):
         else:
             cumisc.mult_matvec(m, v, out=out)
 
-    def mult_st(self, a, b, out):
-        mult_st_kernel(a, b, out)
+    def mult_st(self, s, t, out):
+        mult_st_kernel(s, t, out)
 
     def mult_tt(self, a, b, out):
         mult_tt_kernel(a, b, out)

@@ -284,8 +284,8 @@ class NumpyHandler(Handler):
         _cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
 
-    def mult_add_st(self, a, b, out):
-        out[:] += a * b
+    def mult_add_st(self, s, t, out):
+        out[:] += s * t
 
     def mult_add_tt(self, a, b, out):
         out[:] += a * b
@@ -293,8 +293,8 @@ class NumpyHandler(Handler):
     def mult_mv(self, m, v, out):
         out[:] = m * v
 
-    def mult_st(self, a, b, out):
-        np.multiply(a, b, out)
+    def mult_st(self, s, t, out):
+        np.multiply(s, t, out)
 
     def mult_tt(self, a, b, out):
         np.multiply(a, b, out)

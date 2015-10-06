@@ -501,7 +501,7 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def mult_add_st(self, a, b, out):
+    def mult_add_st(self, s, t, out):
         """Multiply a scalar with each element of a tensor and add to a tensor.
 
         Args:
@@ -548,7 +548,7 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def mult_st(self, a, b, out):
+    def mult_st(self, s, t, out):
         """Multiply a scalar with each element of a tensor.
 
         Args:
