@@ -24,6 +24,7 @@ from brainstorm.layers.noop_layer import NoOp
 from brainstorm.layers.pooling_layer_2d import Pooling2D
 from brainstorm.layers.rnn_layer import Recurrent
 from brainstorm.layers.squared_difference_layer import SquaredDifference
+from brainstorm.layers.l1_decay import L1Decay
 
 CONSTRUCTION_LAYERS = {}
 
