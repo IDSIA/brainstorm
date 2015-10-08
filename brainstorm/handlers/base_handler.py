@@ -515,7 +515,6 @@ class Handler(Describable):
         Returns:
             None
         """
-        out[:] += a * b
 
     @abc.abstractmethod
     def mult_add_tt(self, a, b, out):
