@@ -306,6 +306,11 @@ class NumpyHandler(Handler):
 
     def sqrt_t(self, a, out):
         np.sqrt(a, out)
+    def sigmoid(self, x, y):
+        indices = x >= 0
+        y[indices] = 1. / (1. + np.exp(-x[indices]))
+        indices = x < 0
+        y[indices] = np.exp(x[indices]) / (1. + np.exp(x[indices]))
 
     def subtract_mv(self, m, v, out):
         out[:] = m - v

@@ -520,6 +520,28 @@ mult_tt_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] * y[i]",
     "mult_tt_kernel"
+
+
+    "out[i] = x[i] - y[i]",
+    "subtract_mm_kernel"
+)
+
+sigmoid_kernel = ElementwiseKernel(
+    "float* x, float* y",
+    "y[i] = (x[i]>=0) ? 1.0/(1.0 + exp(-1.0*x[i])) : exp(1.0*x[i])/(1.0 + exp(1.0*x[i]))",
+    "sigmoid_kernel"
+)
+
+sigmoid_deriv_kernel = ElementwiseKernel(
+    "float* x, float* y, float* dy, float* dx",
+    "dx[i] = dy[i] * y[i] * (1.0 - y[i])",
+    "sigmoid_deriv_kernel"
+)
+
+tanh_kernel = ElementwiseKernel(
+    "float* x, float* y",
+    "y[i] = tanh(x[i])",
+    "tanh_kernel"
 )
 
 rel_deriv_kernel = ElementwiseKernel(
