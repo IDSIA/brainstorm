@@ -227,8 +227,7 @@ class ClockworkLstmLayerImpl(BaseLayerImpl):
 
         # Temporary variable to be filled with the current value of time t
         tmp = _h.zeros(timing.shape)
-
-        dCa = _h.zeros(dCa.shape)  # zero initialization. important for backward pass
+        _h.fill(dCa, 0.0)  # zero initialization. important for backward pass
 
         for t in range(time_size - 1, -1, - 1):
             # Cumulate recurrent deltas
