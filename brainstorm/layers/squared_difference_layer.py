@@ -25,12 +25,14 @@ class SquaredDifferenceLayerImpl(BaseLayerImpl):
 
     def setup(self, kwargs, in_shapes):
         # 'inputs_1' and 'inputs_2' must have same shape
-        if in_shapes['inputs_1'] != in_shapes['inputs_2']:
-            raise LayerValidationError("{}: inputs_1 and inputs_2 must have "
-                                       "same shape but got {} and {}"
-                                       .format(self.name,
-                                               in_shapes['inputs_1'],
-                                               in_shapes['inputs_2']))
+        f_size1 = in_shapes['inputs_1'].feature_size
+        f_size2 = in_shapes['inputs_2'].feature_size
+        if f_size1 != f_size2:
+            raise LayerValidationError(
+                "{}: inputs_1 and inputs_2 must have same feature sizes but "
+                "got {} and {}".format(self.name,
+                                       in_shapes['inputs_1'].feature_shape,
+                                       in_shapes['inputs_2'].feature_shape))
 
         outputs = OrderedDict()
         outputs['default'] = BufferStructure('T', 'B', 1)
@@ -45,41 +47,35 @@ class SquaredDifferenceLayerImpl(BaseLayerImpl):
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        inputs_1 = buffers.inputs.inputs_1
-        inputs_2 = buffers.inputs.inputs_2
-        diff = buffers.internals.squared_diff
-        diff_sum = buffers.outputs.default
-
-        flat_inputs_1 = flatten_time_and_features(inputs_1)
-        flat_inputs_2 = flatten_time_and_features(inputs_2)
-        flat_diff = flatten_time_and_features(diff)
-        flat_diff_sum = flatten_time(diff_sum)
+        inputs_1 = flatten_time_and_features(buffers.inputs.inputs_1)
+        inputs_2 = flatten_time_and_features(buffers.inputs.inputs_2)
+        diff = flatten_time_and_features(buffers.internals.squared_diff)
+        diff_sum = flatten_time(buffers.outputs.default)
 
         # calculate
-        _h.subtract_tt(flat_inputs_1, flat_inputs_2, out=flat_diff)
-        _h.mult_tt(flat_diff, flat_diff, out=flat_diff)
-        _h.sum_t(flat_diff, axis=1, out=flat_diff_sum)
-        _h.mult_st(0.5, flat_diff_sum, out=flat_diff_sum)
+        _h.subtract_tt(inputs_1, inputs_2, out=diff)
+        _h.mult_tt(diff, diff, out=diff)
+        _h.sum_t(diff, axis=1, out=diff_sum)
+        _h.mult_st(0.5, diff_sum, out=diff_sum)
 
     def backward_pass(self, buffers):
         # prepare
         _h = self.handler
-        grad_diff_sum = buffers.output_deltas.default
-        grad_diff = buffers.internals.grad_diff
-        grad_inputs_1 = buffers.input_deltas.inputs_1
-        grad_inputs_2 = buffers.input_deltas.inputs_2
-        inputs_1 = buffers.inputs.inputs_1
-        inputs_2 = buffers.inputs.inputs_2
-        tmp = _h.allocate(inputs_1.shape)
+        inputs_1 = flatten_time_and_features(buffers.inputs.inputs_1)
+        inputs_2 = flatten_time_and_features(buffers.inputs.inputs_2)
+        grad_diff_sum = flatten_time(buffers.output_deltas.default)
+        grad_diff = flatten_time_and_features(buffers.internals.grad_diff)
+        dinputs_1 = flatten_time_and_features(buffers.input_deltas.inputs_1)
+        dinputs_2 = flatten_time_and_features(buffers.input_deltas.inputs_2)
 
+        tmp = _h.allocate(inputs_2.shape)
         # grad_diff_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        flat_grad_diff = flatten_features(grad_diff)
-        _h.broadcast_features_t(grad_diff_sum, flat_grad_diff)
+        _h.broadcast_features_t(grad_diff_sum, grad_diff)
 
         # calculate
         _h.subtract_tt(inputs_1, inputs_2, out=tmp)
-        _h.mult_add_tt(grad_diff, tmp, grad_inputs_1)
+        _h.mult_add_tt(grad_diff, tmp, dinputs_1)
 
         _h.subtract_tt(inputs_2, inputs_1, out=tmp)
-        _h.mult_add_tt(grad_diff, tmp, grad_inputs_2)
+        _h.mult_add_tt(grad_diff, tmp, dinputs_2)
