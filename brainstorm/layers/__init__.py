@@ -30,6 +30,7 @@ from brainstorm.layers.deltas_scaling_layer import DeltasScalingLayerImpl
 from brainstorm.layers.clockwork_rnn import ClockworkRnn
 from brainstorm.layers.clockwork_lstm import ClockworkLstm
 from brainstorm.layers.lstm_peephole import LstmPeephole
+from brainstorm.layers.clockwork_lstm_peephole import ClockworkLstmPeep
 CONSTRUCTION_LAYERS = {}
 
 # ------------------------ Automatic Construction Layers ----------------------
