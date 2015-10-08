@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
-from brainstorm.randomness import Seedable
+
 from brainstorm.describable import Describable
+from brainstorm.randomness import Seedable
 
 
 class ValueModifier(Seedable, Describable):
@@ -20,7 +22,7 @@ class ValueModifier(Seedable, Describable):
 
     def __repr__(self):
         return "<{}.{}.{}>".format(self.layer_name, self.view_name,
-                                    self.__class__.__name__)
+                                   self.__class__.__name__)
 
 
 class GradientModifier(Seedable, Describable):
@@ -37,13 +39,13 @@ class GradientModifier(Seedable, Describable):
 
     def __repr__(self):
         return "<{}.{}.{}>".format(self.layer_name, self.view_name,
-                                    self.__class__.__name__)
+                                   self.__class__.__name__)
 
 
 class ConstrainL2Norm(ValueModifier):
 
     """
-    Consrrains the L2 norm of the incoming weights to every neuron/unit to be
+    Constrains the L2 norm of the incoming weights to every neuron/unit to be
     less than or equal to a limit.
     If the L2 norm for any unit exceeds the limit, the weights are
     rescaled such that the squared L2 norm equals the limit.
@@ -57,9 +59,7 @@ class ConstrainL2Norm(ValueModifier):
     which weights to affect.
     """
 
-    __default_values__ = {'limit': 1.0}
-
-    def __init__(self, limit=1.0):
+    def __init__(self, limit):
         super(ConstrainL2Norm, self).__init__()
         self.limit = limit
 
@@ -180,7 +180,7 @@ class L1Decay(GradientModifier):
     New gradients = gradients + factor * sign(parameters)
     """
 
-    def __init__(self, factor=0):
+    def __init__(self, factor):
         super(L1Decay, self).__init__()
         self.factor = factor
 
@@ -198,7 +198,7 @@ class L2Decay(GradientModifier):
     New gradients = gradients + factor * parameters
     """
 
-    def __init__(self, factor=0):
+    def __init__(self, factor):
         super(L2Decay, self).__init__()
         self.factor = factor
 

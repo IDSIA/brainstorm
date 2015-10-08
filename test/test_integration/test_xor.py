@@ -1,11 +1,18 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
 import pytest
-from brainstorm import (Network, Gaussian, Trainer, SgdStep, Undivided)
-from brainstorm.layers import *
+
+from brainstorm import Network, Trainer
+from brainstorm.data_iterators import Undivided
 from brainstorm.hooks import StopAfterEpoch
+from brainstorm.initializers import Gaussian
+from brainstorm.layers import *
+from brainstorm.training import SgdStep
+
+
 # from brainstorm.handlers.pycuda_handler import PyCudaHandler
 
 
@@ -17,15 +24,15 @@ def test_learn_xor_function():
     error_func = BinomialCrossEntropy()
 
     (inp >>
-     FullyConnected(2, activation_function='sigmoid') >>
-     FullyConnected(1, activation_function='sigmoid', name='OutLayer') >>
+     FullyConnected(2, activation='sigmoid') >>
+     FullyConnected(1, activation='sigmoid', name='OutLayer') >>
      error_func >>
      Loss())
 
     net = Network.from_layer(inp - 'targets' >> 'targets' - error_func)
     # net.set_memory_handler(PyCudaHandler())
     net.initialize(Gaussian(1.0), seed=42)  # high weight-init needed
-    print(net.buffer.parameters)
+    # print(net.buffer.parameters)
 
     # set up the trainer
     tr = Trainer(SgdStep(learning_rate=4.0), verbose=False,
@@ -44,8 +51,10 @@ def test_learn_xor_function():
     tr.train(net, Undivided(default=data, targets=targets))
 
     out = net.buffer.OutLayer.outputs.default
-    print('Network output:', out.flatten())
-    print('Rounded output:', np.round(out.flatten()))
-    print('Targets       :', targets.flatten())
-    assert np.all(np.round(out) == targets)
-    assert min(tr.logs['training_loss'][1:]) < 0.5
+    success = np.all(np.round(out) == targets)
+    if not success:
+        print('Network output:', out.flatten())
+        print('Rounded output:', np.round(out.flatten()))
+        print('Targets       :', targets.flatten())
+        raise AssertionError("Network training did not succeed.")
+    assert min(tr.logs['rolling_training']['Loss']) < 0.5

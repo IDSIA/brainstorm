@@ -1,48 +1,50 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
 from brainstorm.utils import flatten_time_and_features
 
 
 def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
+    """Create a BatchNormalization layer."""
     return ConstructionWrapper.create('BatchNorm', name=name, decay=decay,
                                       epsilon=epsilon)
 
 
-class BatchNormLayerImpl(LayerBaseImpl):
+class BatchNormLayerImpl(BaseLayerImpl):
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    outputs = {'default': ShapeTemplate('T', 'B', '...')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'decay', 'epsilon'}
 
-    def _setup_hyperparameters(self):
-        self.epsilon = self.kwargs.get('epsilon', 1.0e-5)
-        self.decay = self.kwargs.get('decay', 0.9)
-        assert 0.0 <= self.decay <= 1.0
+    def setup(self, kwargs, in_shapes):
+        self.epsilon = kwargs.get('epsilon', 1.0e-5)
+        self.decay = kwargs.get('decay', 0.9)
+        assert 0.0 <= self.decay <= 1.0, "Decay must be between 0 and 1."
 
-    def _get_output_shapes(self):
-        return {'default': self.in_shapes['default']}
+        outputs = OrderedDict()
+        outputs['default'] = in_shapes['default']
+        in_size = self.in_shapes['default'].feature_size
 
-    def get_parameter_structure(self):
         parameters = OrderedDict()
-        feature_shape = ShapeTemplate(self.in_shapes['default'].feature_size)
+        feature_shape = BufferStructure(in_size)
         parameters['gamma'] = feature_shape
         parameters['beta'] = feature_shape
         parameters['mu'] = feature_shape
         parameters['sigma'] = feature_shape
-        return parameters
 
-    def get_internal_structure(self):
         internals = OrderedDict()
-        feature_shape = ShapeTemplate(self.in_shapes['default'].feature_size)
+        feature_shape = BufferStructure(self.in_shapes['default'].feature_size)
         internals['sigma_b'] = feature_shape
         internals['centered'] = self.in_shapes['default']
         internals['x_hat'] = self.in_shapes['default']
-        return internals
+
+        return outputs, parameters, internals
 
     def forward_pass(self, buffers, training_pass=True):
         _h = self.handler

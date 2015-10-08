@@ -1,39 +1,61 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import LayerValidationError
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
 
 
-def LstmOpt(size, activation_function='tanh', name=None):
-    return ConstructionWrapper.create('LstmOpt',
-                                      size=size,
-                                      name=name,
-                                      activation_function=activation_function)
+def LstmOpt(size, activation='tanh', name=None):
+    """Create an LSTMOpt layer."""
+    return ConstructionWrapper.create('LstmOpt', size=size, name=name,
+                                      activation=activation)
 
 
 # noinspection PyPep8Naming
-class LstmOptLayerImpl(LayerBaseImpl):
+class LstmOptLayerImpl(BaseLayerImpl):
+    
+    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_kwargs = {'size', 'activation'}
 
-    expected_kwargs = {'size', 'activation_function'}
-
-    def __init__(self, name, in_shapes, incoming_connections,
-                 outgoing_connections, **kwargs):
-        super(LstmOptLayerImpl, self).__init__(
-            name, in_shapes, incoming_connections, outgoing_connections,
-            **kwargs)
+    def setup(self, kwargs, in_shapes):
         self.act_func = lambda x, y: None
         self.act_func_deriv = lambda x, y, dy, dx: None
-        self.kwargs = kwargs
+        in_size = in_shapes['default'].feature_size
+        self.size = kwargs.get('size', in_size)
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', self.size,
+                                             context_size=1)
+
+        parameters = OrderedDict()
+        parameters['W'] = BufferStructure(self.size * 4, in_size)
+        parameters['R'] = BufferStructure(self.size * 4, self.size)
+        parameters['b'] = BufferStructure(self.size * 4)
+
+        internals = OrderedDict()
+        internals['S'] = BufferStructure('T', 'B', self.size * 4,
+                                         context_size=1)
+        internals['Ca'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Cb'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['dS'] = BufferStructure('T', 'B', self.size * 4,
+                                          context_size=1,
+                                          is_backward_only=True)
+        internals['dCa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dCb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        return outputs, parameters, internals
 
     def set_handler(self, new_handler):
         super(LstmOptLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_func_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -41,42 +63,8 @@ class LstmOptLayerImpl(LayerBaseImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['default'].feature_size
-
-        parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(out_size * 4, in_size)
-        parameters['R'] = ShapeTemplate(out_size * 4, out_size)
-        parameters['b'] = ShapeTemplate(out_size * 4)
-
-        return parameters
-
-    def get_internal_structure(self):
-        out_size = self.out_shapes['default'].feature_size
-        internals = OrderedDict()
-
-        internals['S'] = ShapeTemplate('T', 'B', out_size * 4, context_size=1)
-        internals['Ca'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['Cb'] = ShapeTemplate('T', 'B', out_size, context_size=1)
-        internals['dS'] = ShapeTemplate('T', 'B', out_size * 4, context_size=1,
-                                        is_backward_only=True)
-        internals['dCa'] = ShapeTemplate('T', 'B', out_size, context_size=1,
-                                         is_backward_only=True)
-        internals['dCb'] = ShapeTemplate('T', 'B', out_size, context_size=1,
-                                         is_backward_only=True)
-
-        return internals
-
-    def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes['default'].feature_size)
-        if not isinstance(s, int):
-            raise LayerValidationError('size must be int but was {}'.format(s))
-
-        return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'tanh')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

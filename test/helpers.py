@@ -2,10 +2,12 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers import NumpyHandler, DebugHandler
+
 import numpy as np
-from brainstorm.structure.buffers import get_total_size_slices_and_shapes, \
-    create_buffer_views_from_layout
+
+from brainstorm.handlers import DebugHandler, NumpyHandler
+from brainstorm.structure.buffers import (create_buffer_views_from_layout,
+                                          get_total_size_slices_and_shapes)
 from brainstorm.structure.layout import create_layout
 
 np.random.seed(1234)
@@ -72,7 +74,8 @@ def run_deltas_test(layer, specs, inputs_name, outputs_name):
     layer.forward_pass(layer_buffers)
     HANDLER.fill(layer_buffers.output_deltas[outputs_name], 1.0)
     layer.backward_pass(layer_buffers)
-    delta_calc = HANDLER.get_numpy_copy(layer_buffers.input_deltas[inputs_name])
+    delta_calc = HANDLER.get_numpy_copy(layer_buffers
+                                        .input_deltas[inputs_name])
     delta_approx = get_approx_deltas(layer, inputs_name,
                                      outputs_name, layer_buffers,
                                      eps).reshape(delta_calc.shape)
@@ -171,4 +174,3 @@ def run_gradients_test(layer, specs, parameter_name, outputs_name):
     print("Difference:\n", grad_calc - grad_approx)
 
     return False
-

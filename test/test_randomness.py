@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from copy import copy
+
 import pickle
+from copy import copy
+
 import pytest
 
-from brainstorm.randomness import global_rnd, RandomState, Seedable
-from brainstorm.describable import (Describable, get_description,
-                                    create_from_description)
+from brainstorm.describable import (Describable, create_from_description,
+                                    get_description)
+from brainstorm.randomness import RandomState, Seedable, global_rnd
 
 
 # ##################### RandomState ###########################################

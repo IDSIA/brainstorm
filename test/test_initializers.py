@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import mock
 import numpy as np
 import pytest
-from brainstorm.initializers import (
-    Gaussian, Uniform, DenseSqrtFanIn, DenseSqrtFanInOut, SparseInputs,
-    SparseOutputs, EchoState, Initializer, InitializationError,
-    evaluate_initializer)
+
+from brainstorm.initializers import (DenseSqrtFanIn, DenseSqrtFanInOut,
+                                     EchoState, Gaussian, InitializationError,
+                                     Initializer, SparseInputs, SparseOutputs,
+                                     Uniform, evaluate_initializer)
 
 
 @pytest.mark.parametrize("initializer", [Gaussian(),

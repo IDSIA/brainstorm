@@ -1,44 +1,43 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
+from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
 from brainstorm.utils import LayerValidationError
-from brainstorm.structure.shapes import ShapeTemplate
 
 
 def Input(out_shapes, name=None):
-    return ConstructionWrapper.create('Input',
-                                      name=name,
+    """Create an Input layer.
+    Special input layer type, that provides access to external data.
+
+    The 'out_shapes' keyword argument is required and specifies the names and
+    shapes of all external inputs.
+    """
+    return ConstructionWrapper.create('Input', name=name,
                                       out_shapes=out_shapes)
 
 
-class InputLayerImpl(LayerBaseImpl):
-    """
-    Special input layer type, that provides access to external data.
+class InputLayerImpl(BaseLayerImpl):
 
-    The 'out_shapes' kwarg is required and specifies the names and shapes of
-    all external inputs.
-    """
+    expected_inputs = {}
     expected_kwargs = {'out_shapes'}
-    inputs = {}
-    outputs = {}  # special
 
-    def _get_output_shapes(self):
-        if 'out_shapes' not in self.kwargs:
+    def setup(self, kwargs, in_shapes):
+        if 'out_shapes' not in kwargs:
             raise LayerValidationError("InputLayer requires 'out_shapes'")
-
-        return {n: ShapeTemplate.from_tuple(s)
-                for n, s in self.kwargs['out_shapes'].items()}
-
-    def _validate_in_shapes(self):
-        if self.in_shapes:
+        if in_shapes:
             raise LayerValidationError(
                 'InputLayer cannot have any incoming connections!'
-                '(But had these: {})'.format(self.in_shapes))
+                '(But had these: {})'.format(in_shapes))
 
-    def _validate_out_shapes(self):
-        pass
+        outputs = OrderedDict()
+        for n, s in self.kwargs['out_shapes'].items():
+            outputs[n] = BufferStructure(*s)
+        return outputs, OrderedDict(), OrderedDict()
 
     def _validate_connections(self):
         super(InputLayerImpl, self)._validate_connections()

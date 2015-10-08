@@ -2,51 +2,53 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 
-from collections import OrderedDict
 import itertools
+from collections import OrderedDict
 
 import numpy as np
 
-from brainstorm.structure.shapes import (
-    get_feature_size, validate_shape_template, ShapeTemplate)
-from brainstorm.utils import (NetworkValidationError, flatten,
-                              convert_to_nested_indices, sort_by_index_key,
-                              get_normalized_path)
+from brainstorm.structure.buffer_structure import BufferStructure
+from brainstorm.utils import (NetworkValidationError,
+                              convert_to_nested_indices, flatten,
+                              get_normalized_path, sort_by_index_key)
 
 
 class Hub(object):
     @staticmethod
     def create(source_set, sink_set, layout, connections):
+        def ensure_uniform(l):
+            assert min(l) == max(l)
+            return l[0]
+
+        sorted_sources = sorted(source_set)
+        flat_sources = list(flatten(sorted_sources))
+        nesting = convert_to_nested_indices(sorted_sources)
+
         # get buffer type for hub and assert its uniform
-        btypes = [validate_shape_template(get_by_path(s, layout)['@shape'])
-                  for s in flatten(source_set)]
-        assert min(btypes) == max(btypes)
-        btype = btypes[0]
+        structs = [BufferStructure.from_layout(get_by_path(s, layout))
+                   for s in flat_sources]
+        btype = ensure_uniform([s.buffer_type for s in structs])
         # max context size
-        context_size = max([get_by_path(s, layout).get('@context_size', 0)
-                            for s in flatten(source_set)])
+        context_size = max([s.context_size for s in structs])
 
-        hub = Hub(sorted(source_set), sorted(sink_set), btype, context_size)
+        hub = Hub(flat_sources, nesting, sorted(sink_set), btype, context_size)
         hub.setup(connections)
-        hub.sizes = [get_feature_size(get_by_path(s, layout)['@shape'])
-                     for s in hub.sources]
+        hub.sizes = [structs[i].feature_size for i in hub.perm]
         hub.size = sum(hub.sizes)
-
-        is_backward_only = [get_by_path(s, layout).get('@is_backward_only',
-                                                       False)
-                            for s in hub.sources]
-        assert min(is_backward_only) == max(is_backward_only)
-        hub.is_backward_only = is_backward_only[0]
+        hub.is_backward_only = ensure_uniform([structs[i].is_backward_only
+                                               for i in hub.perm])
         return hub
 
-    def __init__(self, sources, sinks, btype, context_size=0):
-        self.sources = sources
+    def __init__(self, flat_sources, nesting, sinks, btype, context_size=0):
+        self.flat_sources = flat_sources
+        self.nesting = nesting
         self.sinks = sinks
         self.btype = btype
         self.context_size = context_size
         self.connection_table = []
         self.sizes = []
         self.size = -1
+        self.perm = None
 
     def get_shape(self, time_size=1, batch_size=1):
         full_shape = (time_size + self.context_size,
@@ -65,11 +67,10 @@ class Hub(object):
         :rtype: np.ndarray
         """
         # set up connection table
-        flat_sources = list(flatten(self.sources))
-        self.connection_table = np.zeros((len(flat_sources), len(self.sinks)))
+        self.connection_table = np.zeros((len(self.flat_sources), len(self.sinks)))
         for start, stop in connections:
-            if start in flat_sources and stop in self.sinks:
-                start_idx = flat_sources.index(start)
+            if start in self.flat_sources and stop in self.sinks:
+                start_idx = self.flat_sources.index(start)
                 stop_idx = self.sinks.index(stop)
                 self.connection_table[start_idx, stop_idx] = 1
 
@@ -79,15 +80,13 @@ class Hub(object):
         the sources, such that they can be connected to the sinks via a single
         buffer.
         """
-        flat_sources = list(flatten(self.sources))
-        nested_indices = convert_to_nested_indices(self.sources)
         # systematically try all permutations until one satisfies the condition
-        for perm in itertools.permutations(nested_indices):
-            perm = list(flatten(perm))
-            ct = np.atleast_2d(self.connection_table[perm])
+        for perm in itertools.permutations(self.nesting):
+            self.perm = list(flatten(perm))
+            ct = np.atleast_2d(self.connection_table[self.perm])
             if Hub.can_be_connected_with_single_buffer(ct):
                 self.connection_table = ct
-                self.sources = [flat_sources[i] for i in perm]
+                self.flat_sources = [self.flat_sources[i] for i in self.perm]
                 return
 
         raise NetworkValidationError("Failed to lay out buffers. "
@@ -119,7 +118,7 @@ class Hub(object):
 
     def get_indices(self):
         idxs = np.cumsum([0] + self.sizes)
-        for source_name, start, stop in zip(self.sources, idxs, idxs[1:]):
+        for source_name, start, stop in zip(self.flat_sources, idxs, idxs[1:]):
             yield source_name, (int(start), int(stop))
 
         for i, sink_name in enumerate(self.sinks):
@@ -136,8 +135,7 @@ def create_layout(layers):
 
     # create a stub layout
     layout = create_layout_stub(layers)
-    all_sinks, all_sources = get_all_sinks_and_sources(forced_orders,
-                                                       connections, layout)
+    all_sources = get_all_sources(forced_orders, connections, layout)
 
     # group into hubs and lay them out
     hubs = group_into_hubs(all_sources, forced_orders, connections, layout)
@@ -170,9 +168,9 @@ def layout_hubs(hubs, layout):
             buffer_layout['@hub'] = hub_nr
 
 
-def get_all_sinks_and_sources(forced_orders, connections, layout):
-    """Gather all sinks and sources while preserving order of the sources."""
-    all_sinks = sorted(list(zip(*connections))[1]) if connections else []
+def get_all_sources(forced_orders, connections, layout):
+    """Gather all sources while preserving order of the sources."""
+    all_sinks = sorted(set(list(zip(*connections))[1])) if connections else []
     all_sources = list()
     for s in gather_array_nodes(layout):
         if s in all_sinks + ['parameters', 'gradients']:
@@ -186,7 +184,7 @@ def get_all_sinks_and_sources(forced_orders, connections, layout):
         else:
             all_sources.append(s)
 
-    return all_sinks, all_sources
+    return all_sources
 
 
 def get_forced_orders(layers):
@@ -225,74 +223,61 @@ def get_layout_stub_for_layer(layer):
     layout = {}
 
     layout['inputs'] = {
-        k: convert_to_array_json(layer.in_shapes[k], i)
+        k: layer.in_shapes[k].to_json(i)
         for i, k in enumerate(sorted(layer.in_shapes))
-        }
+    }
     layout['inputs']['@type'] = 'BufferView'
     layout['inputs']['@index'] = 0
 
     layout['outputs'] = {
-        k: convert_to_array_json(layer.out_shapes[k], i)
-        for i, k in enumerate(sorted(layer.out_shapes))
-        }
+        k: v.to_json(i) for i, (k, v) in enumerate(layer.out_shapes.items())
+    }
     layout['outputs']['@type'] = 'BufferView'
     layout['outputs']['@index'] = 1
 
-    parameters = layer.get_parameter_structure()
+    parameters = layer.parameter_shapes
     assert isinstance(parameters, OrderedDict)
     layout['parameters'] = {
-        k: convert_to_array_json(v, i)
-        for i, (k, v) in enumerate(parameters.items())
-        }
+        k: v.to_json(i) for i, (k, v) in enumerate(parameters.items())
+    }
     layout['parameters']['@type'] = 'BufferView'
     layout['parameters']['@index'] = 2
 
-    internals = layer.get_internal_structure()
+    internals = layer.internal_shapes
     assert isinstance(parameters, OrderedDict)
 
     layout['internals'] = {
-        k: convert_to_array_json(v, i)
-        for i, (k, v) in enumerate(internals.items())
-        }
+        k: v.to_json(i) for i, (k, v) in enumerate(internals.items())
+    }
     layout['internals']['@type'] = 'BufferView'
     layout['internals']['@index'] = 3
 
     layout['input_deltas'] = {
-        k: convert_to_array_json(layer.in_shapes[k], i)
+        k: layer.in_shapes[k].to_json(i)
         for i, k in enumerate(sorted(layer.in_shapes))
-        }
+    }
     for k, v in layout['input_deltas'].items():
         v['@is_backward_only'] = True
     layout['input_deltas']['@type'] = 'BufferView'
     layout['input_deltas']['@index'] = 4
 
     layout['output_deltas'] = {
-        k: convert_to_array_json(layer.out_shapes[k], i)
-        for i, k in enumerate(sorted(layer.out_shapes))
-        }
+        k: v.to_json(i) for i, (k, v) in enumerate(layer.out_shapes.items())
+    }
     for k, v in layout['output_deltas'].items():
         v['@is_backward_only'] = True
     layout['output_deltas']['@type'] = 'BufferView'
     layout['output_deltas']['@index'] = 5
 
     layout['gradients'] = {
-        k: convert_to_array_json(v, i)
-        for i, (k, v) in enumerate(parameters.items())
-        }
+        k: v.to_json(i) for i, (k, v) in enumerate(parameters.items())
+    }
     for k, v in layout['gradients'].items():
         v['@is_backward_only'] = True
     layout['gradients']['@type'] = 'BufferView'
     layout['gradients']['@index'] = 6
 
     return layout
-
-
-def convert_to_array_json(shape_template, i):
-    assert isinstance(shape_template, ShapeTemplate)
-    d = shape_template.to_json()
-    d['@type'] = 'array'
-    d['@index'] = i
-    return d
 
 
 def get_by_path(path, layout):
@@ -328,7 +313,7 @@ def get_backward_connection(start, stop, layer):
 
     if start_category == 'internals':
         dstart_buffer = 'd' + start_buffer
-        if dstart_buffer not in layer.get_internal_structure():
+        if dstart_buffer not in layer.internal_shapes:
             raise KeyError('Missing delta buffer {} for the internal buffer {}'
                            '.'.format(dstart_buffer, start_buffer))
         new_start = '.'.join([start_layer, 'internals', dstart_buffer])
@@ -355,7 +340,7 @@ def get_connections(layers):
 
     # add connections to implicit 'parameters', and 'gradients'-layer
     for layer_name, layer in layers.items():
-        for param_name in layer.get_parameter_structure():
+        for param_name in layer.parameter_shapes:
             start = get_normalized_path(layer_name, 'parameters', param_name)
             end = 'parameters'
             connections.append((start, end))
@@ -373,12 +358,12 @@ def get_order(structure):
 
 def get_parameter_order(layer_name, layer):
     return tuple([get_normalized_path(layer_name, 'parameters', o)
-                  for o in layer.get_parameter_structure()])
+                  for o in layer.parameter_shapes])
 
 
 def get_gradient_order(layer_name, layer):
     return tuple([get_normalized_path(layer_name, 'gradients', o)
-                  for o in layer.get_parameter_structure()])
+                  for o in layer.parameter_shapes])
 
 
 def merge_connections(connections, forced_orders):
@@ -438,7 +423,7 @@ def get_forward_closure(node, connections):
         new_sink_set = {end for start, end in connections
                         if start in source_set}
         if len(new_source_set) > len(source_set) or \
-                        len(new_sink_set) > len(sink_set):
+                len(new_sink_set) > len(sink_set):
             growing = True
             source_set = new_source_set
             sink_set = new_sink_set

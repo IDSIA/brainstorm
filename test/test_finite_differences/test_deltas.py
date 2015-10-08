@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-import pytest
+
 import numpy as np
+import pytest
+
 from brainstorm.handlers import NumpyHandler
+from brainstorm.initializers import Gaussian
 from brainstorm.randomness import global_rnd
 from brainstorm.structure.network import Network
-from brainstorm.initializers import Gaussian
+
 from ..helpers import approx_fprime
 
 
@@ -26,15 +29,15 @@ architectures = [{
         '@type': 'Input',
         'out_shapes': {'default': ('T', 'B', 3,)},
         '@outgoing_connections': {
-            'default': ['OutputLayer'],
+            'default': ['Output'],
         }},
-    'OutputLayer': {
+    'Output': {
         '@type': 'FullyConnected',
         'size': 2,
         '@outgoing_connections': {
-            'default': ['LossLayer']
+            'default': ['Loss']
         }},
-    'LossLayer': {
+    'Loss': {
         '@type': 'Loss',
         '@outgoing_connections': {}
     }}
@@ -60,7 +63,7 @@ def test_deltas_finite_differences(net, input_data):
     def f(x):
         net.provide_external_data({'default': x.reshape(input_data.shape)})
         net.forward_pass()
-        return net.get_loss_value()
+        return net.get_loss_values()['Loss']
     delta_approx = approx_fprime(input_data.copy().flatten(), f, 1e-5)
 
     # ######## compare them #############
@@ -71,7 +74,7 @@ def test_deltas_finite_differences(net, input_data):
         for t in range(diff.shape[0]):
             print("======== t=%d =========" % t)
             print(diff[t])
-    print("Checking Deltas = %0.4f" % mse)
+    # print("Checking Deltas = %0.4f" % mse)
 
     assert mse < 1e-4
 
@@ -87,7 +90,7 @@ def test_gradient_finite_differences(net, input_data):
     def f(x):
         net.buffer.parameters[:] = x
         net.forward_pass()
-        return net.get_loss_value()
+        return net.get_loss_values()['Loss']
     initial_weigths = net.buffer.parameters.copy()
     gradient_approx = approx_fprime(initial_weigths, f, 1e-6)
 
@@ -106,5 +109,5 @@ def test_gradient_finite_differences(net, input_data):
                 print("------------- {} -------------".format(view_name))
                 print(net.buffer[layer_name].gradients[view_name])
 
-    print(">> Checking Gradient = %0.4f" % mse)
+    # print(">> Checking Gradient = %0.4f" % mse)
     assert mse < 1e-4

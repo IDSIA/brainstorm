@@ -1,39 +1,33 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import LayerValidationError, flatten_time, \
-    flatten_time_and_features
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.utils import (LayerValidationError, flatten_time,
+                              flatten_time_and_features)
 
 
-def FullyConnected(size, activation_function='rel', name=None):
-    return ConstructionWrapper.create('FullyConnected',
-                                      size=size,
-                                      name=name,
-                                      activation_function=activation_function)
+def FullyConnected(size, activation='rel', name=None):
+    """Create a Fully Connected (inner product) layer."""
+    return ConstructionWrapper.create('FullyConnected', size=size, name=name,
+                                      activation=activation)
 
 
-class FullyConnectedLayerImpl(LayerBaseImpl):
-    inputs = {'default': ShapeTemplate('T', 'B', '...')}
-    expected_kwargs = {'size', 'activation_function'}
+class FullyConnectedLayerImpl(BaseLayerImpl):
 
-    def _setup_hyperparameters(self):
-        self.act_func = None
-        self.act_func_deriv = None
-        self.size = self.kwargs.get('size',
-                                    self.in_shapes['default'].feature_size)
-        if not isinstance(self.size, int):
-            raise LayerValidationError('size must be int but was {}'.
-                                       format(self.size))
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
+    expected_kwargs = {'size', 'activation'}
 
     def set_handler(self, new_handler):
         super(FullyConnectedLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -41,26 +35,30 @@ class FullyConnectedLayerImpl(LayerBaseImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'rel')]
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'rel')]
 
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
+    def setup(self, kwargs, in_shapes):
+        self.act_func = None
+        self.act_func_deriv = None
+        self.size = kwargs.get('size', self.in_shapes['default'].feature_size)
+        if not isinstance(self.size, int):
+            raise LayerValidationError('size must be int but was {}'.
+                                       format(self.size))
+        in_size = in_shapes['default'].feature_size
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', self.size)
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(self.size, in_size)
-        parameters['bias'] = ShapeTemplate(self.size)
-        return parameters
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['bias'] = BufferStructure(self.size)
 
-    def get_internal_structure(self):
         internals = OrderedDict()
-        internals['H'] = ShapeTemplate('T', 'B', self.size)
-        internals['dH'] = ShapeTemplate('T', 'B', self.size,
-                                        is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', self.size)}
+        internals['H'] = BufferStructure('T', 'B', self.size)
+        internals['dH'] = BufferStructure('T', 'B', self.size,
+                                          is_backward_only=True)
+        return outputs, parameters, internals
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

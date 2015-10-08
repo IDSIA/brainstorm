@@ -1,37 +1,92 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
 
 
-def Lstm(size, activation_function='tanh', name=None):
-    return ConstructionWrapper.create('Lstm',
-                                      size=size,
-                                      name=name,
-                                      activation_function=activation_function)
+def Lstm(size, activation='tanh', name=None):
+    """Create an LSTM layer."""
+    return ConstructionWrapper.create('Lstm', size=size, name=name,
+                                      activation=activation)
 
 
-class LstmLayerImpl(LayerBaseImpl):
-    expected_kwargs = {'size', 'activation_function'}
+class LstmLayerImpl(BaseLayerImpl):
 
-    def _setup_hyperparameters(self):
+    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_kwargs = {'size', 'activation'}
+
+    def setup(self, kwargs, in_shapes):
         self.act_func = lambda x, y: None
         self.act_func_deriv = lambda x, y, dy, dx: None
-        self.size = self.kwargs.get('size',
-                                    self.in_shapes['default'].feature_size)
+        in_size = in_shapes['default'].feature_size
+        self.size = kwargs.get('size', in_size)
         if not isinstance(self.size, int):
             raise LayerValidationError('size must be int but was {}'.
                                        format(self.size))
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', self.size,
+                                             context_size=1)
+
+        parameters = OrderedDict()
+        parameters['Wz'] = BufferStructure(self.size, in_size)
+        parameters['Wi'] = BufferStructure(self.size, in_size)
+        parameters['Wf'] = BufferStructure(self.size, in_size)
+        parameters['Wo'] = BufferStructure(self.size, in_size)
+        parameters['Rz'] = BufferStructure(self.size, self.size)
+        parameters['Ri'] = BufferStructure(self.size, self.size)
+        parameters['Rf'] = BufferStructure(self.size, self.size)
+        parameters['Ro'] = BufferStructure(self.size, self.size)
+        parameters['bz'] = BufferStructure(self.size)
+        parameters['bi'] = BufferStructure(self.size)
+        parameters['bf'] = BufferStructure(self.size)
+        parameters['bo'] = BufferStructure(self.size)
+
+        internals = OrderedDict()
+        internals['Za'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Zb'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ia'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ib'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Fa'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Fb'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Oa'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ob'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ca'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Cb'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['dZa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dZb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dIa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dIb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dFa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dFb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dOa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dOb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dCa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dCb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        return outputs, parameters, internals
 
     def set_handler(self, new_handler):
         super(LstmLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -39,73 +94,8 @@ class LstmLayerImpl(LayerBaseImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-        
-        parameters = OrderedDict()
-        parameters['Wz'] = ShapeTemplate(self.size, in_size)
-        parameters['Wi'] = ShapeTemplate(self.size, in_size)
-        parameters['Wf'] = ShapeTemplate(self.size, in_size)
-        parameters['Wo'] = ShapeTemplate(self.size, in_size)
-
-        parameters['Rz'] = ShapeTemplate(self.size, self.size)
-        parameters['Ri'] = ShapeTemplate(self.size, self.size)
-        parameters['Rf'] = ShapeTemplate(self.size, self.size)
-        parameters['Ro'] = ShapeTemplate(self.size, self.size)
-
-        parameters['bz'] = ShapeTemplate(self.size)
-        parameters['bi'] = ShapeTemplate(self.size)
-        parameters['bf'] = ShapeTemplate(self.size)
-        parameters['bo'] = ShapeTemplate(self.size)
-
-        return parameters
-
-    def get_internal_structure(self):
-        internals = OrderedDict()
-
-        internals['Za'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Zb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ia'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ib'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Fa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Fb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Oa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ob'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ca'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Cb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-
-        internals['dZa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dZb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dIa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dIb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dFa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dFb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dOa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dOb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dCa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dCb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-
-        return internals
-
-    def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes['default'].feature_size)
-        if not isinstance(s, int):
-            raise LayerValidationError('size must be int but was {}'.format(s))
-
-        return {'default': ShapeTemplate('T', 'B', s, context_size=1)}
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'tanh')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare

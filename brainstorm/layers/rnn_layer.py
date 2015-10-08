@@ -1,37 +1,58 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
 
 
-def Rnn(size, activation_function='tanh', name=None):
-    return ConstructionWrapper.create('Rnn',
-                                      size=size,
-                                      name=name,
-                                      activation_function=activation_function)
+def Recurrent(size, activation='tanh', name=None):
+    """Create a Simple Recurrent layer."""
+    return ConstructionWrapper.create('Recurrent', size=size, name=name,
+                                      activation=activation)
 
 
-class RnnLayerImpl(LayerBaseImpl):
-    expected_kwargs = {'size', 'activation_function'}
+class RecurrentLayerImpl(BaseLayerImpl):
 
-    def _setup_hyperparameters(self):
+    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_kwargs = {'size', 'activation'}
+
+    def setup(self, kwargs, in_shapes):
         self.act_func = None
         self.act_func_deriv = None
-        self.size = self.kwargs.get('size',
-                                    self.in_shapes['default'].feature_size)
+        self.size = kwargs.get('size', self.in_shapes['default'].feature_size)
         if not isinstance(self.size, int):
             raise LayerValidationError('size must be int but was {}'.
                                        format(self.size))
 
+        in_size = self.in_shapes['default'].feature_size
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', self.size,
+                                             context_size=1)
+        parameters = OrderedDict()
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['R'] = BufferStructure(self.size, self.size)
+        parameters['bias'] = BufferStructure(self.size)
+
+        internals = OrderedDict()
+        internals['Ha'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['dHa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        internals['dHb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                           is_backward_only=True)
+        return outputs, parameters, internals
+
     def set_handler(self, new_handler):
-        super(RnnLayerImpl, self).set_handler(new_handler)
+        super(RecurrentLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -39,29 +60,9 @@ class RnnLayerImpl(LayerBaseImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-        parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(self.size, in_size)
-        parameters['R'] = ShapeTemplate(self.size, self.size)
-        parameters['bias'] = ShapeTemplate(self.size)
-        return parameters
-
-    def get_internal_structure(self):
-        internals = OrderedDict()
-        internals['Ha'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['dHa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dHb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', self.size, context_size=1)}
-
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'tanh')]
+    
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler

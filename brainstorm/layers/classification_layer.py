@@ -1,67 +1,62 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.utils import LayerValidationError, flatten_time, \
-    flatten_time_and_features
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.utils import (LayerValidationError, flatten_time,
+                              flatten_time_and_features)
 
 
 def Classification(size, name=None):
-    return ConstructionWrapper.create('Classification',
-                                      size=size,
-                                      name=name)
-
-
-class ClassificationLayerImpl(LayerBaseImpl):
-    """
-    Softmax layer with integrated Multinomial-Cross-Entropy.
+    """Create a softmax layer with integrated Multinomial Loss.
 
     Operates like a FullyConnectedLayer with softmax activation function
-    on 'default' input and puts results in 'output'.
+    on 'default' input and puts results (per-class probabilities) in
+    'probabilities'.
 
     It also takes class numbers as the 'targets' input, and computes the
     multinomial cross-entropy loss. The resulting losses are stored in the
     'loss' output.
 
-    WARNING: This layer does not compute derivatives wrt the 'targets' input
-    and it also does not use the deltas coming in from the 'outputs'.
+    WARNING:
+        This layer does not compute derivatives wrt the 'targets' input.
+        It also does not use the deltas coming in from the 'probabilities'.
     """
+    return ConstructionWrapper.create('Classification', size=size, name=name)
 
-    inputs = {'default': ShapeTemplate('T', 'B', '...'),
-              'targets': ShapeTemplate('T', 'B', 1)
-              }
 
-    outputs = {'output': ShapeTemplate('T', 'B', 'F'),
-               'loss': ShapeTemplate('T', 'B', 1)}
+class ClassificationLayerImpl(BaseLayerImpl):
 
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
+                       'targets': StructureTemplate('T', 'B', 1)}
     expected_kwargs = {'size'}
 
-    def _get_output_shapes(self):
-        s = self.kwargs.get('size', self.in_shapes.get('default').feature_size)
-        if not isinstance(s, int):
-            raise LayerValidationError('size must be int but was {}'.format(s))
+    def setup(self, kwargs, in_shapes):
+        in_size = in_shapes['default'].feature_size
+        self.size = kwargs.get('size', in_size)
 
-        return {'output': ShapeTemplate('T', 'B', s),
-                'loss': ShapeTemplate('T', 'B', 1)}
+        if not (isinstance(self.size, int) and self.size > 0):
+            raise LayerValidationError('Size must be a positive integer, '
+                                       'but was {}'.format(self.size))
 
-    def get_internal_structure(self):
-        internals = OrderedDict()
-        size = self.out_shapes['output'].feature_size
-        internals['Ha'] = ShapeTemplate('T', 'B', size)
-        internals['dHa'] = ShapeTemplate('T', 'B', size, is_backward_only=True)
-        return internals
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-        out_size = self.out_shapes['output'].feature_size
+        outputs = OrderedDict()
+        outputs['probabilities'] = BufferStructure('T', 'B', self.size)
+        outputs['loss'] = BufferStructure('T', 'B', 1)
 
         parameters = OrderedDict()
-        parameters['W'] = ShapeTemplate(out_size, in_size)
-        parameters['bias'] = ShapeTemplate(out_size)
-        return parameters
+        parameters['W'] = BufferStructure(self.size, in_size)
+        parameters['bias'] = BufferStructure(self.size)
+
+        internals = OrderedDict()
+        internals['Ha'] = BufferStructure('T', 'B', self.size)
+        internals['dHa'] = BufferStructure('T', 'B', self.size,
+                                           is_backward_only=True)
+        return outputs, parameters, internals
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare
@@ -69,13 +64,13 @@ class ClassificationLayerImpl(LayerBaseImpl):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         targets = buffers.inputs.targets
-        outputs = buffers.outputs.output
+        probabilities = buffers.outputs.probabilities
         loss = buffers.outputs.loss
         Ha = buffers.internals.Ha
 
         # reshape
         flat_input = flatten_time_and_features(inputs)
-        flat_output = flatten_time(outputs)
+        flat_probs = flatten_time(probabilities)
         flat_Ha = flatten_time(Ha)
         flat_loss = flatten_time(loss)
         flat_targets = flatten_time(targets)
@@ -85,13 +80,13 @@ class ClassificationLayerImpl(LayerBaseImpl):
         _h.add_mv(flat_Ha, bias.reshape((1, bias.shape[0])), flat_Ha)
 
         # softmax
-        _h.softmax_m(flat_Ha, flat_output)
+        _h.softmax_m(flat_Ha, flat_probs)
 
         # the multinomial cross entropy error is given by
         # - sum over i: p_i * ln(y_i)
         # now our targets are indices so all p_i = 0 except for i=t
         _h.fill(loss, 0.)
-        _h.index_m_by_v(flat_output, flat_targets, flat_loss)
+        _h.index_m_by_v(flat_probs, flat_targets, flat_loss)
         _h.clip_t(flat_loss, 1e-6, 1.0, flat_loss)
         _h.log_t(loss, loss)
         _h.mult_st(-1, loss, loss)
@@ -102,7 +97,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         targets = buffers.inputs.targets
-        outputs = buffers.outputs.output
+        probs = buffers.outputs.probabilities
 
         dW, dbias = buffers.gradients
         dinputs = buffers.input_deltas.default
@@ -111,7 +106,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
 
         # reshape
         flat_inputs = flatten_time_and_features(inputs)
-        flat_outputs = flatten_time(outputs)
+        flat_probs = flatten_time(probs)
         flat_targets = flatten_time(targets)
         flat_dHa = flatten_time(dHa)
         flat_dloss = flatten_time(dloss)
@@ -121,7 +116,7 @@ class ClassificationLayerImpl(LayerBaseImpl):
         # y - t
         _h.binarize_v(flat_targets, flat_dHa)
         _h.mult_st(-1, flat_dHa, flat_dHa)
-        _h.add_tt(flat_dHa, flat_outputs, flat_dHa)
+        _h.add_tt(flat_dHa, flat_probs, flat_dHa)
         _h.mult_mv(flat_dHa, flat_dloss, flat_dHa)
 
         # calculate in_deltas and gradients

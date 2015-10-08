@@ -11,3 +11,4 @@ Or, if you have virtualenvwrapper installed::
 
     $ mkvirtualenv brainstorm
     $ pip install brainstorm
+

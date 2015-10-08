@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
+import os
+
 import h5py
 
 import brainstorm as bs
+from brainstorm.data_iterators import Minibatches
 from brainstorm.handlers import PyCudaHandler
-import os
-import gzip
-import pickle
-import sys
+
 bs.global_rnd.set_seed(42)
 
 # ---------------------------- Set up Iterators ----------------------------- #
@@ -16,46 +17,47 @@ bs.global_rnd.set_seed(42)
 data_dir = os.environ.get('BRAINSTORM_DATA_DIR', '../data')
 data_file = os.path.join(data_dir, 'MNIST.hdf5')
 ds = h5py.File(data_file, 'r')['normalized_split']
-x_tr, y_tr = ds['training']['default'].value, ds['training']['targets'].value
-x_va, y_va = ds['validation']['default'].value, ds['validation']['targets'].value
-x_te, y_te = ds['test']['default'].value, ds['test']['targets'].value
+x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
+x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
+x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
-getter_tr = bs.Minibatches(100, verbose=True, default=x_tr, targets=y_tr)
-getter_va = bs.Minibatches(100, verbose=True, default=x_va, targets=y_va)
-getter_te = bs.Minibatches(100, verbose=True, default=x_te, targets=y_te)
+getter_tr = Minibatches(100, default=x_tr, targets=y_tr)
+getter_va = Minibatches(100, default=x_va, targets=y_va)
+getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
-inp, out = bs.get_in_out_layers_for_classification(784, 10,
-                                                   outlayer_name='out')
-inp >> \
-    bs.layers.Dropout(drop_prob=0.2) >> \
-    bs.layers.FullyConnected(1200, name='hid1', activation_function='rel') >> \
-    bs.layers.Dropout(drop_prob=0.5) >> \
-    bs.layers.FullyConnected(1200, name='hid2', activation_function='rel') >> \
-    bs.layers.Dropout(drop_prob=0.5) >> \
+inp, out = bs.tools.get_in_out_layers_for_classification(784, 10)
+network = bs.Network.from_layer(
+    inp >>
+    bs.layers.Dropout(drop_prob=0.2) >>
+    bs.layers.FullyConnected(1200, name='Hid1', activation='rel') >>
+    bs.layers.Dropout(drop_prob=0.5) >>
+    bs.layers.FullyConnected(1200, name='Hid2', activation='rel') >>
+    bs.layers.Dropout(drop_prob=0.5) >>
     out
-network = bs.Network.from_layer(out)
+)
 
 network.set_memory_handler(PyCudaHandler(init_cudnn=False))
-network.initialize(bs.Gaussian(0.01))
-network.set_weight_modifiers({"out": bs.ConstrainL2Norm(1)})
+network.initialize(bs.initializers.Gaussian(0.01))
+network.set_weight_modifiers({"Output": bs.value_modifiers.ConstrainL2Norm(1)})
 
 # ----------------------------- Set up Trainer ------------------------------ #
 
-trainer = bs.Trainer(bs.MomentumStep(learning_rate=0.1, momentum=0.9),
+trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.1, momentum=0.9),
                      double_buffering=False)
-trainer.add_hook(bs.hooks.StopAfterEpoch(500))
-trainer.add_hook(bs.hooks.MonitorAccuracy("valid_getter", "out.output",
-                                          name="validation",
-                                          verbose=True))
-trainer.add_hook(bs.hooks.SaveBestNetwork("validation.accuracy",
+trainer.add_hook(bs.hooks.ProgressBar())
+scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
+trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
+                                        name='validation'))
+trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
                                           filename='mnist_pi_best.hdf5',
-                                          name="best weights",
-                                          criterion="max"))
+                                          name='best weights',
+                                          criterion='max'))
+trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("\nHighest accuracy on the validation set:",
-      max(trainer.logs["validation"]["accuracy"]))
+print("Best validation set accuracy:",
+      max(trainer.logs["validation"]["Accuracy"]))

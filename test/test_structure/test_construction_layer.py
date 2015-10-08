@@ -4,8 +4,8 @@ from __future__ import division, print_function, unicode_literals
 
 import pytest
 
-from brainstorm.structure.construction import (
-    ConstructionWrapper, NetworkValidationError)
+from brainstorm.structure.construction import (ConstructionWrapper,
+                                               NetworkValidationError)
 
 
 @pytest.fixture

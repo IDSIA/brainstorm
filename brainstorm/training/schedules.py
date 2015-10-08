@@ -1,57 +1,48 @@
 #!/usr/bin/env python
 # coding=utf-8
 """
-Quantities like learning_rate and momentum in SgdStep, NesterovStep,
-MomentumStep etc. can be changed according to schedules instead of being
-constants.
+Quantities like learning_rate and momentum in steppers (SgdStep, NesterovStep,
+MomentumStep etc.) can be changed according to schedules instead of being
+constants. The schedules are added through
+brainstorm.hooks.ModifyStepperAttribute.
+
+The call signature for all schedules must be the same in order to be usable.
+
+Note that the Trainer counts the current_epoch_nr and current_update_nr in
+natural numbers (starting from 1) and they are initialized to 0. Then it
+a) calls the update hooks (and then the epoch hooks if needed)
+b) increments the update number (and epoch number if an epoch ends)
+c) runs the stepper
+and repeats in this order.
+
+This means that when a schedule object is called, the epoch_nr argument is 0
+for the first epoch,1 for the second epoch and so on, and similarly for
+update_nr.
+
 Some common schedulers are provided for convenience.
 """
 
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
+
 from brainstorm.describable import Describable
-
-
-def get_schedule(schedule_or_const):
-    if callable(schedule_or_const):
-        return schedule_or_const
-    else:
-        return Constant(schedule_or_const)
-
-
-class Constant(Describable):
-    """
-    Returns a constant value at every update.
-    """
-
-    def __init__(self, value):
-        self.value = value
-
-    def __call__(self):
-        return self.value
-
-    def __describe__(self):
-        return self.value
 
 
 class Linear(Describable):
     """
     Changes a quantity linearly from 'initial_value' to 'final_value'.
 
-    A linear change to the quantity is made every 'interval' number of updates.
-    Step size is decided by 'num_changes'.
+    Step size is decided by 'num_changes' every 'interval' number of
+    epochs or updates as specified.
 
     For example:
-    Linear(0.9, 1.0, 10, 100)
+    Linear(0.9, 1.0, 10)
     will change the quantity starting from 0.9 to 1.0 by incrementing it
-    after every 100 updates such that 10 increments are made.
+    such that 10 increments are made.
     """
-    __undescribed__ = {
-        'current_value': None,
-        'update_number': 0
-    }
 
-    def __init__(self, initial_value, final_value, num_changes, interval):
+    def __init__(self, initial_value, final_value, num_changes):
         """
 
         :param initial_value: Value returned before the first change.
@@ -61,25 +52,21 @@ class Linear(Describable):
         :param num_changes: Total number of changes to be made according to a
                             linear schedule.
         :type num_changes: int
-        :param interval: Number of updates to wait before making each change.
-        :type interval: int
         """
         self.initial_value = initial_value
         self.final_value = final_value
-        self.interval = interval
         self.num_changes = num_changes
-        self.update_number = 0  # initial_value should be used for first update
-        self.current_value = None
 
-    def __call__(self):
-        if (self.update_number // self.interval) > self.num_changes:
-            self.current_value = self.final_value
+    def __call__(self, epoch_nr, update_nr, timescale, interval,
+                 net, stepper, logs):
+        current = epoch_nr if timescale == 'epoch' else update_nr
+        if (current // interval) > self.num_changes:
+            return self.final_value
         else:
-            self.current_value = self.initial_value + \
+            new_value = self.initial_value + \
                 ((self.final_value - self.initial_value) / self.num_changes) \
-                * (self.update_number // self.interval)
-        self.update_number += 1
-        return self.current_value
+                * (current // interval)
+        return new_value
 
 
 class Exponential(Describable):
@@ -88,28 +75,21 @@ class Exponential(Describable):
     factor.
 
     The quantity is multiplied by the given 'factor' every 'interval' number of
-    updates. Once the quantity goes below 'minimum' or above 'maximum',
-    it is fixed to the corresponding limit.
+    epochs or updates as specified. Once the quantity goes below 'minimum' or
+    above 'maximum', it is fixed to the corresponding limit.
 
     For example:
-    Exponential(1.0, 0.9, 100) will change the quantity starting from
-    1.0 by a factor of 0.9 after every 100 updates.
+    Exponential(1.0, 0.9) will change the quantity starting from
+    1.0 by a factor of 0.9.
     """
-    __undescribed__ = {
-        'current_value': None,
-        'update_number': 0
-    }
 
-    def __init__(self, initial_value=0, factor=1, interval=1, minimum=-np.Inf,
-                 maximum=np.Inf):
+    def __init__(self, initial_value, factor, minimum=-np.Inf, maximum=np.Inf):
         """
 
-        :param initial_value: Value returned before the first change.
+        :param initial_value: Initial value of the parameter
         :type initial_value: float
         :param factor: Multiplication factor.
         :type factor: float
-        :param interval: Number of updates to wait before making each change.
-        :type interval: int
         :param minimum: Lower bound of the quantity.
         :type minimum: float
         :param maximum: Upper bound of the quantity.
@@ -117,64 +97,51 @@ class Exponential(Describable):
         """
         self.initial_value = initial_value
         self.factor = factor
-        self.interval = interval
         self.minimum = minimum
         self.maximum = maximum
-        self.update_number = 0
-        self.current_value = None
 
-    def __call__(self):
-        self.current_value = min(self.maximum, max(
-            self.minimum,
-            self.initial_value * (self.factor **
-                                  (self.update_number // self.interval))))
-        self.update_number += 1
-        return self.current_value
+    def __call__(self, epoch_nr, update_nr, timescale, interval,
+                 net, stepper, logs):
+        current = epoch_nr if timescale == 'epoch' else update_nr
+        new_value = self.initial_value * (self.factor ** (current // interval))
+        new_value = min(self.maximum, max(self.minimum, new_value))
+        return new_value
 
 
 class MultiStep(Describable):
     """
     A schedule for switching values after a series of specified number of
-    updates.
+    updates or epochs as specified.
 
     For example:
     MultiStep(1.0, [100, 110, 120], [0.1, 0.01, 0.001]) will return 1.0 for
-    the first 100 updates, 0.1 for the next 10, 0.01 for the next 10,
-    and 0.001 for every following update.
+    the first 100 updates/epochs, 0.1 for the next 10, 0.01 for the next 10,
+    and 0.001 for every following update/epoch.
     """
-    __undescribed__ = {
-        'current_value': None,
-        'update_number': 0,
-        'step_number': 0
-    }
 
-    def __init__(self, initial_value, steps, values, name='value'):
+    def __init__(self, initial_value, steps, values):
         """
 
         :param initial_value: Initial value of the parameter
         :type initial_value: float
-        :param steps: List of update numbers at which the values are switched.
+        :param steps: List of update/epoch numbers at which the values are
+                      switched.
         :type steps: list[int]
         :param values: List of values to set after specified update numbers.
         :type values: list[float]
-        :param name: Name/label of the quantity to be changed.
         """
         assert len(steps) == len(values)
         self.initial_value = initial_value
-        self.steps = steps
-        self.values = values
-        self.name = name
-        self.update_number = 0
-        self.step_number = 0
-        self.current_value = None
+        self.steps = [0] + steps + [np.inf]
+        self.values = [self.initial_value] + values
 
-    def __call__(self):
-        if self.step_number < len(self.steps) and \
-                self.update_number == self.steps[self.step_number]:
-            self.step_number += 1
-            print("Changing {} to {}".format(
-                self.name, self.values[self.step_number - 1]))
-        self.current_value = self.initial_value if self.step_number == 0 \
-            else self.values[self.step_number - 1]
-        self.update_number += 1
-        return self.current_value
+    def __call__(self, epoch_nr, update_nr, timescale, interval,
+                 net, stepper, logs):
+        assert interval == 1, "MultiStep schedule only supports unit intervals"
+        current = epoch_nr if timescale == 'epoch' else update_nr
+        step_number = 0
+        for i in range(1, len(self.steps)):
+            if self.steps[i - 1] <= current < self.steps[i]:
+                step_number = i - 1
+                break
+        return self.values[step_number]

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
-import brainstorm as bs
 import pytest
+
+import brainstorm as bs
 from brainstorm.utils import NetworkValidationError
 
 
@@ -72,9 +74,9 @@ def test_initialize_with_array(net):
     net.initialize(0,
                    FullyConnected_1={'bias': [1, 2]},
                    FullyConnected_2={'bias': np.array([3, 4, 5]),
-                                          'W': [[6, 7],
-                                                [8, 9],
-                                                [10, 11]]},
+                                     'W': [[6, 7],
+                                           [8, 9],
+                                           [10, 11]]},
                    OutputLayer={'bias': [12]})
 
     assert np.all(net.buffer.FullyConnected_1.parameters.W == 0)
@@ -90,10 +92,11 @@ def test_initialize_with_array(net):
 
 def test_initialize_with_initializer(net):
     net.initialize(
-        default=bs.Uniform(0, 1),
-        FullyConnected_1=bs.Uniform(1, 2),
-        FullyConnected_2={'W': bs.Uniform(2, 3)},
-        OutputLayer={'W': bs.Uniform(3, 4), 'bias': bs.Uniform(4, 5)}
+        default=bs.initializers.Uniform(0, 1),
+        FullyConnected_1=bs.initializers.Uniform(1, 2),
+        FullyConnected_2={'W': bs.initializers.Uniform(2, 3)},
+        OutputLayer={'W': bs.initializers.Uniform(3, 4),
+                     'bias': bs.initializers.Uniform(4, 5)}
     )
 
     layer1 = net.buffer.FullyConnected_1.parameters

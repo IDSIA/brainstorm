@@ -1,29 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
 import pytest
-from brainstorm.data_iterators import progress_bar, Online, Undivided, \
-    Minibatches, AddGaussianNoise, Pad, Flip, RandomCrop
+
+from brainstorm.data_iterators import (AddGaussianNoise, Flip, Minibatches,
+                                       Pad, RandomCrop, Undivided)
+from brainstorm.handlers import default_handler
 from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.utils import IteratorValidationError
-from brainstorm.handlers import default_handler
-
-
-# ########################### Progress Bar ####################################
-
-def test_progress_bar():
-    prefix = '<<'
-    bar = '1234567890'
-    suffix = '>>'
-    p = progress_bar(10, prefix, bar, suffix)
-    assert next(p) == prefix
-    assert p.send(4) == '1234'
-    assert p.send(4) == ''
-    assert p.send(9) == '56789'
-    assert p.send(9.999) == ''
-    assert p.send(10) == '0' + suffix
-
 
 # ######################### Nested Iterators ##################################
 
@@ -112,8 +98,8 @@ def test_crop_images_operation():
     assert np.allclose(out[:, 0, ...], a[:, 0, :, 0:3, 0:3])
     assert np.allclose(out[:, 1, ...], a[:, 1, :, 1:4, 2:5])
 
-# ######################## Common Validation Tests ###########################
 
+# ######################## Common Validation Tests ###########################
 
 def test_non5d_data_raises():
     with pytest.raises(IteratorValidationError):
@@ -127,7 +113,7 @@ def test_non5d_data_raises():
                        shape_dict={'default': (1, 1)})
 
 
-@pytest.mark.parametrize('iterator', [Undivided, Online, Minibatches])
+@pytest.mark.parametrize('iterator', [Undivided, Minibatches])
 def test_data_iterator_with_wrong_input_type_raises(iterator):
     targets = np.ones((2, 3, 1))
     with pytest.raises(IteratorValidationError):
@@ -140,7 +126,7 @@ def test_data_iterator_with_wrong_input_type_raises(iterator):
         iterator(default=[[[1]]], some_targets=targets)
 
 
-@pytest.mark.parametrize('iterator', [Undivided, Online, Minibatches])
+@pytest.mark.parametrize('iterator', [Undivided, Minibatches])
 def test_data_iterator_with_wrong_targets_type_raises(iterator):
     input_data = np.zeros((2, 3, 5))
     with pytest.raises(IteratorValidationError):
@@ -153,21 +139,21 @@ def test_data_iterator_with_wrong_targets_type_raises(iterator):
         iterator(my_data=input_data, my_target='3')
 
 
-@pytest.mark.parametrize('iterator', [Undivided, Online, Minibatches])
+@pytest.mark.parametrize('iterator', [Undivided, Minibatches])
 def test_data_iterator_with_wrong_input_dim_raises(iterator):
     targets = np.ones((2, 3, 1))
     with pytest.raises(IteratorValidationError):
         iterator(my_data=np.zeros((2, 3)), my_targets=targets)
 
 
-@pytest.mark.parametrize('iterator', [Undivided, Online, Minibatches])
+@pytest.mark.parametrize('iterator', [Undivided, Minibatches])
 def test_data_iterator_with_input_target_shape_mismatch_raises(iterator):
     targets = np.ones((2, 3, 1))
     with pytest.raises(IteratorValidationError):
         iterator(my_data=np.zeros((2, 5, 7)), my_targets=targets)
 
 
-@pytest.mark.parametrize('iterator', [Undivided, Online, Minibatches])
+@pytest.mark.parametrize('iterator', [Undivided, Minibatches])
 def test_data_iterator_with_shape_mismatch_among_targets_raises(iterator):
     targets1 = np.ones((2, 3, 1))
     targets2 = np.ones((2, 5, 1))
@@ -215,9 +201,11 @@ def test_undivided_named_targets():
 def test_online_default():
     input_data = np.zeros((4, 5, 3))
     targets = np.ones((4, 5, 1))
-    it = Online(my_data=input_data,
-                my_targets=targets,
-                shuffle=False)(default_handler)
+    it = Minibatches(
+            batch_size=1,
+            my_data=input_data,
+            my_targets=targets,
+            shuffle=False)(default_handler)
     x = next(it)
     assert set(x.keys()) == {'my_data', 'my_targets'}
     assert x['my_data'].shape == (4, 1, 3)

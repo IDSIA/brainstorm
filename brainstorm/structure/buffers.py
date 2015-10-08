@@ -2,35 +2,22 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
+
 from brainstorm.handlers import default_handler
+from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.structure.layout import validate_shape_template
 from brainstorm.utils import sort_by_index_key
 
 
 def create_buffer_views_from_layout(layout, buffers, hubs, existing_view=None):
     if '@slice' in layout:
         buffer_nr = layout['@hub']
-        start, stop = layout['@slice']
-        shape = layout['@shape']
-
-        cutoff = hubs[buffer_nr].context_size - layout.get('@context_size', 0)
-        t_slice = slice(0, -cutoff if cutoff else None)
-        buffer_type = validate_shape_template(shape)
-        if buffer_type == 0:
-            full_buffer = buffers[buffer_nr][start:stop]
-            full_buffer = full_buffer.reshape(shape[buffer_type:])
-        elif buffer_type == 1:
-            full_buffer = buffers[buffer_nr][:, start:stop]
-            full_buffer = full_buffer.reshape(full_buffer.shape[:1] +
-                                              shape[buffer_type:])
-        else:  # buffer_type == 2
-            full_buffer = buffers[buffer_nr][t_slice, :, start:stop]
-            full_buffer = full_buffer.reshape(
-                (full_buffer.shape[0],
-                 full_buffer.shape[1]) +
-                shape[buffer_type:])
+        feature_slice = slice(*layout['@slice'])
+        structure = BufferStructure.from_layout(layout)
+        full_buffer = structure.create_from_buffer_hub(
+            buffers[buffer_nr], hubs[buffer_nr], feature_slice)
     else:
         full_buffer = None
 
@@ -83,8 +70,6 @@ class BufferManager(object):
         if time_size == self.time_size and batch_size == self.batch_size:
             return self.views  # lazy
 
-        N = len(self.hubs)
-
         self.time_size = time_size
         self.batch_size = batch_size
         total_size, slices, shapes = get_total_size_slices_and_shapes(
@@ -95,7 +80,7 @@ class BufferManager(object):
             self.size = total_size
 
         self.buffers = [self.full_buffer[slices[i]].reshape(shapes[i])
-                        for i in range(N)]
+                        for i in range(len(self.hubs))]
 
         parameters = None
         if self.views is not None:

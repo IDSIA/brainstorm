@@ -1,26 +1,29 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-import numpy as np
-import h5py
-import json
 
-from brainstorm.structure.architecture import (
-    instantiate_layers_from_architecture)
+import json
+import re
+from collections import OrderedDict
+
+import h5py
+import numpy as np
+
+from brainstorm.describable import create_from_description, get_description
+from brainstorm.handlers import default_handler
+from brainstorm.initializers import ArrayInitializer, evaluate_initializer
+from brainstorm.layers.loss_layer import LossLayerImpl
+from brainstorm.randomness import Seedable
+from brainstorm.structure.architecture import (generate_architecture,
+                                               instantiate_layers_from_architecture)
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
-from brainstorm.structure.view_references import (resolve_references,
+from brainstorm.structure.view_references import (order_and_copy_modifiers,
                                                   prune_view_references,
-                                                  order_and_copy_modifiers)
-from brainstorm.initializers import evaluate_initializer, ArrayInitializer
-from brainstorm.randomness import Seedable
-from brainstorm.structure.architecture import generate_architecture
-from brainstorm.handlers import default_handler
+                                                  resolve_references)
 from brainstorm.utils import NetworkValidationError
-from brainstorm.layers.loss_layer import LossLayerImpl
-from brainstorm.describable import get_description, create_from_description
-from brainstorm.value_modifiers import ValueModifier, GradientModifier
+from brainstorm.value_modifiers import GradientModifier
 
 __all__ = ['Network']
 
@@ -94,6 +97,32 @@ class Network(Seedable):
         self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
+        self.default_output = None
+
+    def get_output(self, out_name=''):
+        out_name = out_name if out_name else self.default_output
+        if not out_name:
+            raise KeyError(
+                'No output specified. Either pass an out_name to this function'
+                ' or set network.default_output to fix this.')
+        if not re.match(r'\w+\.\w+', out_name):
+            raise ValueError('Invalid out_name "{}". Should be of the form '
+                             '"LAYERNAME.OUT_NAME"'.format(out_name))
+        layername, _, output_name = out_name.partition('.')
+        if layername not in self.layers:
+            raise KeyError('Invalid layer name "{}". Available names are: {}'
+                           .format(layername, list(self.layers.keys())))
+        layer_buffer = self.buffer[layername]
+        if output_name not in layer_buffer.outputs:
+            raise KeyError('Invalid view name "{}". Available names are: {}'
+                           .format(output_name,
+                                   list(layer_buffer.outputs.keys())))
+
+        return self.handler.get_numpy_copy(layer_buffer.outputs[output_name])
+
+    def get_input(self, input_name):
+        return self.handler.get_numpy_copy(
+            self.buffer.Input.outputs[input_name])
 
     # -------------------------- Setup Methods --------------------------------
 
@@ -141,11 +170,12 @@ class Network(Seedable):
         There are two special layer patterns:
 
             3. ``{'default': INIT}``
-               Matches all weights that are not matched by any other path-pattern
+               Matches all weights that are not matched by any other
+               path-pattern
             4. ``{'fallback': INIT}``
                Set a fallback initializer for every weight. It will only be
-               evaluated for the weights for which the regular initializer failed
-               with an InitializationError.
+               evaluated for the weights for which the regular initializer
+               failed with an InitializationError.
 
                `This is useful for initializers that require a certain shape
                of weights and will not work otherwise. The fallback will then
@@ -262,9 +292,9 @@ class Network(Seedable):
         So for example:
 
         >>> net.set_gradient_modifiers(
-        ...    default=bs.ClipValues(-1, 1)
-        ...    FullyConnectedLayer={'W': [bs.ClipValues(),
-        ...                               bs.MaskValues(my_mask)]}
+        ...    default=bs.value_modifiers.ClipValues(-1, 1)
+        ...    FullyConnectedLayer={'W': [bs.value_modifiers.ClipValues(),
+        ...                               bs.value_modifiers.MaskValues(my_mask)]}
         ...    )
 
         .. Note:: The order in which ValueModifiers appear in the list matters,
@@ -294,10 +324,12 @@ class Network(Seedable):
 
     # -------------------------- Running Methods ------------------------------
 
-    def provide_external_data(self, data):
+    def provide_external_data(self, data, all_inputs=True):
         time_size, batch_size = data[next(iter(data))].shape[: 2]
         self.buffer = self._buffer_manager.resize(time_size, batch_size)
         for name, buf in self.buffer.Input.outputs.items():
+            if name not in data.keys() and all_inputs is False:
+                continue
             if isinstance(data[name], self.handler.array_type):
                 self.handler.copy_to(buf, data[name])
             else:
@@ -318,12 +350,17 @@ class Network(Seedable):
             layer.backward_pass(self.buffer[layer_name])
         self.apply_gradient_modifiers()
 
-    def get_loss_value(self):
+    def get_loss_values(self):
         loss = 0.
+        losses = OrderedDict()
         for loss_layer_name in self.loss_layers:
-            loss += float(self.handler.get_numpy_copy(
+            l = float(self.handler.get_numpy_copy(
                 self.buffer[loss_layer_name].outputs.loss))
-        return loss
+            losses[loss_layer_name] = l
+            loss += l
+        if len(losses) > 1:
+            losses['total_loss'] = loss
+        return losses
 
     def get_context(self):
         return self._buffer_manager.get_context()

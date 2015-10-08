@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.structure.architecture import (
-    generate_architecture, get_layer_description,
-    instantiate_layers_from_architecture)
+
 from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.structure.architecture import (generate_architecture,
+                                               get_layer_description,
+                                               instantiate_layers_from_architecture)
+from brainstorm.structure.buffer_structure import BufferStructure
+from brainstorm.structure.construction import ConstructionWrapper
 
 
 def test_get_layer_description():
@@ -135,12 +136,12 @@ def test_instantiate_layers_from_architecture():
 
     assert layers['Input'].in_shapes == {}
     assert layers['Input'].out_shapes == {'default':
-                                          ShapeTemplate('T', 'B', 10)}
-    assert layers['A'].in_shapes == {'default': ShapeTemplate('T', 'B', 10)}
-    assert layers['A'].out_shapes == {'default': ShapeTemplate('T', 'B', 10)}
-    assert layers['B'].in_shapes == {'default': ShapeTemplate('T', 'B', 20)}
-    assert layers['B'].out_shapes == {'default': ShapeTemplate('T', 'B', 20)}
-    assert layers['C'].in_shapes == {'default': ShapeTemplate('T', 'B', 10)}
-    assert layers['C'].out_shapes == {'default': ShapeTemplate('T', 'B', 10)}
-    assert layers['D'].in_shapes == {'default': ShapeTemplate('T', 'B', 30)}
-    assert layers['D'].out_shapes == {'default': ShapeTemplate('T', 'B', 30)}
+                                          BufferStructure('T', 'B', 10)}
+    assert layers['A'].in_shapes == {'default': BufferStructure('T', 'B', 10)}
+    assert layers['A'].out_shapes == {'default': BufferStructure('T', 'B', 10)}
+    assert layers['B'].in_shapes == {'default': BufferStructure('T', 'B', 20)}
+    assert layers['B'].out_shapes == {'default': BufferStructure('T', 'B', 20)}
+    assert layers['C'].in_shapes == {'default': BufferStructure('T', 'B', 10)}
+    assert layers['C'].out_shapes == {'default': BufferStructure('T', 'B', 10)}
+    assert layers['D'].in_shapes == {'default': BufferStructure('T', 'B', 30)}
+    assert layers['D'].out_shapes == {'default': BufferStructure('T', 'B', 30)}
