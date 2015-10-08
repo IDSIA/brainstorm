@@ -330,7 +330,10 @@ class NumpyHandler(Handler):
         dx[:] = dy * (y > 0)
 
     def sigmoid(self, x, y):
-        y[:] = 1. / (1. + np.exp(-x))
+        indices = x >= 0
+        y[indices] = 1. / (1. + np.exp(-x[indices]))
+        indices = x < 0
+        y[indices] = np.exp(x[indices]) / (1. + np.exp(x[indices]))
 
     def sigmoid_deriv(self, x, y, dy, dx):
         dx[:] = dy * y * (1. - y)
