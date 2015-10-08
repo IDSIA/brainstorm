@@ -7,7 +7,7 @@ from collections import OrderedDict
 from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.structure.construction import ConstructionWrapper
-from utils import LayerValidationError
+from brainstorm.utils import LayerValidationError
 
 
 def DeltasScaling(factor, name=None):
