@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 
 import math
+import signal
 import sys
 from collections import OrderedDict
 
@@ -422,6 +423,32 @@ class MonitorScores(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         return evaluate(net, self.iter, self.scorers)
+
+
+class StopOnSigQuit(Hook):
+    """
+    Stops training the next possible moment if it received a SIGQUIT (Ctrl + \)
+    """
+    __undescribed__ = {'quit': False}
+
+    def __init__(self, name=None, timescale='epoch', interval=1, verbose=None):
+        super(StopOnSigQuit, self).__init__(name, timescale, interval,
+                                            verbose=verbose)
+        self.quit = False
+
+    def start(self, net, stepper, verbose, named_data_iters):
+        super(StopOnSigQuit, self).start(net, stepper, verbose,
+                                         named_data_iters)
+        self.quit = False
+        signal.signal(signal.SIGQUIT, self.receive_signal)
+
+    def receive_signal(self, signum, stack):
+        print('Interrupting')
+        self.quit = True
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if self.quit:
+            raise StopIteration('Received SIGQUIT signal.')
 
 
 class VisualiseAccuracy(Hook):
