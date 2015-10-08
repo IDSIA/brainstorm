@@ -39,11 +39,13 @@ class Network(Seedable):
         """
         Create Network instance from a construction layer.
 
-        :param some_layer: Some layer used to wire up an architecture with `>>`
-        :type some_layer: brainstorm.construction.ConstructionWrapper
+        Args:
+            some_layer (brainstorm.construction.ConstructionWrapper):
+                Some layer used to wire up an architecture with `>>`
 
-        :returns: A fully functional Network instance.
-        :rtype: brainstorm.structure.Network
+        Returns:
+            brainstorm.structure.Network:
+                A fully functional Network instance.
         """
         arch = generate_architecture(some_layer)
         return cls.from_architecture(arch)
@@ -53,11 +55,12 @@ class Network(Seedable):
         """
         Create Network instance from given architecture.
 
-        :param architecture: JSON serializable Architecture description.
-        :type architecture: dict
-
-        :returns: A fully functional Network instance.
-        :rtype: brainstorm.structure.Network
+        Args:
+            architecture (dict):
+                JSON serializable Architecture description.
+        Returns:
+            brainstorm.structure.Network:
+                A fully functional Network instance.
         """
         layers = instantiate_layers_from_architecture(architecture)
         hubs, layout = create_layout(layers)
