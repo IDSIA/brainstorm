@@ -28,7 +28,7 @@ from brainstorm.layers.l1_decay import L1Decay
 from brainstorm.layers.l2_decay import L2Decay
 from brainstorm.layers.deltas_scaling_layer import DeltasScalingLayerImpl
 from brainstorm.layers.clockwork_rnn import ClockworkRnn
-
+from brainstorm.layers.clockwork_lstm import ClockworkLstm
 CONSTRUCTION_LAYERS = {}
 
 # ------------------------ Automatic Construction Layers ----------------------
