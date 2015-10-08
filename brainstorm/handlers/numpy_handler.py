@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
+
+from brainstorm.handlers import _cpuop
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
-from brainstorm.handlers import _cpuop
 
 
 # noinspection PyMethodMayBeStatic

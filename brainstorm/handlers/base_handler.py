@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.describable import Describable
+
 import abc
+
 import six
+
+from brainstorm.describable import Describable
 
 
 @six.add_metaclass(abc.ABCMeta)

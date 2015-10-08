@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import OrderedDict
+
 import math
 import sys
+from collections import OrderedDict
+
 import h5py
 import numpy as np
 from six import string_types
-from brainstorm.structure.network import Network
+
 from brainstorm.describable import Describable
-from brainstorm.utils import get_by_path, progress_bar
+from brainstorm.structure.network import Network
 from brainstorm.tools import evaluate
+from brainstorm.utils import get_by_path, progress_bar
 
 
 class Hook(Describable):

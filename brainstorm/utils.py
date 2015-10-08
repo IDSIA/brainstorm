@@ -2,10 +2,12 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from datetime import datetime
+
 import math
-import numpy as np
 import re
+from datetime import datetime
+
+import numpy as np
 
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 

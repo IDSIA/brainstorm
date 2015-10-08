@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
 import numpy as np
+
 from brainstorm.describable import Describable
 
 

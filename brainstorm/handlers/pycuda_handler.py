@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function
+
 import numpy as np
 import pycuda
-from pycuda import gpuarray, cumath
-from pycuda.elementwise import ElementwiseKernel
-from pycuda.compiler import SourceModule
-from pycuda.curandom import XORWOWRandomNumberGenerator
 import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
+from pycuda import cumath, gpuarray
+from pycuda.compiler import SourceModule
+from pycuda.curandom import XORWOWRandomNumberGenerator
+from pycuda.elementwise import ElementwiseKernel
+
 from brainstorm.handlers.base_handler import Handler
-from brainstorm.randomness import global_rnd
 from brainstorm.optional import has_cudnn
+from brainstorm.randomness import global_rnd
+
 culinalg.init()
 
 if has_cudnn:

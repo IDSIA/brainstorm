@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
-from brainstorm.value_modifiers import ConstrainL2Norm
+
 from brainstorm.handlers import default_handler
 from brainstorm.optional import has_pycuda
+from brainstorm.value_modifiers import ConstrainL2Norm
 
 non_default_handlers = []
 if has_pycuda:

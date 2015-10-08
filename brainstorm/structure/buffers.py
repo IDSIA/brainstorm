@@ -2,11 +2,13 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
+
 from brainstorm.handlers import default_handler
+from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.utils import sort_by_index_key
-from brainstorm.structure.buffer_structure import BufferStructure
 
 
 def create_buffer_views_from_layout(layout, buffers, hubs, existing_view=None):

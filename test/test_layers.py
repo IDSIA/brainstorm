@@ -3,36 +3,36 @@
 
 from __future__ import division, print_function, unicode_literals
 
-from brainstorm.utils import LayerValidationError
-from brainstorm.structure.architecture import Connection
-from brainstorm.layers.input_layer import InputLayerImpl
+import numpy as np
+import pytest
+
 from brainstorm.layers.base_layer import get_layer_class_from_typename
-from brainstorm.layers.classification_layer import ClassificationLayerImpl
-from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
-from brainstorm.layers.highway_layer import HighwayLayerImpl
-from brainstorm.layers.squared_difference_layer import \
-    SquaredDifferenceLayerImpl
+from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
-
-from .helpers import run_gradients_test, run_deltas_test, set_up_layer, \
-    HANDLER, approx_fprime
-import numpy as np
-from brainstorm.structure.buffer_structure import BufferStructure
-from brainstorm.layers.rnn_layer import RecurrentLayerImpl
-from brainstorm.layers.noop_layer import NoOpLayerImpl
-from brainstorm.layers.loss_layer import LossLayerImpl
-from brainstorm.layers.lstm_layer import LstmLayerImpl
-from brainstorm.layers.mask_layer import MaskLayerImpl
+from brainstorm.layers.classification_layer import ClassificationLayerImpl
 from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
-from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
-from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
-from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
+from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
+from brainstorm.layers.highway_layer import HighwayLayerImpl
+from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.l1_decay import L1DecayLayerImpl
 from brainstorm.layers.l2_decay import L2DecayLayerImpl
+from brainstorm.layers.loss_layer import LossLayerImpl
+from brainstorm.layers.lstm_layer import LstmLayerImpl
+from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
+from brainstorm.layers.mask_layer import MaskLayerImpl
+from brainstorm.layers.noop_layer import NoOpLayerImpl
+from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
+from brainstorm.layers.rnn_layer import RecurrentLayerImpl
+from brainstorm.layers.squared_difference_layer import \
+    SquaredDifferenceLayerImpl
+from brainstorm.structure.architecture import Connection
+from brainstorm.structure.buffer_structure import BufferStructure
+from brainstorm.utils import LayerValidationError
 
-import pytest
+from .helpers import (HANDLER, approx_fprime, run_deltas_test,
+                      run_gradients_test, set_up_layer)
 
 np.random.seed(1234)
 

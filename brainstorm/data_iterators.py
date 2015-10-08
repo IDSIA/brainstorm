@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import math
+
 import numpy as np
+
+from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.randomness import Seedable
 from brainstorm.utils import IteratorValidationError
-from brainstorm.handlers._cpuop import _crop_images
 
 
 class DataIterator(Seedable):

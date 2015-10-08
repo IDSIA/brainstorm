@@ -2,10 +2,12 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers import NumpyHandler, DebugHandler
+
 import numpy as np
-from brainstorm.structure.buffers import get_total_size_slices_and_shapes, \
-    create_buffer_views_from_layout
+
+from brainstorm.handlers import DebugHandler, NumpyHandler
+from brainstorm.structure.buffers import (create_buffer_views_from_layout,
+                                          get_total_size_slices_and_shapes)
 from brainstorm.structure.layout import create_layout
 
 np.random.seed(1234)

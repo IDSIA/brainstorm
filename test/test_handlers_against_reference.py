@@ -2,11 +2,14 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+
 import itertools
+
 import numpy as np
 import pytest
-from brainstorm.optional import has_pycuda, has_cudnn
+
 from brainstorm.handlers import NumpyHandler
+from brainstorm.optional import has_cudnn, has_pycuda
 
 non_default_handlers = []
 handler_ids = []

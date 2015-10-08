@@ -21,9 +21,12 @@ containing the ``'@type': 'ClassName'`` key possibly along with other
 properties.
 """
 from __future__ import division, print_function, unicode_literals
+
+from copy import deepcopy
+
 import numpy as np
 import six
-from copy import deepcopy
+
 from brainstorm.utils import get_inheritors
 
 

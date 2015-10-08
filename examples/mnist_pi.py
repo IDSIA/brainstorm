@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
+import os
+
 import h5py
 
 import brainstorm as bs
-from brainstorm.handlers import PyCudaHandler
 from brainstorm.data_iterators import Minibatches
-import os
+from brainstorm.handlers import PyCudaHandler
 
 bs.global_rnd.set_seed(42)
 

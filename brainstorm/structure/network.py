@@ -1,27 +1,28 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import OrderedDict
-import numpy as np
-import h5py
+
 import json
 import re
+from collections import OrderedDict
 
-from brainstorm.structure.architecture import (
-    instantiate_layers_from_architecture)
+import h5py
+import numpy as np
+
+from brainstorm.describable import create_from_description, get_description
+from brainstorm.handlers import default_handler
+from brainstorm.initializers import ArrayInitializer, evaluate_initializer
+from brainstorm.layers.loss_layer import LossLayerImpl
+from brainstorm.randomness import Seedable
+from brainstorm.structure.architecture import (generate_architecture,
+                                               instantiate_layers_from_architecture)
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
-from brainstorm.structure.view_references import (resolve_references,
+from brainstorm.structure.view_references import (order_and_copy_modifiers,
                                                   prune_view_references,
-                                                  order_and_copy_modifiers)
-from brainstorm.initializers import evaluate_initializer, ArrayInitializer
-from brainstorm.randomness import Seedable
-from brainstorm.structure.architecture import generate_architecture
-from brainstorm.handlers import default_handler
+                                                  resolve_references)
 from brainstorm.utils import NetworkValidationError
-from brainstorm.layers.loss_layer import LossLayerImpl
-from brainstorm.describable import get_description, create_from_description
 from brainstorm.value_modifiers import GradientModifier
 
 __all__ = ['Network']

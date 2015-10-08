@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
-import brainstorm as bs
 import pytest
+
+import brainstorm as bs
 from brainstorm.utils import NetworkValidationError
 
 

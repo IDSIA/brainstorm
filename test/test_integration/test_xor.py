@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
 import pytest
+
 from brainstorm import Network, Trainer
 from brainstorm.data_iterators import Undivided
-from brainstorm.training import SgdStep
+from brainstorm.hooks import StopAfterEpoch
 from brainstorm.initializers import Gaussian
 from brainstorm.layers import *
-from brainstorm.hooks import StopAfterEpoch
+from brainstorm.training import SgdStep
+
+
 # from brainstorm.handlers.pycuda_handler import PyCudaHandler
 
 

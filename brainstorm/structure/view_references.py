@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
+import re
 from collections import namedtuple
 from copy import deepcopy
-import re
+
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.utils import is_valid_layer_name, NetworkValidationError
+from brainstorm.utils import NetworkValidationError, is_valid_layer_name
 
 
 def get_regex_for_reference(reference):

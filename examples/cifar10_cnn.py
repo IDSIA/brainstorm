@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers import PyCudaHandler
+
+import os
+
+import h5py
+
 import brainstorm as bs
 from brainstorm.data_iterators import Minibatches
+from brainstorm.handlers import PyCudaHandler
 from brainstorm.initializers import Gaussian
-import h5py
-import os
+
 bs.global_rnd.set_seed(42)
 
 # ----------------------------- Set up Iterators ---------------------------- #

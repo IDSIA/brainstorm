@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
-from brainstorm.utils import get_inheritors, LayerValidationError, get_by_path
+
+from brainstorm.utils import LayerValidationError, get_by_path, get_inheritors
 
 
 def get_layer_class_from_typename(typename):

@@ -23,7 +23,9 @@ Some common schedulers are provided for convenience.
 """
 
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
+
 from brainstorm.describable import Describable
 
 

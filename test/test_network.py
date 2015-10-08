@@ -2,13 +2,16 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm import Network
-from brainstorm.initializers import Gaussian
-from brainstorm.layers import Input, Recurrent, Lstm, Classification
-from brainstorm.training.utils import run_network
-from brainstorm.data_iterators import Undivided
+
 import numpy as np
 import pytest
+
+from brainstorm import Network
+from brainstorm.data_iterators import Undivided
+from brainstorm.initializers import Gaussian
+from brainstorm.layers import Classification, Input, Lstm, Recurrent
+from brainstorm.training.utils import run_network
+
 from .helpers import HANDLER
 
 np.random.seed(1234)

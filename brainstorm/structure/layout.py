@@ -2,15 +2,15 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 
-from collections import OrderedDict
 import itertools
+from collections import OrderedDict
 
 import numpy as np
 
 from brainstorm.structure.buffer_structure import BufferStructure
-from brainstorm.utils import (NetworkValidationError, flatten,
-                              convert_to_nested_indices, sort_by_index_key,
-                              get_normalized_path)
+from brainstorm.utils import (NetworkValidationError,
+                              convert_to_nested_indices, flatten,
+                              get_normalized_path, sort_by_index_key)
 
 
 class Hub(object):

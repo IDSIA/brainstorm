@@ -2,8 +2,10 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
 import pytest
+
 from brainstorm.handlers import NumpyHandler
 from brainstorm.optional import has_cudnn
 

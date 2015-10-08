@@ -2,11 +2,13 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers import NumpyHandler
-from brainstorm.utils import (
-    get_inheritors, flatten, convert_to_nested_indices, flatten_time,
-    flatten_time_and_features, flatten_keys, progress_bar)
+
 import numpy as np
+
+from brainstorm.handlers import NumpyHandler
+from brainstorm.utils import (convert_to_nested_indices, flatten, flatten_keys,
+                              flatten_time, flatten_time_and_features,
+                              get_inheritors, progress_bar)
 
 
 def test_get_inheritors():

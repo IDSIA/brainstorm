@@ -2,10 +2,11 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+
 import pytest
-from brainstorm.training.schedules import Linear, Exponential, \
-    MultiStep
 import six
+
+from brainstorm.training.schedules import Exponential, Linear, MultiStep
 
 
 def test_linear():

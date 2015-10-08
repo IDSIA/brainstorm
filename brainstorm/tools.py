@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import h5py
+
 from brainstorm import layers
+from brainstorm.scorers import (aggregate_losses_and_scores,
+                                gather_losses_and_scores)
 from brainstorm.training.trainer import run_network
 from brainstorm.utils import get_by_path
-from brainstorm.scorers import (
-    gather_losses_and_scores, aggregate_losses_and_scores)
 
 __all__ = ['get_in_out_layers_for_classification',
            'get_in_out_layers_for_regression', 'draw_network',

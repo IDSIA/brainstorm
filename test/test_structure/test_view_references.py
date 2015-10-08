@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import pytest
-from brainstorm.structure.view_references import (
-    get_regex_for_reference, get_key_to_references_mapping,
-    resolve_references, prune_view_references)
+
+from brainstorm.structure.view_references import (get_key_to_references_mapping,
+                                                  get_regex_for_reference,
+                                                  prune_view_references,
+                                                  resolve_references)
 from brainstorm.utils import NetworkValidationError
 
 

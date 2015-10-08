@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import json
+
 import numpy as np
 import pytest
+
 import brainstorm as bs
-from brainstorm.describable import (Describable, get_description,
-                                    create_from_description)
-from brainstorm.optional import has_pycuda
+from brainstorm.describable import (Describable, create_from_description,
+                                    get_description)
 from brainstorm.handlers.numpy_handler import NumpyHandler
-
-
+from brainstorm.optional import has_pycuda
 # ######################### get_all_undescribed ###############################
 from brainstorm.structure.architecture import generate_architecture
 
