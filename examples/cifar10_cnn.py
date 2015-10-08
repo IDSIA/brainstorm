@@ -39,7 +39,7 @@ inp, out = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
     out)
 
 network = bs.Network.from_layer(out)
-network.set_memory_handler(PyCudaHandler())
+network.set_handler(PyCudaHandler())
 network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
                     'FC': {'W': Gaussian(0.1), 'bias': 0},
                     'Output': {'W': Gaussian(0.1), 'bias': 0}})

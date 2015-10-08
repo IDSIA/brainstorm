@@ -38,7 +38,7 @@ network = bs.Network.from_layer(
     out
 )
 
-network.set_memory_handler(PyCudaHandler(init_cudnn=False))
+network.set_handler(PyCudaHandler(init_cudnn=False))
 network.initialize(bs.initializers.Gaussian(0.01))
 network.set_weight_modifiers({"Output": bs.value_modifiers.ConstrainL2Norm(1)})
 

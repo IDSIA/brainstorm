@@ -47,7 +47,7 @@ architectures = [{
 @pytest.fixture(scope='module', params=architectures)
 def net(request):
     n = Network.from_architecture(request.param)
-    n.set_memory_handler(NumpyHandler(dtype=np.float64))
+    n.set_handler(NumpyHandler(dtype=np.float64))
     n.initialize(Gaussian(1), seed=235)
     return n
 

@@ -95,7 +95,7 @@ class BufferManager(object):
 
         return self.views
 
-    def set_memory_handler(self, new_handler):
+    def set_handler(self, new_handler):
         self.full_buffer = None
         self.size = -1
         self.time_size = -1

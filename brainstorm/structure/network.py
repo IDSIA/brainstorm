@@ -70,12 +70,13 @@ class Network(Seedable):
     @classmethod
     def __new_from_description__(cls, description):
         net = Network.from_architecture(description['architecture'])
-        net.set_memory_handler(create_from_description(description['handler']))
+        net.set_handler(create_from_description(description['handler']))
         net.initialize(create_from_description(description['initializers']))
         net.set_gradient_modifiers(
             create_from_description(description['gradient_modifiers']))
         net.set_weight_modifiers(
             create_from_description(description['weight_modifiers']))
+        net.default_output = description.get('default_output')
         return net
 
     @classmethod
@@ -96,7 +97,7 @@ class Network(Seedable):
         self.buffer = self._buffer_manager.views
         self.architecture = architecture
         self.handler = None
-        self.set_memory_handler(handler)
+        self.set_handler(handler)
         self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
@@ -318,9 +319,9 @@ class Network(Seedable):
         self.gradient_modifiers = order_and_copy_modifiers(gradient_mods)
         # TODO: Check that all are ValueModifiers or GradientModifiers
 
-    def set_memory_handler(self, new_handler):
+    def set_handler(self, new_handler):
         self.handler = new_handler
-        self._buffer_manager.set_memory_handler(new_handler)
+        self._buffer_manager.set_handler(new_handler)
         self.buffer = self._buffer_manager.views
         for layer in self.layers.values():
             layer.set_handler(new_handler)
