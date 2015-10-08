@@ -109,7 +109,8 @@ class NumpyHandler(Handler):
                               bias_deltas):
         if stride != (1, 1):
             raise NotImplementedError("Strides > 1 for ConvolutionLayer2D are "
-                                      "not supported yet.")
+                                      "not supported yet. (was {})"
+                                      .format(stride))
         num_filters = weights.shape[0]
         num_images, num_input_maps, input_rows, input_cols = inputs.shape
         _, num_output_maps, output_rows, output_cols = out_deltas.shape

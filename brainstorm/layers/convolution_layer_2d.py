@@ -3,7 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
-
+from brainstorm.handlers.base_handler import Handler
 from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
@@ -38,7 +38,7 @@ class Convolution2DLayerImpl(BaseLayerImpl):
                                         "for ConvolutionLayer"
         self.num_filters = kwargs['num_filters']
         self.kernel_size = kwargs['kernel_size']
-        self.stride = kwargs.get('stride', (1, 1))
+        self.stride = tuple(kwargs.get('stride', (1, 1)))
         self.padding = kwargs.get('padding', 0)
         assert type(self.padding) is int and self.padding >= 0, \
             "Invalid padding: {}".format(self.padding)
@@ -53,7 +53,7 @@ class Convolution2DLayerImpl(BaseLayerImpl):
             "Invalid stride: {}".format(self.stride)
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "ConvolutionLayer2D must have 3 dimensional input but input " \
-            "shape was %s" % in_shape
+            "shape was {}".format(in_shape)
         num_input_maps = in_shape[0]
         num_filters = self.num_filters
         kernel_x, kernel_y = self.kernel_size

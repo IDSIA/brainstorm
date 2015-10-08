@@ -38,9 +38,9 @@ class SquaredDifferenceLayerImpl(BaseLayerImpl):
         outputs['default'] = BufferStructure('T', 'B', 1)
 
         internals = OrderedDict()
-        feature_shape = self.in_shapes['inputs_1'].feature_shape
-        internals['squared_diff'] = BufferStructure('T', 'B', *feature_shape)
-        internals['grad_diff'] = BufferStructure('T', 'B', *feature_shape,
+        feature_size = self.in_shapes['inputs_1'].feature_size
+        internals['squared_diff'] = BufferStructure('T', 'B', feature_size)
+        internals['grad_diff'] = BufferStructure('T', 'B', feature_size,
                                                  is_backward_only=True)
         return outputs, OrderedDict(), internals
 
@@ -63,16 +63,17 @@ class SquaredDifferenceLayerImpl(BaseLayerImpl):
         _h = self.handler
         inputs_1 = flatten_time_and_features(buffers.inputs.inputs_1)
         inputs_2 = flatten_time_and_features(buffers.inputs.inputs_2)
-        grad_diff_sum = flatten_time(buffers.output_deltas.default)
-        grad_diff = flatten_time_and_features(buffers.internals.grad_diff)
+        out_deltas = buffers.output_deltas.default
+        grad_diff = buffers.internals.grad_diff
         dinputs_1 = flatten_time_and_features(buffers.input_deltas.inputs_1)
         dinputs_2 = flatten_time_and_features(buffers.input_deltas.inputs_2)
 
         tmp = _h.allocate(inputs_2.shape)
-        # grad_diff_sum has only one feature dimension due to summation,
+        # out_deltas has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_features_t(grad_diff_sum, grad_diff)
+        _h.broadcast_features_t(out_deltas, grad_diff)
 
+        grad_diff = flatten_time(grad_diff)
         # calculate
         _h.subtract_tt(inputs_1, inputs_2, out=tmp)
         _h.mult_add_tt(grad_diff, tmp, dinputs_1)
