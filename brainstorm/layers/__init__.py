@@ -26,6 +26,8 @@ from brainstorm.layers.rnn_layer import Recurrent
 from brainstorm.layers.squared_difference_layer import SquaredDifference
 from brainstorm.layers.l1_decay import L1Decay
 from brainstorm.layers.l2_decay import L2Decay
+from brainstorm.layers.deltas_scaling_layer import DeltasScalingLayerImpl
+
 
 CONSTRUCTION_LAYERS = {}
 
