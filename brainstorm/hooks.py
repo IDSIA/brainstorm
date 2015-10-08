@@ -428,18 +428,21 @@ class VisualiseAccuracy(Hook):
     """
     Visualises the accuracy using the bokeh.plotting library.
 
-    By default the output saved as a .html file, however a display can be enabled
+    By default the output saved as a .html file, however a display can be
+    enabled
 
-    Parameters
-    ----------
-    log_names : list, array, or dict
-        Contains the name of the accuracies recorded by the accuracy monitors.
-        Input should be of the form <monitorname>.accuracy
-    filename : str
-        The location to which the .html file containing the accuracy plot should be saved
+    Args:
+        log_names (list, array, or dict):
+            Contains the name of the accuracies recorded by the accuracy
+            monitors. Input should be of the form <monitorname>.accuracy
+    filename (str):
+        The location to which the .html file containing the accuracy plot
+        should be saved
     """
-    def __init__(self, log_names, filename, timescale='epoch', interval=1, name=None, verbose=None):
-        super(VisualiseAccuracy, self).__init__(name, timescale, interval, verbose)
+    def __init__(self, log_names, filename, timescale='epoch', interval=1,
+                 name=None, verbose=None):
+        super(VisualiseAccuracy, self).__init__(name, timescale, interval,
+                                                verbose)
 
         self.log_names = log_names
         self.filename = filename
@@ -449,11 +452,14 @@ class VisualiseAccuracy(Hook):
 
             self.bk = bk
             self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset"
-            self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua', 'gray']
+            self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua',
+                           'gray']
 
             self.bk.output_server("Accuracy Monitor")
-            self.fig = self.bk.figure(title="Accuracy Monitor", x_axis_label=self.timescale, y_axis_label='accuracy',
-                            tools=self.TOOLS, x_range=(0, 10), y_range=(0, 1))
+            self.fig = self.bk.figure(
+                title="Accuracy Monitor", x_axis_label=self.timescale,
+                y_axis_label='accuracy', tools=self.TOOLS,
+                x_range=(0, 10), y_range=(0, 1))
 
         except ImportError:
             print("bokeh is required for drawing networks but was not found.")
@@ -463,11 +469,13 @@ class VisualiseAccuracy(Hook):
 
         # create empty line objects
         for log_name in self.log_names:
-            self.fig.line([], [], legend=log_name, line_width=2, color=self.colors[count], name=log_name)
+            self.fig.line([], [], legend=log_name, line_width=2,
+                          color=self.colors[count], name=log_name)
             count += 1
 
         self.bk.show(self.fig)
-        self.bk.output_file(self.filename + ".html", title="Accuracy Monitor", mode="cdn")
+        self.bk.output_file(self.filename + ".html", title="Accuracy Monitor",
+                            mode="cdn")
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         count = 0

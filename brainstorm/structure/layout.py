@@ -105,15 +105,13 @@ class Hub(object):
         This means checking if in every column of the table all the ones form a
         connected block.
 
-        Parameters
-        ----------
-        connection_table : array_like
-            2d array of zeros and ones representing the connectivity between
-            inputs and outputs of a hub.
+        Args:
+            connection_table (array_like):
+                2d array of zeros and ones representing the connectivity between
+                inputs and outputs of a hub.
 
-        Returns
-        -------
-        bool
+        Returns:
+            bool
         """
         padded = np.zeros((connection_table.shape[0] + 2,
                            connection_table.shape[1]))
