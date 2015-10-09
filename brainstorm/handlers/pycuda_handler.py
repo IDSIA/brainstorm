@@ -78,7 +78,7 @@ class PyCudaHandler(Handler):
 
     # ---------------------------- Copy and Fill ---------------------------- #
 
-    def copy_to(self, dest, src):
+    def copy_to(self, src, dest):
         # Copy data from src to dest (both must be GPUArrays)
         pycuda.driver.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 
@@ -344,7 +344,7 @@ class PyCudaHandler(Handler):
         if len(a.shape) < 3 and (axis == 0 or axis == 1):
             cumisc.sum(a, axis, out)
         elif axis is None:
-            self.copy_to(out, cumisc.sum(a))
+            self.copy_to(cumisc.sum(a), out)
         else:
             raise NotImplementedError
 

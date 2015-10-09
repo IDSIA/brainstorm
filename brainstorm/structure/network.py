@@ -335,7 +335,7 @@ class Network(Seedable):
             if name not in data.keys() and all_inputs is False:
                 continue
             if isinstance(data[name], self.handler.array_type):
-                self.handler.copy_to(buf, data[name])
+                self.handler.copy_to(data[name], buf)
             else:
                 # assert isinstance(data[name], np.ndarray)
                 self.handler.set_from_numpy(buf, data[name])

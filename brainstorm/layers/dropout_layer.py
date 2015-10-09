@@ -44,7 +44,7 @@ class DropoutLayerImpl(BaseLayerImpl):
             _h.mult_st(1 / (1 - self.drop_prob), buffers.outputs.default,
                        out=buffers.outputs.default)
         else:
-            _h.copy_to(buffers.outputs.default, buffers.inputs.default)
+            _h.copy_to(buffers.inputs.default, buffers.outputs.default)
 
     def backward_pass(self, buffers):
         self.handler.mult_add_tt(buffers.output_deltas.default,

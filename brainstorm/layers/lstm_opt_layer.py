@@ -58,8 +58,8 @@ class LstmOptLayerImpl(BaseLayerImpl):
         activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'linear': (lambda x, y: self.handler.copy_to(x, y),
+                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
@@ -140,7 +140,7 @@ class LstmOptLayerImpl(BaseLayerImpl):
         dF = dS[:, :, out_size * 2:out_size * 3]
         dO = dS[:, :, out_size * 3:]
 
-        _h.copy_to(dy, deltas)
+        _h.copy_to(deltas, dy)
 
         for t in range(time_size - 1, -1, - 1):
             # cumulate recurrent deltas

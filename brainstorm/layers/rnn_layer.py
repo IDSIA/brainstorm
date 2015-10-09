@@ -55,8 +55,8 @@ class RecurrentLayerImpl(BaseLayerImpl):
         activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'linear': (lambda x, y: self.handler.copy_to(x, y),
+                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
@@ -92,7 +92,7 @@ class RecurrentLayerImpl(BaseLayerImpl):
         doutputs = buffers.output_deltas.default
         Ha, dHa, dHb = buffers.internals
 
-        _h.copy_to(dHb, doutputs)
+        _h.copy_to(doutputs, dHb)
         T = inputs.shape[0] - 1
         self.act_func_deriv(Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):

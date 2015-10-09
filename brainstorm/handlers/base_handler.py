@@ -73,7 +73,7 @@ class Handler(Describable):
     # ---------------------------- Copy and Fill ---------------------------- #
 
     @abc.abstractmethod
-    def copy_to(self, dest, src):
+    def copy_to(self, src, dest):
         """Copy the contents of one array to another.
 
         Both source and destination arrays must be of this handler's supported

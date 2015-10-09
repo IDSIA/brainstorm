@@ -35,7 +35,7 @@ class DeltasScalingLayerImpl(BaseLayerImpl):
         return out_shapes, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
-        self.handler.copy_to(buffers.outputs.default, buffers.inputs.default)
+        self.handler.copy_to(buffers.inputs.default, buffers.outputs.default)
 
     def backward_pass(self, buffers):
         self.handler.mult_add_st(self.factor,

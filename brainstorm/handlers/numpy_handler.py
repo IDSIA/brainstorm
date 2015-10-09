@@ -43,7 +43,7 @@ class NumpyHandler(Handler):
 
     # ---------------------------- Copy and Fill ---------------------------- #
 
-    def copy_to(self, dest, src):
+    def copy_to(self, src, dest):
         # FIXME: change casting to 'no'
         np.copyto(dest, src, casting='same_kind')
 
