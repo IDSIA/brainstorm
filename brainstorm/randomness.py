@@ -92,7 +92,7 @@ class RandomState(np.random.RandomState):
 
 class Seedable(Describable):
     """
-    Baseclass for all objects that use randomness.
+    Base class for all objects that use randomness.
     It offers a self.rnd which is a RandomState.
 
     Dev-note: It inherits from Describable in order to implement

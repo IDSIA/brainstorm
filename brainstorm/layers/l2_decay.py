@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 
 from brainstorm.handlers.base_handler import Handler
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -17,7 +17,7 @@ def L2Decay(name=None):
     return ConstructionWrapper.create('L2Decay', name=name)
 
 
-class L2DecayLayerImpl(BaseLayerImpl):
+class L2DecayLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {}

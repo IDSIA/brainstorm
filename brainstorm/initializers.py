@@ -19,7 +19,7 @@ __all__ = [str(a) for a in [
 
 class Initializer(Seedable, Describable):
     """
-    Base Class for all initializers. It inherits from Seedable, so every
+    Base class for all initializers. It inherits from Seedable, so every
     sub-class has access to self.rnd, and it provides basic methods for
     converting from and to a description.
     """

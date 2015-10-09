@@ -109,7 +109,7 @@ def get_approx_deltas(layer, inputs_name, outputs_name, layer_buffers, eps):
     Approximates the derivative of one layer input with respect to some outputs
 
     Args:
-        layer (brainstorm.layers.base_layer.BaseLayerImpl):
+        layer (brainstorm.layers.base_layer.Layer):
             The layer whose derivative should be approximated
         inputs_name (str):
             The input for which to approximate the derivative
@@ -142,7 +142,7 @@ def get_approx_gradients(layer, parameter_name, outputs_name, layer_buffers,
     some outputs.
 
     Args:
-        layer (brainstorm.layers.base_layer.BaseLayerImpl):
+        layer (brainstorm.layers.base_layer.Layer):
             The layer whose derivative should be approximated
         parameter_name (str):
             The parameters for which to approximate the derivative

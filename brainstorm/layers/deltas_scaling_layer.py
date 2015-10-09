@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
@@ -23,7 +23,7 @@ def DeltasScaling(factor, name=None):
                                       factor=factor)
 
 
-class DeltasScalingLayerImpl(BaseLayerImpl):
+class DeltasScalingLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'factor'}
 

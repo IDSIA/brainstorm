@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 from brainstorm.handlers.base_handler import Handler
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -23,7 +23,7 @@ def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                                       name=name)
 
 
-class Convolution2DLayerImpl(BaseLayerImpl):
+class Convolution2DLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'padding',

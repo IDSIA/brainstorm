@@ -11,7 +11,7 @@ from brainstorm.describable import Describable
 
 @six.add_metaclass(abc.ABCMeta)
 class Handler(Describable):
-    """Abstract Base Class for all handlers.
+    """Abstract base class for all handlers.
 
     This base is used mainly to ensure a common interface and provide
     documentation for derived handlers. When implementing new methods

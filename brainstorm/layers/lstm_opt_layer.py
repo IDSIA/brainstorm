@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -17,7 +17,7 @@ def LstmOpt(size, activation='tanh', name=None):
 
 
 # noinspection PyPep8Naming
-class LstmOptLayerImpl(BaseLayerImpl):
+class LstmOptLayerImpl(Layer):
     
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation'}
