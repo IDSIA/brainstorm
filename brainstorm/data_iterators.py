@@ -12,7 +12,7 @@ from brainstorm.utils import IteratorValidationError
 
 
 class DataIterator(Seedable):
-    """BaseClass for Data Iterators.
+    """Base class for Data Iterators.
 
     Attributes:
         data_shapes (dict[str, tuple[int]]):

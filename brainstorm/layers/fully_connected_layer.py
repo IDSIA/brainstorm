@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -18,7 +18,7 @@ def FullyConnected(size, activation='rel', name=None):
                                       activation=activation)
 
 
-class FullyConnectedLayerImpl(BaseLayerImpl):
+class FullyConnectedLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation'}
@@ -30,8 +30,8 @@ class FullyConnectedLayerImpl(BaseLayerImpl):
         activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'linear': (lambda x, y: self.handler.copy_to(x, y),
+                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 

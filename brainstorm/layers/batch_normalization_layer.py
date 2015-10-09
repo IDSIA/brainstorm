@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -17,7 +17,7 @@ def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
                                       epsilon=epsilon)
 
 
-class BatchNormLayerImpl(BaseLayerImpl):
+class BatchNormLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'decay', 'epsilon'}

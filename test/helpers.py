@@ -18,13 +18,18 @@ def approx_fprime(x0, f, epsilon, *args):
     """
     Calculates the 2-sided numerical gradient of $f$.
 
-    :param x0: A 1-D array which specifies the point at which gradient is
-    computed.
-    :param f: A function whose gradient will be computed. Must return a
-    scalar value.
-    :param epsilon: Perturbation value for numerical gradient calculation.
-    :param args: Any arguments which need to be passed on to $f$.
-    :return: Numerically computed gradient of same shape as $x0$.
+    Args:
+        x0 (ndarray):
+            A 1-D array which specifies the point at which gradient is computed
+        f (callable):
+            A function whose gradient will be computed. Must return a scalar
+            value
+        epsilon (float):
+            Perturbation value for numerical gradient calculation.
+        args (tuple):
+            Any arguments which need to be passed on to `f`.
+    Returns:
+        Numerically computed gradient of same shape as `x0`.
     """
     grad = np.zeros((len(x0),), float)
     ei = np.zeros((len(x0),), float)
@@ -107,11 +112,17 @@ def get_approx_deltas(layer, inputs_name, outputs_name, layer_buffers, eps):
     """
     Approximates the derivative of one layer input with respect to some outputs
 
-    :param layer: The layer whose derivative should be approximated
-    :param inputs_name: The input for which to approximate the derivative
-    :param outputs_name: The output wrt. to which to approximate the derivative
-    :param layer_buffers: Buffers view for the layer
-    :param eps: Size of perturbation for numerical gradient computation
+    Args:
+        layer (brainstorm.layers.base_layer.Layer):
+            The layer whose derivative should be approximated
+        inputs_name (str):
+            The input for which to approximate the derivative
+        outputs_name (str):
+            The output wrt. to which to approximate the derivative
+        layer_buffers (brainstorm.structure.buffer_views.BufferView):
+            Buffers view for the layer
+        eps (float):
+            Size of perturbation for numerical gradient computation
     """
     _h = layer.handler
 
@@ -134,12 +145,17 @@ def get_approx_gradients(layer, parameter_name, outputs_name, layer_buffers,
     Approximates the derivative of one layer parameter with respect to
     some outputs.
 
-    :param layer: The layer whose derivative should be approximated
-    :param parameter_name: The parameters for which to approximate the
-                           derivative
-    :param outputs_name: The output wrt. to which to approximate the derivative
-    :param layer_buffers: Forward buffers view for the layer
-    :param eps: Size of perturbation for numerical gradient computation
+    Args:
+        layer (brainstorm.layers.base_layer.Layer):
+            The layer whose derivative should be approximated
+        parameter_name (str):
+            The parameters for which to approximate the derivative
+        outputs_name (str):
+            The output wrt. to which to approximate the derivative
+        layer_buffers (brainstorm.structure.buffer_views.BufferView):
+            Forward buffers view for the layer
+        eps (float):
+            Size of perturbation for numerical gradient computation
     """
     _h = layer.handler
 

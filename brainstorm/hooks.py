@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 
 import math
+import signal
 import sys
 from collections import OrderedDict
 
@@ -11,9 +12,10 @@ import numpy as np
 from six import string_types
 
 from brainstorm.describable import Describable
+from brainstorm import optional
 from brainstorm.structure.network import Network
 from brainstorm.tools import evaluate
-from brainstorm.utils import get_by_path, progress_bar
+from brainstorm.utils import get_by_path, progress_bar, get_brainstorm_info
 
 
 class Hook(Describable):
@@ -114,6 +116,8 @@ class SaveLogs(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         with h5py.File(self.filename, 'w') as f:
+            f.attrs.create('info', get_brainstorm_info())
+            f.attrs.create('format', b'Logs file v1.0')
             SaveLogs._save_recursively(f, logs)
 
     @staticmethod
@@ -424,71 +428,102 @@ class MonitorScores(Hook):
         return evaluate(net, self.iter, self.scorers)
 
 
-class VisualiseAccuracy(Hook):
+class StopOnSigQuit(Hook):
     """
-    Visualises the accuracy using the bokeh.plotting library.
-
-    By default the output saved as a .html file, however a display can be enabled
-
-    Parameters
-    ----------
-    log_names : list, array, or dict
-        Contains the name of the accuracies recorded by the accuracy monitors.
-        Input should be of the form <monitorname>.accuracy
-    filename : str
-        The location to which the .html file containing the accuracy plot should be saved
+    Stops training the next possible moment if it received a SIGQUIT (Ctrl + \)
     """
-    def __init__(self, log_names, filename, timescale='epoch', interval=1, name=None, verbose=None):
-        super(VisualiseAccuracy, self).__init__(name, timescale, interval, verbose)
+    __undescribed__ = {'quit': False}
 
-        self.log_names = log_names
-        self.filename = filename
+    def __init__(self, name=None, timescale='epoch', interval=1, verbose=None):
+        super(StopOnSigQuit, self).__init__(name, timescale, interval,
+                                            verbose=verbose)
+        self.quit = False
 
-        try:
-            import bokeh.plotting as bk
+    def start(self, net, stepper, verbose, named_data_iters):
+        super(StopOnSigQuit, self).start(net, stepper, verbose,
+                                         named_data_iters)
+        self.quit = False
+        signal.signal(signal.SIGQUIT, self.receive_signal)
+
+    def receive_signal(self, signum, stack):
+        print('Interrupting')
+        self.quit = True
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if self.quit:
+            raise StopIteration('Received SIGQUIT signal.')
+
+if optional.has_bokeh:
+    import bokeh.plotting as bk
+
+    class VisualizeAccuracy(Hook):
+        """
+        Visualizes the accuracy using the bokeh.plotting library.
+
+        By default the output saved as a .html file, however a display can be
+        enabled
+
+        Args:
+            log_names (list, array, or dict):
+                Contains the name of the accuracies recorded by the accuracy
+                monitors. Input should be of the form <monitorname>.accuracy
+        filename (str):
+            The location to which the .html file containing the accuracy plot
+            should be saved
+        """
+        def __init__(self, log_names, filename, timescale='epoch', interval=1,
+                     name=None, verbose=None):
+            super(VisualizeAccuracy, self).__init__(name, timescale, interval,
+                                                    verbose)
+
+            self.log_names = log_names
+            self.filename = filename
 
             self.bk = bk
             self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset"
-            self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua', 'gray']
+            self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua',
+                           'gray']
 
             self.bk.output_server("Accuracy Monitor")
-            self.fig = self.bk.figure(title="Accuracy Monitor", x_axis_label=self.timescale, y_axis_label='accuracy',
-                            tools=self.TOOLS, x_range=(0, 10), y_range=(0, 1))
+            self.fig = self.bk.figure(
+                title="Accuracy Monitor", x_axis_label=self.timescale,
+                y_axis_label='accuracy', tools=self.TOOLS,
+                x_range=(0, 10), y_range=(0, 1))
 
-        except ImportError:
-            print("bokeh is required for drawing networks but was not found.")
+        def start(self, net, stepper, verbose, named_data_iters):
+            count = 0
 
-    def start(self, net, stepper, verbose, named_data_iters):
-        count = 0
+            # create empty line objects
+            for log_name in self.log_names:
+                self.fig.line([], [], legend=log_name, line_width=2,
+                              color=self.colors[count], name=log_name)
+                count += 1
 
-        # create empty line objects
-        for log_name in self.log_names:
-            self.fig.line([], [], legend=log_name, line_width=2, color=self.colors[count], name=log_name)
-            count += 1
+            self.bk.show(self.fig)
+            self.bk.output_file(self.filename + ".html",
+                                title="Accuracy Monitor", mode="cdn")
 
-        self.bk.show(self.fig)
-        self.bk.output_file(self.filename + ".html", title="Accuracy Monitor", mode="cdn")
+        def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+            count = 0
+            for log_name in self.log_names:
+                renderer = self.fig.select(dict(name=log_name))
 
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        count = 0
-        for log_name in self.log_names:
-            renderer = self.fig.select(dict(name=log_name))
+                datasource = renderer[0].data_source
+                datasource.data["y"] = get_by_path(logs, log_name)
 
-            datasource = renderer[0].data_source
-            datasource.data["y"] = get_by_path(logs, log_name)
+                if self.timescale == 'epoch':
+                    datasource.data["x"] = range(epoch_nr)
+                elif self.timescale == 'update':
+                    datasource.data["x"] = range(update_nr)
 
-            if self.timescale == 'epoch':
-                datasource.data["x"] = range(epoch_nr)
-            elif self.timescale == 'update':
-                datasource.data["x"] = range(update_nr)
+                self.bk.cursession().store_objects(datasource)
+                count += 1
 
-            self.bk.cursession().store_objects(datasource)
-            count += 1
-
-        self.bk.save(self.fig, filename=self.filename + ".html")
+            self.bk.save(self.fig, filename=self.filename + ".html")
 
 
 class ProgressBar(Hook):
+    """ Adds a progress bar to show the training progress. """
     def __init__(self):
         super(ProgressBar, self).__init__(None, 'update', 1)
         self.length = None

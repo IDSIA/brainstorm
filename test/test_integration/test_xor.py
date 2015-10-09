@@ -30,7 +30,7 @@ def test_learn_xor_function():
      Loss())
 
     net = Network.from_layer(inp - 'targets' >> 'targets' - error_func)
-    # net.set_memory_handler(PyCudaHandler())
+    # net.set_handler(PyCudaHandler())
     net.initialize(Gaussian(1.0), seed=42)  # high weight-init needed
     # print(net.buffer.parameters)
 

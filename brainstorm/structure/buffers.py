@@ -95,7 +95,7 @@ class BufferManager(object):
 
         return self.views
 
-    def set_memory_handler(self, new_handler):
+    def set_handler(self, new_handler):
         self.full_buffer = None
         self.size = -1
         self.time_size = -1
@@ -123,8 +123,8 @@ class BufferManager(object):
                 context_start_idx = self.time_size - hub.context_size
                 context_stop_idx = self.time_size
 
-                self.handler.copy_to(
-                    c, buf[context_start_idx:context_stop_idx])
+                self.handler.copy_to(buf[context_start_idx:context_stop_idx],
+                                     c)
                 context.append(c)
 
         return context
@@ -133,7 +133,7 @@ class BufferManager(object):
         for c, buf in zip(context, self.buffers):
             if c is None:
                 continue
-            self.handler.copy_to(buf[self.time_size:], c)
+            self.handler.copy_to(c, buf[self.time_size:])
 
     def clear_context(self):
         if self.buffers is None:

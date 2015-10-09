@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -16,7 +16,7 @@ def Highway(name=None):
     return ConstructionWrapper.create('Highway', name=name)
 
 
-class HighwayLayerImpl(BaseLayerImpl):
+class HighwayLayerImpl(Layer):
     expected_inputs = {'H': StructureTemplate('T', 'B', '...'),
                        'T': StructureTemplate('T', 'B', '...'),
                        'x': StructureTemplate('T', 'B', '...')}

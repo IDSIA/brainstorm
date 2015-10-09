@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.structure.construction import ConstructionWrapper
 
@@ -17,7 +17,7 @@ def NoOp(name=None):
     return ConstructionWrapper.create('NoOp', name=name)
 
 
-class NoOpLayerImpl(BaseLayerImpl):
+class NoOpLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {}
@@ -26,8 +26,7 @@ class NoOpLayerImpl(BaseLayerImpl):
         return self.in_shapes, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
-        self.handler.copy_to(buffers.outputs.default,
-                             buffers.inputs.default)
+        self.handler.copy_to(buffers.inputs.default, buffers.outputs.default)
 
     def backward_pass(self, buffers):
         self.handler.add_tt(buffers.output_deltas.default,

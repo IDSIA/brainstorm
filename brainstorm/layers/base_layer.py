@@ -8,7 +8,7 @@ from brainstorm.utils import LayerValidationError, get_by_path, get_inheritors
 
 
 def get_layer_class_from_typename(typename):
-    layer_classes = get_inheritors(BaseLayerImpl)
+    layer_classes = get_inheritors(Layer)
     for layer_class in layer_classes:
         if typename == layer_class.__name__:
             return layer_class
@@ -16,9 +16,9 @@ def get_layer_class_from_typename(typename):
         raise TypeError("Layer-type '{}' unknown!".format(typename))
 
 
-class BaseLayerImpl(object):
+class Layer(object):
     """
-    The base-class of all layer types defined in Python.
+    The base class of all layer types defined in Python.
 
     Each layer has a set of named inputs and outputs.
 

@@ -11,7 +11,7 @@ from brainstorm.describable import Describable
 
 @six.add_metaclass(abc.ABCMeta)
 class Handler(Describable):
-    """Abstract Base Class for all handlers.
+    """Abstract base class for all handlers.
 
     This base is used mainly to ensure a common interface and provide
     documentation for derived handlers. When implementing new methods
@@ -73,7 +73,7 @@ class Handler(Describable):
     # ---------------------------- Copy and Fill ---------------------------- #
 
     @abc.abstractmethod
-    def copy_to(self, dest, src):
+    def copy_to(self, src, dest):
         """Copy the contents of one array to another.
 
         Both source and destination arrays must be of this handler's supported
@@ -515,7 +515,6 @@ class Handler(Describable):
         Returns:
             None
         """
-        out[:] += a * b
 
     @abc.abstractmethod
     def mult_add_tt(self, a, b, out):

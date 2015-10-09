@@ -22,7 +22,7 @@ from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import (order_and_copy_modifiers,
                                                   prune_view_references,
                                                   resolve_references)
-from brainstorm.utils import NetworkValidationError
+from brainstorm.utils import NetworkValidationError, get_brainstorm_info
 from brainstorm.value_modifiers import GradientModifier
 
 __all__ = ['Network']
@@ -39,11 +39,13 @@ class Network(Seedable):
         """
         Create Network instance from a construction layer.
 
-        :param some_layer: Some layer used to wire up an architecture with `>>`
-        :type some_layer: brainstorm.construction.ConstructionWrapper
+        Args:
+            some_layer (brainstorm.construction.ConstructionWrapper):
+                Some layer used to wire up an architecture with `>>`
 
-        :returns: A fully functional Network instance.
-        :rtype: brainstorm.structure.Network
+        Returns:
+            brainstorm.structure.Network:
+                A fully functional Network instance.
         """
         arch = generate_architecture(some_layer)
         return cls.from_architecture(arch)
@@ -53,11 +55,12 @@ class Network(Seedable):
         """
         Create Network instance from given architecture.
 
-        :param architecture: JSON serializable Architecture description.
-        :type architecture: dict
-
-        :returns: A fully functional Network instance.
-        :rtype: brainstorm.structure.Network
+        Args:
+            architecture (dict):
+                JSON serializable Architecture description.
+        Returns:
+            brainstorm.structure.Network:
+                A fully functional Network instance.
         """
         layers = instantiate_layers_from_architecture(architecture)
         hubs, layout = create_layout(layers)
@@ -67,12 +70,13 @@ class Network(Seedable):
     @classmethod
     def __new_from_description__(cls, description):
         net = Network.from_architecture(description['architecture'])
-        net.set_memory_handler(create_from_description(description['handler']))
+        net.set_handler(create_from_description(description['handler']))
         net.initialize(create_from_description(description['initializers']))
         net.set_gradient_modifiers(
             create_from_description(description['gradient_modifiers']))
         net.set_weight_modifiers(
             create_from_description(description['weight_modifiers']))
+        net.default_output = description.get('default_output')
         return net
 
     @classmethod
@@ -93,7 +97,7 @@ class Network(Seedable):
         self.buffer = self._buffer_manager.views
         self.architecture = architecture
         self.handler = None
-        self.set_memory_handler(handler)
+        self.set_handler(handler)
         self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
@@ -315,9 +319,9 @@ class Network(Seedable):
         self.gradient_modifiers = order_and_copy_modifiers(gradient_mods)
         # TODO: Check that all are ValueModifiers or GradientModifiers
 
-    def set_memory_handler(self, new_handler):
+    def set_handler(self, new_handler):
         self.handler = new_handler
-        self._buffer_manager.set_memory_handler(new_handler)
+        self._buffer_manager.set_handler(new_handler)
         self.buffer = self._buffer_manager.views
         for layer in self.layers.values():
             layer.set_handler(new_handler)
@@ -331,7 +335,7 @@ class Network(Seedable):
             if name not in data.keys() and all_inputs is False:
                 continue
             if isinstance(data[name], self.handler.array_type):
-                self.handler.copy_to(buf, data[name])
+                self.handler.copy_to(data[name], buf)
             else:
                 # assert isinstance(data[name], np.ndarray)
                 self.handler.set_from_numpy(buf, data[name])
@@ -388,8 +392,12 @@ class Network(Seedable):
 
     # -------------------------- Serialization --------------------------------
 
-    def save_as_hdf5(self, filename):
+    def save_as_hdf5(self, filename, comment=''):
         with h5py.File(filename, 'w') as f:
+            f.attrs.create('info', get_brainstorm_info())
+            f.attrs.create('format', b'Network file v1.0')
+            if comment:
+                f.attrs.create('comment', comment.encode())
             description = get_description(self)
             f['description'] = json.dumps(description).encode()
             f.create_dataset(

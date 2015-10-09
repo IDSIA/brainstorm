@@ -169,7 +169,7 @@ class FreezeValues(ValueModifier):
             self.device_weights = handler.allocate(self.weights.shape)
             handler.set_from_numpy(self.device_weights, self.weights)
 
-        handler.copy_to(view, self.device_weights)
+        handler.copy_to(self.device_weights, view)
 
 
 class L1Decay(GradientModifier):

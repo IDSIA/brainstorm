@@ -83,11 +83,11 @@ class DebugHandler(Handler):
     # ---------------------------- Copy and Fill ---------------------------- #
 
     @check_for_inf_or_nan
-    def copy_to(self, dest, src):
+    def copy_to(self, src, dest):
         assert_debug_arrays(dest, src)
         assert_shapes_equal(dest, src)
         assert dest.size == src.size, "{} != {}".format(dest.size, src.size)
-        self.handler.copy_to(dest.array, src.array)
+        self.handler.copy_to(src.array, dest.array)
 
     @check_for_inf_or_nan
     def create_from_numpy(self, arr):
