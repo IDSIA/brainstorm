@@ -16,6 +16,7 @@ try:
 except ImportError:
     has_pycuda = False
 
+
 has_cudnn = False
 if has_pycuda:
     try:
@@ -26,3 +27,10 @@ if has_pycuda:
         pass
 
 __all__ = ['has_pycuda', 'has_cudnn']
+
+
+try:
+    import bokeh
+    has_bokeh = True
+except ImportError:
+    has_bokeh = False
