@@ -9,7 +9,7 @@ import pytest
 from brainstorm import Network
 from brainstorm.data_iterators import Undivided
 from brainstorm.initializers import Gaussian
-from brainstorm.layers import Classification, Input, Lstm, Recurrent
+from brainstorm.layers import SoftmaxCE, Input, Lstm, Recurrent
 from brainstorm.training.utils import run_network
 
 from .helpers import HANDLER
@@ -92,7 +92,7 @@ def test_context_slice_allows_continuing_forward_pass(net_with_context):
 
 inp = Input(out_shapes={'default': ('T', 'B', 4),
                         'targets': ('T', 'B', 1)})
-out = Classification(2, name='Output')
+out = SoftmaxCE(2, name='Output')
 (inp - 'targets' >> 'targets' - out)
 simple_net = Network.from_layer(inp >> out)
 
