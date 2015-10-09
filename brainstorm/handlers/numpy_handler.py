@@ -295,6 +295,9 @@ class NumpyHandler(Handler):
     def mult_mv(self, m, v, out):
         out[:] = m * v
 
+    def mult_add_mv(self, m, v, out):
+        out[:] += m * v
+
     def mult_st(self, s, t, out):
         np.multiply(s, t, out)
 
@@ -306,11 +309,6 @@ class NumpyHandler(Handler):
 
     def sqrt_t(self, a, out):
         np.sqrt(a, out)
-    def sigmoid(self, x, y):
-        indices = x >= 0
-        y[indices] = 1. / (1. + np.exp(-x[indices]))
-        indices = x < 0
-        y[indices] = np.exp(x[indices]) / (1. + np.exp(x[indices]))
 
     def subtract_mv(self, m, v, out):
         out[:] = m - v
@@ -353,3 +351,22 @@ class NumpyHandler(Handler):
 
     def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
+
+
+    def modulo_mm(self, a, b, out):
+        np.fmod(a, b, out)
+
+    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+        indices = np.where(timing_mod != 0)
+        if indices[0].shape[0]:
+            out[:, indices] = b[:, indices]
+
+    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing_mod, hb_t, out):
+        indices = np.where(timing_mod != 0)
+        if indices[0].shape[0]:
+            out[:, indices] += hb_t[:, indices]
+
+    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing_mod, out):
+        indices = np.where(timing_mod != 0)
+        if indices[0].shape[0]:
+            out[:, indices] = 0.0

@@ -8,17 +8,17 @@ from brainstorm.layers.base_layer import BaseLayerImpl
 from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
 
 
-def ClockworkRnn(size, timing, activation_function='tanh', name=None):
+def ClockworkRnn(size, timing, activation='tanh', name=None):
     return ConstructionWrapper.create('ClockworkRnn',
                                       size=size,
                                       timing=timing,
                                       name=name,
-                                      activation_function=activation_function)
+                                      activation=activation)
 
 
 class ClockworkRnnLayerImpl(BaseLayerImpl):
-    expected_kwargs = {'size', 'timing', 'activation_function'}
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_kwargs = {'size', 'timing', 'activation'}
 
     def setup(self, kwargs, in_shapes):
         self.act_func = None
@@ -29,7 +29,7 @@ class ClockworkRnnLayerImpl(BaseLayerImpl):
             raise LayerValidationError('size must be int but was {}'.
                                        format(self.size))
 
-        in_size = in_shapes['default'].feature_size
+        in_size = self.in_shapes['default'].feature_size
 
         outputs = OrderedDict()
         outputs['default'] = BufferStructure('T', 'B', self.size, context_size=1)
@@ -53,7 +53,7 @@ class ClockworkRnnLayerImpl(BaseLayerImpl):
         super(ClockworkRnnLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_func_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -61,8 +61,8 @@ class ClockworkRnnLayerImpl(BaseLayerImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'tanh')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare
@@ -77,6 +77,7 @@ class ClockworkRnnLayerImpl(BaseLayerImpl):
 
         flat_inputs = flatten_time(inputs)
         flat_H = flatten_time(Ha[:-1])
+
         _h.dot_mm(flat_inputs, W, flat_H, transb=True)
         _h.add_mv(flat_H, bias.reshape((1, self.size)), flat_H)
 
