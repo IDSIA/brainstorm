@@ -4,19 +4,90 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
-from brainstorm.layers.base_layer import LayerBaseImpl
-from brainstorm.structure.shapes import ShapeTemplate
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
 
-def ClockworkLstmPeep(size, timing, activation_function='tanh', name=None):
+def ClockworkLstmPeep(size, timing, activation='tanh', name=None):
     return ConstructionWrapper.create('ClockworkLstmPeep',
                                       size=size,
                                       timing=timing,
                                       name=name,
-                                      activation_function=activation_function)
+                                      activation=activation)
 
+class ClockworkLstmPeepLayerImpl(BaseLayerImpl):
+    expected_kwargs = {'size', 'timing', 'activation'}
+    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
 
-class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
-    expected_kwargs = {'size', 'timing', 'activation_function'}
+    def setup(self, kwargs, in_shapes):
+        self.act_func = None
+        self.act_func_deriv = None
+        self.size = kwargs.get('size', in_shapes['default'].feature_size)
+
+        if not isinstance(self.size, int):
+            raise LayerValidationError('size must be int but was {}'.
+                                       format(self.size))
+
+        in_size = in_shapes['default'].feature_size
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure('T', 'B', self.size, context_size=1)
+
+        parameters = OrderedDict()
+        parameters['Wz'] = BufferStructure(self.size, in_size)
+        parameters['Wi'] = BufferStructure(self.size, in_size)
+        parameters['Wf'] = BufferStructure(self.size, in_size)
+        parameters['Wo'] = BufferStructure(self.size, in_size)
+
+        parameters['Wci'] = BufferStructure(self.size)
+        parameters['Wcf'] = BufferStructure(self.size)
+        parameters['Wco'] = BufferStructure(self.size)
+
+        parameters['Rz'] = BufferStructure(self.size, self.size)
+        parameters['Ri'] = BufferStructure(self.size, self.size)
+        parameters['Rf'] = BufferStructure(self.size, self.size)
+        parameters['Ro'] = BufferStructure(self.size, self.size)
+
+        parameters['bz'] = BufferStructure(self.size)
+        parameters['bi'] = BufferStructure(self.size)
+        parameters['bf'] = BufferStructure(self.size)
+        parameters['bo'] = BufferStructure(self.size)
+
+        parameters['timing'] = BufferStructure(self.size)
+
+        internals = OrderedDict()
+        internals['Za'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Zb'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ia'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ib'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Fa'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Fb'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Oa'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ob'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Ca'] = BufferStructure('T', 'B', self.size, context_size=1)
+        internals['Cb'] = BufferStructure('T', 'B', self.size, context_size=1)
+
+        internals['dZa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dZb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dIa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dIb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dFa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dFb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dOa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dOb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dCa'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+        internals['dCb'] = BufferStructure('T', 'B', self.size, context_size=1,
+                                         is_backward_only=True)
+
+        return outputs, parameters, internals
 
     def _setup_hyperparameters(self):
         self.act_func = None
@@ -32,7 +103,7 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
         super(ClockworkLstmPeepLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_func_derivs
-        activation_functions = {
+        activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
             'linear': (lambda x, y: self.handler.copy_to(y, x),
@@ -40,75 +111,8 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
-        self.act_func, self.act_func_deriv = activation_functions[
-            self.kwargs.get('activation_function', 'tanh')]
-
-    def get_parameter_structure(self):
-        in_size = self.in_shapes['default'].feature_size
-
-        parameters = OrderedDict()
-        parameters['Wz'] = ShapeTemplate(self.size, in_size)
-        parameters['Wi'] = ShapeTemplate(self.size, in_size)
-        parameters['Wf'] = ShapeTemplate(self.size, in_size)
-        parameters['Wo'] = ShapeTemplate(self.size, in_size)
-
-        parameters['Wci'] = ShapeTemplate(self.size, self.size)
-        parameters['Wcf'] = ShapeTemplate(self.size, self.size)
-        parameters['Wco'] = ShapeTemplate(self.size, self.size)
-
-        parameters['Rz'] = ShapeTemplate(self.size, self.size)
-        parameters['Ri'] = ShapeTemplate(self.size, self.size)
-        parameters['Rf'] = ShapeTemplate(self.size, self.size)
-        parameters['Ro'] = ShapeTemplate(self.size, self.size)
-
-        parameters['bz'] = ShapeTemplate(self.size)
-        parameters['bi'] = ShapeTemplate(self.size)
-        parameters['bf'] = ShapeTemplate(self.size)
-        parameters['bo'] = ShapeTemplate(self.size)
-
-        parameters['timing'] = ShapeTemplate(self.size)
-
-        return parameters
-
-    def get_internal_structure(self):
-        internals = OrderedDict()
-
-
-        internals['Za'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Zb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ia'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ib'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Fa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Fb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Oa'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ob'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Ca'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-        internals['Cb'] = ShapeTemplate('T', 'B', self.size, context_size=1)
-
-        internals['dZa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dZb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dIa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dIb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dFa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dFb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dOa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dOb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dCa'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        internals['dCb'] = ShapeTemplate('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
-        return internals
-
-    def _get_output_shapes(self):
-        return {'default': ShapeTemplate('T', 'B', self.size, context_size=1)}
+        self.act_func, self.act_func_deriv = activations[
+            self.kwargs.get('activation', 'tanh')]
 
 
     def forward_pass(self, buffers, training_pass=True):
@@ -157,13 +161,13 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
 
             # Input Gate
             _h.dot_add_mm(y[t - 1], Ri, Ia[t])
-            _h.dot_add_mm(Ca[t - 1], Wci, Ia[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t - 1], Wci.reshape((1, self.size)), Ia[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Ia[t], bi.reshape((1, self.size)), Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
             _h.dot_add_mm(y[t - 1], Rf, Fa[t])
-            _h.dot_add_mm(Ca[t - 1], Wcf, Fa[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t - 1], Wcf.reshape((1, self.size)), Fa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Fa[t], bf.reshape((1, self.size)), Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
 
@@ -173,7 +177,7 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
 
             # Output Gate
             _h.dot_add_mm(y[t - 1], Ro, Oa[t])
-            _h.dot_add_mm(Ca[t], Wco, Oa[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t], Wco.reshape((1, self.size)), Oa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Oa[t], bo.reshape((1, self.size)), Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
 
@@ -246,8 +250,8 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
             _h.dot_add_mm(dOa[t + 1], Ro, dy[t], transb=True)
             _h.dot_add_mm(dZa[t + 1], Rz, dy[t], transb=True)
 
-            _h.dot_add_mm(dIa[t + 1], Wci, dCa[t], transb=True)
-            _h.dot_add_mm(dFa[t + 1], Wcf, dCa[t], transb=True)
+            _h.mult_add_mv(dIa[t + 1], Wci.reshape((1, self.size)), dCa[t])
+            _h.mult_add_mv(dFa[t + 1], Wcf.reshape((1, self.size)), dCa[t])
 
             # Output Gate
             _h.mult_tt(dy[t], Cb[t], dOb[t])
@@ -255,7 +259,7 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
             _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dOb[t])
             _h.sigmoid_deriv(Oa[t], Ob[t], dOb[t], dOa[t])
             # Output influence on peephole:
-            _h.dot_add_mm(dOa[t], Wco, dCa[t], transb=True)
+            _h.mult_add_mv(dOa[t], Wco.reshape((1, self.size)), dCa[t])
 
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
@@ -320,8 +324,12 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
         flat_cell = flatten_time(Ca[:-2])
         flat_cell2 = flatten_time(Ca[:-1])
 
+        dWco_tmp = _h.allocate(flat_cell2.shape)
+        dWc_tmp = _h.allocate(dWco.shape)
         # Peephole connection output weight:
-        _h.dot_add_mm(flat_cell2, flat_dOa, dWco, transa=True)
+        _h.mult_tt(flat_cell2, flat_dOa, dWco_tmp)
+        _h.sum_t(dWco_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dWco, dWc_tmp, dWco)
 
         flat_dIa = flatten_time(dIa[1:-1])
         flat_dFa = flatten_time(dFa[1:-1])
@@ -339,8 +347,18 @@ class ClockworkLstmPeepLayerImpl(LayerBaseImpl):
         _h.dot_add_mm(dy[-1], dZa[0], dRz, transa=True)
 
         # Peephole connection weights:
-        _h.dot_add_mm(flat_cell, flat_dIa, dWci, transa=True)
-        _h.dot_add_mm(flat_cell, flat_dFa, dWcf, transa=True)
+        dWcif_tmp = _h.allocate(flat_cell.shape)
+        _h.mult_tt(flat_cell, flat_dIa, dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dWci, dWc_tmp, dWci)
+        _h.mult_tt(flat_cell, flat_dFa, dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dWcf, dWc_tmp, dWcf)
 
-        _h.dot_add_mm(dCa[-1], dIa[0], dWci, transa=True)
-        _h.dot_add_mm(dCa[-1], dFa[0], dWcf, transa=True)
+        dWcif_tmp = _h.allocate(dIa[0].shape)
+        _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dWci, dWc_tmp, dWci)
+        _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dWcf, dWc_tmp, dWcf)
