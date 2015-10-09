@@ -129,18 +129,18 @@ class LstmPeepholeLayerImpl(Layer):
 
         for t in range(time_size):
             # Block input
-            _h.dot_add_mm(y[t - 1], Rz, Za[t])
+            _h.dot_add_mm(y[t - 1], Rz, Za[t], transb=True)
             _h.add_mv(Za[t], bz.reshape((1, self.size)), Za[t])
             self.act_func(Za[t], Zb[t])
 
             # Input Gate
-            _h.dot_add_mm(y[t - 1], Ri, Ia[t])
+            _h.dot_add_mm(y[t - 1], Ri, Ia[t], transb=True)
             _h.mult_add_mv(Ca[t - 1], Wci.reshape((1, self.size)), Ia[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Ia[t], bi.reshape((1, self.size)), Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
-            _h.dot_add_mm(y[t - 1], Rf, Fa[t])
+            _h.dot_add_mm(y[t - 1], Rf, Fa[t], transb=True)
             _h.mult_add_mv(Ca[t - 1], Wcf.reshape((1, self.size)), Fa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Fa[t], bf.reshape((1, self.size)), Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
@@ -150,7 +150,7 @@ class LstmPeepholeLayerImpl(Layer):
             _h.mult_add_tt(Fb[t], Ca[t - 1], Ca[t])
 
             # Output Gate
-            _h.dot_add_mm(y[t - 1], Ro, Oa[t])
+            _h.dot_add_mm(y[t - 1], Ro, Oa[t], transb=True)
             _h.mult_add_mv(Ca[t], Wco.reshape((1, self.size)), Oa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Oa[t], bo.reshape((1, self.size)), Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
@@ -186,10 +186,10 @@ class LstmPeepholeLayerImpl(Layer):
         for t in range(time_size - 1, -1, - 1):
             # Accumulate recurrent deltas
             _h.copy_to(deltas[t], dy[t])
-            _h.dot_add_mm(dIa[t + 1], Ri, dy[t], transb=True)
-            _h.dot_add_mm(dFa[t + 1], Rf, dy[t], transb=True)
-            _h.dot_add_mm(dOa[t + 1], Ro, dy[t], transb=True)
-            _h.dot_add_mm(dZa[t + 1], Rz, dy[t], transb=True)
+            _h.dot_add_mm(dIa[t + 1], Ri, dy[t])
+            _h.dot_add_mm(dFa[t + 1], Rf, dy[t])
+            _h.dot_add_mm(dOa[t + 1], Ro, dy[t])
+            _h.dot_add_mm(dZa[t + 1], Rz, dy[t])
 
             # Peephole connection part:
             _h.mult_add_mv(dIa[t + 1], Wci.reshape((1, self.size)), dCa[t])
@@ -265,15 +265,15 @@ class LstmPeepholeLayerImpl(Layer):
         flat_dOa = flatten_time(dOa[1:-1])
         flat_dZa = flatten_time(dZa[1:-1])
 
-        _h.dot_add_mm(flat_outputs, flat_dIa, dRi, transa=True)
-        _h.dot_add_mm(flat_outputs, flat_dFa, dRf, transa=True)
-        _h.dot_add_mm(flat_outputs, flat_dOa, dRo, transa=True)
-        _h.dot_add_mm(flat_outputs, flat_dZa, dRz, transa=True)
+        _h.dot_add_mm(flat_dIa, flat_outputs, dRi, transa=True)
+        _h.dot_add_mm(flat_dFa, flat_outputs, dRf, transa=True)
+        _h.dot_add_mm(flat_dOa, flat_outputs, dRo, transa=True)
+        _h.dot_add_mm(flat_dZa, flat_outputs, dRz, transa=True)
 
-        _h.dot_add_mm(dy[-1], dIa[0], dRi, transa=True)
-        _h.dot_add_mm(dy[-1], dFa[0], dRf, transa=True)
-        _h.dot_add_mm(dy[-1], dOa[0], dRo, transa=True)
-        _h.dot_add_mm(dy[-1], dZa[0], dRz, transa=True)
+        _h.dot_add_mm(dIa[0], dy[-1], dRi, transa=True)
+        _h.dot_add_mm(dFa[0], dy[-1], dRf, transa=True)
+        _h.dot_add_mm(dOa[0], dy[-1], dRo, transa=True)
+        _h.dot_add_mm(dZa[0], dy[-1], dRz, transa=True)
 
         # Peephole connection weights:
         dWcif_tmp = _h.allocate(flat_cell.shape)

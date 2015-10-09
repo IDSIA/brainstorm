@@ -26,11 +26,11 @@ if has_pycuda:
     except ImportError:
         pass
 
-__all__ = ['has_pycuda', 'has_cudnn']
-
-
 try:
     import bokeh
     has_bokeh = True
 except ImportError:
     has_bokeh = False
+
+
+__all__ = ['has_pycuda', 'has_cudnn', 'has_bokeh']

@@ -78,7 +78,7 @@ class RecurrentLayerImpl(Layer):
         _h.add_mv(flat_H, bias.reshape((1, self.size)), flat_H)
 
         for t in range(inputs.shape[0]):
-            _h.dot_add_mm(outputs[t - 1], R, Ha[t])
+            _h.dot_add_mm(outputs[t - 1], R, Ha[t], transb=True)
             self.act_func(Ha[t], outputs[t])
 
     def backward_pass(self, buffers):
@@ -96,7 +96,7 @@ class RecurrentLayerImpl(Layer):
         T = inputs.shape[0] - 1
         self.act_func_deriv(Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
-            _h.dot_add_mm(dHa[t + 1], R, dHb[t], transb=True)
+            _h.dot_add_mm(dHa[t + 1], R, dHb[t])
             self.act_func_deriv(Ha[t], outputs[t],
                                 dHb[t], dHa[t])
 
@@ -113,5 +113,5 @@ class RecurrentLayerImpl(Layer):
 
         flat_outputs = flatten_time(outputs[:-2])
         flat_dHa = flatten_time(dHa[1:-1])
-        _h.dot_add_mm(flat_outputs, flat_dHa, dR, transa=True)
-        _h.dot_add_mm(outputs[-1], dHa[0], dR, transa=True)
+        _h.dot_add_mm(flat_dHa, flat_outputs, dR, transa=True)
+        _h.dot_add_mm(dHa[0], outputs[-1], dR, transa=True)

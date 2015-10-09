@@ -83,7 +83,7 @@ class ClockworkRnnLayerImpl(Layer):
 
         tmp = _h.zeros(timing.shape)
         for t in range(inputs.shape[0]):
-            _h.dot_add_mm(outputs[t - 1], R, Ha[t])
+            _h.dot_add_mm(outputs[t - 1], R, Ha[t], transb=True)
             self.act_func(Ha[t], outputs[t])
             # -----------------------------------
             # Clockwork part: Undo updates:
@@ -117,7 +117,7 @@ class ClockworkRnnLayerImpl(Layer):
             _h.clw_copy_add_act_of_inactive(batch_size, feature_size, tmp, dHb[t+1], dHb[t])
             _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dHa[t+1])
 
-            _h.dot_add_mm(dHa[t + 1], R, dHb[t], transb=True)
+            _h.dot_add_mm(dHa[t + 1], R, dHb[t])
             self.act_func_deriv(Ha[t], outputs[t], dHb[t], dHa[t])
 
         # Same as for standard RNN:
@@ -134,5 +134,5 @@ class ClockworkRnnLayerImpl(Layer):
 
         flat_outputs = flatten_time(outputs[:-2])
         flat_dHa = flatten_time(dHa[1:-1])
-        _h.dot_add_mm(flat_outputs, flat_dHa, dR, transa=True)
-        _h.dot_add_mm(outputs[-1], dHa[0], dR, transa=True)
+        _h.dot_add_mm(flat_dHa, flat_outputs, dR, transa=True)
+        _h.dot_add_mm(dHa[0], outputs[-1], dR, transa=True)

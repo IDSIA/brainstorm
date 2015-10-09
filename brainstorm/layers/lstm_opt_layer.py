@@ -66,6 +66,14 @@ class LstmOptLayerImpl(Layer):
         self.act_func, self.act_func_deriv = activations[
             self.kwargs.get('activation', 'tanh')]
 
+    def slice_state(self, S):
+        gates = S[:, :, self.size:]
+        Z = S[:, :, :self.size]
+        I = S[:, :, self.size:2 * self.size]
+        F = S[:, :, self.size * 2:self.size * 3]
+        O = S[:, :, self.size * 3:]
+        return gates, Z, I, F, O
+
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
@@ -75,17 +83,12 @@ class LstmOptLayerImpl(Layer):
         y = buffers.outputs.default
 
         time_size, batch_size, in_size = x.shape
-        out_size = y.shape[2]
         flat_size = time_size * batch_size
         flat_x = x.reshape((flat_size, in_size))
 
         flat_S = S[:-1].reshape((flat_size, S.shape[2]))
 
-        Z = S[:, :, :out_size]
-        gates = S[:, :, out_size:]
-        I = S[:, :, out_size:2 * out_size]
-        F = S[:, :, out_size * 2:out_size * 3]
-        O = S[:, :, out_size * 3:]
+        gates, Z, I, F, O = self.slice_state(S)
 
         _h.dot_mm(flat_x, W, flat_S, transb=True)  # all inputs times weights
         _h.add_mv(flat_S, b.reshape((1, b.shape[0])), flat_S)  # all biases
@@ -122,23 +125,13 @@ class LstmOptLayerImpl(Layer):
         dy = _h.allocate(y.shape)
 
         time_size, batch_size, in_size = x.shape
-        out_size = y.shape[2]
         flat_size = time_size * batch_size
         flat_dx = dx.reshape((flat_size, in_size))
         flat_x = x.reshape((flat_size, in_size))
         flat_dS = dS[:-1].reshape((flat_size, S.shape[2]))
 
-        gates = S[:, :, out_size:]
-        Z = S[:, :, :out_size]
-        I = S[:, :, out_size:2 * out_size]
-        F = S[:, :, out_size * 2:out_size * 3]
-        O = S[:, :, out_size * 3:]
-
-        dgates = dS[:, :, out_size:]
-        dZ = dS[:, :, :out_size]
-        dI = dS[:, :, out_size:2 * out_size]
-        dF = dS[:, :, out_size * 2:out_size * 3]
-        dO = dS[:, :, out_size * 3:]
+        gates, Z, I, F, O = self.slice_state(S)
+        dgates, dZ, dI, dF, dO = self.slice_state(dS)
 
         _h.copy_to(deltas, dy)
 
