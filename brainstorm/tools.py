@@ -12,7 +12,7 @@ from brainstorm.utils import get_by_path
 
 __all__ = ['get_in_out_layers_for_classification',
            'get_in_out_layers_for_regression', 'draw_network',
-           'print_network_info', 'evaluate', 'save_features']
+           'print_network_info', 'evaluate', 'extract_and_save']
 
 
 def get_in_out_layers_for_classification(in_shape, nr_classes,
@@ -227,36 +227,52 @@ def evaluate(network, iter, scorers=(), out_name='', targets_name='targets',
     return aggregate_losses_and_scores(scores, network, scorers)
 
 
-def save_features(network, iter, file_name, feat_name):
-    """Save the features/outputs produced by a network to an HDF5 file.
+def extract_and_save(network, iter, buffer_names, file_name):
+    """Save the desired buffer values of a network to an HDF5 file.
 
+    In particular, this tool can be used to save the predictions of a
+    network on a dataset.
+    In general, any number of internal, input or output buffers of the network
+    can be extracted.
+
+    Examples:
+        >>> getter = Minibatches(100, default=x_test)
+        >>> extract_and_save(network,
+        ...                  getter,
+        ...                  ['Output.outputs.probabilities',
+        ...                   'Hid1.internals.H'],
+        ...                  'network_features.hdf5')
     Args:
         net (brainstorm.structure.Network): Network using which the features
                                             should be generated.
         iter (brainstorm.DataIterator): A data iterator which produces the
                                         data on which the features are
                                         computed.
-        file_name (str): Name of the hdf5 file (including extension) in
-                         which the features should be saved.
-        feat_name (str): Name of the feature view to saved in dotted
-                         notation. See example.
+        buffer_names (list[unicode]): Name of the buffer views to be saved (in
+                                      dotted notation). See example.
+        file_name (unicode): Name of the hdf5 file (including extension) in
+                             which the features should be saved.
     """
     iterator = iter(handler=network.handler)
-
-    first_pass = True
+    if isinstance(buffer_names, (str, unicode)):
+        buffer_names = [buffer_names]
     num_items = 0
+    ds = []
+
     with h5py.File(file_name, 'w') as f:
         for _ in run_network(network, iterator, all_inputs=False):
             network.forward_pass()
-            data = network.handler.get_numpy_copy(get_by_path(network.buffer,
-                                                              feat_name))
-            num_items += data.shape[1]
-            if first_pass:
-                ds = f.create_dataset(
-                    feat_name, data.shape, data.dtype, chunks=data.shape,
-                    maxshape=(data.shape[0], None) + data.shape[2:])
-                ds[:] = data
-                first_pass = False
-            else:
-                ds.resize(size=num_items, axis=1)
-                ds[:, num_items - data.shape[1]:num_items, ...] = data
+            first_pass = False if len(ds) > 0 else True
+            for num, buffer_name in enumerate(buffer_names):
+                data = network.handler.get_numpy_copy(
+                    get_by_path(network.buffer, buffer_name))
+                if num == 0:
+                    num_items += data.shape[1]
+                if first_pass:
+                    ds.append(f.create_dataset(
+                        buffer_name, data.shape, data.dtype, chunks=data.shape,
+                        maxshape=(data.shape[0], None) + data.shape[2:]))
+                    ds[-1][:] = data
+                else:
+                    ds[num].resize(size=num_items, axis=1)
+                    ds[num][:, num_items - data.shape[1]:num_items, ...] = data
