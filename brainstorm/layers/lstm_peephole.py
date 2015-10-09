@@ -41,9 +41,9 @@ class LstmPeepholeLayerImpl(Layer):
         parameters['Wf'] = BufferStructure(self.size, in_size)
         parameters['Wo'] = BufferStructure(self.size, in_size)
 
-        parameters['Wci'] = BufferStructure(self.size)
-        parameters['Wcf'] = BufferStructure(self.size)
-        parameters['Wco'] = BufferStructure(self.size)
+        parameters['pi'] = BufferStructure(1, self.size)
+        parameters['pf'] = BufferStructure(1, self.size)
+        parameters['po'] = BufferStructure(1, self.size)
 
         parameters['Rz'] = BufferStructure(self.size, self.size)
         parameters['Ri'] = BufferStructure(self.size, self.size)
@@ -106,7 +106,7 @@ class LstmPeepholeLayerImpl(Layer):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
-         Wci, Wcf, Wco,
+         pi, pf, po,
          Rz, Ri, Rf, Ro,
          bz, bi, bf, bo) = buffers.parameters
 
@@ -135,13 +135,13 @@ class LstmPeepholeLayerImpl(Layer):
 
             # Input Gate
             _h.dot_add_mm(y[t - 1], Ri, Ia[t], transb=True)
-            _h.mult_add_mv(Ca[t - 1], Wci.reshape((1, self.size)), Ia[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t - 1], pi, Ia[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Ia[t], bi.reshape((1, self.size)), Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
             _h.dot_add_mm(y[t - 1], Rf, Fa[t], transb=True)
-            _h.mult_add_mv(Ca[t - 1], Wcf.reshape((1, self.size)), Fa[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t - 1], pf, Fa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Fa[t], bf.reshape((1, self.size)), Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
 
@@ -151,7 +151,7 @@ class LstmPeepholeLayerImpl(Layer):
 
             # Output Gate
             _h.dot_add_mm(y[t - 1], Ro, Oa[t], transb=True)
-            _h.mult_add_mv(Ca[t], Wco.reshape((1, self.size)), Oa[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t], po, Oa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Oa[t], bo.reshape((1, self.size)), Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
 
@@ -163,11 +163,11 @@ class LstmPeepholeLayerImpl(Layer):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
-         Wci, Wcf, Wco,
+         pi, pf, po,
          Rz, Ri, Rf, Ro,
          bz, bi, bf, bo) = buffers.parameters
         (dWz, dWi, dWf, dWo,
-         dWci, dWcf, dWco,
+         dpi, dpf, dpo,
          dRz, dRi, dRf, dRo,
          dbz, dbi, dbf, dbo) = buffers.gradients
 
@@ -192,14 +192,14 @@ class LstmPeepholeLayerImpl(Layer):
             _h.dot_add_mm(dZa[t + 1], Rz, dy[t])
 
             # Peephole connection part:
-            _h.mult_add_mv(dIa[t + 1], Wci.reshape((1, self.size)), dCa[t])
-            _h.mult_add_mv(dFa[t + 1], Wcf.reshape((1, self.size)), dCa[t])
+            _h.mult_add_mv(dIa[t + 1], pi, dCa[t])
+            _h.mult_add_mv(dFa[t + 1], pf, dCa[t])
 
             # Output Gate
             _h.mult_tt(dy[t], Cb[t], dOb[t])
             _h.sigmoid_deriv(Oa[t], Ob[t], dOb[t], dOa[t])
             # Peephole connection part:
-            _h.mult_add_mv(dOa[t], Wco.reshape((1, self.size)), dCa[t])
+            _h.mult_add_mv(dOa[t], po, dCa[t])
 
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
@@ -254,11 +254,11 @@ class LstmPeepholeLayerImpl(Layer):
         flat_cell2 = flatten_time(Ca[:-1])
 
         dWco_tmp = _h.allocate(flat_cell2.shape)
-        dWc_tmp = _h.allocate(dWco.shape)
+        dWc_tmp = _h.allocate(dpo.shape)
         # Peephole connection output weight:
         _h.mult_tt(flat_cell2, flat_dOa, dWco_tmp)
         _h.sum_t(dWco_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWco, dWc_tmp, dWco)
+        _h.add_tt(dpo, dWc_tmp, dpo)
 
         flat_dIa = flatten_time(dIa[1:-1])
         flat_dFa = flatten_time(dFa[1:-1])
@@ -279,15 +279,15 @@ class LstmPeepholeLayerImpl(Layer):
         dWcif_tmp = _h.allocate(flat_cell.shape)
         _h.mult_tt(flat_cell, flat_dIa, dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWci, dWc_tmp, dWci)
+        _h.add_tt(dpi, dWc_tmp, dpi)
         _h.mult_tt(flat_cell, flat_dFa, dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWcf, dWc_tmp, dWcf)
+        _h.add_tt(dpf, dWc_tmp, dpf)
 
         dWcif_tmp = _h.allocate(dIa[0].shape)
         _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWci, dWc_tmp, dWci)
+        _h.add_tt(dpi, dWc_tmp, dpi)
         _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWcf, dWc_tmp, dWcf)
+        _h.add_tt(dpf, dWc_tmp, dpf)
