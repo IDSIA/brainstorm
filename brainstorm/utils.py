@@ -9,6 +9,8 @@ from datetime import datetime
 
 import numpy as np
 
+from brainstorm.__about__ import __version__
+
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 
 NAME_BLACKLIST = {'default', 'fallback'}
@@ -208,3 +210,8 @@ def progress_bar(maximum, prefix='[',
 def silence():
     while True:
         yield ''
+
+
+def get_brainstorm_info():
+    info = 'Created with brainstorm {}'.format(__version__)
+    return info.encode()

@@ -15,7 +15,7 @@ from brainstorm.describable import Describable
 from brainstorm import optional
 from brainstorm.structure.network import Network
 from brainstorm.tools import evaluate
-from brainstorm.utils import get_by_path, progress_bar
+from brainstorm.utils import get_by_path, progress_bar, get_brainstorm_info
 
 
 class Hook(Describable):
@@ -116,6 +116,8 @@ class SaveLogs(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         with h5py.File(self.filename, 'w') as f:
+            f.attrs.create('info', get_brainstorm_info())
+            f.attrs.create('format', b'Logs file v1.0')
             SaveLogs._save_recursively(f, logs)
 
     @staticmethod

@@ -3,12 +3,13 @@
 from __future__ import division, print_function, unicode_literals
 
 import h5py
+import six
 
 from brainstorm import layers
 from brainstorm.scorers import (aggregate_losses_and_scores,
                                 gather_losses_and_scores)
 from brainstorm.training.trainer import run_network
-from brainstorm.utils import get_by_path
+from brainstorm.utils import get_by_path, get_brainstorm_info
 
 __all__ = ['get_in_out_layers_for_classification',
            'get_in_out_layers_for_regression', 'draw_network',
@@ -254,12 +255,15 @@ def extract_and_save(network, iter, buffer_names, file_name):
                              which the features should be saved.
     """
     iterator = iter(handler=network.handler)
-    if isinstance(buffer_names, (str, unicode)):
+    if isinstance(buffer_names, six.string_types):
         buffer_names = [buffer_names]
     num_items = 0
     ds = []
 
     with h5py.File(file_name, 'w') as f:
+        f.attrs.create('info', get_brainstorm_info())
+        f.attrs.create('format', b'Buffers file v1.0')
+
         for _ in run_network(network, iterator, all_inputs=False):
             network.forward_pass()
             first_pass = False if len(ds) > 0 else True

@@ -22,7 +22,7 @@ from brainstorm.structure.layout import create_layout
 from brainstorm.structure.view_references import (order_and_copy_modifiers,
                                                   prune_view_references,
                                                   resolve_references)
-from brainstorm.utils import NetworkValidationError
+from brainstorm.utils import NetworkValidationError, get_brainstorm_info
 from brainstorm.value_modifiers import GradientModifier
 
 __all__ = ['Network']
@@ -392,8 +392,12 @@ class Network(Seedable):
 
     # -------------------------- Serialization --------------------------------
 
-    def save_as_hdf5(self, filename):
+    def save_as_hdf5(self, filename, comment=''):
         with h5py.File(filename, 'w') as f:
+            f.attrs.create('info', get_brainstorm_info())
+            f.attrs.create('format', b'Network file v1.0')
+            if comment:
+                f.attrs.create('comment', comment.encode())
             description = get_description(self)
             f['description'] = json.dumps(description).encode()
             f.create_dataset(
