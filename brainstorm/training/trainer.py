@@ -26,7 +26,7 @@ class Trainer(Describable):
     }
     __default_values__ = {'verbose': True}
 
-    def __init__(self, stepper, verbose=True, double_buffering=True):
+    def __init__(self, stepper, verbose=True, double_buffering=False):
         """Create a new Trainer.
 
         Args:
