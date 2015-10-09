@@ -12,7 +12,7 @@ from brainstorm.utils import get_by_path
 
 __all__ = ['get_in_out_layers_for_classification',
            'get_in_out_layers_for_regression', 'draw_network',
-           'print_network_info', 'evaluate', 'save_features']
+           'print_network_info', 'evaluate', 'extract_and_save']
 
 
 def get_in_out_layers_for_classification(in_shape, nr_classes,
@@ -235,6 +235,13 @@ def extract_and_save(network, iter, buffer_names, file_name):
     In general, any number of internal, input or output buffers of the network
     can be extracted.
 
+    Examples:
+        >>> getter = Minibatches(100, default=x_test)
+        >>> extract_and_save(network,
+        ...                  getter,
+        ...                  ['Output.outputs.probabilities',
+        ...                   'Hid1.internals.H'],
+        ...                  'network_features.hdf5')
     Args:
         net (brainstorm.structure.Network): Network using which the features
                                             should be generated.
