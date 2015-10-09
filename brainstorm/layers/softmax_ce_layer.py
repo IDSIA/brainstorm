@@ -11,7 +11,7 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import (LayerValidationError, flatten_all_but_last)
 
 
-def SoftmaxCE(size, name=None):
+def SoftmaxCE(name=None):
     """Create a softmax layer with integrated Multinomial Cross Entropy loss.
 
     Applies the softmax activation function on 'default' input and puts
@@ -28,7 +28,7 @@ def SoftmaxCE(size, name=None):
         This layer does not compute derivatives wrt the 'targets' input.
         It also does not use the deltas coming in from the 'probabilities'.
     """
-    return ConstructionWrapper.create('SoftmaxCE', size=size, name=name)
+    return ConstructionWrapper.create('SoftmaxCE', name=name)
 
 
 class SoftmaxCELayerImpl(Layer):

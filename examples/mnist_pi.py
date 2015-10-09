@@ -27,7 +27,7 @@ getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
-inp, out = bs.tools.get_in_out_layers_for_classification((1, 28, 28), 10)
+inp, fc = bs.tools.get_in_out_layers_for_classification((1, 28, 28), 10, fc_name='FC')
 network = bs.Network.from_layer(
     inp >>
     bs.layers.Dropout(drop_prob=0.2) >>
@@ -35,12 +35,12 @@ network = bs.Network.from_layer(
     bs.layers.Dropout(drop_prob=0.5) >>
     bs.layers.FullyConnected(1200, name='Hid2', activation='rel') >>
     bs.layers.Dropout(drop_prob=0.5) >>
-    out
+    fc
 )
 
 network.set_handler(PyCudaHandler(init_cudnn=False))
 network.initialize(bs.initializers.Gaussian(0.01))
-network.set_weight_modifiers({"Output": bs.value_modifiers.ConstrainL2Norm(1)})
+network.set_weight_modifiers({"FC": bs.value_modifiers.ConstrainL2Norm(1)})
 
 # ----------------------------- Set up Trainer ------------------------------ #
 
