@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
 
 def ClockworkLstmPeep(size, timing, activation='tanh', name=None):
@@ -14,7 +14,7 @@ def ClockworkLstmPeep(size, timing, activation='tanh', name=None):
                                       name=name,
                                       activation=activation)
 
-class ClockworkLstmPeepLayerImpl(BaseLayerImpl):
+class ClockworkLstmPeepLayerImpl(Layer):
     expected_kwargs = {'size', 'timing', 'activation'}
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
 
@@ -106,8 +106,8 @@ class ClockworkLstmPeepLayerImpl(BaseLayerImpl):
         activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'linear': (lambda x, y: self.handler.copy_to(x, y),
+                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 

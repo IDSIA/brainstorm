@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -17,7 +17,7 @@ def LstmPeephole(size, activation='tanh', name=None):
                                       activation=activation)
 
 
-class LstmPeepholeLayerImpl(BaseLayerImpl):
+class LstmPeepholeLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation'}
@@ -94,8 +94,8 @@ class LstmPeepholeLayerImpl(BaseLayerImpl):
         activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
+            'linear': (lambda x, y: self.handler.copy_to(x, y),
+                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
             'rel': (self.handler.rel, self.handler.rel_deriv)
         }
 
@@ -185,7 +185,7 @@ class LstmPeepholeLayerImpl(BaseLayerImpl):
         time_size, batch_size, in_size = x.shape
         for t in range(time_size - 1, -1, - 1):
             # Accumulate recurrent deltas
-            _h.copy_to(dy[t], deltas[t])
+            _h.copy_to(deltas[t], dy[t])
             _h.dot_add_mm(dIa[t + 1], Ri, dy[t], transb=True)
             _h.dot_add_mm(dFa[t + 1], Rf, dy[t], transb=True)
             _h.dot_add_mm(dOa[t + 1], Ro, dy[t], transb=True)

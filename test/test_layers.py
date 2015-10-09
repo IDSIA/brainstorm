@@ -236,7 +236,7 @@ def clockwork_rnn(spec):
                                   size=7,
                                   activation=spec['act_func'])
     spec['skip_parameters'] = ['timing']
-    spec['inits'] = {'timing': np.array([1, 1, 1, 1, 1, 1, 1])}
+    spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
 
