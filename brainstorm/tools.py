@@ -19,12 +19,20 @@ __all__ = ['get_in_out_layers_for_classification',
 def get_in_out_layers_for_classification(in_shape, nr_classes,
                                          data_name='default',
                                          targets_name='targets',
-                                         outlayer_name="Output",
+                                         fc_name=None,
+                                         out_name="Output",
                                          mask_name=None):
     """Prepare input and output layers for building a multi-class classifier.
 
     This is a helper function for quickly building a typical multi-class
-    classifier. The output layer is a ``Classification`` layer.
+    classifier. It returns an ``Input`` layer and a ``FullyConnected`` layer
+    which are already connected to other layers needed for this common case,
+
+    The returned ``FullyConnected`` layer is already connected to the output
+    layer (with the specified name) which is a ``SoftmaxCE`` layer.
+    The targets are already connected to the SoftmaxCE layer as well.
+    Finally, the ``loss`` output of the output layer is already connected to a
+    ``Loss`` layer to make the network trainable.
 
     Example:
         >>> from brainstorm import tools, Network, layers
@@ -39,8 +47,11 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
         targets_name (Optional[str]):
             Name of the ground-truth target data which will be provided by a
             data iterator. Defaults to 'targets'.
+        fclayer_name (Optional[str]):
+            Name for the fully connected layer which connects to the softmax
+            layer. If unspecified, it is set to outlayer_name + '_FC'.
         outlayer_name (Optional[str]):
-            Name for the output layer.
+            Name for the output layer. Defaults to 'Output'.
         mask_name (Optional[str]):
             Name of the mask data which will be provided by a data iterator.
             Defaults to None.
@@ -48,15 +59,17 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
             The mask is needed if error should be injected
             only at certain time steps (for sequential data).
     Returns:
-        tuple: An input and an output layer.
+        tuple: An ``Input`` and a ``FullyConnected`` layer.
     NOTE:
         This tool provides the output layer for `multi-class` classification,
         not `multi-label` classification.
     """
     if isinstance(in_shape, int):
         in_shape = (in_shape, )
-
-    out_layer = layers.SoftmaxCE(nr_classes, name=outlayer_name)
+    fc_name = out_name + '_FC' if fc_name is None else fc_name
+    fc_layer = layers.FullyConnected(nr_classes, name=fc_name)
+    out_layer = layers.SoftmaxCE(name=out_name)
+    fc_layer >> out_layer
 
     if mask_name is None:
         inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
@@ -72,7 +85,7 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
         out_layer - 'loss' >> mask_layer >> layers.Loss()
         inp_layer - mask_name >> 'mask' - mask_layer
 
-    return inp_layer, out_layer
+    return inp_layer, fc_layer
 
 
 def get_in_out_layers_for_regression(in_shape, nr_outputs,

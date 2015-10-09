@@ -9,7 +9,7 @@ import pytest
 from brainstorm import Network
 from brainstorm.data_iterators import Undivided
 from brainstorm.initializers import Gaussian
-from brainstorm.layers import SoftmaxCE, Input, Lstm, Recurrent
+from brainstorm.layers import SoftmaxCE, Input, Lstm, Recurrent, FullyConnected
 from brainstorm.training.utils import run_network
 
 from .helpers import HANDLER
@@ -92,9 +92,10 @@ def test_context_slice_allows_continuing_forward_pass(net_with_context):
 
 inp = Input(out_shapes={'default': ('T', 'B', 4),
                         'targets': ('T', 'B', 1)})
-out = SoftmaxCE(2, name='Output')
+hid = FullyConnected(2, name="Hid")
+out = SoftmaxCE(name='Output')
 (inp - 'targets' >> 'targets' - out)
-simple_net = Network.from_layer(inp >> out)
+simple_net = Network.from_layer(inp >> hid >> out)
 
 
 def test_forward_pass_with_missing_data():
