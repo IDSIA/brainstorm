@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
 import pytest
+
 from brainstorm import Network, Trainer
 from brainstorm.data_iterators import Undivided
-from brainstorm.training import SgdStep
+from brainstorm.hooks import StopAfterEpoch
 from brainstorm.initializers import Gaussian
 from brainstorm.layers import *
-from brainstorm.hooks import StopAfterEpoch
+from brainstorm.training import SgdStep
+
+
 # from brainstorm.handlers.pycuda_handler import PyCudaHandler
 
 
@@ -26,7 +30,7 @@ def test_learn_xor_function():
      Loss())
 
     net = Network.from_layer(inp - 'targets' >> 'targets' - error_func)
-    # net.set_memory_handler(PyCudaHandler())
+    # net.set_handler(PyCudaHandler())
     net.initialize(Gaussian(1.0), seed=42)  # high weight-init needed
     # print(net.buffer.parameters)
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
-from brainstorm.utils import ValidationError, ShapeValidationError
+
+from brainstorm.utils import ShapeValidationError, ValidationError
 
 
 class StructureTemplate(object):

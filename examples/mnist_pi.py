@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
+import os
+
 import h5py
 
 import brainstorm as bs
-from brainstorm.handlers import PyCudaHandler
 from brainstorm.data_iterators import Minibatches
-import os
+from brainstorm.handlers import PyCudaHandler
 
 bs.global_rnd.set_seed(42)
 
@@ -36,7 +38,7 @@ network = bs.Network.from_layer(
     out
 )
 
-network.set_memory_handler(PyCudaHandler(init_cudnn=False))
+network.set_handler(PyCudaHandler(init_cudnn=False))
 network.initialize(bs.initializers.Gaussian(0.01))
 network.set_weight_modifiers({"Output": bs.value_modifiers.ConstrainL2Norm(1)})
 

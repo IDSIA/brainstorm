@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
 import numpy as np
+
 from brainstorm.describable import Describable
 
 
@@ -66,7 +69,7 @@ class Accuracy(Scorer):
     def __call__(self, true_labels, predicted, mask=None):
         if predicted.shape[1] > 1:
             predicted = predicted.argmax(1).reshape(-1, 1)
-        correct = predicted == true_labels
+        correct = (predicted == true_labels).astype(np.float)
         if mask is not None:
             correct *= mask
         return np.sum(correct)
@@ -79,7 +82,8 @@ class Hamming(Scorer):
         self.threshold = threshold
 
     def __call__(self, true_labels, predicted, mask=None):
-        correct = np.logical_xor(predicted < self.threshold, true_labels)
+        correct = np.logical_xor(predicted < self.threshold,
+                                 true_labels).astype(np.float)
         if mask is not None:
             correct *= mask
         return np.sum(correct) / true_labels.shape[1]

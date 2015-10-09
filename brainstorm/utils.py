@@ -2,10 +2,12 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from datetime import datetime
+
 import math
-import numpy as np
 import re
+from datetime import datetime
+
+import numpy as np
 
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 
@@ -102,17 +104,24 @@ def get_by_path(d, path):
 
     For example, 'foo.bar.baz' would return d['foo']['bar']['baz'].
 
-    :param d: (nested) dictionary
-    :type d: dict
-    :param path: path to access the dictionary
-    :type path: str
-    :return: object
+    Args:
+        d (dict):
+            (nested) dictionary
+        path (str):
+            path to access the dictionary
+
+    Returns:
+        the value corresponding to d[p1][p2]...
+
+    Raises:
+        KeyError:
+            if any key along the path was not found.
     """
     try:
         for p in path.split('.'):
             d = d[p]
     except KeyError:
-        print('Did not find log `{}`. Available logs are {}'.format(
+        print('Did not find entry `{}`. Available entries are {}'.format(
             path, flatten_keys(d)))
         raise
     return d
@@ -159,12 +168,15 @@ def flatten_keys(dictionary):
     Flattens the keys for a nested dictionary using dot notation. This
     returns all the keys which can be accessed via `get_by_path`.
 
-    For example, {'a': None, 'b': {'x': None}} would return ['a', 'b.x']
+    Example:
+        For example, {'a': None, 'b': {'x': None}} would return ['a', 'b.x']
 
-    :param dictionary: A dictionary which should be flattened.
-    :type dictionary: dict
-    :return: list of flattened keys
-    :rtype: list[unicode]
+    Args:
+        dictionary (dict):
+            A dictionary which should be flattened.
+
+    Returns:
+        list[str]: list of flattened keys
     """
     if not isinstance(dictionary, dict):
         return []

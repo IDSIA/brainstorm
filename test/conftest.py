@@ -4,8 +4,8 @@ from __future__ import division, print_function, unicode_literals
 
 import pytest
 
-from brainstorm.structure.architecture import (
-    instantiate_layers_from_architecture)
+from brainstorm.structure.architecture import \
+    instantiate_layers_from_architecture
 
 
 def pytest_addoption(parser):

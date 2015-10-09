@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
 import pytest
-from brainstorm.data_iterators import (
-    Undivided, Minibatches, AddGaussianNoise, Pad, Flip, RandomCrop)
+
+from brainstorm.data_iterators import (AddGaussianNoise, Flip, Minibatches,
+                                       Pad, RandomCrop, Undivided)
+from brainstorm.handlers import default_handler
 from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.utils import IteratorValidationError
-from brainstorm.handlers import default_handler
-
 
 # ######################### Nested Iterators ##################################
 

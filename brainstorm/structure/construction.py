@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import six
+
 from brainstorm.uniquely_named import UniquelyNamed
-from brainstorm.utils import (
-    NetworkValidationError, is_valid_layer_name)
+from brainstorm.utils import NetworkValidationError, is_valid_layer_name
 
 
 class LayerDetails(UniquelyNamed):

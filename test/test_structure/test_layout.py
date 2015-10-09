@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
 import pytest
 
-from brainstorm.structure.layout import (
-    create_layout_stub, get_order, get_parameter_order,
-    get_forced_orders, get_connections, merge_connections, get_forward_closure,
-    create_layout, gather_array_nodes, Hub, get_all_sources)
+from brainstorm.structure.layout import (Hub, create_layout,
+                                         create_layout_stub,
+                                         gather_array_nodes, get_all_sources,
+                                         get_connections, get_forced_orders,
+                                         get_forward_closure, get_order,
+                                         get_parameter_order,
+                                         merge_connections)
 
 
 def test_get_order():

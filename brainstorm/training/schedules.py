@@ -23,7 +23,9 @@ Some common schedulers are provided for convenience.
 """
 
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
+
 from brainstorm.describable import Describable
 
 
@@ -42,14 +44,14 @@ class Linear(Describable):
 
     def __init__(self, initial_value, final_value, num_changes):
         """
-
-        :param initial_value: Value returned before the first change.
-        :type initial_value: float
-        :param final_value: Value returned after the last change.
-        :type final_value: float
-        :param num_changes: Total number of changes to be made according to a
-                            linear schedule.
-        :type num_changes: int
+        Args:
+            initial_value (float):
+                Value returned before the first change.
+            final_value (float):
+                Value returned after the last change.
+            num_changes (int):
+                Total number of changes to be made according to a
+                linear schedule.
         """
         self.initial_value = initial_value
         self.final_value = final_value
@@ -83,15 +85,15 @@ class Exponential(Describable):
 
     def __init__(self, initial_value, factor, minimum=-np.Inf, maximum=np.Inf):
         """
-
-        :param initial_value: Initial value of the parameter
-        :type initial_value: float
-        :param factor: Multiplication factor.
-        :type factor: float
-        :param minimum: Lower bound of the quantity.
-        :type minimum: float
-        :param maximum: Upper bound of the quantity.
-        :type maximum: float
+        Args:
+            initial_value (float):
+                Initial value of the parameter
+            factor (float):
+                Multiplication factor.
+            minimum (float):
+                Lower bound of the quantity.
+            maximum (float):
+                Upper bound of the quantity.
         """
         self.initial_value = initial_value
         self.factor = factor
@@ -119,14 +121,13 @@ class MultiStep(Describable):
 
     def __init__(self, initial_value, steps, values):
         """
-
-        :param initial_value: Initial value of the parameter
-        :type initial_value: float
-        :param steps: List of update/epoch numbers at which the values are
-                      switched.
-        :type steps: list[int]
-        :param values: List of values to set after specified update numbers.
-        :type values: list[float]
+        Args:
+            initial_value (float):
+                Initial value of the parameter
+            steps (list[int]):
+                List of update/epoch numbers at which the values are switched.
+            values (list[float]):
+                List of values to set after specified update numbers.
         """
         assert len(steps) == len(values)
         self.initial_value = initial_value

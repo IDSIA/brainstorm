@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers import PyCudaHandler
+
+import os
+
+import h5py
+
 import brainstorm as bs
 from brainstorm.data_iterators import Minibatches
+from brainstorm.handlers import PyCudaHandler
 from brainstorm.initializers import Gaussian
-import h5py
-import os
+
 bs.global_rnd.set_seed(42)
 
 # ----------------------------- Set up Iterators ---------------------------- #
@@ -35,7 +39,7 @@ inp, out = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
     out)
 
 network = bs.Network.from_layer(out)
-network.set_memory_handler(PyCudaHandler())
+network.set_handler(PyCudaHandler())
 network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
                     'FC': {'W': Gaussian(0.1), 'bias': 0},
                     'Output': {'W': Gaussian(0.1), 'bias': 0}})

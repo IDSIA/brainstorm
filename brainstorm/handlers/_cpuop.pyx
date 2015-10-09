@@ -204,22 +204,21 @@ def _crop_images(DTYPE_t[:, :, :, :, ::1] inputs not None,
                 np.int_t[:] col_indices,
                 DTYPE_t[:, :, :, :, ::1] outputs not None):
     """
-
-    :param inputs: 5 dimensional Numpy array
-    :type inputs: numpy.ndarray[ndim=5]
-    :param height: height of output crop
-    :type height: int
-    :param width: width of output crop
-    :type width: int
-    :param row_indices: 1D Numpy array containing location of top-left row
-    positions with inputs.shape[1] elements (one for each item in batch)
-    :type row_indices: numpy.ndarray[ndim=1]
-    :param col_indices: 1D Numpy array containing location of top-left column
-    positions with inputs.shape[1] elements (one for each item in batch)
-    :type col_indices: numpy.ndarray[ndim=1]
-    :param outputs: 5 dimensional Numpy array
-    :type outputs: numpy.ndarray[ndim=5]
-    :return: None
+    Args:
+        inputs (numpy.ndarray[ndim=5]):
+            5 dimensional Numpy array
+        height (int):
+            height of output crop
+        width (int):
+            width of output crop
+        row_indices (numpy.ndarray[ndim=1]):
+            1D Numpy array containing location of top-left row positions
+            with inputs.shape[1] elements (one for each item in batch)
+        col_indices (numpy.ndarray[ndim=1]):
+            1D Numpy array containing location of top-left column positions
+            with inputs.shape[1] elements (one for each item in batch)
+        outputs (numpy.ndarray[ndim=5]):
+            5 dimensional Numpy array
     """
     cdef int batch_size = row_indices.shape[0]
     cdef int time_steps = inputs.shape[0]

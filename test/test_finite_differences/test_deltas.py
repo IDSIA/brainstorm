@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-import pytest
+
 import numpy as np
+import pytest
+
 from brainstorm.handlers import NumpyHandler
+from brainstorm.initializers import Gaussian
 from brainstorm.randomness import global_rnd
 from brainstorm.structure.network import Network
-from brainstorm.initializers import Gaussian
+
 from ..helpers import approx_fprime
 
 
@@ -44,7 +47,7 @@ architectures = [{
 @pytest.fixture(scope='module', params=architectures)
 def net(request):
     n = Network.from_architecture(request.param)
-    n.set_memory_handler(NumpyHandler(dtype=np.float64))
+    n.set_handler(NumpyHandler(dtype=np.float64))
     n.initialize(Gaussian(1), seed=235)
     return n
 

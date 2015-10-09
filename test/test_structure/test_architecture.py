@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import pytest
-from brainstorm.structure.architecture import combine_buffer_structures, \
-    validate_architecture, get_canonical_layer_order
-from brainstorm.utils import NetworkValidationError
+
+from brainstorm.structure.architecture import (combine_buffer_structures,
+                                               get_canonical_layer_order,
+                                               validate_architecture)
 from brainstorm.structure.buffer_structure import BufferStructure
+from brainstorm.utils import NetworkValidationError
 
 
 def test_validate_architecture_minimal():

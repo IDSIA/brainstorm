@@ -2,15 +2,15 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 
-from collections import OrderedDict
 import itertools
+from collections import OrderedDict
 
 import numpy as np
 
 from brainstorm.structure.buffer_structure import BufferStructure
-from brainstorm.utils import (NetworkValidationError, flatten,
-                              convert_to_nested_indices, sort_by_index_key,
-                              get_normalized_path)
+from brainstorm.utils import (NetworkValidationError,
+                              convert_to_nested_indices, flatten,
+                              get_normalized_path, sort_by_index_key)
 
 
 class Hub(object):
@@ -63,8 +63,12 @@ class Hub(object):
     def set_up_connection_table(self, connections):
         """
         Construct a source/sink connection table from a list of connections.
-        :type connections: list[tuple[object, object]]
-        :rtype: np.ndarray
+        Args:
+            connections (list[tuple]):
+                list of connections
+        Returns:
+            np.ndarray:
+                connection table
         """
         # set up connection table
         self.connection_table = np.zeros((len(self.flat_sources), len(self.sinks)))
@@ -101,15 +105,13 @@ class Hub(object):
         This means checking if in every column of the table all the ones form a
         connected block.
 
-        Parameters
-        ----------
-        connection_table : array_like
-            2d array of zeros and ones representing the connectivity between
-            inputs and outputs of a hub.
+        Args:
+            connection_table (array_like):
+                2d array of zeros and ones representing the connectivity between
+                inputs and outputs of a hub.
 
-        Returns
-        -------
-        bool
+        Returns:
+            bool
         """
         padded = np.zeros((connection_table.shape[0] + 2,
                            connection_table.shape[1]))
@@ -404,14 +406,19 @@ def get_forward_closure(node, connections):
       - the source_set contains all the connection starts for nodes from the
         sink_set
 
-    :param node: The node to start the forward closure from.
-    :param connections: list of nodes
-    :type connections: list
-    :return: A tuple (source_set, sink_set) where source_set is set of
-        nodes containing the initial node and all nodes connecting to nodes
-        in the sink_set. And sink_set is a set of nodes containing all
-        nodes receiving connections from any of the nodes from the source_set.
-    :rtype: (set, set)
+    Args:
+        node (str):
+            The node to start the forward closure from.
+        connections (list[(str, str)]):
+            list of connections (start_node, end_node)
+
+    Returns:
+        (set, set):
+            A tuple (source_set, sink_set) where source_set is set of
+            nodes containing the initial node and all nodes connecting to nodes
+            in the sink_set. And sink_set is a set of nodes containing all
+            nodes receiving connections from any of the nodes from the
+            source_set.
     """
     source_set = {node}
     sink_set = {end for start, end in connections if start in source_set}

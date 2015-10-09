@@ -21,9 +21,12 @@ containing the ``'@type': 'ClassName'`` key possibly along with other
 properties.
 """
 from __future__ import division, print_function, unicode_literals
+
+from copy import deepcopy
+
 import numpy as np
 import six
-from copy import deepcopy
+
 from brainstorm.utils import get_inheritors
 
 
@@ -66,8 +69,8 @@ class Describable(object):
         If a sub-class of Describable contains non-describable members, it has
         to override this method to specify how it should be described.
 
-        :return: Description of this object
-        :rtype: dict
+        Returns:
+            dict: Description of this object
         """
         description = {}
         ignorelist = self.__get_all_undescribed__()
@@ -96,9 +99,12 @@ class Describable(object):
         to override this method to specify how they should be initialized from
         their description.
 
-        :param description: description of this object
-        :type description: dict
-        :return: A new instance of this class according to the description.
+        Args:
+            description (dict):
+                description of this object
+
+        Returns:
+            A new instance of this class according to the description.
         """
         assert cls.__name__ == description['@type'], \
             "Description for '{}' has wrong type '{}'".format(
@@ -123,6 +129,13 @@ class Describable(object):
         """
         Subclasses can override this to provide additional initialization when
         created from a description.
+
+        This method will be called AFTER the object has already been created
+        from the description.
+
+        Args:
+            description (dict):
+                the description of this object
         """
         pass
 
@@ -152,10 +165,12 @@ def get_description(this):
     This description can be used to create a new instance of this object by
     calling :func:`create_from_description`.
 
-    :param this: An object to be described. Must either be a basic datatype
-                 or inherit from Describable.
-    :type this: Describable
-    :return: A JSON-serializable description of this object.
+    Args:
+        this (Describable):
+            An object to be described. Must either be a basic datatype
+            or inherit from Describable.
+    Returns:
+        A JSON-serializable description of this object.
     """
     if isinstance(this, Describable):
         return this.__describe__()
@@ -192,9 +207,12 @@ def create_from_description(description):
     """
     Instantiate a new object from a description.
 
-    :param description: A description of the object.
-    :type description: dict
-    :return: A new instance of the described object
+    Args:
+        description (dict):
+            A description of the object.
+
+    Returns:
+        A new instance of the described object
     """
     if isinstance(description, dict):
         if '@type' in description:

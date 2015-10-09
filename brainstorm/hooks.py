@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import OrderedDict
+
 import math
+import signal
 import sys
+from collections import OrderedDict
+
 import h5py
 import numpy as np
 from six import string_types
-from brainstorm.structure.network import Network
+
 from brainstorm.describable import Describable
-from brainstorm.utils import get_by_path, progress_bar
+from brainstorm.structure.network import Network
 from brainstorm.tools import evaluate
+from brainstorm.utils import get_by_path, progress_bar
 
 
 class Hook(Describable):
@@ -421,22 +425,51 @@ class MonitorScores(Hook):
         return evaluate(net, self.iter, self.scorers)
 
 
+class StopOnSigQuit(Hook):
+    """
+    Stops training the next possible moment if it received a SIGQUIT (Ctrl + \)
+    """
+    __undescribed__ = {'quit': False}
+
+    def __init__(self, name=None, timescale='epoch', interval=1, verbose=None):
+        super(StopOnSigQuit, self).__init__(name, timescale, interval,
+                                            verbose=verbose)
+        self.quit = False
+
+    def start(self, net, stepper, verbose, named_data_iters):
+        super(StopOnSigQuit, self).start(net, stepper, verbose,
+                                         named_data_iters)
+        self.quit = False
+        signal.signal(signal.SIGQUIT, self.receive_signal)
+
+    def receive_signal(self, signum, stack):
+        print('Interrupting')
+        self.quit = True
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if self.quit:
+            raise StopIteration('Received SIGQUIT signal.')
+
+
 class VisualiseAccuracy(Hook):
     """
     Visualises the accuracy using the bokeh.plotting library.
 
-    By default the output saved as a .html file, however a display can be enabled
+    By default the output saved as a .html file, however a display can be
+    enabled
 
-    Parameters
-    ----------
-    log_names : list, array, or dict
-        Contains the name of the accuracies recorded by the accuracy monitors.
-        Input should be of the form <monitorname>.accuracy
-    filename : str
-        The location to which the .html file containing the accuracy plot should be saved
+    Args:
+        log_names (list, array, or dict):
+            Contains the name of the accuracies recorded by the accuracy
+            monitors. Input should be of the form <monitorname>.accuracy
+    filename (str):
+        The location to which the .html file containing the accuracy plot
+        should be saved
     """
-    def __init__(self, log_names, filename, timescale='epoch', interval=1, name=None, verbose=None):
-        super(VisualiseAccuracy, self).__init__(name, timescale, interval, verbose)
+    def __init__(self, log_names, filename, timescale='epoch', interval=1,
+                 name=None, verbose=None):
+        super(VisualiseAccuracy, self).__init__(name, timescale, interval,
+                                                verbose)
 
         self.log_names = log_names
         self.filename = filename
@@ -446,11 +479,14 @@ class VisualiseAccuracy(Hook):
 
             self.bk = bk
             self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset"
-            self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua', 'gray']
+            self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua',
+                           'gray']
 
             self.bk.output_server("Accuracy Monitor")
-            self.fig = self.bk.figure(title="Accuracy Monitor", x_axis_label=self.timescale, y_axis_label='accuracy',
-                            tools=self.TOOLS, x_range=(0, 10), y_range=(0, 1))
+            self.fig = self.bk.figure(
+                title="Accuracy Monitor", x_axis_label=self.timescale,
+                y_axis_label='accuracy', tools=self.TOOLS,
+                x_range=(0, 10), y_range=(0, 1))
 
         except ImportError:
             print("bokeh is required for drawing networks but was not found.")
@@ -460,11 +496,13 @@ class VisualiseAccuracy(Hook):
 
         # create empty line objects
         for log_name in self.log_names:
-            self.fig.line([], [], legend=log_name, line_width=2, color=self.colors[count], name=log_name)
+            self.fig.line([], [], legend=log_name, line_width=2,
+                          color=self.colors[count], name=log_name)
             count += 1
 
         self.bk.show(self.fig)
-        self.bk.output_file(self.filename + ".html", title="Accuracy Monitor", mode="cdn")
+        self.bk.output_file(self.filename + ".html", title="Accuracy Monitor",
+                            mode="cdn")
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         count = 0

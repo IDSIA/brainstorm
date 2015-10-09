@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.handlers.base_handler import Handler
+
 import numpy as np
+
+from brainstorm.handlers.base_handler import Handler
 
 
 # ############################## Debug Array ################################ #
@@ -117,6 +119,11 @@ class DebugHandler(Handler):
         return self.handler.is_fully_finite(a.array)
 
     # ----------------------- Mathematical operations ----------------------- #
+
+    def abs_t(self, a, out):
+        assert_debug_arrays(a, out)
+        assert_shapes_equal(a, out)
+        self.handler.abs_t(a.array, out.array)
 
     @check_for_inf_or_nan
     def add_mv(self, m, v, out):

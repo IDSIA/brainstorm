@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
-from brainstorm.structure.construction import ConstructionWrapper
+
 from brainstorm.layers.base_layer import BaseLayerImpl
-from brainstorm.structure.buffer_structure import (StructureTemplate,
-                                                   BufferStructure)
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
+from brainstorm.structure.construction import ConstructionWrapper
 
 
 def LstmOpt(size, activation='tanh', name=None):

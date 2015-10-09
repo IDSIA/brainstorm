@@ -2,11 +2,14 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
+
 import itertools
+
 import numpy as np
 import pytest
-from brainstorm.optional import has_pycuda, has_cudnn, has_nervanagpu
+
 from brainstorm.handlers import NumpyHandler
+from brainstorm.optional import has_cudnn, has_pycuda
 
 non_default_handlers = []
 handler_ids = []
@@ -286,6 +289,16 @@ def test_log_t(handler):
         out = np.zeros_like(a, dtype=ref_dtype)
         ref_args = (a, out)
         assert operation_check(handler, 'log_t', ref_args)
+
+
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_abs_t(handler):
+    list_a = get_random_arrays(some_nd_shapes)
+
+    for a in list_a:
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, out)
+        assert operation_check(handler, 'abs_t', ref_args)
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)

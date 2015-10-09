@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict, namedtuple
 from copy import copy
+
 from six import string_types
+
+from brainstorm.layers.base_layer import get_layer_class_from_typename
 from brainstorm.structure.buffer_structure import combine_buffer_structures
 from brainstorm.structure.construction import ConstructionWrapper
-
-from brainstorm.utils import (NetworkValidationError,
-                              is_valid_layer_name, get_normalized_path)
-from brainstorm.layers.base_layer import get_layer_class_from_typename
-
+from brainstorm.utils import (NetworkValidationError, get_normalized_path,
+                              is_valid_layer_name)
 
 ConnectionBase = namedtuple('ConnectionBase',
                             ['start_layer', 'output_name',

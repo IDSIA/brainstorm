@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-import pytest
-from brainstorm.handlers.debug_handler import DebugArray
+
 import numpy as np
+import pytest
+
+from brainstorm.handlers.debug_handler import DebugArray
 
 
 @pytest.fixture

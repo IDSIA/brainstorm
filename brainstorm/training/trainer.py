@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import OrderedDict
+
 import sys
 import traceback
+from collections import OrderedDict
+
 from brainstorm.describable import Describable
+from brainstorm.scorers import (aggregate_losses_and_scores,
+                                gather_losses_and_scores)
 from brainstorm.training.utils import run_network, run_network_double_buffer
-from brainstorm.scorers import (
-    gather_losses_and_scores, aggregate_losses_and_scores)
 
 
 class Trainer(Describable):

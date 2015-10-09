@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 from collections import OrderedDict
+
+from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
-from brainstorm.layers.base_layer import BaseLayerImpl
-from brainstorm.structure.buffer_structure import (StructureTemplate,
-                                                   BufferStructure)
 
 
-def Rnn(size, activation='tanh', name=None):
+def Recurrent(size, activation='tanh', name=None):
     """Create a Simple Recurrent layer."""
-    return ConstructionWrapper.create('Rnn', size=size, name=name,
+    return ConstructionWrapper.create('Recurrent', size=size, name=name,
                                       activation=activation)
 
 
-class RnnLayerImpl(BaseLayerImpl):
+class RecurrentLayerImpl(BaseLayerImpl):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation'}
@@ -47,7 +49,7 @@ class RnnLayerImpl(BaseLayerImpl):
         return outputs, parameters, internals
 
     def set_handler(self, new_handler):
-        super(RnnLayerImpl, self).set_handler(new_handler)
+        super(RecurrentLayerImpl, self).set_handler(new_handler)
 
         # Assign act_func and act_dunc_derivs
         activations = {

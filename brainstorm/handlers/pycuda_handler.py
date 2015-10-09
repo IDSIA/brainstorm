@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function
+
 import numpy as np
 import pycuda
-from pycuda import gpuarray, cumath
-from pycuda.elementwise import ElementwiseKernel
-from pycuda.compiler import SourceModule
-from pycuda.curandom import XORWOWRandomNumberGenerator
 import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
+from pycuda import cumath, gpuarray
+from pycuda.compiler import SourceModule
+from pycuda.curandom import XORWOWRandomNumberGenerator
+from pycuda.elementwise import ElementwiseKernel
+
 from brainstorm.handlers.base_handler import Handler
-from brainstorm.randomness import global_rnd
 from brainstorm.optional import has_cudnn
+from brainstorm.randomness import global_rnd
+
 culinalg.init()
 
 if has_cudnn:
@@ -103,6 +106,9 @@ class PyCudaHandler(Handler):
         return np.all(temp.get())
 
     # ----------------------- Mathematical operations ----------------------- #
+
+    def abs_t(self, a, out):
+        cumath.fabs(a, out=out)
 
     def add_mv(self, m, v, out):
         cumisc.add_matvec(m, v, out=out)
@@ -304,8 +310,8 @@ class PyCudaHandler(Handler):
         self._pool2d_forward_batch(inputs, window, outputs, padding,
                                    stride, argmax, pool_mode)
 
-    def mult_add_st(self, a, b, out):
-        mult_add_st_kernel(a, b, out)
+    def mult_add_st(self, s, t, out):
+        mult_add_st_kernel(s, t, out)
 
     def mult_add_tt(self, a, b, out):
         mult_add_kernel(a, b, out)
@@ -316,8 +322,8 @@ class PyCudaHandler(Handler):
         else:
             cumisc.mult_matvec(m, v, out=out)
 
-    def mult_st(self, a, b, out):
-        mult_st_kernel(a, b, out)
+    def mult_st(self, s, t, out):
+        mult_st_kernel(s, t, out)
 
     def mult_tt(self, a, b, out):
         mult_tt_kernel(a, b, out)
@@ -535,7 +541,7 @@ sigmoid_deriv_kernel = ElementwiseKernel(
 
 sigmoid_kernel = ElementwiseKernel(
     "float* x, float* y",
-    "y[i] = 1.0/(1.0 + exp(-1*x[i]))",
+    "y[i] = (x[i]>=0) ? 1.0/(1.0 + exp(-1.0*x[i])) : exp(1.0*x[i])/(1.0 + exp(1.0*x[i]))",
     "sigmoid_kernel"
 )
 

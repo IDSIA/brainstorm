@@ -2,13 +2,16 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-from brainstorm import Network
-from brainstorm.initializers import Gaussian
-from brainstorm.layers import Input, Rnn, Lstm, Classification
-from brainstorm.training.utils import run_network
-from brainstorm.data_iterators import Undivided
+
 import numpy as np
 import pytest
+
+from brainstorm import Network
+from brainstorm.data_iterators import Undivided
+from brainstorm.initializers import Gaussian
+from brainstorm.layers import Classification, Input, Lstm, Recurrent
+from brainstorm.training.utils import run_network
+
 from .helpers import HANDLER
 
 np.random.seed(1234)
@@ -18,7 +21,7 @@ NO_CON = set()
 
 def simple_recurrent_net():
     inp = Input(out_shapes={'default': ('T', 'B', 2)})
-    net = Network.from_layer(inp >> Rnn(3, name='out'))
+    net = Network.from_layer(inp >> Recurrent(3, name='out'))
     return net
 
 
@@ -44,7 +47,7 @@ def net_with_context(request):
 
 def test_context_slice_allows_continuing_forward_pass(net_with_context):
     net = net_with_context
-    net.set_memory_handler(HANDLER)
+    net.set_handler(HANDLER)
     net.initialize(Gaussian(0.1), seed=1234)
     all_data = np.random.randn(4, 1, 2)
 

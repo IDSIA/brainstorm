@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.utils import get_inheritors, LayerValidationError, get_by_path
+
+from collections import OrderedDict
+
+from brainstorm.utils import LayerValidationError, get_by_path, get_inheritors
 
 
 def get_layer_class_from_typename(typename):
@@ -43,8 +46,12 @@ class BaseLayerImpl(object):
         self.kwargs = kwargs
         """ Additional options or hyperparameters for this layer"""
 
-        self.in_shapes = in_shapes
+        self.in_shapes = OrderedDict()
         """ Dictionary of `BufferStructure`s for each input. """
+
+        # make sure in_shapes are an ordered dict
+        for key in sorted(in_shapes.keys()):
+            self.in_shapes[key] = in_shapes[key]
 
         self.incoming = incoming_connections
         """ List of incoming connections """

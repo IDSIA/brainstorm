@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
 import numpy as np
+
+from brainstorm.handlers import _cpuop
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
-from brainstorm.handlers import _cpuop
 
 
 # noinspection PyMethodMayBeStatic
@@ -65,6 +67,9 @@ class NumpyHandler(Handler):
 
     # ----------------------- Mathematical operations ----------------------- #
 
+    def abs_t(self, a, out):
+        np.abs(a, out=out)
+
     def add_mv(self, m, v, out):
         out[:] = m + v
 
@@ -103,7 +108,8 @@ class NumpyHandler(Handler):
                               bias_deltas):
         if stride != (1, 1):
             raise NotImplementedError("Strides > 1 for ConvolutionLayer2D are "
-                                      "not supported yet.")
+                                      "not supported yet. (was {})"
+                                      .format(stride))
         num_filters = weights.shape[0]
         num_images, num_input_maps, input_rows, input_cols = inputs.shape
         _, num_output_maps, output_rows, output_cols = out_deltas.shape
@@ -281,8 +287,8 @@ class NumpyHandler(Handler):
         _cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
 
-    def mult_add_st(self, a, b, out):
-        out[:] += a * b
+    def mult_add_st(self, s, t, out):
+        out[:] += s * t
 
     def mult_add_tt(self, a, b, out):
         out[:] += a * b
@@ -290,8 +296,8 @@ class NumpyHandler(Handler):
     def mult_mv(self, m, v, out):
         out[:] = m * v
 
-    def mult_st(self, a, b, out):
-        np.multiply(a, b, out)
+    def mult_st(self, s, t, out):
+        np.multiply(s, t, out)
 
     def mult_tt(self, a, b, out):
         np.multiply(a, b, out)
@@ -325,7 +331,10 @@ class NumpyHandler(Handler):
         dx[:] = dy * (y > 0)
 
     def sigmoid(self, x, y):
-        y[:] = 1. / (1. + np.exp(-x))
+        indices = x >= 0
+        y[indices] = 1. / (1. + np.exp(-x[indices]))
+        indices = x < 0
+        y[indices] = np.exp(x[indices]) / (1. + np.exp(x[indices]))
 
     def sigmoid_deriv(self, x, y, dy, dx):
         dx[:] = dy * y * (1. - y)

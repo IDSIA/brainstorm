@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from brainstorm.describable import Describable
+
 import abc
+
 import six
+
+from brainstorm.describable import Describable
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -141,6 +144,18 @@ class Handler(Describable):
         """
 
     # ----------------------- Mathematical operations ----------------------- #
+
+    @abc.abstractmethod
+    def abs_t(self, a, out):
+        """Compute the element-wise absolute value.
+
+        Args:
+            a (array_type): Array whose absolute values are to be computed.
+            out (array_type): Array into which the output is placed. Must
+                              have the same shape as :attr:`a`.
+        Returns:
+            None
+        """
 
     @abc.abstractmethod
     def add_mv(self, m, v, out):
@@ -489,7 +504,7 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def mult_add_st(self, a, b, out):
+    def mult_add_st(self, s, t, out):
         """Multiply a scalar with each element of a tensor and add to a tensor.
 
         Args:
@@ -500,7 +515,6 @@ class Handler(Describable):
         Returns:
             None
         """
-        out[:] += a * b
 
     @abc.abstractmethod
     def mult_add_tt(self, a, b, out):
@@ -536,7 +550,7 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def mult_st(self, a, b, out):
+    def mult_st(self, s, t, out):
         """Multiply a scalar with each element of a tensor.
 
         Args:

@@ -1,27 +1,28 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-from collections import OrderedDict
-import numpy as np
-import h5py
+
 import json
 import re
+from collections import OrderedDict
 
-from brainstorm.structure.architecture import (
-    instantiate_layers_from_architecture)
+import h5py
+import numpy as np
+
+from brainstorm.describable import create_from_description, get_description
+from brainstorm.handlers import default_handler
+from brainstorm.initializers import ArrayInitializer, evaluate_initializer
+from brainstorm.layers.loss_layer import LossLayerImpl
+from brainstorm.randomness import Seedable
+from brainstorm.structure.architecture import (generate_architecture,
+                                               instantiate_layers_from_architecture)
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
-from brainstorm.structure.view_references import (resolve_references,
+from brainstorm.structure.view_references import (order_and_copy_modifiers,
                                                   prune_view_references,
-                                                  order_and_copy_modifiers)
-from brainstorm.initializers import evaluate_initializer, ArrayInitializer
-from brainstorm.randomness import Seedable
-from brainstorm.structure.architecture import generate_architecture
-from brainstorm.handlers import default_handler
+                                                  resolve_references)
 from brainstorm.utils import NetworkValidationError
-from brainstorm.layers.loss_layer import LossLayerImpl
-from brainstorm.describable import get_description, create_from_description
 from brainstorm.value_modifiers import GradientModifier
 
 __all__ = ['Network']
@@ -38,11 +39,13 @@ class Network(Seedable):
         """
         Create Network instance from a construction layer.
 
-        :param some_layer: Some layer used to wire up an architecture with `>>`
-        :type some_layer: brainstorm.construction.ConstructionWrapper
+        Args:
+            some_layer (brainstorm.construction.ConstructionWrapper):
+                Some layer used to wire up an architecture with `>>`
 
-        :returns: A fully functional Network instance.
-        :rtype: brainstorm.structure.Network
+        Returns:
+            brainstorm.structure.Network:
+                A fully functional Network instance.
         """
         arch = generate_architecture(some_layer)
         return cls.from_architecture(arch)
@@ -52,11 +55,12 @@ class Network(Seedable):
         """
         Create Network instance from given architecture.
 
-        :param architecture: JSON serializable Architecture description.
-        :type architecture: dict
-
-        :returns: A fully functional Network instance.
-        :rtype: brainstorm.structure.Network
+        Args:
+            architecture (dict):
+                JSON serializable Architecture description.
+        Returns:
+            brainstorm.structure.Network:
+                A fully functional Network instance.
         """
         layers = instantiate_layers_from_architecture(architecture)
         hubs, layout = create_layout(layers)
@@ -66,12 +70,13 @@ class Network(Seedable):
     @classmethod
     def __new_from_description__(cls, description):
         net = Network.from_architecture(description['architecture'])
-        net.set_memory_handler(create_from_description(description['handler']))
+        net.set_handler(create_from_description(description['handler']))
         net.initialize(create_from_description(description['initializers']))
         net.set_gradient_modifiers(
             create_from_description(description['gradient_modifiers']))
         net.set_weight_modifiers(
             create_from_description(description['weight_modifiers']))
+        net.default_output = description.get('default_output')
         return net
 
     @classmethod
@@ -92,7 +97,7 @@ class Network(Seedable):
         self.buffer = self._buffer_manager.views
         self.architecture = architecture
         self.handler = None
-        self.set_memory_handler(handler)
+        self.set_handler(handler)
         self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
@@ -314,9 +319,9 @@ class Network(Seedable):
         self.gradient_modifiers = order_and_copy_modifiers(gradient_mods)
         # TODO: Check that all are ValueModifiers or GradientModifiers
 
-    def set_memory_handler(self, new_handler):
+    def set_handler(self, new_handler):
         self.handler = new_handler
-        self._buffer_manager.set_memory_handler(new_handler)
+        self._buffer_manager.set_handler(new_handler)
         self.buffer = self._buffer_manager.views
         for layer in self.layers.values():
             layer.set_handler(new_handler)

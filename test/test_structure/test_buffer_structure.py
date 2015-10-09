@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-import pytest
-from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate, \
-    combine_buffer_structures
-from brainstorm.utils import ShapeValidationError
 
+import pytest
+
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate,
+                                                   combine_buffer_structures)
+from brainstorm.utils import ShapeValidationError
 
 # ############################ BufferStructures ############################# #
 

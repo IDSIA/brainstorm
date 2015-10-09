@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+
+import re
 from collections import namedtuple
 from copy import deepcopy
-import re
+
 from brainstorm.structure.buffer_views import BufferView
-from brainstorm.utils import is_valid_layer_name, NetworkValidationError
+from brainstorm.utils import NetworkValidationError, is_valid_layer_name
 
 
 def get_regex_for_reference(reference):
@@ -28,12 +30,16 @@ def get_key_to_references_mapping(keys, references):
     The 'default' reference matches only if no other reference does.
     The 'fallback' reference is ignored.
 
-    :param keys: List of keys that the references are referring to.
-    :type keys: iterable[str]
-    :param references: List of references. Can be starred.
-    :type references: iterable[str]
-    :return: Dictionary mapping keys to sets of matching references.
-    :rtype: dict[str, set[str]]
+    Args:
+        keys (iterable[str]):
+            List of keys that the references are referring to.
+
+        references (iterable[str]):
+            List of references. Can contain star wildcards.
+
+    Returns:
+        dict[str, set[str]]:
+            Dictionary mapping keys to sets of matching references.
     """
     key_to_reference = {key: set() for key in keys}
 
@@ -66,10 +72,13 @@ def empty_dict_from(structure):
     """
     Create a nested dict where all the leaves are Nodes from a given
     nested dict.
-    :param structure: The nested dict structure to mimic
-    :type structure: dict
-    :return: nested dictionary that mimics the structure
-    :rtype: dict
+
+    Args:
+        structure (dict):
+            The nested dict structure to mimic
+    Returns:
+        dict:
+            nested dictionary that mimics the structure
     """
     if isinstance(structure, (dict, BufferView)):
         return {k: empty_dict_from(v) for k, v in structure.items()}
