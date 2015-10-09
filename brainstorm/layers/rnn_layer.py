@@ -51,7 +51,7 @@ class RecurrentLayerImpl(BaseLayerImpl):
     def set_handler(self, new_handler):
         super(RecurrentLayerImpl, self).set_handler(new_handler)
 
-        # Assign act_func and act_dunc_derivs
+        # Assign act_func and act_func_derivs
         activations = {
             'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
             'tanh': (self.handler.tanh, self.handler.tanh_deriv),
