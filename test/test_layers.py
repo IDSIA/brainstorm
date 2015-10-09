@@ -231,20 +231,21 @@ def l2_decay_layer(spec):
 
 def clockwork_rnn(spec):
     layer = ClockworkRnnLayerImpl('ClockworkRnn',
-                                  {'default': ShapeTemplate('T', 'B', 5)},
+                                  {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation_function=spec['act_func'])
+                                  activation=spec['act_func'])
     spec['skip_parameters'] = ['timing']
-    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 3, 5])}
+    spec['inits'] = {'timing': np.array([1, 1, 1, 1, 1, 1, 1])}
     return layer, spec
+
 
 def clockwork_lstm(spec):
     layer = ClockworkLstmLayerImpl('ClockworkLstm',
-                                  {'default': ShapeTemplate('T', 'B', 5)},
+                                  {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation_function=spec['act_func'])
+                                  activation=spec['act_func'])
 
     spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
@@ -252,18 +253,18 @@ def clockwork_lstm(spec):
 
 def lstm_peephole_layer(spec):
     layer = LstmPeepholeLayerImpl('LstmPeepholeLayer',
-                          {'default': ShapeTemplate('T', 'B', 5)},
+                          {'default': BufferStructure('T', 'B', 5)},
                           NO_CON, NO_CON,
                           size=7,
-                          activation_function=spec['act_func'])
+                          activation=spec['act_func'])
     return layer, spec
 
 def clockwork_lstm_peephole(spec):
     layer = ClockworkLstmPeepLayerImpl('ClockworkLstmPeepLayer',
-                                  {'default': ShapeTemplate('T', 'B', 5)},
+                                  {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation_function=spec['act_func'])
+                                  activation=spec['act_func'])
 
     spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
@@ -290,7 +291,7 @@ layers_to_test = [
     batch_norm_layer,
     elementwise_layer,
     l1_decay_layer,
-    l2_decay_layer
+    l2_decay_layer,
     clockwork_rnn,
     clockwork_lstm,
     lstm_peephole_layer,
