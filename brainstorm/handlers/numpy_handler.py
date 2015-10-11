@@ -353,7 +353,6 @@ class NumpyHandler(Handler):
     def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
 
-
     def modulo_mm(self, a, b, out):
         np.fmod(a, b, out)
 
