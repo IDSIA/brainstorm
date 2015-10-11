@@ -27,7 +27,8 @@ def Classification(size, name=None):
         This layer does not compute derivatives wrt the 'targets' input.
         It also does not use the deltas coming in from the 'probabilities'.
     """
-    return ConstructionWrapper.create('Classification', size=size, name=name)
+    return ConstructionWrapper.create(ClassificationLayerImpl, size=size,
+                                      name=name)
 
 
 class ClassificationLayerImpl(Layer):

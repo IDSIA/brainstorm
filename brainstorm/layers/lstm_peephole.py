@@ -13,8 +13,8 @@ from brainstorm.utils import LayerValidationError, flatten_time
 
 def LstmPeephole(size, activation='tanh', name=None):
     """Create an LSTM layer."""
-    return ConstructionWrapper.create('Lstm', size=size, name=name,
-                                      activation=activation)
+    return ConstructionWrapper.create(LstmPeepholeLayerImpl, size=size,
+                                      name=name, activation=activation)
 
 
 class LstmPeepholeLayerImpl(Layer):

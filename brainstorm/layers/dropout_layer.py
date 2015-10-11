@@ -14,7 +14,7 @@ def Dropout(drop_prob=0.5, name=None):
 
     drop_prob is the probability of a unit being dropped, i.e. 0
     """
-    return ConstructionWrapper.create('Dropout', drop_prob=drop_prob,
+    return ConstructionWrapper.create(DropoutLayerImpl, drop_prob=drop_prob,
                                       name=name)
 
 

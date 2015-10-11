@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function
-from functools import partial
-import sys
-from brainstorm.utils import get_inheritors
-from brainstorm.structure.construction import ConstructionWrapper
 
 from brainstorm.layers.base_layer import Layer
 from brainstorm.layers.batch_normalization_layer import BatchNorm
@@ -31,30 +27,3 @@ from brainstorm.layers.clockwork_rnn import ClockworkRnn
 from brainstorm.layers.clockwork_lstm import ClockworkLstm
 from brainstorm.layers.lstm_peephole import LstmPeephole
 from brainstorm.layers.clockwork_lstm_peephole import ClockworkLstmPeep
-CONSTRUCTION_LAYERS = {}
-
-# ------------------------ Automatic Construction Layers ----------------------
-
-
-def construction_layer_for(layer_impl):
-    layer_name = layer_impl.__name__
-    assert layer_name.endswith('LayerImpl'), \
-        "{} should end with 'LayerImpl'".format(layer_name)
-    layer_name = layer_name[:-9]
-    return partial(ConstructionWrapper.create, layer_name)
-
-
-for layer in get_inheritors(Layer):
-    layer_name = layer.__name__[:-9]
-    if layer_name not in CONSTRUCTION_LAYERS:
-        CONSTRUCTION_LAYERS[layer_name] = construction_layer_for(layer)
-
-
-this_module = sys.modules[__name__]  # this module
-for name, cl in CONSTRUCTION_LAYERS.items():
-    if not hasattr(this_module, name):
-        setattr(this_module, name, cl)
-
-
-# somehow str is needed because in __all__ unicode does not work
-__all__ = ['construction_layer_for'] + [str(a) for a in CONSTRUCTION_LAYERS]

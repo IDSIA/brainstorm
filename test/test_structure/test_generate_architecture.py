@@ -12,55 +12,52 @@ from brainstorm.structure.construction import ConstructionWrapper
 
 
 def test_get_layer_description():
-    l = ConstructionWrapper.create('layertype', 10, name='foo')
-    l2 = ConstructionWrapper.create('layertype', 10, name='bar')
-    l3 = ConstructionWrapper.create('layertype', 10, name='baz')
+    l = ConstructionWrapper.create('FooLayerImpl', name='foo')
+    l2 = ConstructionWrapper.create('FooLayerImpl', name='bar')
+    l3 = ConstructionWrapper.create('FooLayerImpl', name='baz')
     _ = l >> l2
     _ = l >> l3
     descr = get_layer_description(l.layer)
     assert descr == {
-        '@type': 'layertype',
+        '@type': 'Foo',
         '@outgoing_connections': {
             'default': ['bar.default', 'baz.default']
-        },
-        'shape': 10
+        }
     }
 
 
 def test_get_layer_description_named_inputs_outputs():
-    l = ConstructionWrapper.create('layertype', 10, name='foo')
-    l2 = ConstructionWrapper.create('layertype', 10, name='bar')
-    l3 = ConstructionWrapper.create('layertype', 10, name='baz')
+    l = ConstructionWrapper.create('FooLayerImpl', name='foo')
+    l2 = ConstructionWrapper.create('FooLayerImpl', name='bar')
+    l3 = ConstructionWrapper.create('FooLayerImpl', name='baz')
     _ = l - 'out1' >> l2
     _ = l >> 'A' - l3
     descr = get_layer_description(l.layer)
     assert descr == {
-        '@type': 'layertype',
+        '@type': 'Foo',
         '@outgoing_connections': {
             'default': ['baz.A'],
             'out1': ['bar.default']
-        },
-        'shape': 10
+        }
     }
 
 
 def test_layer_with_kwargs():
-    l = ConstructionWrapper.create('layertype', 10, name='foo', a=2, b=3)
+    l = ConstructionWrapper.create('FooLayerImpl', name='foo', a=2, b=3)
     descr = get_layer_description(l.layer)
     assert descr == {
-        '@type': 'layertype',
+        '@type': 'Foo',
         '@outgoing_connections': {},
-        'shape': 10,
         'a': 2,
         'b': 3
     }
 
 
 def test_generate_architecture():
-    l1 = ConstructionWrapper.create('Input', 10)
-    l2 = ConstructionWrapper.create('layertype', 20, name='bar')
-    l3 = ConstructionWrapper.create('layertype', 30, name='baz')
-    l4 = ConstructionWrapper.create('layertype', 40, name='out')
+    l1 = ConstructionWrapper.create('InputLayerImpl')
+    l2 = ConstructionWrapper.create('FooLayerImpl', name='bar')
+    l3 = ConstructionWrapper.create('FooLayerImpl', name='baz')
+    l4 = ConstructionWrapper.create('FooLayerImpl', name='out')
     _ = l1 - 'foo' >> l2 >> 'A' - l4
     _ = l1 - 'bar' >> l3 >> 'B' - l4
 
@@ -72,7 +69,6 @@ def test_generate_architecture():
     assert arch1 == {
         'Input': {
             '@type': 'Input',
-            'shape': 10,
             '@outgoing_connections': {
                 'foo': ['bar.default'],
                 'bar': ['baz.default'],
@@ -80,22 +76,19 @@ def test_generate_architecture():
 
         },
         'bar': {
-            '@type': 'layertype',
-            'shape': 20,
+            '@type': 'Foo',
             '@outgoing_connections': {
                 'default': ['out.A'],
             }
         },
         'baz': {
-            '@type': 'layertype',
-            'shape': 30,
+            '@type': 'Foo',
             '@outgoing_connections': {
                 'default': ['out.B'],
             }
         },
         'out': {
-            '@type': 'layertype',
-            'shape': 40,
+            '@type': 'Foo',
             '@outgoing_connections': {}
         }
     }

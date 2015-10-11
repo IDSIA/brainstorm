@@ -17,7 +17,7 @@ def Input(out_shapes, name=None):
     The 'out_shapes' keyword argument is required and specifies the names and
     shapes of all external inputs.
     """
-    return ConstructionWrapper.create('Input', name=name,
+    return ConstructionWrapper.create(InputLayerImpl, name=name,
                                       out_shapes=out_shapes)
 
 

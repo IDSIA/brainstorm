@@ -14,7 +14,7 @@ from brainstorm.utils import (LayerValidationError, flatten_features,
 
 def SquaredDifference(name=None):
     """Create a Squared Difference layer."""
-    return ConstructionWrapper.create('SquaredDifference', name=name)
+    return ConstructionWrapper.create(SquaredDifferenceLayerImpl, name=name)
 
 
 class SquaredDifferenceLayerImpl(Layer):

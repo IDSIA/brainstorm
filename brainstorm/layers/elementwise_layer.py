@@ -14,7 +14,7 @@ def Elementwise(activation='rel', name=None):
 
     This layer just applies a unit-wise function to its inputs.
     """
-    return ConstructionWrapper.create('Elementwise', name=name,
+    return ConstructionWrapper.create(ElementwiseLayerImpl, name=name,
                                       activation=activation)
 
 

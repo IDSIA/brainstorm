@@ -9,7 +9,7 @@ from brainstorm.structure.buffer_structure import BufferStructure, StructureTemp
 
 
 def ClockworkRnn(size, timing, activation='tanh', name=None):
-    return ConstructionWrapper.create('ClockworkRnn',
+    return ConstructionWrapper.create(ClockworkRnnLayerImpl,
                                       size=size,
                                       timing=timing,
                                       name=name,

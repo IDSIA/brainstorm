@@ -12,7 +12,8 @@ from brainstorm.structure.construction import ConstructionWrapper
 
 def Loss(importance=1.0, name=None):
     """Create a Loss layer."""
-    return ConstructionWrapper.create('Loss', importance=importance, name=name)
+    return ConstructionWrapper.create(LossLayerImpl, importance=importance,
+                                      name=name)
 
 
 class LossLayerImpl(Layer):

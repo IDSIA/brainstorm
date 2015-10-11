@@ -7,12 +7,14 @@ from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
 
+
 def ClockworkLstm(size, timing, activation='tanh', name=None):
-    return ConstructionWrapper.create('ClockworkLstm',
+    return ConstructionWrapper.create(ClockworkLstmLayerImpl,
                                       size=size,
                                       timing=timing,
                                       name=name,
                                       activation=activation)
+
 
 class ClockworkLstmLayerImpl(Layer):
     expected_kwargs = {'size', 'timing', 'activation'}

@@ -13,8 +13,8 @@ from brainstorm.utils import LayerValidationError, flatten_time
 
 def Recurrent(size, activation='tanh', name=None):
     """Create a Simple Recurrent layer."""
-    return ConstructionWrapper.create('Recurrent', size=size, name=name,
-                                      activation=activation)
+    return ConstructionWrapper.create(RecurrentLayerImpl, size=size,
+                                      name=name, activation=activation)
 
 
 class RecurrentLayerImpl(Layer):

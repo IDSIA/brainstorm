@@ -6,6 +6,7 @@ import six
 
 from brainstorm.uniquely_named import UniquelyNamed
 from brainstorm.utils import NetworkValidationError, is_valid_layer_name
+from brainstorm.layers.base_layer import Layer
 
 
 class LayerDetails(UniquelyNamed):
@@ -15,7 +16,7 @@ class LayerDetails(UniquelyNamed):
     This information is later used to generate an architecture, from which the
     actual layers are instantiated and combined into a network.
     """
-    def __init__(self, layer_type, shape=None, name=None, **kwargs):
+    def __init__(self, layer_type, name=None, **kwargs):
         if not is_valid_layer_name(layer_type):
             raise NetworkValidationError(
                 "Invalid layer_type: '{}'".format(layer_type))
@@ -48,9 +49,6 @@ class LayerDetails(UniquelyNamed):
         self.layer_kwargs = kwargs
         """Dictionary of additional parameters for this layer"""
 
-        if shape is not None:
-            self.layer_kwargs['shape'] = shape
-
         self._traversing = False
 
     def collect_connected_layers(self):
@@ -82,8 +80,18 @@ class ConstructionWrapper(object):
     """
 
     @classmethod
-    def create(cls, layer_type, shape=None, name=None, **kwargs):
-        details = LayerDetails(layer_type, shape, name, **kwargs)
+    def create(cls, layer_type, name=None, **kwargs):
+        if isinstance(layer_type, six.string_types):
+            layer_type_name = layer_type
+        else:
+            layer_type_name = layer_type.__name__
+
+        if not layer_type_name.endswith('LayerImpl'):
+            raise NetworkValidationError("{} should end with 'LayerImpl'"
+                                         .format(layer_type_name))
+        layer_type_name = layer_type_name[:-9]
+
+        details = LayerDetails(layer_type_name, name=name, **kwargs)
         return ConstructionWrapper(details)
 
     def __init__(self, layer_details, input_name='default',

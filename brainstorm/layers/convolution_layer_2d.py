@@ -14,7 +14,7 @@ from brainstorm.utils import flatten_time
 def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                   activation='rel', name=None):
     """Create a 2D Convolution layer."""
-    return ConstructionWrapper.create('Convolution2D',
+    return ConstructionWrapper.create(Convolution2DLayerImpl,
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
                                       stride=stride,

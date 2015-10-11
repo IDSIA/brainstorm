@@ -12,7 +12,7 @@ from brainstorm.structure.construction import ConstructionWrapper
 
 def LstmOpt(size, activation='tanh', name=None):
     """Create an LSTMOpt layer."""
-    return ConstructionWrapper.create('LstmOpt', size=size, name=name,
+    return ConstructionWrapper.create(LstmOptLayerImpl, size=size, name=name,
                                       activation=activation)
 
 

@@ -13,7 +13,7 @@ from brainstorm.utils import LayerValidationError, flatten_time
 
 def Lstm(size, activation='tanh', name=None):
     """Create an LSTM layer."""
-    return ConstructionWrapper.create('Lstm', size=size, name=name,
+    return ConstructionWrapper.create(LstmLayerImpl, size=size, name=name,
                                       activation=activation)
 
 
