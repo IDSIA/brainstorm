@@ -54,22 +54,22 @@ class Convolution2DLayerImpl(Layer):
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "ConvolutionLayer2D must have 3 dimensional input but input " \
             "shape was {}".format(in_shape)
-        num_input_maps = in_shape[0]
+        num_input_maps = in_shape[2]
         num_filters = self.num_filters
         kernel_x, kernel_y = self.kernel_size
         padding, stride = self.padding, self.stride
-        output_height = ((in_shape[1] + 2 * padding - kernel_x) //
+        output_height = ((in_shape[0] + 2 * padding - kernel_x) //
                          stride[0]) + 1
-        output_width = ((in_shape[2] + 2 * padding - kernel_y) //
+        output_width = ((in_shape[1] + 2 * padding - kernel_y) //
                         stride[1]) + 1
-        out_shape = (num_filters, output_height, output_width)
+        out_shape = (output_height, output_width, num_filters)
 
         outputs = OrderedDict()
         outputs['default'] = BufferStructure('T', 'B', *out_shape)
 
         parameters = OrderedDict()
-        parameters['W'] = BufferStructure(num_filters, num_input_maps,
-                                          kernel_x, kernel_y)
+        parameters['W'] = BufferStructure(num_filters, kernel_x, kernel_y,
+                                          num_input_maps)
         parameters['bias'] = BufferStructure(num_filters)
 
         internals = OrderedDict()

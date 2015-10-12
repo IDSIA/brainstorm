@@ -50,14 +50,14 @@ class Pooling2DLayerImpl(Layer):
         kernel_size = self.kernel_size
         padding = self.padding
         stride = self.stride
-        output_height = ((in_shape[1] + 2 * padding - kernel_size[0]) //
+        output_height = ((in_shape[0] + 2 * padding - kernel_size[0]) //
                          stride[0]) + 1
-        output_width = ((in_shape[2] + 2 * padding - kernel_size[1]) //
+        output_width = ((in_shape[1] + 2 * padding - kernel_size[1]) //
                         stride[1]) + 1
         assert output_height > 0 and output_width > 0, \
             "Evaluated output height and width must be positive but were " \
             "({}, {})".format(output_height, output_width)
-        output_shape = (in_shape[0], output_height, output_width)
+        output_shape = (output_height, output_width, in_shape[2])
 
         outputs = OrderedDict()
         outputs['default'] = BufferStructure('T', 'B', *output_shape)
