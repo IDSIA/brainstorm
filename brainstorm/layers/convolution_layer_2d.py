@@ -3,7 +3,6 @@
 from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
-from brainstorm.handlers.base_handler import Handler
 from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)

@@ -8,6 +8,7 @@ from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
+from brainstorm.utils import flatten_time
 
 
 def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
@@ -75,14 +76,13 @@ class Pooling2DLayerImpl(Layer):
         outputs = buffers.outputs.default
 
         # reshape
-        t, b, c, h, w = inputs.shape
-        flat_inputs = inputs.reshape((t * b, c, h, w))
-        flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
+        flat_inputs = flatten_time(inputs)
+        flat_outputs = flatten_time(outputs)
 
         # calculate outputs
         if self.type == 'max':
             argmax = buffers.internals.argmax
-            flat_argmax = argmax.reshape((t * b,) + argmax.shape[2:])
+            flat_argmax = flatten_time(argmax)
             _h.maxpool2d_forward_batch(flat_inputs, self.kernel_size,
                                        flat_outputs, self.padding, self.stride,
                                        flat_argmax)

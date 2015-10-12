@@ -175,10 +175,9 @@ def convolution_layer_2d_c(spec):
 
 
 def maxpooling_layer_2d(spec):
-    y = BufferStructure('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
                                {'default':
-                                BufferStructure('T', 'B', 1, 4, 4)},
+                                BufferStructure('T', 'B', 4, 4, 1)},
                                NO_CON, NO_CON,
                                kernel_size=(2, 2), stride=(1, 1),
                                type="max")
@@ -186,10 +185,9 @@ def maxpooling_layer_2d(spec):
 
 
 def avgpooling_layer_2d(spec):
-    y = BufferStructure('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
                                {'default':
-                                BufferStructure('T', 'B', 1, 4, 4)},
+                                BufferStructure('T', 'B', 4, 4, 1)},
                                NO_CON, NO_CON,
                                kernel_size=(2, 2), stride=(1, 1),
                                type="avg")
