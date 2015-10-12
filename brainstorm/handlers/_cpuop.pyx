@@ -34,11 +34,11 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
-    cdef int n_filters = inputs.shape[1]
-    cdef int in_h = inputs.shape[2]
-    cdef int in_w = inputs.shape[3]
-    cdef int out_h = outputs.shape[2]
-    cdef int out_w = outputs.shape[3]
+    cdef int n_channels = inputs.shape[3]
+    cdef int in_h = inputs.shape[1]
+    cdef int in_w = inputs.shape[2]
+    cdef int out_h = outputs.shape[1]
+    cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, y_out, x_out
     cdef int y_min, y_max, x_min, x_max
     cdef int in_y, in_x,
@@ -56,28 +56,28 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
 
     with nogil:
         for i in range(n_inputs):
-            for c in range(n_filters):
+            for c in range(n_channels):
                 for y_out in range(out_h):
-                    y = y_out*stride_y-padding
+                    y = y_out * stride_y - padding
                     y_min = int_max(y, 0)
-                    y_max = int_min(y+pool_h, in_h)
+                    y_max = int_min(y + pool_h, in_h)
                     for x_out in range(out_w):
-                        x = x_out*stride_x-padding
+                        x = x_out * stride_x - padding
                         x_min = int_max(x, 0)
-                        x_max = int_min(x+pool_w, in_w)
+                        x_max = int_min(x + pool_w, in_w)
                         value = min_value
                         in_y_max = -1
                         in_x_max = -1
                         for in_y in range(y_min, y_max):
                             for in_x in range(x_min, x_max):
-                                new_value = inputs[i, c, in_y, in_x,]
+                                new_value = inputs[i, in_y, in_x, c]
                                 if new_value > value:
                                     value = new_value
                                     in_y_max = in_y
                                     in_x_max = in_x
-                        outputs[i, c, y_out, x_out] = value
-                        argmax[i, c, y_out, x_out, 0] = <DTYPE_t>(in_y_max)
-                        argmax[i, c, y_out, x_out, 1] = <DTYPE_t>(in_x_max)
+                        outputs[i, y_out, x_out, c] = value
+                        argmax[i, y_out, x_out, c, 0] = <DTYPE_t>(in_y_max)
+                        argmax[i, y_out, x_out, c, 1] = <DTYPE_t>(in_x_max)
 
 
 @cython.boundscheck(False)
@@ -95,22 +95,22 @@ def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
-    cdef int n_filters = inputs.shape[1]
-    cdef int in_h = inputs.shape[2]
-    cdef int in_w = inputs.shape[3]
-    cdef int out_h = outputs.shape[2]
-    cdef int out_w = outputs.shape[3]
+    cdef int n_channels = inputs.shape[3]
+    cdef int in_h = inputs.shape[1]
+    cdef int in_w = inputs.shape[2]
+    cdef int out_h = outputs.shape[1]
+    cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, in_y, in_x
     with nogil:
         for i in range(n_inputs):
-            for c in range(n_filters):
+            for c in range(n_channels):
                 for y in range(out_h):
                     for x in range(out_w):
-                        in_y = <int>(argmax[i, c, y, x, 0])
-                        in_x = <int>(argmax[i, c, y, x, 1])
+                        in_y = <int>(argmax[i, y, x, c, 0])
+                        in_x = <int>(argmax[i, y, x, c, 1])
                         if in_y >= 0 and in_x >= 0:
-                            in_deltas[i, c, in_y, in_x] += \
-                                out_deltas[i, c, y, x]
+                            in_deltas[i, in_y, in_x, c] += \
+                                out_deltas[i, y, x, c]
 
 
 @cython.boundscheck(False)
@@ -125,11 +125,11 @@ def avgpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
-    cdef int n_filters = inputs.shape[1]
-    cdef int in_h = inputs.shape[2]
-    cdef int in_w = inputs.shape[3]
-    cdef int out_h = outputs.shape[2]
-    cdef int out_w = outputs.shape[3]
+    cdef int n_channels = inputs.shape[3]
+    cdef int in_h = inputs.shape[1]
+    cdef int in_w = inputs.shape[2]
+    cdef int out_h = outputs.shape[1]
+    cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, y_out, x_out
     cdef int y_min, y_max, x_min, x_max
     cdef int in_y, in_x,
@@ -139,22 +139,22 @@ def avgpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef DTYPE_t pool_size = pool_h * pool_w
     with nogil:
         for i in range(n_inputs):
-            for c in range(n_filters):
+            for c in range(n_channels):
                 for y_out in range(out_h):
-                    y = y_out*stride_y-padding
+                    y = y_out * stride_y - padding
                     y_min = int_max(y, 0)
-                    y_max = int_min(y+pool_h, in_h)
+                    y_max = int_min(y + pool_h, in_h)
                     for x_out in range(out_w):
-                        x = x_out*stride_x-padding
+                        x = x_out * stride_x - padding
                         x_min = int_max(x, 0)
-                        x_max = int_min(x+pool_w, in_w)
+                        x_max = int_min(x + pool_w, in_w)
                         value = 0
                         in_y_max = -1
                         in_x_max = -1
                         for in_y in range(y_min, y_max):
                             for in_x in range(x_min, x_max):
-                                value += inputs[i, c, in_y, in_x,]
-                        outputs[i, c, y_out, x_out] = value / pool_size
+                                value += inputs[i, in_y, in_x, c]
+                        outputs[i, y_out, x_out, c] = value / pool_size
 
 
 @cython.boundscheck(False)
@@ -171,28 +171,28 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
-    cdef int n_filters = inputs.shape[1]
-    cdef int in_h = inputs.shape[2]
-    cdef int in_w = inputs.shape[3]
-    cdef int out_h = outputs.shape[2]
-    cdef int out_w = outputs.shape[3]
+    cdef int n_channels = inputs.shape[3]
+    cdef int in_h = inputs.shape[1]
+    cdef int in_w = inputs.shape[2]
+    cdef int out_h = outputs.shape[1]
+    cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, x_min, x_max, y_min, y_max, x_out, y_out
     cdef DTYPE_t pool_size = pool_h * pool_w
     with nogil:
         for i in range(n_inputs):
-            for c in range(n_filters):
+            for c in range(n_channels):
                 for y_out in range(out_h):
-                    y = y_out*stride_y-padding
+                    y = y_out * stride_y - padding
                     y_min = int_max(y, 0)
-                    y_max = int_min(y+pool_h, in_h)
+                    y_max = int_min(y + pool_h, in_h)
                     for x_out in range(out_w):
-                        x = x_out*stride_x-padding
+                        x = x_out * stride_x-padding
                         x_min = int_max(x, 0)
-                        x_max = int_min(x+pool_w, in_w)
+                        x_max = int_min(x + pool_w, in_w)
                         for yy in range(y_min, y_max):
                             for xx in range(x_min, x_max):
-                                 in_deltas[i, c, yy, xx] += \
-                                     out_deltas[i, c, y_out, x_out] / pool_size
+                                 in_deltas[i, yy, xx, c] += \
+                                     out_deltas[i, y_out, x_out, c] / pool_size
 
 
 @cython.boundscheck(False)
@@ -236,3 +236,65 @@ def _crop_images(DTYPE_t[:, :, :, :, ::1] inputs not None,
                                                             k + start_row,
                                                             l + start_col]
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def im2col(DTYPE_t[::1] flat_in not None,
+           const int height, const int width, const int channels,
+           const int kernel_h, const int kernel_w,
+           const int pad_t, const int pad_l, const int pad_b, const int pad_r,
+           const int stride_h, const int stride_w,
+           DTYPE_t[::1] flat_col not None):
+
+    cdef int height_col = (height + pad_t + pad_b - kernel_h) // stride_h + 1
+    cdef int width_col = (width + pad_l + pad_r - kernel_w) // stride_w + 1
+    cdef int h_pad = -pad_t
+    cdef int col_idx = 0
+    cdef int h, w_pad, w, ih, iw
+    with nogil:
+        for h in range(height_col):
+            w_pad = -pad_l
+            for w in range(width_col):
+                for ih in range(h_pad, h_pad + kernel_h):
+                    for iw in range(w_pad, w_pad + kernel_w):
+                        if 0 <= ih < height and 0 <= iw < width:
+                            flat_col[col_idx: col_idx + channels] = \
+                                flat_in[(ih * width + iw) * channels:
+                                       (ih * width + iw) * channels + channels]
+                        else:
+                            flat_col[col_idx: col_idx + channels] = 0
+                        col_idx += channels
+                w_pad += stride_w
+            h_pad += stride_h
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def col2im(DTYPE_t[::1] flat_col not None,
+           const int height, const int width, const int channels,
+           const int kernel_h, const int kernel_w,
+           const int pad_t, const int pad_l, const int pad_b, const int pad_r,
+           const int stride_h, const int stride_w,
+           DTYPE_t[::1] flat_in not None):
+    cdef int height_col = (height + pad_t + pad_b - kernel_h) // stride_h + 1
+    cdef int width_col = (width + pad_l + pad_r - kernel_w) // stride_w + 1
+    cdef int h_pad = -pad_t
+    cdef int im_patch_idx = 0
+    cdef int col_idx = 0
+    cdef int h, w_pad, w, ih, iw, idx
+    with nogil:
+        for h in range(height_col):
+            w_pad = -pad_l
+            for w in range(width_col):
+                im_patch_idx = (h_pad * width + w_pad) * channels
+                for ih in range(h_pad, h_pad + kernel_h):
+                    for iw in range(w_pad, w_pad + kernel_w):
+                        if 0 <= ih < height and 0 <= iw < width:
+                            for idx in range(channels):
+                                flat_in[im_patch_idx + idx] += flat_col[col_idx
+                                                                        +  idx]
+                        im_patch_idx += channels
+                        col_idx += channels
+                    im_patch_idx += channels * (width - kernel_w)
+                w_pad += stride_w
+            h_pad += stride_h
