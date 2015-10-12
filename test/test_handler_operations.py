@@ -96,13 +96,15 @@ def test_conv2d_forward_batch_numpy():
 
                                 passed = np.allclose(outputs, true_outputs)
                                 if not passed:
-                                    print("Failed for Inputs:", (nr_images,
-                                          nr_input_maps) + input_shape)
+                                    print("Failed for Inputs:", (nr_images,) +
+                                          input_shape + (nr_input_maps,))
                                     print("Filters:",
-                                          (nr_filters, nr_input_maps) +
-                                          kernel_shape)
+                                          (nr_filters,) + kernel_shape +
+                                          (nr_input_maps,))
                                     print("Stride: ", stride, "padding: ",
                                           padding)
+                                    print("Expected:\n", true_outputs)
+                                    print("Obtained:\n", outputs)
 
                                 assert passed
 
@@ -155,12 +157,13 @@ def test_conv2d_forward_batch_pycuda():
                                 outputs = _h.get_numpy_copy(o_dev)
                                 passed = np.allclose(outputs, true_outputs)
                                 if not passed:
-                                    print("Checking Inputs:",
-                                          (nr_images, nr_input_maps) +
-                                          input_shape)
+                                    print("Checking Inputs:",(nr_images,) +
+                                          input_shape + (nr_input_maps,))
                                     print("Filters:",
-                                          (nr_filters, nr_input_maps) +
-                                          kernel_shape)
+                                          (nr_filters,) + kernel_shape +
+                                          (nr_input_maps,))
                                     print("Stride: ", stride, "padding: ",
                                           padding)
+                                    print("Expected:\n", true_outputs)
+                                    print("Obtained:\n", outputs)
                                 assert passed

@@ -14,12 +14,20 @@ from pycuda.elementwise import ElementwiseKernel
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.optional import has_cudnn
 from brainstorm.randomness import global_rnd
+from brainstorm.utils import flatten_all_but_last
 
 culinalg.init()
 
 if has_cudnn:
     import ctypes
     import libcudnn as cudnn
+
+
+NUM_CUDA_THREADS = 1024
+
+
+def get_blocks(n):
+    return (n + NUM_CUDA_THREADS - 1) // NUM_CUDA_THREADS
 
 
 class PyCudaHandler(Handler):
@@ -212,65 +220,95 @@ class PyCudaHandler(Handler):
 
     def conv2d_forward_batch(self, inputs, weights, bias, outputs,
                              padding, stride):
-        upscalex, upscaley = 1, 1  # currently not exposed to API
+        num_filters = weights.shape[0]
+        num_images, input_rows, input_cols, channels = inputs.shape
+        kernel_shape = weights.shape[1:]
+        num_output_pixels = outputs.shape[1] * outputs.shape[2]
+        num_kernel_params = np.prod(kernel_shape)
+        out_shape = (num_output_pixels, num_filters)
+        num_cuda_kernels = num_output_pixels * channels
 
-        n, h, w, c = inputs.shape
-        x_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, n, c, h, w)
+        for i in range(num_images):
+            col = self.zeros((num_output_pixels, num_kernel_params))
+            _im2col_fp32_impl(np.int32(num_cuda_kernels), inputs[i],
+                              np.int32(input_rows), np.int32(input_cols),
+                              np.int32(kernel_shape[0]),
+                              np.int32(kernel_shape[1]),
+                              np.int32(padding), np.int32(padding),
+                              np.int32(stride[0]), np.int32(stride[1]),
+                              np.int32(outputs.shape[2]),
+                              np.int32(channels),
+                              col.gpudata,
+                              block=(get_blocks(num_cuda_kernels), 1, 1),
+                              grid=(NUM_CUDA_THREADS, 1, 1))
 
-        n, h, w, c = outputs.shape
-        y_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, n, c, h, w)
+            reshaped_params = weights.reshape(num_filters, num_kernel_params)
+            culinalg.dot(col, reshaped_params, transb='T',
+                         out=outputs[i].reshape(out_shape))
 
-        w_desc = cudnn.cudnnCreateFilterDescriptor()
-        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
-                                         *weights.shape)
+        flat_outputs = flatten_all_but_last(outputs)
+        self.add_mv(flat_outputs, bias, flat_outputs)
+        # outputs += bias.reshape((1, 1, 1, num_filters))
 
-        b_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, 1, bias.size, 1,
-                                         1)
-
-        conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
-        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
-                                              stride[0], stride[1], upscalex,
-                                              upscaley, self.cudnn_convmode)
-
-        # TODO: remove this sanity check once implementation works
-        outshape = cudnn.cudnnGetConvolution2dForwardOutputDim(
-            conv_desc, x_desc, w_desc)
-        print(inputs.shape, weights.shape, outputs.shape)
-        print(outshape)
-        assert (outshape == outputs.shape)
-        assert (weights.shape[0] == bias.size)
-        assert (outputs.shape[1] == bias.size)
-
-        # TODO: we hardcode a memory limit of zero for cudnn
-        algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
-            self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
-            self.cudnn_convpref, 0)
-
-        alpha, beta = 1.0, 0.0
-        x_data = ctypes.c_void_p(int(inputs.gpudata))
-        w_data = ctypes.c_void_p(int(weights.gpudata))
-        b_data = ctypes.c_void_p(int(bias.gpudata))
-        y_data = ctypes.c_void_p(int(outputs.gpudata))
-        cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
-                                      x_data, w_desc, w_data, conv_desc, algo,
-                                      None, 0, beta, y_desc,
-                                      y_data)
-        beta = 1.0
-        cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
-                             b_desc, b_data, beta, y_desc, y_data)
-
-        cudnn.cudnnDestroyTensorDescriptor(x_desc)
-        cudnn.cudnnDestroyTensorDescriptor(y_desc)
-        cudnn.cudnnDestroyFilterDescriptor(w_desc)
-        cudnn.cudnnDestroyTensorDescriptor(b_desc)
-        cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
-        # cudnn.cudnnDestroy(cudnn_context)
+        # upscalex, upscaley = 1, 1  # currently not exposed to API
+        #
+        # n, h, w, c = inputs.shape
+        # x_desc = cudnn.cudnnCreateTensorDescriptor()
+        # cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+        #                                  self.cudnn_data_type, n, c, h, w)
+        #
+        # n, h, w, c = outputs.shape
+        # y_desc = cudnn.cudnnCreateTensorDescriptor()
+        # cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+        #                                  self.cudnn_data_type, n, c, h, w)
+        #
+        # w_desc = cudnn.cudnnCreateFilterDescriptor()
+        # cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
+        #                                  *weights.shape)
+        #
+        # b_desc = cudnn.cudnnCreateTensorDescriptor()
+        # cudnn.cudnnSetTensor4dDescriptor(b_desc, self.cudnn_tensor_format,
+        #                                  self.cudnn_data_type, 1, bias.size, 1,
+        #                                  1)
+        #
+        # conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
+        # cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
+        #                                       stride[0], stride[1], upscalex,
+        #                                       upscaley, self.cudnn_convmode)
+        #
+        # # TODO: remove this sanity check once implementation works
+        # outshape = cudnn.cudnnGetConvolution2dForwardOutputDim(
+        #     conv_desc, x_desc, w_desc)
+        # print(inputs.shape, weights.shape, outputs.shape)
+        # print(outshape)
+        # assert (outshape == outputs.shape)
+        # assert (weights.shape[0] == bias.size)
+        # assert (outputs.shape[1] == bias.size)
+        #
+        # # TODO: we hardcode a memory limit of zero for cudnn
+        # algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
+        #     self.cudnn_context, x_desc, w_desc, conv_desc, y_desc,
+        #     self.cudnn_convpref, 0)
+        #
+        # alpha, beta = 1.0, 0.0
+        # x_data = ctypes.c_void_p(int(inputs.gpudata))
+        # w_data = ctypes.c_void_p(int(weights.gpudata))
+        # b_data = ctypes.c_void_p(int(bias.gpudata))
+        # y_data = ctypes.c_void_p(int(outputs.gpudata))
+        # cudnn.cudnnConvolutionForward(self.cudnn_context, alpha, x_desc,
+        #                               x_data, w_desc, w_data, conv_desc, algo,
+        #                               None, 0, beta, y_desc,
+        #                               y_data)
+        # beta = 1.0
+        # cudnn.cudnnAddTensor(self.cudnn_context, self.cudnn_addmode, alpha,
+        #                      b_desc, b_data, beta, y_desc, y_data)
+        #
+        # cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        # cudnn.cudnnDestroyTensorDescriptor(y_desc)
+        # cudnn.cudnnDestroyFilterDescriptor(w_desc)
+        # cudnn.cudnnDestroyTensorDescriptor(b_desc)
+        # cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
+        # # cudnn.cudnnDestroy(cudnn_context)
 
     def dot_add_mm(self, a, b, out, transa=False, transb=False):
         transa = 'T' if transa else 'N'
@@ -626,5 +664,85 @@ __softmax_kernel_code = """
         }
     }
     """
-_mod = SourceModule(__softmax_kernel_code)
-_softmax_impl = _mod.get_function("softmax_kernel")
+_mod_softmax = SourceModule(__softmax_kernel_code)
+_softmax_impl = _mod_softmax.get_function("softmax_kernel")
+
+__im2col_fp32_kernel_code = """
+    __global__ void im2col_fp32_kernel(const int n, const float* data_im,
+        const int height, const int width, const int kernel_h, const int kernel_w,
+        const int pad_t, const int pad_l,
+        const int stride_h, const int stride_w,
+        const int width_col, const int channels,
+        float* data_col) {
+      for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+           index < (n);
+           index += blockDim.x * gridDim.x) {
+        int channel_in = index % channels;
+        int w_out = index / channels % width_col;
+        int h_out = index / channels / width_col;
+        int h_in = h_out * stride_h - pad_t;
+        int w_in = w_out * stride_w - pad_l;
+        float* local_data_col = data_col +
+            ((h_out * width_col) + w_out) * channels * kernel_h * kernel_w
+            + channel_in;
+        for (int i = 0; i < kernel_h; ++i) {
+          int h = h_in + i;
+          for (int j = 0; j < kernel_w; ++j) {
+            int w = w_in + j;
+            *local_data_col = (h >= 0 && w >= 0 && h < height && w < width) ?
+                data_im[(h * width + w) * channels + channel_in] : 0;
+            local_data_col += channels;
+          }
+        }
+      }
+    }
+    """
+
+_mod_im2col_fp32 = SourceModule(__im2col_fp32_kernel_code)
+_im2col_fp32_impl = _mod_im2col_fp32.get_function("im2col_fp32_kernel")
+
+__col2im_fp32_kernel_code = """
+    __global__ void col2im_fp32_kernel(const int n, const float* data_col,
+        const int width, const int channels,
+        const int patch_h, const int patch_w,
+        const int pad_t, const int pad_l,
+        const int stride_h, const int stride_w,
+        const int height_col, const int width_col,
+        float* data_im) {
+      for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+           index < (n);
+           index += blockDim.x * gridDim.x) {
+        float val = 0;
+        int c = index % channels;
+        int w = index / channels % width + pad_l;
+        int h = index / channels / width + pad_t;
+        // compute the start and end of the output
+        int w_col_start = (w < patch_w) ? 0 : (w - patch_w) / stride_w + 1;
+        int w_col_end = min(w / stride_w + 1, width_col);
+        int h_col_start = (h < patch_h) ? 0 : (h - patch_h) / stride_h + 1;
+        int h_col_end = min(h / stride_h + 1, height_col);
+        int channels_col = patch_h * patch_w * channels;
+        /*
+        for (int h_col = h_col_start; h_col < h_col_end; ++h_col) {
+          for (int w_col = w_col_start; w_col < w_col_end; ++w_col) {
+            int c_col = ((h - h_col * stride_h) * patch_w + w - w_col * stride_w) * channels + c;
+            val += data_col[(h_col * width_col + w_col) * channels_col + c_col];
+          }
+        }
+        */
+        // Equivalent of above
+        int offset = (h * patch_w + w) * channels + c;
+        int coeff_h_col = width_col * channels_col - stride_h * patch_w * channels;
+        int coeff_w_col = channels_col - stride_w * channels;
+        for (int h_col = h_col_start; h_col < h_col_end; ++h_col) {
+          for (int w_col = w_col_start; w_col < w_col_end; ++w_col) {
+            val += data_col[offset + h_col * coeff_h_col + w_col * coeff_w_col];
+          }
+        }
+        data_im[index] = val;
+      }
+    }
+    """
+
+_mod_col2im_fp32 = SourceModule(__col2im_fp32_kernel_code)
+_col2im_fp32_impl = _mod_col2im_fp32.get_function("col2im_fp32_kernel")
