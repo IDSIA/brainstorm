@@ -165,6 +165,10 @@ def flatten_features(array, start_idx=2):
                          (int(np.product(array.shape[start_idx:])),))
 
 
+def flatten_all_but_last(array):
+    return array.reshape((int(np.product(array.shape[:-1])), array.shape[-1]))
+
+
 def flatten_keys(dictionary):
     """
     Flattens the keys for a nested dictionary using dot notation. This

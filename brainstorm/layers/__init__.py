@@ -15,6 +15,7 @@ from brainstorm.layers.input_layer import Input
 from brainstorm.layers.loss_layer import Loss
 from brainstorm.layers.lstm_layer import Lstm
 from brainstorm.layers.lstm_opt_layer import LstmOpt
+from brainstorm.layers.merge_layer import Merge
 from brainstorm.layers.mask_layer import Mask
 from brainstorm.layers.noop_layer import NoOp
 from brainstorm.layers.pooling_layer_2d import Pooling2D

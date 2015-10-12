@@ -34,6 +34,7 @@ from brainstorm.layers.clockwork_rnn import ClockworkRnnLayerImpl
 from brainstorm.layers.clockwork_lstm import ClockworkLstmLayerImpl
 from brainstorm.layers.lstm_peephole import LstmPeepholeLayerImpl
 from brainstorm.layers.clockwork_lstm_peephole import ClockworkLstmPeepLayerImpl
+from brainstorm.layers.merge_layer import MergeLayerImpl
 
 from .helpers import (HANDLER, approx_fprime, run_deltas_test,
                       run_gradients_test, set_up_layer)
@@ -270,6 +271,15 @@ def clockwork_lstm_peephole(spec):
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
+
+def merge(spec):
+    in_shapes = {'inputs_1': BufferStructure('T', 'B', 3, 2),
+                 'inputs_2': BufferStructure('T', 'B', 3, 4)}
+
+    layer = MergeLayerImpl('Merge',
+                           in_shapes, NO_CON, NO_CON)
+    return layer, spec
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -295,7 +305,8 @@ layers_to_test = [
     clockwork_rnn,
     clockwork_lstm,
     lstm_peephole_layer,
-    clockwork_lstm_peephole
+    clockwork_lstm_peephole,
+    merge
 ]
 
 ids = [f.__name__ for f in layers_to_test]
