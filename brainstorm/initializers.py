@@ -123,6 +123,11 @@ class DenseSqrtFanInOut(Initializer):
     inputs to each neuron and n2 is the number of neurons in the current layer.
     Use scaling = 4*sqrt(6) for sigmoid units, sqrt(6) for tanh units and
     sqrt(12) for rel units (used by default).
+
+    Reference:
+    Glorot, Xavier, and Yoshua Bengio.
+    "Understanding the difficulty of training deep feedforward neural networks"
+    International conference on artificial intelligence and statistics. 2010.
     """
     __default_values__ = {'scale': np.sqrt(12)}
 
@@ -236,8 +241,7 @@ class Identity(Initializer):
         self.enforce_square = enforce_square
 
     def __call__(self, shape):
-        self._assert_atleast2d(shape)
-        if len(shape) > 2:
+        if len(shape) != 2:
             raise InitializationError("Works only with 2D matrices but shape "
                                       "was: {}".format(shape))
         if self.enforce_square and shape[0] != shape[1]:
@@ -246,6 +250,62 @@ class Identity(Initializer):
         weights = np.eye(shape[0], shape[1], dtype=np.float) * self.scale
         weights += self.rnd.randn(*shape) * self.std
         return weights
+
+
+class Orthogonal(Initializer):
+    """
+    Othogonal initialization
+    """
+    def __init__(self, scale=1.0):
+        super(Orthogonal, self).__init__()
+        self.scale = scale
+
+    def __call__(self, shape):
+        if len(shape) != 2:
+            raise InitializationError("Works only with 2D matrices but shape "
+                                      "was: {}".format(shape))
+        a = self.rnd.randn(*shape)
+        u, _, v = np.linalg.svd(a, full_matrices=False)
+        q = u if u.shape == shape else v
+        return (self.scale * q).reshape(shape)
+
+
+class RandomWalk(Initializer):
+    """
+    Initializes a (square) weight matrix with the random walk scheme proposed
+    by:
+
+    Sussillo, David, and L. F. Abbott.
+    "Random Walk Initialization for Training Very Deep Feedforward Networks."
+    arXiv:1412.6558 [cs, Stat], December 19, 2014.
+    http://arxiv.org/abs/1412.6558.
+
+    """
+    __default_values__ = {'scale': None}
+
+    def __init__(self, act_func='linear', scale=None):
+        super(RandomWalk, self).__init__()
+        self.act_func = act_func
+        self.scale = scale
+
+    def __call__(self, shape):
+        if len(shape) != 2:
+            raise InitializationError("Works only with 2D matrices but shape "
+                                      "was: {}".format(shape))
+        if shape[0] != shape[1]:
+            raise InitializationError("Matrix needs to be square, but was {}"
+                                      "".format(shape))
+
+        N = shape[1]
+        if self.scale is None:
+            scale = {
+                'linear': np.exp(1 / (2 * N)),
+                'relu': np.sqrt(2) * np.exp(1.2 / (max(N, 6) - 2.4))
+            }[self.act_func]
+        else:
+            scale = self.scale
+
+        return scale * self.rnd.randn(*shape) / N
 
 
 class LstmOptInit(Initializer):
