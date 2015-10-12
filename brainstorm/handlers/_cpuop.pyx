@@ -125,11 +125,11 @@ def avgpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
-    cdef int n_filters = inputs.shape[1]
-    cdef int in_h = inputs.shape[2]
-    cdef int in_w = inputs.shape[3]
-    cdef int out_h = outputs.shape[2]
-    cdef int out_w = outputs.shape[3]
+    cdef int n_channels = inputs.shape[3]
+    cdef int in_h = inputs.shape[1]
+    cdef int in_w = inputs.shape[2]
+    cdef int out_h = outputs.shape[1]
+    cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, y_out, x_out
     cdef int y_min, y_max, x_min, x_max
     cdef int in_y, in_x,
@@ -139,22 +139,22 @@ def avgpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef DTYPE_t pool_size = pool_h * pool_w
     with nogil:
         for i in range(n_inputs):
-            for c in range(n_filters):
+            for c in range(n_channels):
                 for y_out in range(out_h):
-                    y = y_out*stride_y-padding
+                    y = y_out * stride_y - padding
                     y_min = int_max(y, 0)
-                    y_max = int_min(y+pool_h, in_h)
+                    y_max = int_min(y + pool_h, in_h)
                     for x_out in range(out_w):
-                        x = x_out*stride_x-padding
+                        x = x_out * stride_x - padding
                         x_min = int_max(x, 0)
-                        x_max = int_min(x+pool_w, in_w)
+                        x_max = int_min(x + pool_w, in_w)
                         value = 0
                         in_y_max = -1
                         in_x_max = -1
                         for in_y in range(y_min, y_max):
                             for in_x in range(x_min, x_max):
-                                value += inputs[i, c, in_y, in_x,]
-                        outputs[i, c, y_out, x_out] = value / pool_size
+                                value += inputs[i, in_y, in_x, c]
+                        outputs[i, y_out, x_out, c] = value / pool_size
 
 
 @cython.boundscheck(False)
@@ -171,28 +171,28 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int stride_x = strides[1]
     cdef int stride_y = strides[0]
     cdef int n_inputs = inputs.shape[0]
-    cdef int n_filters = inputs.shape[1]
-    cdef int in_h = inputs.shape[2]
-    cdef int in_w = inputs.shape[3]
-    cdef int out_h = outputs.shape[2]
-    cdef int out_w = outputs.shape[3]
+    cdef int n_channels = inputs.shape[3]
+    cdef int in_h = inputs.shape[1]
+    cdef int in_w = inputs.shape[2]
+    cdef int out_h = outputs.shape[1]
+    cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, x_min, x_max, y_min, y_max, x_out, y_out
     cdef DTYPE_t pool_size = pool_h * pool_w
     with nogil:
         for i in range(n_inputs):
-            for c in range(n_filters):
+            for c in range(n_channels):
                 for y_out in range(out_h):
-                    y = y_out*stride_y-padding
+                    y = y_out * stride_y - padding
                     y_min = int_max(y, 0)
-                    y_max = int_min(y+pool_h, in_h)
+                    y_max = int_min(y + pool_h, in_h)
                     for x_out in range(out_w):
-                        x = x_out*stride_x-padding
+                        x = x_out * stride_x-padding
                         x_min = int_max(x, 0)
-                        x_max = int_min(x+pool_w, in_w)
+                        x_max = int_min(x + pool_w, in_w)
                         for yy in range(y_min, y_max):
                             for xx in range(x_min, x_max):
-                                 in_deltas[i, c, yy, xx] += \
-                                     out_deltas[i, c, y_out, x_out] / pool_size
+                                 in_deltas[i, yy, xx, c] += \
+                                     out_deltas[i, y_out, x_out, c] / pool_size
 
 
 @cython.boundscheck(False)
