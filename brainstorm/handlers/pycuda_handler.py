@@ -47,7 +47,7 @@ class PyCudaHandler(Handler):
             self.init_cudnn = init_cudnn
             self.cudnn_context = cudnn.cudnnCreate()
             self.cudnn_tensor_format = cudnn.cudnnTensorFormat[
-                'CUDNN_TENSOR_NCHW']
+                'CUDNN_TENSOR_NHWC']
             self.cudnn_data_type = cudnn.cudnnDataType[
                 'CUDNN_DATA_FLOAT']
             self.cudnn_convmode = cudnn.cudnnConvolutionMode[
@@ -153,17 +153,19 @@ class PyCudaHandler(Handler):
                               bias_deltas):
         upscalex, upscaley = 1, 1  # currently not exposed to API
 
+        n, h, w, c = inputs.shape
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, *inputs.shape)
+                                         self.cudnn_data_type, n, c, h, w)
         id_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
                                          self.cudnn_data_type,
-                                         *in_deltas.shape)
+                                         n, c, h, w)
+        n, h, w, c = out_deltas.shape
         od_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
                                          self.cudnn_data_type,
-                                         *out_deltas.shape)
+                                         n, c, h, w)
         w_desc = cudnn.cudnnCreateFilterDescriptor()
         cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
                                          *weights.shape)
@@ -212,9 +214,15 @@ class PyCudaHandler(Handler):
                              padding, stride):
         upscalex, upscaley = 1, 1  # currently not exposed to API
 
+        n, h, w, c = inputs.shape
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, *inputs.shape)
+                                         self.cudnn_data_type, n, c, h, w)
+
+        n, h, w, c = outputs.shape
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+                                         self.cudnn_data_type, n, c, h, w)
 
         w_desc = cudnn.cudnnCreateFilterDescriptor()
         cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
@@ -233,13 +241,11 @@ class PyCudaHandler(Handler):
         # TODO: remove this sanity check once implementation works
         outshape = cudnn.cudnnGetConvolution2dForwardOutputDim(
             conv_desc, x_desc, w_desc)
+        print(inputs.shape, weights.shape, outputs.shape)
+        print(outshape)
         assert (outshape == outputs.shape)
         assert (weights.shape[0] == bias.size)
         assert (outputs.shape[1] == bias.size)
-
-        y_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, *outputs.shape)
 
         # TODO: we hardcode a memory limit of zero for cudnn
         algo = cudnn.cudnnGetConvolutionForwardAlgorithm(
@@ -355,12 +361,14 @@ class PyCudaHandler(Handler):
                                           window[0], window[1], padding,
                                           padding, stride[0], stride[1])
 
+        n, h, w, c = inputs.shape
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, *inputs.shape)
+                                         self.cudnn_data_type, n, c, h, w)
+        n, h, w, c = outputs.shape
         y_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, *outputs.shape)
+                                         self.cudnn_data_type, n, c, h, w)
 
         # TODO: remove this sanity check once implementation works
         # outshape = cudnn.cudnnGetPooling2dForwardOutputDim(
@@ -383,20 +391,20 @@ class PyCudaHandler(Handler):
                                           window[0], window[1], padding,
                                           padding, stride[0], stride[1])
 
+        n, h, w, c = inputs.shape
         x_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, *inputs.shape)
-        y_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, *outputs.shape)
+                                         self.cudnn_data_type, n, c, h, w)
         id_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type,
-                                         *in_deltas.shape)
+                                         self.cudnn_data_type, n, c, h, w)
+        n, h, w, c = outputs.shape
+        y_desc = cudnn.cudnnCreateTensorDescriptor()
+        cudnn.cudnnSetTensor4dDescriptor(y_desc, self.cudnn_tensor_format,
+                                         self.cudnn_data_type, n, c, h, w)
         od_desc = cudnn.cudnnCreateTensorDescriptor()
         cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type,
-                                         *out_deltas.shape)
+                                         self.cudnn_data_type, n, c, h, w)
 
         x_data = ctypes.c_void_p(int(inputs.gpudata))
         y_data = ctypes.c_void_p(int(outputs.gpudata))
