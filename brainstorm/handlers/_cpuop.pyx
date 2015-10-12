@@ -251,21 +251,21 @@ def im2col(DTYPE_t[::1] flat_in not None,
     cdef int h_pad = -pad_t
     cdef int col_idx = 0
     cdef int h, w_pad, w, ih, iw
-
-    for h in range(height_col):
-        w_pad = -pad_l
-        for w in range(width_col):
-            for ih in range(h_pad, h_pad + kernel_h):
-                for iw in range(w_pad, w_pad + kernel_w):
-                    if 0 <= ih < height and 0 <= iw < width:
-                        flat_col[col_idx: col_idx + channels] = \
-                            flat_in[(ih * width + iw) * channels:
-                                    (ih * width + iw) * channels + channels]
-                    else:
-                        flat_col[col_idx: col_idx + channels] = 0
-                    col_idx += channels
-            w_pad += stride_w
-        h_pad += stride_h
+    with nogil:
+        for h in range(height_col):
+            w_pad = -pad_l
+            for w in range(width_col):
+                for ih in range(h_pad, h_pad + kernel_h):
+                    for iw in range(w_pad, w_pad + kernel_w):
+                        if 0 <= ih < height and 0 <= iw < width:
+                            flat_col[col_idx: col_idx + channels] = \
+                                flat_in[(ih * width + iw) * channels:
+                                       (ih * width + iw) * channels + channels]
+                        else:
+                            flat_col[col_idx: col_idx + channels] = 0
+                        col_idx += channels
+                w_pad += stride_w
+            h_pad += stride_h
 
 
 @cython.boundscheck(False)
@@ -282,19 +282,19 @@ def col2im(DTYPE_t[::1] flat_col not None,
     cdef int im_patch_idx = 0
     cdef int col_idx = 0
     cdef int h, w_pad, w, ih, iw, idx
-
-    for h in range(height_col):
-        w_pad = -pad_l
-        for w in range(width_col):
-            im_patch_idx = (h_pad * width + w_pad) * channels
-            for ih in range(h_pad, h_pad + kernel_h):
-                for iw in range(w_pad, w_pad + kernel_w):
-                    if 0 <= ih < height and 0 <= iw < width:
-                        for idx in range(channels):
-                            flat_in[im_patch_idx + idx] += flat_col[col_idx
-                                                                    +  idx]
-                    im_patch_idx += channels
-                    col_idx += channels
-                im_patch_idx += channels * (width - kernel_w)
-            w_pad += stride_w
-        h_pad += stride_h
+    with nogil:
+        for h in range(height_col):
+            w_pad = -pad_l
+            for w in range(width_col):
+                im_patch_idx = (h_pad * width + w_pad) * channels
+                for ih in range(h_pad, h_pad + kernel_h):
+                    for iw in range(w_pad, w_pad + kernel_w):
+                        if 0 <= ih < height and 0 <= iw < width:
+                            for idx in range(channels):
+                                flat_in[im_patch_idx + idx] += flat_col[col_idx
+                                                                        +  idx]
+                        im_patch_idx += channels
+                        col_idx += channels
+                    im_patch_idx += channels * (width - kernel_w)
+                w_pad += stride_w
+            h_pad += stride_h
