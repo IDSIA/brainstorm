@@ -244,7 +244,7 @@ def im2col(DTYPE_t[::1] flat_in not None,
            const int kernel_h, const int kernel_w,
            const int pad_t, const int pad_l, const int pad_b, const int pad_r,
            const int stride_h, const int stride_w,
-           DTYPE_t[::1] flat_col):
+           DTYPE_t[::1] flat_col not None):
 
     cdef int height_col = (height + pad_t + pad_b - kernel_h) // stride_h + 1
     cdef int width_col = (width + pad_l + pad_r - kernel_w) // stride_w + 1

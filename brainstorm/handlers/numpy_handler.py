@@ -184,36 +184,26 @@ class NumpyHandler(Handler):
                              padding, stride):
 
         num_filters = weights.shape[0]
-        num_images, num_input_maps, input_rows, input_cols = inputs.shape
-        kernel_size = (weights.shape[2], weights.shape[3])
-        out_shape = outputs.shape[1:]
+        num_images, input_rows, input_cols, num_input_maps = inputs.shape
+        kernel_shape = weights.shape[1:]
+        num_output_pixels = outputs.shape[1] * outputs.shape[2]
+        num_kernel_params = np.prod(kernel_shape)
+        out_shape = (num_output_pixels, num_filters)
 
-        im2col_map = self.get_im2col_map(num_input_maps,
-                                         input_rows + 2 * padding,
-                                         input_cols + 2 * padding,
-                                         kernel_size, stride)
-
-        # reshape
         for i in range(num_images):
-            # pad
-            if padding == 0:
-                im = inputs[i]
-            else:
-                im = np.zeros((inputs.shape[1], inputs.shape[2] + 2 * padding,
-                               inputs.shape[3] + 2 * padding))
-                im[:, padding: -padding, padding: -padding] = inputs[i]
 
-            # Get all actual indices & index into input array for output
-            col = np.take(im, im2col_map)
+            col = np.zeros((num_output_pixels, num_kernel_params),
+                           dtype=self.dtype)
+            _cpuop.im2col(inputs[i].reshape(inputs[i].size),
+                          input_rows, input_cols, num_input_maps,
+                          kernel_shape[0], kernel_shape[1],
+                          padding, padding, padding, padding, stride[0],
+                          stride[1], col.reshape(col.size))
 
-            # multiply
-            reshaped_weights = weights.reshape(num_filters,
-                                               kernel_size[0] *
-                                               kernel_size[1] *
-                                               num_input_maps)
-            outputs[i] = np.dot(reshaped_weights, col).reshape(out_shape)
+            reshaped_params = weights.reshape(num_filters, num_kernel_params)
+            np.dot(col, reshaped_params.T, out=outputs[i].reshape(out_shape))
 
-        outputs += bias.reshape((1, num_filters, 1, 1))
+        outputs += bias.reshape((1, 1, 1, num_filters))
 
     def dot_add_mm(self, a, b, out, transa=False, transb=False):
         x = a.T if transa else a
