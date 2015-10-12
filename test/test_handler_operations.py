@@ -10,7 +10,7 @@ from brainstorm.handlers import NumpyHandler
 from brainstorm.optional import has_cudnn
 
 # np.random.seed(1234)
-dtype = np.float64
+dtype = np.float32
 NO_CON = set()
 
 
@@ -119,13 +119,14 @@ def test_conv2d_forward_batch_pycuda():
                         for stride in ((1, 1), (2, 2), (1, 2)):
                             for padding in (0, 1):
 
-                                inputs = np.random.rand(nr_images,
-                                                        nr_input_maps,
-                                                        *input_shape)
-                                weights = np.random.rand(nr_filters,
-                                                         nr_input_maps,
-                                                         *kernel_shape)
-                                bias = np.random.rand(nr_filters)
+                                inputs = np.random.rand(
+                                    nr_images, input_shape[0], input_shape[1],
+                                    nr_input_maps).astype(dtype)
+                                weights = np.random.rand(
+                                    nr_filters, kernel_shape[0],
+                                    kernel_shape[1], nr_input_maps).astype(
+                                    dtype)
+                                bias = np.zeros(nr_filters).astype(dtype)
 
                                 output_height = \
                                     (input_shape[0] + 2 * padding -
@@ -134,18 +135,16 @@ def test_conv2d_forward_batch_pycuda():
                                     (input_shape[1] + 2 * padding -
                                      kernel_shape[1]) / stride[1] + 1
 
-                                true_outputs = np.zeros((nr_images,
-                                                         nr_filters) +
-                                                        (output_height,
-                                                         output_width))
+                                outputs = np.zeros((nr_images,
+                                                    output_height,
+                                                    output_width,
+                                                    nr_filters), dtype=dtype)
+                                true_outputs = np.zeros_like(outputs)
 
                                 _conv2d_forward_batch(inputs, weights,
                                                       bias, true_outputs,
                                                       padding, stride)
 
-                                outputs = np.zeros(
-                                    (nr_images, nr_filters) +
-                                    (output_height, output_width))
                                 i_dev = _h.create_from_numpy(inputs)
                                 w_dev = _h.create_from_numpy(weights)
                                 b_dev = _h.create_from_numpy(bias)

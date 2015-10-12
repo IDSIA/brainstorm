@@ -104,85 +104,48 @@ class NumpyHandler(Handler):
     def clip_t(self, a, a_min, a_max, out):
         np.clip(a, a_min, a_max, out)
 
-    def conv2d_backward_batch(self, inputs, weights, padding, stride,
-                              in_deltas, out_deltas, weight_deltas,
-                              bias_deltas):
-        if stride != (1, 1):
-            raise NotImplementedError("Strides > 1 for ConvolutionLayer2D are "
-                                      "not supported yet. (was {})"
-                                      .format(stride))
-        num_filters = weights.shape[0]
-        num_images, num_input_maps, input_rows, input_cols = inputs.shape
-        _, num_output_maps, output_rows, output_cols = out_deltas.shape
-        kernel_size = (weights.shape[2], weights.shape[3])
+    def conv2d_backward_batch(self, inputs, params, padding, stride,
+                              in_deltas, out_deltas, dparams,
+                              dbias):
+        num_filters = params.shape[0]
+        num_images, input_rows, input_cols, num_input_maps = inputs.shape
+        _, output_rows, output_cols, num_output_maps = out_deltas.shape
+        kernel_shape = params.shape[1:]
+        num_output_pixels = out_deltas.shape[1] * out_deltas.shape[2]
+        num_kernel_params = np.prod(kernel_shape)
 
-        im2col_map = self.get_im2col_map(num_input_maps,
-                                         input_rows + 2 * padding,
-                                         input_cols + 2 * padding,
-                                         kernel_size, stride)
+        dparams.fill(0.0)
+        dbias.fill(0.0)
 
-        dpadh = ((input_rows + 2 * padding - 1) * stride[0] + kernel_size[0] -
-                 output_rows) // 2
-        dpadw = ((input_cols + 2 * padding - 1) * stride[1] + kernel_size[1] -
-                 output_cols) // 2
-        col2im_map = self.get_im2col_map(num_output_maps,
-                                         output_rows + 2 * dpadh,
-                                         output_cols + 2 * dpadw,
-                                         kernel_size, (1, 1))
-        weight_deltas.fill(0.0)
-        bias_deltas.fill(0.0)
         for i in range(num_images):
-            # pad
-            if padding == 0:
-                im = inputs[i]
-            else:
-                im = np.zeros((num_input_maps, input_rows + 2 * padding,
-                               input_cols + 2 * padding))
-                im[:, padding: -padding, padding: -padding] = inputs[i]
-
-            # Get all actual indices & index into input array for final output
-            col = np.take(im, im2col_map)
+            col = np.zeros((num_output_pixels, num_kernel_params),
+                           dtype=self.dtype)
+            _cpuop.im2col(inputs[i].reshape(inputs[i].size),
+                          input_rows, input_cols, num_input_maps,
+                          kernel_shape[0], kernel_shape[1],
+                          padding, padding, padding, padding,
+                          stride[0], stride[1], col.reshape(col.size))
 
             # Compute gradients
-            reshaped_dweights = weight_deltas.reshape(num_filters,
-                                                      kernel_size[0] *
-                                                      kernel_size[1] *
-                                                      num_input_maps)
-            reshaped_out_deltas = out_deltas[i].reshape((num_filters, -1))
-            self.dot_add_mm(reshaped_out_deltas, col, out=reshaped_dweights,
-                            transb=True)
-            bias_deltas += np.sum(reshaped_out_deltas, axis=1)
+            reshaped_dparams = dparams.reshape(num_filters, num_kernel_params)
+            reshaped_out_deltas = out_deltas[i].reshape((num_output_pixels,
+                                                         num_filters))
+            self.dot_add_mm(reshaped_out_deltas, col, out=reshaped_dparams,
+                            transa=True)
+            dbias += np.sum(reshaped_out_deltas, axis=0)
 
             # Compute in_deltas
-
-            # But first some reshaping magic to rotate all kernels twice by 90
-            prod_k = kernel_size[0] * kernel_size[1]
-            _weights = np.fliplr(weights.reshape(-1, prod_k)).reshape(
-                weights.shape)
-            reshaped_weights = _weights.swapaxes(0, 1).reshape(num_input_maps,
-                                                               prod_k *
-                                                               num_filters)
-
-            im = np.zeros((num_filters, output_rows + 2 * dpadh,
-                           output_cols + 2 * dpadw))
-            im[:, dpadh: -dpadh, dpadw: -dpadw] = out_deltas[i]
-
-            col = np.take(im, col2im_map)
-
-            # temp contains deltas WRT padded inputs
-            new_shape = (num_input_maps,
-                         input_rows + 2 * padding,
-                         input_cols + 2 * padding)
-            temp = np.dot(reshaped_weights, col).reshape(new_shape)
-            # Remove padding
-            if padding == 0:
-                in_deltas[i] += temp
-            else:
-                in_deltas[i] += temp[:, padding: -padding, padding: -padding]
+            reshaped_params = params.reshape((num_filters, num_kernel_params))
+            np.dot(reshaped_out_deltas, reshaped_params, out=col)
+            _cpuop.col2im(col.reshape(col.size),
+                          input_rows, input_cols, num_input_maps,
+                          kernel_shape[0], kernel_shape[1],
+                          padding, padding, padding, padding,
+                          stride[0], stride[1],
+                          in_deltas[i].reshape(in_deltas[i].size))
 
     def conv2d_forward_batch(self, inputs, weights, bias, outputs,
                              padding, stride):
-
         num_filters = weights.shape[0]
         num_images, input_rows, input_cols, num_input_maps = inputs.shape
         kernel_shape = weights.shape[1:]
@@ -191,7 +154,6 @@ class NumpyHandler(Handler):
         out_shape = (num_output_pixels, num_filters)
 
         for i in range(num_images):
-
             col = np.zeros((num_output_pixels, num_kernel_params),
                            dtype=self.dtype)
             _cpuop.im2col(inputs[i].reshape(inputs[i].size),
