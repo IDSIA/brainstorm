@@ -19,7 +19,7 @@ cdef inline DTYPE_t dtype_t_max(DTYPE_t a, DTYPE_t b) nogil:
 cdef inline int int_max(int a, int b) nogil: return a if a >= b else b
 cdef inline int int_min(int a, int b) nogil: return a if a <= b else b
 
-# ---------------------------- Cudarray routines ---------------------------- #
+# ------------------------- Cudarray-based routines ------------------------- #
 # Please see Third Party License file for license information
 
 @cython.boundscheck(False)
@@ -29,7 +29,7 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
             DTYPE_t[:, :, :, ::1] outputs not None,
             int padding,
             tuple strides not None,
-            DTYPE_t[:, :, :, :, ::1] argmax not None):
+            DTYPE_t[:, :, :, ::1] argmax not None):
     cdef int pool_h = kernel[0]
     cdef int pool_w = kernel[1]
     cdef int stride_x = strides[1]
@@ -77,8 +77,9 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
                                     in_y_max = in_y
                                     in_x_max = in_x
                         outputs[i, y_out, x_out, c] = value
-                        argmax[i, y_out, x_out, c, 0] = <DTYPE_t>(in_y_max)
-                        argmax[i, y_out, x_out, c, 1] = <DTYPE_t>(in_x_max)
+                        argmax[i, y_out, x_out, c] = in_y_max * in_w + in_x_max
+                        # argmax[i, y_out, x_out, c, 0] = <DTYPE_t>(in_y_max)
+                        # argmax[i, y_out, x_out, c, 1] = <DTYPE_t>(in_x_max)
 
 
 @cython.boundscheck(False)
@@ -88,7 +89,7 @@ def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                      DTYPE_t[:, :, :, ::1] outputs not None,
                      const int padding,
                      tuple strides not None,
-                     DTYPE_t[:, :, :, :, ::1] argmax not None,
+                     DTYPE_t[:, :, :, ::1] argmax not None,
                      DTYPE_t[:, :, :, ::1] in_deltas not None,
                      DTYPE_t[:, :, :, ::1] out_deltas not None):
     cdef int pool_h = kernel[0]
@@ -107,8 +108,8 @@ def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
             for c in range(n_channels):
                 for y in range(out_h):
                     for x in range(out_w):
-                        in_y = <int>(argmax[i, y, x, c, 0])
-                        in_x = <int>(argmax[i, y, x, c, 1])
+                        in_y = <int>(argmax[i, y, x, c]) // in_w
+                        in_x = <int>(argmax[i, y, x, c]) % in_w
                         if in_y >= 0 and in_x >= 0:
                             in_deltas[i, in_y, in_x, c] += \
                                 out_deltas[i, y, x, c]
@@ -242,7 +243,7 @@ def _crop_images(DTYPE_t[:, :, :, :, ::1] inputs not None,
                                                             k + start_row,
                                                             l + start_col]
 
-# ----------------------------- Caffe2 routines ----------------------------- #
+# -------------------------- Caffe2-based routines -------------------------- #
 # Please see Third Party License file for license information
 
 @cython.boundscheck(False)

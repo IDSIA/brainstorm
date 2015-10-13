@@ -65,7 +65,7 @@ class Pooling2DLayerImpl(Layer):
 
         internals = OrderedDict()
         if self.type == 'max':
-            argmax_shape = outputs['default'].feature_shape + (2, )
+            argmax_shape = outputs['default'].feature_shape
             internals['argmax'] = BufferStructure('T', 'B', *argmax_shape)
         return outputs, OrderedDict(), internals
 
@@ -100,15 +100,14 @@ class Pooling2DLayerImpl(Layer):
         out_deltas = buffers.output_deltas.default
 
         # reshape
-        t, b, c, h, w = inputs.shape
-        flat_inputs = inputs.reshape((t * b, c, h, w))
-        flat_in_deltas = in_deltas.reshape((t * b, c, h, w))
-        flat_out_deltas = out_deltas.reshape((t * b,) + out_deltas.shape[2:])
-        flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
+        flat_inputs = flatten_time(inputs)
+        flat_in_deltas = flatten_time(in_deltas)
+        flat_out_deltas = flatten_time(out_deltas)
+        flat_outputs = flatten_time(outputs)
 
         if self.type == 'max':
             argmax = buffers.internals.argmax
-            flat_argmax = argmax.reshape((t * b,) + argmax.shape[2:])
+            flat_argmax = flatten_time(argmax)
             _h.maxpool2d_backward_batch(flat_inputs, self.kernel_size,
                                         flat_outputs, self.padding,
                                         self.stride, flat_argmax,

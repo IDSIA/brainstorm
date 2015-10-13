@@ -418,16 +418,18 @@ class PyCudaHandler(Handler):
 
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, argmax, in_deltas, out_deltas):
-        pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
-        self._pool2d_backward_batch(inputs, window, outputs, padding, stride,
-                                    argmax, in_deltas, out_deltas,
-                                    pool_mode)
+        pass
+        # pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
+        # self._pool2d_backward_batch(inputs, window, outputs, padding, stride,
+        #                             argmax, in_deltas, out_deltas,
+        #                             pool_mode)
 
     def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride, argmax):
-        pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
-        self._pool2d_forward_batch(inputs, window, outputs, padding,
-                                   stride, argmax, pool_mode)
+        pass
+        # pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
+        # self._pool2d_forward_batch(inputs, window, outputs, padding,
+        #                            stride, argmax, pool_mode)
 
     def mult_add_st(self, s, t, out):
         mult_add_st_kernel(s, t, out)
