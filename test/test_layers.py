@@ -115,7 +115,7 @@ def classification_layer(spec):
                                     NO_CON, size=feature_dim)
 
     spec['skip_inputs'] = ['targets']
-    spec['skip_outputs'] = ['output']
+    spec['skip_outputs'] = ['probabilities']
     spec['targets'] = targets
     return layer, spec
 
@@ -436,7 +436,8 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         layer.backward_pass(layer_buffers)
         for key, value in layer_buffers.input_deltas.items():
             assert np.allclose(deltas[key], HANDLER.get_numpy_copy(value),
-                               rtol=eps, atol=eps), "Failed for internal.{} when inspecting {}".format(internal, key)
+                               rtol=eps, atol=eps), \
+                "Failed for internal.{} when inspecting {}".format(internal, key)
 
 
 def test_layer_add_to_deltas(layer_specs):
@@ -469,13 +470,14 @@ def test_layer_add_to_deltas(layer_specs):
 
     # assert all input deltas are 1.0 bigger
     for key, value in layer_buffers.input_deltas.items():
-        passed = np.allclose(deltas[key] + 1.0, HANDLER.get_numpy_copy(value),
+        obtained = HANDLER.get_numpy_copy(value)
+        passed = np.allclose(deltas[key] + 1.0, obtained,
                              rtol=eps, atol=eps)
         if not passed:
             print("Adding deltas test failed for {}!".format(key))
-            print("Calculated Deltas:\n", value)
+            print("Calculated Deltas:\n", obtained)
             print("Expected Deltas:\n", deltas[key] + 1.0)
-            print("Difference:\n", deltas[key] + 1.0 - value)
+            print("Difference:\n", deltas[key] + 1.0 - obtained)
         assert passed, key
 
 
