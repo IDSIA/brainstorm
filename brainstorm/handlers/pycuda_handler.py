@@ -131,14 +131,14 @@ class PyCudaHandler(Handler):
                                  stride, in_deltas, out_deltas):
         n, h, w, c = inputs.shape
         o_h, o_w = outputs.shape[1], outputs.shape[2]
-        _avepool_bwd_fp32_impl(np.int32(inputs.size), out_deltas.gpudata,
+        _avepool_bwd_fp32_impl(np.int32(inputs.size), out_deltas,
                                np.int32(n), np.int32(h),
                                np.int32(w), np.int32(c),
                                np.int32(o_h), np.int32(o_w),
                                np.int32(window[0]), np.int32(window[1]),
                                np.int32(stride[0]), np.int32(stride[1]),
                                np.int32(padding), np.int32(padding),
-                               in_deltas.gpudata,
+                               in_deltas,
                                block=(get_blocks(inputs.size), 1, 1),
                                grid=(NUM_CUDA_THREADS, 1, 1))
         # pool_mode = cudnn.cudnnPoolingMode[
@@ -151,14 +151,14 @@ class PyCudaHandler(Handler):
                                 stride):
         n, h, w, c = inputs.shape
         o_h, o_w = outputs.shape[1], outputs.shape[2]
-        _avepool_fwd_fp32_impl(np.int32(outputs.size), inputs.gpudata,
+        _avepool_fwd_fp32_impl(np.int32(outputs.size), inputs,
                                np.int32(n), np.int32(h),
                                np.int32(w), np.int32(c),
                                np.int32(o_h), np.int32(o_w),
                                np.int32(window[0]), np.int32(window[1]),
                                np.int32(stride[0]), np.int32(stride[1]),
                                np.int32(padding), np.int32(padding),
-                               outputs.gpudata,
+                               outputs,
                                block=(get_blocks(outputs.size), 1, 1),
                                grid=(NUM_CUDA_THREADS, 1, 1))
         # pool_mode = cudnn.cudnnPoolingMode[
@@ -420,11 +420,11 @@ class PyCudaHandler(Handler):
                                  stride, argmax, in_deltas, out_deltas):
         in_image_size = inputs.size // inputs.shape[0]
         out_image_size = outputs.size // outputs.shape[0]
-        _maxpool_bwd_fp32_impl(np.int32(outputs.size), out_deltas.gpudata,
-                               argmax.gpudata,
+        _maxpool_bwd_fp32_impl(np.int32(outputs.size), out_deltas,
+                               argmax,
                                np.int32(out_image_size),
                                np.int32(in_image_size),
-                               in_deltas.gpudata,
+                               in_deltas,
                                block=(get_blocks(outputs.size), 1, 1),
                                grid=(NUM_CUDA_THREADS, 1, 1))
         # pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
@@ -436,14 +436,14 @@ class PyCudaHandler(Handler):
                                 stride, argmax):
         n, h, w, c = inputs.shape
         o_h, o_w = outputs.shape[1], outputs.shape[2]
-        _maxpool_fwd_fp32_impl(np.int32(outputs.size), inputs.gpudata,
+        _maxpool_fwd_fp32_impl(np.int32(outputs.size), inputs,
                                np.int32(h), np.int32(w), np.int32(c),
                                np.int32(o_h), np.int32(o_w),
                                np.int32(window[0]), np.int32(window[1]),
                                np.int32(stride[0]), np.int32(stride[1]),
                                np.int32(padding), np.int32(padding),
-                               outputs.gpudata,
-                               argmax.gpudata,
+                               outputs,
+                               argmax,
                                block=(get_blocks(outputs.size), 1, 1),
                                grid=(NUM_CUDA_THREADS, 1, 1))
         # pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
@@ -848,8 +848,7 @@ _col2im_fp32_impl = _mod_col2im_fp32.get_function("col2im_fp32_kernel")
 
 __maxpool_fwd_fp32_kernel = """
     #include "float.h"
-    __global__ void max_pool_fwd(const int nthreads, const float*
-    bottom_data,
+    __global__ void max_pool_fwd(const int nthreads, const float* bottom_data,
         const int height, const int width,
         const int channels, const int pooled_height, const int pooled_width,
         const int kernel_h, const int kernel_w, const int stride_h,
