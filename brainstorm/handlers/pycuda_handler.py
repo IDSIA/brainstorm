@@ -418,17 +418,14 @@ class PyCudaHandler(Handler):
 
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, argmax, in_deltas, out_deltas):
-        n, h, w, c = inputs.shape
-        o_h, o_w = outputs.shape[1], outputs.shape[2]
-        _maxpool_bwd_fp32_impl(np.int32(inputs.size), out_deltas.gpudata,
-                               np.int32(n), np.int32(h),
-                               np.int32(w), np.int32(c),
-                               np.int32(o_h), np.int32(o_w),
-                               np.int32(window[0]), np.int32(window[1]),
-                               np.int32(stride[0]), np.int32(stride[1]),
-                               np.int32(padding), np.int32(padding),
+        in_image_size = inputs.size // inputs.shape[0]
+        out_image_size = outputs.size // outputs.shape[0]
+        _maxpool_bwd_fp32_impl(np.int32(outputs.size), out_deltas.gpudata,
+                               argmax.gpudata,
+                               np.int32(out_image_size),
+                               np.int32(in_image_size),
                                in_deltas.gpudata,
-                               block=(get_blocks(inputs.size), 1, 1),
+                               block=(get_blocks(outputs.size), 1, 1),
                                grid=(NUM_CUDA_THREADS, 1, 1))
         # pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
         # self._pool2d_backward_batch(inputs, window, outputs, padding, stride,
@@ -886,6 +883,9 @@ __maxpool_fwd_fp32_kernel = """
         }
         top_data[index] = maxval;
         mask[index] = maxidx;
+        if (maxidx == -1) {
+          top_data[index] = 0;
+        }
       }
     }
     """
@@ -899,9 +899,10 @@ __maxpool_bwd_fp32_kernel = """
       for (int index = blockIdx.x * blockDim.x + threadIdx.x;
            index < (nthreads);
            index += blockDim.x * gridDim.x) {
-        int image_id = (index / top_offset);
-        atomicAdd(bottom_diff + image_id * bottom_offset + int(mask[index]),
-                  top_diff[index]);
+        if (!(mask[index] < 0.0)) {
+          int image_id = (index / top_offset);
+          atomicAdd(bottom_diff + image_id * bottom_offset + (int)(mask[index]),top_diff[index]);
+        }
       }
     }
     """

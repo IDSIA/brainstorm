@@ -42,9 +42,8 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, y_out, x_out
     cdef int y_min, y_max, x_min, x_max
-    cdef int in_y, in_x,
-    cdef int in_y_max = 0
-    cdef int in_x_max = 0
+    cdef int in_y, in_x
+    cdef int max_idx = -1
     cdef DTYPE_t value, new_value
     cdef DTYPE_t min_value
 
@@ -67,20 +66,18 @@ def maxpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
                         x_min = int_max(x, 0)
                         x_max = int_min(x + pool_w, in_w)
                         value = min_value
-                        in_y_max = -1
-                        in_x_max = -1
+                        max_idx = -1
                         for in_y in range(y_min, y_max):
                             for in_x in range(x_min, x_max):
                                 new_value = inputs[i, in_y, in_x, c]
                                 if new_value > value:
                                     value = new_value
-                                    in_y_max = in_y
-                                    in_x_max = in_x
+                                    max_idx = (in_y * in_w + in_x) * \
+                                              n_channels + c
                         outputs[i, y_out, x_out, c] = value
-                        argmax[i, y_out, x_out, c] = in_y_max * in_w + in_x_max
-                        # argmax[i, y_out, x_out, c, 0] = <DTYPE_t>(in_y_max)
-                        # argmax[i, y_out, x_out, c, 1] = <DTYPE_t>(in_x_max)
-
+                        argmax[i, y_out, x_out, c] = <DTYPE_t>max_idx
+                        if max_idx == -1:
+                            outputs[i, y_out, x_out, c] = 0
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -102,17 +99,20 @@ def maxpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int in_w = inputs.shape[2]
     cdef int out_h = outputs.shape[1]
     cdef int out_w = outputs.shape[2]
-    cdef int i, c, y, x, in_y, in_x
+    cdef int i, c, y, x, in_y, in_x, map_loc, max_idx
     with nogil:
         for i in range(n_inputs):
             for c in range(n_channels):
                 for y in range(out_h):
                     for x in range(out_w):
-                        in_y = <int>(argmax[i, y, x, c]) // in_w
-                        in_x = <int>(argmax[i, y, x, c]) % in_w
-                        if in_y >= 0 and in_x >= 0:
-                            in_deltas[i, in_y, in_x, c] += \
-                                out_deltas[i, y, x, c]
+                        max_idx = <int>(argmax[i, y, x, c])
+                        if max_idx != -1:
+                            map_loc = max_idx // n_channels
+                            in_y = map_loc // in_w
+                            in_x = map_loc % in_w
+                            if in_y >= 0 and in_x >= 0:
+                                in_deltas[i, in_y, in_x, c] += \
+                                    out_deltas[i, y, x, c]
 
 
 @cython.boundscheck(False)
