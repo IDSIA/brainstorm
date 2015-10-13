@@ -26,7 +26,7 @@ getter_va = Minibatches(100, default=ds['validation']['default'][:],
 
 # ------------------------------ Set up Network ----------------------------- #
 
-inp, fc = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
+inp, fc = bs.tools.get_in_out_layers_for_classification((32, 32, 3), 10)
 
 (inp >>
     bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='Conv1') >>
@@ -39,7 +39,7 @@ inp, fc = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
     fc)
 
 network = bs.Network.from_layer(fc)
-network.set_handler(PyCudaHandler())
+network.set_handler(PyCudaHandler(init_cudnn=False))
 network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
                     'FC': {'W': Gaussian(0.1), 'bias': 0},
                     'Output_FC': {'W': Gaussian(0.1), 'bias': 0}})

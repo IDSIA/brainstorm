@@ -27,7 +27,8 @@ getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
-inp, fc = bs.tools.get_in_out_layers_for_classification(784, 10, fc_name='FC')
+inp, fc = bs.tools.get_in_out_layers_for_classification((28, 28, 1), 10,
+                                                        fc_name='FC')
 network = bs.Network.from_layer(
     inp >>
     bs.layers.Dropout(drop_prob=0.2) >>
