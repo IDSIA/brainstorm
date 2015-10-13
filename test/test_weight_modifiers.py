@@ -11,7 +11,7 @@ from brainstorm.value_modifiers import ConstrainL2Norm
 non_default_handlers = []
 if has_pycuda:
     from brainstorm.handlers import PyCudaHandler
-    non_default_handlers.append(PyCudaHandler(init_cudnn=False))
+    non_default_handlers.append(PyCudaHandler())
 
 
 def test_limit_incoming_weights_squared():

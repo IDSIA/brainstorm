@@ -9,13 +9,13 @@ import numpy as np
 import pytest
 
 from brainstorm.handlers import NumpyHandler
-from brainstorm.optional import has_cudnn, has_pycuda
+from brainstorm.optional import has_pycuda
 
 non_default_handlers = []
 handler_ids = []
 if has_pycuda:
     from brainstorm.handlers import PyCudaHandler
-    non_default_handlers.append(PyCudaHandler(init_cudnn=has_cudnn))
+    non_default_handlers.append(PyCudaHandler())
     handler_ids.append("PyCudaHandler")
 
 # np.random.seed(1234)
