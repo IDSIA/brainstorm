@@ -254,7 +254,12 @@ class Identity(Initializer):
 
 class Orthogonal(Initializer):
     """
-    Othogonal initialization
+    Othogonal initialization.
+
+    Reference:
+    Saxe, Andrew M., James L. McClelland, and Surya Ganguli.
+    "Exact solutions to the nonlinear dynamics of learning in deep linear
+    neural networks." arXiv preprint arXiv:1312.6120 (2013).
     """
     def __init__(self, scale=1.0):
         super(Orthogonal, self).__init__()
