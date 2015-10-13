@@ -141,65 +141,6 @@ class DenseSqrtFanInOut(Initializer):
         return self.scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(n1 + n2)
 
 
-class SparseInputs(Initializer):
-    """
-    Makes sure every neuron only gets activation from a certain number of input
-    neurons and the rest of the parameters are 0.
-    The connections are initialized by evaluating the passed sub_initializer.
-
-    Example usage:
-    >> net = build_net(InputLayer(20) >> ForwardLayer(5))
-    >> net.initialize(ForwardLayer=SparseInputs(Gaussian(), connections=10))
-    """
-
-    def __init__(self, sub_initializer, connections=15):
-        super(SparseInputs, self).__init__()
-        self.sub_initializer = sub_initializer
-        self.connections = connections
-
-    def __call__(self, shape):
-        self._assert_atleast2d(shape)
-        if shape[0] < self.connections:
-            raise InitializationError("Input dimension to small: {} < {}"
-                                      "".format(shape[0], self.connections))
-
-        sub_result = evaluate_initializer(self.sub_initializer, shape)
-        connection_mask = np.zeros(shape)
-        connection_mask[:self.connections, :] = 1.
-        for i in range(shape[1]):
-            self.rnd.shuffle(connection_mask[:, i])
-        return sub_result * connection_mask
-
-
-class SparseOutputs(Initializer):
-    """
-    Makes sure every neuron is propagating its activation only to a certain
-    number of output neurons, and the rest of the parameters are 0.
-    The connections are initialized by evaluating the passed sub_initializer.
-
-    Example usage:
-    >> net = build_net(InputLayer(5) >> ForwardLayer(20))
-    >> net.initialize(ForwardLayer=SparseOutputs(Gaussian(), connections=10))
-    """
-
-    def __init__(self, sub_initializer, connections=15):
-        super(SparseOutputs, self).__init__()
-        self.sub_initializer = sub_initializer
-        self.connections = connections
-
-    def __call__(self, shape):
-        self._assert_atleast2d(shape)
-        if shape[1] < self.connections:
-            raise InitializationError("Output dimension to small: {} < {}"
-                                      "".format(shape[1], self.connections))
-        sub_result = evaluate_initializer(self.sub_initializer, shape)
-        connection_mask = np.zeros(shape)
-        connection_mask[:, :self.connections] = 1.
-        for i in range(shape[0]):
-            self.rnd.shuffle(connection_mask[i, :])
-        return sub_result * connection_mask
-
-
 class EchoState(Initializer):
     """
     Classic echo state initialization. Creates a matrix with a fixed spectral
@@ -249,6 +190,42 @@ class Identity(Initializer):
                                       "".format(shape))
         weights = np.eye(shape[0], shape[1], dtype=np.float) * self.scale
         weights += self.rnd.randn(*shape) * self.std
+        return weights
+
+
+class LstmOptInit(Initializer):
+    """
+    Used to initialize an LstmOpt layer.
+    This is useful because in an LstmOpt layer all the parameters are
+    concatenated for efficiency.
+
+    The parameters (input_block, input_gate, forget_gate, and output_gate)
+    can be scalars or Initializers themselves.
+    """
+    def __init__(self, input_block=0.0, input_gate=0.0, forget_gate=0.0,
+                 output_gate=0.0):
+        super(LstmOptInit, self).__init__()
+        self.block_input = input_block
+        self.input_gate = input_gate
+        self.forget_gate = forget_gate
+        self.output_gate = output_gate
+
+    def __call__(self, shape):
+        if shape[0] % 4 != 0:
+            raise InitializationError("First dim of LstmOpt shape needs to be "
+                                      "divisible by 4. But shape was {}"
+                                      .format(shape))
+        weights = np.zeros(shape)
+        n = shape[0] // 4
+        sub_shape = (n,) + shape[1:]
+        weights[:n] = evaluate_initializer(
+            self.block_input, sub_shape, seed=self.rnd.generate_seed())
+        weights[n:2 * n] = evaluate_initializer(
+            self.input_gate, sub_shape, seed=self.rnd.generate_seed())
+        weights[2 * n:3 * n] = evaluate_initializer(
+            self.forget_gate, sub_shape, seed=self.rnd.generate_seed())
+        weights[3 * n:] = evaluate_initializer(
+            self.output_gate, sub_shape, seed=self.rnd.generate_seed())
         return weights
 
 
@@ -313,40 +290,63 @@ class RandomWalk(Initializer):
         return scale * self.rnd.randn(*shape) / N
 
 
-class LstmOptInit(Initializer):
+class SparseInputs(Initializer):
     """
-    Used to initialize an LstmOpt layer.
-    This is useful because in an LstmOpt layer all the parameters are
-    concatenated for efficiency.
+    Makes sure every neuron only gets activation from a certain number of input
+    neurons and the rest of the parameters are 0.
+    The connections are initialized by evaluating the passed sub_initializer.
 
-    The parameters (input_block, input_gate, forget_gate, and output_gate)
-    can be scalars or Initializers themselves.
+    Example usage:
+    >> net = build_net(InputLayer(20) >> ForwardLayer(5))
+    >> net.initialize(ForwardLayer=SparseInputs(Gaussian(), connections=10))
     """
-    def __init__(self, input_block=0.0, input_gate=0.0, forget_gate=0.0,
-                 output_gate=0.0):
-        super(LstmOptInit, self).__init__()
-        self.block_input = input_block
-        self.input_gate = input_gate
-        self.forget_gate = forget_gate
-        self.output_gate = output_gate
+
+    def __init__(self, sub_initializer, connections=15):
+        super(SparseInputs, self).__init__()
+        self.sub_initializer = sub_initializer
+        self.connections = connections
 
     def __call__(self, shape):
-        if shape[0] % 4 != 0:
-            raise InitializationError("First dim of LstmOpt shape needs to be "
-                                      "divisible by 4. But shape was {}"
-                                      .format(shape))
-        weights = np.zeros(shape)
-        n = shape[0] // 4
-        sub_shape = (n,) + shape[1:]
-        weights[:n] = evaluate_initializer(
-            self.block_input, sub_shape, seed=self.rnd.generate_seed())
-        weights[n:2 * n] = evaluate_initializer(
-            self.input_gate, sub_shape, seed=self.rnd.generate_seed())
-        weights[2 * n:3 * n] = evaluate_initializer(
-            self.forget_gate, sub_shape, seed=self.rnd.generate_seed())
-        weights[3 * n:] = evaluate_initializer(
-            self.output_gate, sub_shape, seed=self.rnd.generate_seed())
-        return weights
+        self._assert_atleast2d(shape)
+        if shape[0] < self.connections:
+            raise InitializationError("Input dimension to small: {} < {}"
+                                      "".format(shape[0], self.connections))
+
+        sub_result = evaluate_initializer(self.sub_initializer, shape)
+        connection_mask = np.zeros(shape)
+        connection_mask[:self.connections, :] = 1.
+        for i in range(shape[1]):
+            self.rnd.shuffle(connection_mask[:, i])
+        return sub_result * connection_mask
+
+
+class SparseOutputs(Initializer):
+    """
+    Makes sure every neuron is propagating its activation only to a certain
+    number of output neurons, and the rest of the parameters are 0.
+    The connections are initialized by evaluating the passed sub_initializer.
+
+    Example usage:
+    >> net = build_net(InputLayer(5) >> ForwardLayer(20))
+    >> net.initialize(ForwardLayer=SparseOutputs(Gaussian(), connections=10))
+    """
+
+    def __init__(self, sub_initializer, connections=15):
+        super(SparseOutputs, self).__init__()
+        self.sub_initializer = sub_initializer
+        self.connections = connections
+
+    def __call__(self, shape):
+        self._assert_atleast2d(shape)
+        if shape[1] < self.connections:
+            raise InitializationError("Output dimension to small: {} < {}"
+                                      "".format(shape[1], self.connections))
+        sub_result = evaluate_initializer(self.sub_initializer, shape)
+        connection_mask = np.zeros(shape)
+        connection_mask[:, :self.connections] = 1.
+        for i in range(shape[0]):
+            self.rnd.shuffle(connection_mask[i, :])
+        return sub_result * connection_mask
 
 
 # ########################### helper methods ##################################
