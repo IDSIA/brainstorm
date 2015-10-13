@@ -13,7 +13,9 @@ from brainstorm.utils import flatten_time_and_features
 
 def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
     """Create a BatchNormalization layer."""
-    return ConstructionWrapper.create('BatchNorm', name=name, decay=decay,
+    return ConstructionWrapper.create(BatchNormLayerImpl,
+                                      name=name,
+                                      decay=decay,
                                       epsilon=epsilon)
 
 

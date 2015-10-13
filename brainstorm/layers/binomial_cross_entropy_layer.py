@@ -25,7 +25,8 @@ def BinomialCrossEntropy(name=None):
     For outputs outside that range or non-binary targets the result is
     undefined.
     """
-    return ConstructionWrapper.create('BinomialCrossEntropy', name=name)
+    return ConstructionWrapper.create(BinomialCrossEntropyLayerImpl,
+                                      name=name)
 
 
 class BinomialCrossEntropyLayerImpl(Layer):

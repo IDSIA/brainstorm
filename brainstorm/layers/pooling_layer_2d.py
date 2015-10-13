@@ -13,7 +13,8 @@ from brainstorm.utils import flatten_time
 
 def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
     """Create a 2D Pooling layer."""
-    return ConstructionWrapper.create('Pooling2D', kernel_size=kernel_size,
+    return ConstructionWrapper.create(Pooling2DLayerImpl,
+                                      kernel_size=kernel_size,
                                       type=type, stride=stride,
                                       padding=padding, name=name)
 

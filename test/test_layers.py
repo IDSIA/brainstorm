@@ -30,6 +30,11 @@ from brainstorm.layers.squared_difference_layer import \
 from brainstorm.structure.architecture import Connection
 from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.utils import LayerValidationError
+from brainstorm.layers.clockwork_rnn import ClockworkRnnLayerImpl
+from brainstorm.layers.clockwork_lstm import ClockworkLstmLayerImpl
+from brainstorm.layers.lstm_peephole import LstmPeepholeLayerImpl
+from brainstorm.layers.clockwork_lstm_peephole import ClockworkLstmPeepLayerImpl
+from brainstorm.layers.merge_layer import MergeLayerImpl
 
 from .helpers import (HANDLER, approx_fprime, run_deltas_test,
                       run_gradients_test, set_up_layer)
@@ -223,6 +228,56 @@ def l2_decay_layer(spec):
     return layer, spec
 
 
+def clockwork_rnn(spec):
+    layer = ClockworkRnnLayerImpl('ClockworkRnn',
+                                  {'default': BufferStructure('T', 'B', 5)},
+                                  NO_CON, NO_CON,
+                                  size=7,
+                                  activation=spec['act_func'])
+    spec['skip_parameters'] = ['timing']
+    spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
+    return layer, spec
+
+
+def clockwork_lstm(spec):
+    layer = ClockworkLstmLayerImpl('ClockworkLstm',
+                                  {'default': BufferStructure('T', 'B', 5)},
+                                  NO_CON, NO_CON,
+                                  size=7,
+                                  activation=spec['act_func'])
+
+    spec['skip_parameters'] = ['timing']
+    spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
+    return layer, spec
+
+def lstm_peephole_layer(spec):
+    layer = LstmPeepholeLayerImpl('LstmPeepholeLayer',
+                          {'default': BufferStructure('T', 'B', 5)},
+                          NO_CON, NO_CON,
+                          size=7,
+                          activation=spec['act_func'])
+    return layer, spec
+
+def clockwork_lstm_peephole(spec):
+    layer = ClockworkLstmPeepLayerImpl('ClockworkLstmPeepLayer',
+                                  {'default': BufferStructure('T', 'B', 5)},
+                                  NO_CON, NO_CON,
+                                  size=7,
+                                  activation=spec['act_func'])
+
+    spec['skip_parameters'] = ['timing']
+    spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
+    return layer, spec
+
+
+def merge(spec):
+    in_shapes = {'inputs_1': BufferStructure('T', 'B', 3, 2),
+                 'inputs_2': BufferStructure('T', 'B', 3, 4)}
+
+    layer = MergeLayerImpl('Merge',
+                           in_shapes, NO_CON, NO_CON)
+    return layer, spec
+
 layers_to_test = [
     noop_layer,
     loss_layer,
@@ -244,7 +299,12 @@ layers_to_test = [
     batch_norm_layer,
     elementwise_layer,
     l1_decay_layer,
-    l2_decay_layer
+    l2_decay_layer,
+    clockwork_rnn,
+    clockwork_lstm,
+    lstm_peephole_layer,
+    clockwork_lstm_peephole,
+    merge
 ]
 
 ids = [f.__name__ for f in layers_to_test]
@@ -253,7 +313,8 @@ spec_list = [
     (1, 1, 'tanh'),
     (5, 1, 'sigmoid'),
     (2, 3, 'rel'),
-    (1, 4, 'linear')]
+    (1, 4, 'linear'),
+]
 spec_ids = ['{}{}{}'.format(*p) for p in spec_list]
 
 
@@ -373,7 +434,7 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         layer.backward_pass(layer_buffers)
         for key, value in layer_buffers.input_deltas.items():
             assert np.allclose(deltas[key], HANDLER.get_numpy_copy(value),
-                               rtol=eps, atol=eps)
+                               rtol=eps, atol=eps), "Failed for internal.{} when inspecting {}".format(internal, key)
 
 
 def test_layer_add_to_deltas(layer_specs):

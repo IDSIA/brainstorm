@@ -14,7 +14,7 @@ from brainstorm.utils import flatten_time, flatten_time_and_features
 
 def L1Decay(name=None):
     """Add L1 regularization to the activations of a layer."""
-    return ConstructionWrapper.create('L1Decay', name=name)
+    return ConstructionWrapper.create(L1DecayLayerImpl, name=name)
 
 
 class L1DecayLayerImpl(Layer):

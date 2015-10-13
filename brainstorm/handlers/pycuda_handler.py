@@ -27,6 +27,7 @@ class PyCudaHandler(Handler):
     __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd'}
 
     def __init__(self, seed=None):
+        super(PyCudaHandler, self).__init__()
         self.dtype = np.float32
         self.context = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)
@@ -141,6 +142,22 @@ class PyCudaHandler(Handler):
 
     def clip_t(self, a, a_min, a_max, out):
         clip_kernel(a, out, a_min, a_max)
+
+    # NEW  -----------------------------------------------------------------
+
+    def modulo_mm(self, a, b, out):
+        modulo_mm_kernel(a, b, out)
+
+    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+        clw_undo_update_kernel(batch_size, feature_size, timing_mod, b, out)
+
+    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
+        clw_copy_add_act_of_inactive_kernel(batch_size, feature_size, timing, hb_t, out)
+
+    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
+        clw_set_inactive_to_zero_kernel(batch_size, feature_size, timing, out)
+
+    # END NEW  -------------------------------------------------------------
 
     def conv2d_backward_batch(self, inputs, params, padding, stride,
                               in_deltas, out_deltas, dparams, dbias):
@@ -297,6 +314,14 @@ class PyCudaHandler(Handler):
         else:
             cumisc.mult_matvec(m, v, out=out)
 
+    def mult_add_mv(self, m, v, out):
+        if m.shape == v.shape:
+            self.mult_add_tt(m, v, out=out)
+        else:
+            tmp = self.allocate(out.shape)
+            cumisc.mult_matvec(m, v, out=tmp)
+            self.add_tt(tmp, out, out=out)
+
     def mult_st(self, s, t, out):
         mult_st_kernel(s, t, out)
 
@@ -352,6 +377,33 @@ class PyCudaHandler(Handler):
 
 
 # -------------------------- Activation functions --------------------------- #
+
+# NEW ----------------------------------------------------------------------
+
+modulo_mm_kernel = ElementwiseKernel(
+    "int* x, int* y, int* out",
+    "out[i] = x[i] % y[i]",
+    "modulo_mm_kernel")
+
+clw_undo_update_kernel = ElementwiseKernel(
+    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
+    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = y[i/batch_size + (i % batch_size)*feature_size]",
+    "clw_undo_update_kernel"
+)
+
+clw_copy_add_act_of_inactive_kernel = ElementwiseKernel(
+    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
+    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] += y[i/batch_size + (i % batch_size)*feature_size]",
+    "clw_copy_add_act_of_inactive_kernel"
+)
+
+clw_set_inactive_to_zero_kernel = ElementwiseKernel(
+    "int batch_size, int feature_size, float* timing_mod, float* out",
+    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = 0.0",
+    "clw_undo_update_kernel"
+)
+# NEW END ------------------------------------------------------------------
+
 
 add_mm_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",

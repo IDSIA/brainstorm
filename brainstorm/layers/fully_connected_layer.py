@@ -14,8 +14,8 @@ from brainstorm.utils import (LayerValidationError, flatten_time,
 
 def FullyConnected(size, activation='rel', name=None):
     """Create a Fully Connected (inner product) layer."""
-    return ConstructionWrapper.create('FullyConnected', size=size, name=name,
-                                      activation=activation)
+    return ConstructionWrapper.create(FullyConnectedLayerImpl, size=size,
+                                      name=name, activation=activation)
 
 
 class FullyConnectedLayerImpl(Layer):
@@ -23,24 +23,8 @@ class FullyConnectedLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation'}
 
-    def set_handler(self, new_handler):
-        super(FullyConnectedLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_dunc_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(x, y),
-                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'rel')]
-
     def setup(self, kwargs, in_shapes):
-        self.act_func = None
-        self.act_func_deriv = None
+        self.activation = kwargs.get('activation', 'linear')
         self.size = kwargs.get('size', self.in_shapes['default'].feature_size)
         if not isinstance(self.size, int):
             raise LayerValidationError('size must be int but was {}'.
@@ -75,7 +59,7 @@ class FullyConnectedLayerImpl(Layer):
         # calculate outputs
         _h.dot_mm(flat_input, W, flat_H, transb=True)
         _h.add_mv(flat_H, bias.reshape((1, self.size)), flat_H)
-        self.act_func(H, outputs)
+        _h.act_func[self.activation](H, outputs)
 
     def backward_pass(self, buffers):
         # prepare
@@ -94,7 +78,7 @@ class FullyConnectedLayerImpl(Layer):
         flat_in_delta_buffer = flatten_time_and_features(in_deltas)
 
         # calculate in_deltas and gradients
-        self.act_func_deriv(H, outputs, out_deltas, dH)
+        _h.act_func_deriv[self.activation](H, outputs, out_deltas, dH)
         _h.dot_add_mm(flat_dH, W, out=flat_in_delta_buffer)
         _h.dot_mm(flat_dH, flat_input, out=dW, transa=True)
         _h.sum_t(flat_dH, axis=0, out=dbias)

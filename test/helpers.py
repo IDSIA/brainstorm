@@ -58,7 +58,11 @@ def set_up_layer(layer, specs):
 
     # init parameters randomly
     HANDLER.set_from_numpy(view.parameters,
-                           np.random.randn(view.parameters.size) * 0.1)
+                           np.random.randn(view.parameters.size) * 1)
+
+    inits = specs.get('inits', {})
+    for param_name, value in inits.items():
+        HANDLER.set_from_numpy(view.test_layer.parameters[param_name], value)
 
     for key, value in view.test_layer.inputs.items():
         if key in specs:  # if a special input is given use that

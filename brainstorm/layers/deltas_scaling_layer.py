@@ -19,7 +19,7 @@ def DeltasScaling(factor, name=None):
     This can be used to invert the deltas and set up an adversarial branch of
     the network.
     """
-    return ConstructionWrapper.create('DeltasScaling', name=name,
+    return ConstructionWrapper.create(DeltasScalingLayerImpl, name=name,
                                       factor=factor)
 
 

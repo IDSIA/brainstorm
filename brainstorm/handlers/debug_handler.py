@@ -62,9 +62,13 @@ class DebugHandler(Handler):
     __undescribed__ = {'EMPTY', 'array_type'}
 
     def __init__(self, handler):
+        super(DebugHandler, self).__init__()
         self.handler = handler
         self.EMPTY = DebugArray(arr=handler.EMPTY)
         self.array_type = DebugArray
+
+    def __init_from_description__(self, description):
+        self.__init__(self.handler)
 
     # ------------------------- Allocate new memory ------------------------- #
 
@@ -381,6 +385,15 @@ class DebugHandler(Handler):
         self.handler.mult_mv(m.array, v.array, out.array)
 
     @check_for_inf_or_nan
+    def mult_add_mv(self, m, v, out):
+        assert_debug_arrays(m, v, out)
+        assert_shapes_equal(m, out)
+        assert len(m.shape) == 2, "len({}) != 2".format(m.shape)
+        assert v.shape == (m.shape[0], 1) or v.shape == (1, m.shape[1]), \
+            "invalid shape {}".format(v.shape)
+        self.handler.mult_add_mv(m.array, v.array, out.array)
+
+    @check_for_inf_or_nan
     def mult_st(self, s, t, out):
         assert_debug_arrays(t, out)
         assert_is_scalar(s)
@@ -392,6 +405,37 @@ class DebugHandler(Handler):
         assert_debug_arrays(a, b, out)
         assert_shapes_equal(a, b, out)
         self.handler.mult_tt(a.array, b.array, out.array)
+
+# NEW:-------------------------------------------
+
+    def modulo_mm(self, a, b, out):
+        assert_debug_arrays(a, b, out)
+        assert_shapes_equal(a, b, out)
+        self.handler.modulo_mm(a.array, b.array, out.array)
+
+    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+        assert_debug_arrays(b, out)
+        assert_is_scalar(batch_size)
+        assert_is_scalar(feature_size)
+        assert_shapes_equal(b, out)
+        self.handler.clw_undo_update(batch_size, feature_size, timing_mod.array, b.array, out.array)
+
+    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing_mod, hb_t, out):
+        assert_debug_arrays(timing_mod, hb_t, out)
+        assert_is_scalar(batch_size)
+        assert_is_scalar(feature_size)
+        assert_shapes_equal(hb_t, out)
+        self.handler.clw_copy_add_act_of_inactive(batch_size, feature_size, timing_mod.array, hb_t.array, out.array)
+
+    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing_mod, out):
+        assert_debug_arrays(timing_mod, out)
+        assert_is_scalar(batch_size)
+        assert_is_scalar(feature_size)
+        self.handler.clw_set_inactive_to_zero(batch_size, feature_size, timing_mod.array, out.array)
+
+
+# NEW END: --------------------------------------
+
 
     @check_for_inf_or_nan
     def sign_t(self, a, out):

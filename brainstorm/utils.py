@@ -41,15 +41,11 @@ class IteratorValidationError(ValidationError):
     pass
 
 
-class ShapeValidationError(ValidationError):
+class StructureValidationError(ValidationError):
     pass
 
 
 class InitializationError(Exception):
-    pass
-
-
-class WeightModificationError(Exception):
     pass
 
 
@@ -166,7 +162,7 @@ def flatten_features(array, start_idx=2):
 
 
 def flatten_all_but_last(array):
-    return array.reshape((array.size // array.shape[-1], array.shape[-1]))
+    return array.reshape((int(np.product(array.shape[:-1])), array.shape[-1]))
 
 
 def flatten_keys(dictionary):

@@ -13,7 +13,7 @@ from brainstorm.utils import LayerValidationError
 
 def Highway(name=None):
     """Create a Highway layer."""
-    return ConstructionWrapper.create('Highway', name=name)
+    return ConstructionWrapper.create(HighwayLayerImpl, name=name)
 
 
 class HighwayLayerImpl(Layer):

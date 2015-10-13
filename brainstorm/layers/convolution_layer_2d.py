@@ -13,7 +13,7 @@ from brainstorm.utils import flatten_time
 def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                   activation='rel', name=None):
     """Create a 2D Convolution layer."""
-    return ConstructionWrapper.create('Convolution2D',
+    return ConstructionWrapper.create(Convolution2DLayerImpl,
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
                                       stride=stride,
@@ -29,8 +29,7 @@ class Convolution2DLayerImpl(Layer):
                        'activation'}
 
     def setup(self, kwargs, in_shapes):
-        self.act_func = None
-        self.act_func_deriv = None
+        self.activation = kwargs.get('activation', 'tanh')
         assert 'num_filters' in kwargs, "num_filters must be specified " \
                                         " for ConvolutionLayer"
         assert 'kernel_size' in kwargs, "kernel_size must be specified " \
@@ -78,21 +77,6 @@ class Convolution2DLayerImpl(Layer):
 
         return outputs, parameters, internals
 
-    def set_handler(self, new_handler):
-        super(Convolution2DLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_dunc_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(x, y),
-                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'rel')]
-
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
@@ -108,7 +92,7 @@ class Convolution2DLayerImpl(Layer):
         # calculate outputs
         _h.conv2d_forward_batch(flat_inputs, W, bias, flat_H,
                                 self.padding, self.stride)
-        self.act_func(H, outputs)
+        _h.act_func[self.activation](H, outputs)
 
     def backward_pass(self, buffers):
         # prepare
@@ -127,6 +111,6 @@ class Convolution2DLayerImpl(Layer):
         flat_dH = flatten_time(dH)
 
         # calculate in_deltas and gradients
-        self.act_func_deriv(H, outputs, out_deltas, dH)
+        _h.act_func_deriv[self.activation](H, outputs, out_deltas, dH)
         _h.conv2d_backward_batch(flat_inputs, W, self.padding, self.stride,
                                  flat_in_deltas, flat_dH, dW, dbias)

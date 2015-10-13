@@ -12,7 +12,7 @@ from brainstorm.utils import flatten_time, flatten_time_and_features
 
 def Mask(name=None):
     """Create a Mask layer."""
-    return ConstructionWrapper.create('Mask', name=name)
+    return ConstructionWrapper.create(MaskLayerImpl, name=name)
 
 
 class MaskLayerImpl(Layer):

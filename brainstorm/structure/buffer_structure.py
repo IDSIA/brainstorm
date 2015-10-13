@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 import numpy as np
 
-from brainstorm.utils import ShapeValidationError, ValidationError
+from brainstorm.utils import StructureValidationError, ValidationError
 
 
 class StructureTemplate(object):
@@ -34,52 +34,52 @@ class StructureTemplate(object):
 
     def validate(self):
         if len(self.shape) == 0:
-            raise ShapeValidationError("shape must be non-empty (nr dims > 0)")
+            raise StructureValidationError("shape must be non-empty (nr dims > 0)")
 
         if 'T' in self.shape and self.shape[:2] != ('T', 'B'):
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "Shapes that scale with time need to start with ('T', 'B')"
                 "(but started with {})".format(self.shape[:2]))
 
         if 'T' not in self.shape and 'B' in self.shape and \
                 self.shape[:1] != ('B',):
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "Shapes that scale with batch-size need to start with 'B'"
                 "(but started with {})".format(self.shape[:1]))
 
         # validate feature dimensions
         if len(self.shape) < self.first_feature_dim:
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "need at least one feature dimension"
                 "(but shape was {})".format(self.shape))
 
         if '...' in self.shape:
             if self.feature_shape != ('...',):
-                raise ShapeValidationError(
+                raise StructureValidationError(
                     'Wildcard-shapes can ONLY have a single feature dimension'
                     ' entry "...". (But had {})'.format(self.feature_shape))
 
         elif 'F' in self.shape:
             # TODO: Is this condition necessary?
             if not all([f == 'F' for f in self.feature_shape]):
-                raise ShapeValidationError(
+                raise StructureValidationError(
                     'The feature dimensions of shapes with feature templates '
                     '("F") have to consist only of "F"s. (But was {})'
                     .format(self.feature_shape))
         else:
             if not all([isinstance(f, int) for f in self.feature_shape]):
-                raise ShapeValidationError(
+                raise StructureValidationError(
                     'The feature dimensions have to be all-integer. But was {}'
                     .format(self.feature_shape))
 
         # validate context_size
         if not isinstance(self.context_size, int) or self.context_size < 0:
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "context_size has to be a non-negative integer, but was {}"
                 .format(self.context_size))
 
         if self.context_size and 'T' not in self.shape:
-            raise ShapeValidationError("context_size is only available for "
+            raise StructureValidationError("context_size is only available for "
                                        "shapes that scale with time.")
 
     def matches(self, shape):
@@ -162,38 +162,38 @@ class BufferStructure(object):
 
     def validate(self):
         if len(self.shape) == 0:
-            raise ShapeValidationError("shape must be non-empty (nr dims > 0)")
+            raise StructureValidationError("shape must be non-empty (nr dims > 0)")
 
         if self.scales_with_time and self.shape[:2] != ('T', 'B'):
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "Shapes that scale with time need to start with ('T', 'B')"
                 "(but started with {})".format(self.shape[:2]))
 
         if not self.scales_with_time and self.scales_with_batch_size and \
                 self.shape[:1] != ('B',):
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "Shapes that scale with batch-size need to start with 'B'"
                 "(but started with {})".format(self.shape[:1]))
 
         # validate feature dimensions
         if len(self.shape) <= self.first_feature_dim:
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "need at least one feature dimension"
                 "(but shape was {})".format(self.shape))
 
         if not all([isinstance(f, int) for f in self.feature_shape]):
-                raise ShapeValidationError(
+                raise StructureValidationError(
                     'The feature dimensions have to be all-integer. But was {}'
                     .format(self.feature_shape))
 
         # validate context_size
         if not isinstance(self.context_size, int) or self.context_size < 0:
-            raise ShapeValidationError(
+            raise StructureValidationError(
                 "context_size has to be a non-negative integer, but was {}"
                 .format(self.context_size))
 
         if self.context_size and not self.scales_with_time:
-            raise ShapeValidationError("context_size is only available for "
+            raise StructureValidationError("context_size is only available for "
                                        "shapes that scale with time.")
 
     def to_json(self, i):

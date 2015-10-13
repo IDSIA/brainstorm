@@ -10,12 +10,11 @@ from brainstorm.structure.construction import (ConstructionWrapper,
 
 @pytest.fixture
 def layers():
-    return [ConstructionWrapper.create('dummy_type', i) for i in range(1, 6)]
+    return [ConstructionWrapper.create('DummyLayerImpl') for _ in range(5)]
 
 
 def test_constructor():
-    cl = ConstructionWrapper.create('Foo', 7)
-    assert cl.layer.layer_kwargs == {'shape': 7}
+    cl = ConstructionWrapper.create('FooLayerImpl')
     assert cl.layer.layer_type == 'Foo'
     assert repr(cl) == "<Layer: 'default' - Foo - 'default'>"
 
@@ -121,25 +120,25 @@ def test_collect_connected_layers2(layers):
 
 
 def test_name():
-    l = ConstructionWrapper.create('Foo', 7, name='bar')
+    l = ConstructionWrapper.create('FooLayerImpl', name='bar')
     assert l.layer.name == 'bar'
 
 
 def test_default_name():
-    l = ConstructionWrapper.create('Foo', 7)
+    l = ConstructionWrapper.create('FooLayerImpl')
     assert l.layer.name == 'Foo'
 
 
 def test_name_unconnected():
-    l1 = ConstructionWrapper.create('Foo', 7, name='bar')
-    l2 = ConstructionWrapper.create('Foo', 7, name='bar')
+    l1 = ConstructionWrapper.create('FooLayerImpl', name='bar')
+    l2 = ConstructionWrapper.create('FooLayerImpl', name='bar')
     assert l1.layer.name == 'bar'
     assert l2.layer.name == 'bar'
 
 
 def test_name_connected():
-    l1 = ConstructionWrapper.create('Foo', 7, name='bar')
-    l2 = ConstructionWrapper.create('Foo', 7, name='bar')
+    l1 = ConstructionWrapper.create('FooLayerImpl', name='bar')
+    l2 = ConstructionWrapper.create('FooLayerImpl', name='bar')
     _ = l1 >> l2
     assert l1.layer.name == 'bar_1'
     assert l2.layer.name == 'bar_2'
@@ -150,8 +149,8 @@ def test_name_connected_complex(layers):
     _ = l3 >> l4
     _ = l2 >> l1
     _ = l5 >> l2 >> l3
-    assert l1.layer.name == 'dummy_type_1'
-    assert l2.layer.name == 'dummy_type_2'
-    assert l3.layer.name == 'dummy_type_3'
-    assert l4.layer.name == 'dummy_type_4'
-    assert l5.layer.name == 'dummy_type_5'
+    assert l1.layer.name == 'Dummy_1'
+    assert l2.layer.name == 'Dummy_2'
+    assert l3.layer.name == 'Dummy_3'
+    assert l4.layer.name == 'Dummy_4'
+    assert l5.layer.name == 'Dummy_5'

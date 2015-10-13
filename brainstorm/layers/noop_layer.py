@@ -14,7 +14,7 @@ def NoOp(name=None):
 
     This layer just copies its input into its output.
     """
-    return ConstructionWrapper.create('NoOp', name=name)
+    return ConstructionWrapper.create(NoOpLayerImpl, name=name)
 
 
 class NoOpLayerImpl(Layer):

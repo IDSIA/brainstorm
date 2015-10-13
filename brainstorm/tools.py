@@ -39,7 +39,7 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
         >>> inp, out = tools.get_in_out_layers_for_classification(784, 10)
         >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
     Args:
-        in_shape (tuple[int]): Shape of the input data.
+        in_shape (int or tuple[int]): Shape of the input data.
         nr_classes (int): Number of possible classes.
         data_name (Optional[str]):
             Name of the input data which will be provided by a data iterator.
@@ -104,7 +104,7 @@ def get_in_out_layers_for_regression(in_shape, nr_outputs,
         >>> inp, out = tools.get_in_out_layers_for_regression(100, 10)
         >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
     Args:
-        in_shape (tuple[int]): Shape of the input data.
+        in_shape (int or tuple[int]): Shape of the input data.
         nr_classes (int): Number of outputs.
         data_name (Optional[str]):
             Name of the input data which will be provided by a data iterator.
@@ -216,7 +216,7 @@ def evaluate(network, iter, scorers=(), out_name='', targets_name='targets',
     data.
 
     Args:
-        net (brainstorm.structure.Network): Network to be evaluated.
+        network (brainstorm.structure.Network): Network to be evaluated.
         iter (brainstorm.DataIterator): A data iterator which produces the
                                         data on which the scores are computed.
         scorers (tuple[brainstorm.scorers.Scorer]): A list or tuple of Scorers.
@@ -257,7 +257,7 @@ def extract_and_save(network, iter, buffer_names, file_name):
         ...                   'Hid1.internals.H'],
         ...                  'network_features.hdf5')
     Args:
-        net (brainstorm.structure.Network): Network using which the features
+        network (brainstorm.structure.Network): Network using which the features
                                             should be generated.
         iter (brainstorm.DataIterator): A data iterator which produces the
                                         data on which the features are
