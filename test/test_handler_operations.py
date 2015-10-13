@@ -111,7 +111,7 @@ def test_conv2d_forward_batch_numpy():
 
 def test_conv2d_forward_batch_pycuda():
     from brainstorm.handlers import PyCudaHandler
-    _h = PyCudaHandler(init_cudnn=True)
+    _h = PyCudaHandler(init_cudnn=False)
     for input_shape in ((3, 3), (5, 4), (4, 9)):
         for nr_images in (1, 4):
             for nr_input_maps in (1, 3):
