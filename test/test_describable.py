@@ -318,7 +318,7 @@ def test_describe_pycuda_handler():
     from brainstorm.handlers.pycuda_handler import PyCudaHandler
     pch = PyCudaHandler()
     d = get_description(pch)
-    assert d == {'@type': 'PyCudaHandler', 'init_cudnn': True}
+    assert d == {'@type': 'PyCudaHandler'}
     pch2 = create_from_description(d)
     assert isinstance(pch2, PyCudaHandler)
 
