@@ -67,7 +67,8 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
     if isinstance(in_shape, int):
         in_shape = (in_shape, )
     fc_name = out_name + '_FC' if fc_name is None else fc_name
-    fc_layer = layers.FullyConnected(nr_classes, name=fc_name)
+    fc_layer = layers.FullyConnected(nr_classes, name=fc_name,
+                                     activation='linear')
     out_layer = layers.SoftmaxCE(name=out_name)
     fc_layer >> out_layer
 
