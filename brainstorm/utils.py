@@ -41,15 +41,11 @@ class IteratorValidationError(ValidationError):
     pass
 
 
-class ShapeValidationError(ValidationError):
+class StructureValidationError(ValidationError):
     pass
 
 
 class InitializationError(Exception):
-    pass
-
-
-class WeightModificationError(Exception):
     pass
 
 

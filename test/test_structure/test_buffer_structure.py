@@ -7,7 +7,7 @@ import pytest
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate,
                                                    combine_buffer_structures)
-from brainstorm.utils import ShapeValidationError
+from brainstorm.utils import StructureValidationError
 
 # ############################ BufferStructures ############################# #
 
@@ -73,7 +73,7 @@ illegal_structures = [
 
 @pytest.mark.parametrize('shape', illegal_structures)
 def test_illegal_buffer_structure_raise(shape):
-    with pytest.raises(ShapeValidationError):
+    with pytest.raises(StructureValidationError):
         BufferStructure(*shape)
 
 # ########################### StructureTemplates ############################ #
@@ -99,7 +99,7 @@ illegal_templates = illegal_structures + [
 
 @pytest.mark.parametrize('shape', illegal_templates)
 def test_illegal_structure_template_raise(shape):
-    with pytest.raises(ShapeValidationError):
+    with pytest.raises(StructureValidationError):
         StructureTemplate(*shape)
 
 

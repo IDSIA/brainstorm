@@ -62,10 +62,12 @@ class AddGaussianNoise(DataIterator):
                 Defaults to None meaning all means are treated as 0.
         """
         DataIterator.__init__(self, iter.data_shapes, iter.length)
-        if mean_dict is not None:
-            assert set(mean_dict.keys()) == set(std_dict.keys()), \
-                "means and standard deviations must be provided for " \
-                "the same data names"
+        mean_keys = set(mean_dict.keys()) if mean_dict is not None else set()
+        std_keys = set(std_dict.keys())
+        if mean_dict is not None and mean_keys != std_keys:
+            raise IteratorValidationError(
+                "means and standard deviations must be provided for the same "
+                "data names. But {} != {}".format(mean_keys, std_keys))
         for key in std_dict.keys():
             if key not in iter.data_shapes:
                 raise IteratorValidationError(
