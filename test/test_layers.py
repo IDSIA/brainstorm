@@ -24,7 +24,7 @@ from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
-from brainstorm.layers.rnn_layer import RecurrentLayerImpl
+from brainstorm.layers.recurrent_layer import RecurrentLayerImpl
 from brainstorm.layers.squared_difference_layer import \
     SquaredDifferenceLayerImpl
 from brainstorm.structure.architecture import Connection
