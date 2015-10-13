@@ -129,7 +129,18 @@ class PyCudaHandler(Handler):
 
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, in_deltas, out_deltas):
-        pass
+        n, h, w, c = inputs.shape
+        o_h, o_w = outputs.shape[1], outputs.shape[2]
+        _avepool_bwd_fp32_impl(np.int32(inputs.size), out_deltas.gpudata,
+                               np.int32(n), np.int32(h),
+                               np.int32(w), np.int32(c),
+                               np.int32(o_h), np.int32(o_w),
+                               np.int32(window[0]), np.int32(window[1]),
+                               np.int32(stride[0]), np.int32(stride[1]),
+                               np.int32(padding), np.int32(padding),
+                               in_deltas.gpudata,
+                               block=(get_blocks(inputs.size), 1, 1),
+                               grid=(NUM_CUDA_THREADS, 1, 1))
         # pool_mode = cudnn.cudnnPoolingMode[
         #     'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
         # self._pool2d_backward_batch(inputs, window, outputs, padding,
@@ -941,8 +952,7 @@ __avepool_bwd_fp32_kernel = """
             int wend = min(wstart + kernel_w, width);
             hstart = max(hstart, 0);
             wstart = max(wstart, 0);
-            // Make sure that all pixels were not padding
-            int pool_size = max((hend - hstart) * (wend - wstart), 1);
+            int pool_size = (hend - hstart) * (wend - wstart);
             gradient +=
                 top_diff_slice[(ph * pooled_width + pw) * channels] / pool_size;
           }

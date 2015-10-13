@@ -170,7 +170,7 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                      tuple strides not None,
                      DTYPE_t[:, :, :, ::1] in_deltas not None,
                      DTYPE_t[:, :, :, ::1] out_deltas not None):
-    # NOTE: Modified to count only non-padding pixels
+    # NOTE: No modification need to count only non-padding pixels
     cdef int pool_h = kernel[0]
     cdef int pool_w = kernel[1]
     cdef int stride_x = strides[1]
@@ -194,8 +194,7 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                         x = x_out * stride_x-padding
                         x_min = int_max(x, 0)
                         x_max = int_min(x + pool_w, in_w)
-                        pool_size = int_max((y_max - y_min) * (x_max - x_min),
-                                            1)
+                        pool_size = (y_max - y_min) * (x_max - x_min)
                         for yy in range(y_min, y_max):
                             for xx in range(x_min, x_max):
                                  in_deltas[i, yy, xx, c] += \

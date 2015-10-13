@@ -109,7 +109,6 @@ def test_conv2d_forward_batch_numpy():
                                 assert passed
 
 
-@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
 def test_conv2d_forward_batch_pycuda():
     from brainstorm.handlers import PyCudaHandler
     _h = PyCudaHandler(init_cudnn=True)
