@@ -115,7 +115,7 @@ class NumpyHandler(Handler):
         dparams.fill(0.0)
         dbias.fill(0.0)
         col = np.zeros((num_output_pixels, num_kernel_params),
-                           dtype=self.dtype)
+                       dtype=self.dtype)
 
         for i in range(num_images):
             _cpuop.im2col(inputs[i].reshape(inputs[i].size),

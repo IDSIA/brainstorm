@@ -446,7 +446,6 @@ def test_rel_deriv(handler):
         assert operation_check(handler, 'rel_deriv', ref_args)
 
 
-@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_conv2d_forward(handler):
     img_shapes = [(1, 3, 3, 1), (3, 8, 8, 1), (2, 6, 4, 3), (1, 3, 4, 2)]
@@ -473,7 +472,6 @@ def test_conv2d_forward(handler):
             assert passed
 
 
-@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_conv2d_backward(handler):
     img_shapes = [(1, 3, 3, 1), (4, 8, 8, 1), (3, 6, 4, 10), (1, 3, 4, 2)]
@@ -569,10 +567,9 @@ def test_maxpool2d_backward(handler):
                     assert passed
 
 
-@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_avgpool2d_forward(handler):
-    img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
+    img_shapes = [(1, 5, 5, 1), (10, 32, 32, 3), (10, 6, 4, 10), (1, 6, 9, 2)]
     window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
     list_x = get_random_arrays(img_shapes)
@@ -582,9 +579,11 @@ def test_avgpool2d_forward(handler):
             for strides in strides_list:
                 for window in window_list:
                     out_shape = (
-                        x.shape[0], x.shape[1],
-                        (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
-                        (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
+                        x.shape[0],
+                        (x.shape[1] + 2*padding - window[0]) // strides[0] + 1,
+                        (x.shape[2] + 2*padding - window[1]) // strides[1] + 1,
+                        x.shape[3]
+                    )
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
                     ref_args = (x, window, outputs, padding, strides)
                     passed = operation_check(handler,
@@ -595,10 +594,9 @@ def test_avgpool2d_forward(handler):
                     assert passed
 
 
-@pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_avgpool2d_backward(handler):
-    img_shapes = [(1, 1, 5, 5), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 6, 9)]
+    img_shapes = [(1, 5, 5, 1), (10, 32, 32, 3), (10, 6, 4, 10), (1, 6, 9, 2)]
     window_list = [(2, 2), (3, 3), (4, 4), (2, 1), (1, 2)]
     strides_list = [(1, 1), (2, 2), (1, 2), (2, 1)]
     list_x = get_random_arrays(img_shapes)
@@ -608,9 +606,11 @@ def test_avgpool2d_backward(handler):
             for strides in strides_list:
                 for window in window_list:
                     out_shape = (
-                        x.shape[0], x.shape[1],
-                        (x.shape[2] + 2*padding - window[0]) // strides[0] + 1,
-                        (x.shape[3] + 2*padding - window[1]) // strides[1] + 1)
+                        x.shape[0],
+                        (x.shape[1] + 2*padding - window[0]) // strides[0] + 1,
+                        (x.shape[2] + 2*padding - window[1]) // strides[1] + 1,
+                        x.shape[3]
+                    )
                     outputs = np.zeros(out_shape, dtype=ref_dtype)
                     o_deltas = np.random.normal(size=out_shape)
                     o_deltas = o_deltas.astype(ref_dtype)

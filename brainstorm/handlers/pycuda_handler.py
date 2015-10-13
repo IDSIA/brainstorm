@@ -129,18 +129,31 @@ class PyCudaHandler(Handler):
 
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, in_deltas, out_deltas):
-        pool_mode = cudnn.cudnnPoolingMode[
-            'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
-        self._pool2d_backward_batch(inputs, window, outputs, padding,
-                                    stride, None, in_deltas, out_deltas,
-                                    pool_mode)
+        pass
+        # pool_mode = cudnn.cudnnPoolingMode[
+        #     'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
+        # self._pool2d_backward_batch(inputs, window, outputs, padding,
+        #                             stride, None, in_deltas, out_deltas,
+        #                             pool_mode)
 
     def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride):
-        pool_mode = cudnn.cudnnPoolingMode[
-            'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
-        self._pool2d_forward_batch(inputs, window, outputs, padding,
-                                   stride, None, pool_mode)
+        n, h, w, c = inputs.shape
+        o_h, o_w = outputs.shape[1], outputs.shape[2]
+        _avepool_fwd_fp32_impl(np.int32(outputs.size), inputs.gpudata,
+                               np.int32(n), np.int32(h),
+                               np.int32(w), np.int32(c),
+                               np.int32(o_h), np.int32(o_w),
+                               np.int32(window[0]), np.int32(window[1]),
+                               np.int32(stride[0]), np.int32(stride[1]),
+                               np.int32(padding), np.int32(padding),
+                               outputs.gpudata,
+                               block=(get_blocks(outputs.size), 1, 1),
+                               grid=(NUM_CUDA_THREADS, 1, 1))
+        # pool_mode = cudnn.cudnnPoolingMode[
+        #     'CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING']
+        # self._pool2d_forward_batch(inputs, window, outputs, padding,
+        #                            stride, None, pool_mode)
 
     def binarize_v(self, v, out):
         binarize_v_kernel(out, v, out.shape[0], out.shape[1])
@@ -718,6 +731,9 @@ __softmax_kernel_code = """
 _mod_softmax = SourceModule(__softmax_kernel_code)
 _softmax_impl = _mod_softmax.get_function("softmax_kernel")
 
+# ----------------------------- Caffe2 Kernels ------------------------------ #
+# Please see Third Party License file for license information
+
 __im2col_fp32_kernel_code = """
     __global__ void im2col_fp32_kernel(const int n, const float* data_im,
         const int height, const int width, const int kernel_h, const int kernel_w,
@@ -797,3 +813,143 @@ __col2im_fp32_kernel_code = """
 
 _mod_col2im_fp32 = SourceModule(__col2im_fp32_kernel_code)
 _col2im_fp32_impl = _mod_col2im_fp32.get_function("col2im_fp32_kernel")
+
+__maxpool_fwd_fp32_kernel = """
+    #include "float.h"
+    __global__ void max_pool_fwd(const int nthreads, const float*
+    bottom_data,
+        const int height, const int width,
+        const int channels, const int pooled_height, const int pooled_width,
+        const int kernel_h, const int kernel_w, const int stride_h,
+        const int stride_w, const int pad_t, const int pad_l, float* top_data,
+        float* mask) {
+      for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+           index < (nthreads);
+           index += blockDim.x * gridDim.x) {
+        int n = index;
+        int c = n % channels;
+        n /= channels;
+        int wstart = (n % pooled_width) * stride_w - pad_l;
+        n /= pooled_width;
+        int hstart = (n % pooled_height) * stride_h - pad_t;
+        n /= pooled_height;
+        int hend = min(hstart + kernel_h, height);
+        int wend = min(wstart + kernel_w, width);
+        hstart = max(hstart, 0);
+        wstart = max(wstart, 0);
+        float maxval = -FLT_MAX;
+        int maxidx = -1;
+        bottom_data += n * height * width * channels;
+        for (int h = hstart; h < hend; ++h) {
+          for (int w = wstart; w < wend; ++w) {
+            int idx = (h * width + w) * channels + c;
+            if (bottom_data[idx] > maxval) {
+              maxidx = idx;
+              maxval = bottom_data[idx];
+            }
+          }
+        }
+        top_data[index] = maxval;
+        mask[index] = maxidx;
+      }
+    }
+    """
+_mod_maxpool_fwd_fp32 = SourceModule(__maxpool_fwd_fp32_kernel)
+_maxpool_fwd_fp32_impl = _mod_maxpool_fwd_fp32.get_function("max_pool_fwd")
+
+__maxpool_bwd_fp32_kernel = """
+    __global__ void max_pool_bwd(
+        const int nthreads, const float* top_diff, const float* mask,
+        const int top_offset, const int bottom_offset, float* bottom_diff) {
+      for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+           index < (nthreads);
+           index += blockDim.x * gridDim.x) {
+        int image_id = (index / top_offset);
+        atomicAdd(bottom_diff + image_id * bottom_offset + int(mask[index]),
+                  top_diff[index]);
+      }
+    }
+    """
+_mod_maxpool_bwd_fp32 = SourceModule(__maxpool_bwd_fp32_kernel)
+_maxpool_bwd_fp32_impl = _mod_maxpool_bwd_fp32.get_function("max_pool_bwd")
+
+__avepool_fwd_fp32_kernel = """
+    __global__ void ave_pool_fwd(
+        const int nthreads, const float* bottom_data,
+        const int num, const int height, const int width,
+        const int channels, const int pooled_height, const int pooled_width,
+        const int kernel_h, const int kernel_w, const int stride_h,
+        const int stride_w, const int pad_t, const int pad_l, float* top_data) {
+      for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+           index < (nthreads);
+           index += blockDim.x * gridDim.x) {
+        int c = index % channels;
+        int pw = (index / channels) % pooled_width;
+        int ph = (index / channels / pooled_width) % pooled_height;
+        int n = index / channels / pooled_width / pooled_height;
+        int hstart = ph * stride_h - pad_t;
+        int wstart = pw * stride_w - pad_l;
+        int hend = min(hstart + kernel_h, height);
+        int wend = min(wstart + kernel_w, width);
+        hstart = max(hstart, 0);
+        wstart = max(wstart, 0);
+        float output = 0;
+        bottom_data += n * height * width * channels;
+        for (int h = hstart; h < hend; ++h) {
+          for (int w = wstart; w < wend; ++w) {
+            output += bottom_data[(h * width + w) * channels + c];
+          }
+        }
+        // Make sure that all pixels were not padding
+        int pool_size = max((hend - hstart) * (wend - wstart), 1);
+        top_data[index] = output / pool_size;
+      }
+    }
+    """
+_mod_avepool_fwd_fp32 = SourceModule(__avepool_fwd_fp32_kernel)
+_avepool_fwd_fp32_impl = _mod_avepool_fwd_fp32.get_function("ave_pool_fwd")
+
+__avepool_bwd_fp32_kernel = """
+    __global__ void ave_pool_bwd(const int nthreads,
+        const float* const top_diff, const int num, const int height,
+        const int width, const int channels, const int pooled_height,
+        const int pooled_width, const int kernel_h, const int kernel_w,
+        const int stride_h, const int stride_w, const int pad_t,
+        const int pad_l, float* const bottom_diff) {
+      for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+           index < (nthreads);
+           index += blockDim.x * gridDim.x) {
+        // find out the local index
+        // find out the local offset
+        const int c = index % channels;
+        const int w = index / channels % width + pad_l;
+        const int h = (index / channels / width) % height + pad_t;
+        const int n = index / channels / width / height;
+        const int phstart = (h < kernel_h) ? 0 : (h - kernel_h) / stride_h + 1;
+        const int phend = min(h / stride_h + 1, pooled_height);
+        const int pwstart = (w < kernel_w) ? 0 : (w - kernel_w) / stride_w + 1;
+        const int pwend = min(w / stride_w + 1, pooled_width);
+        float gradient = 0;
+        const float* const top_diff_slice =
+            top_diff + n * pooled_height * pooled_width * channels + c;
+        for (int ph = phstart; ph < phend; ++ph) {
+          for (int pw = pwstart; pw < pwend; ++pw) {
+            // figure out the pooling size
+            int hstart = ph * stride_h - pad_t;
+            int wstart = pw * stride_w - pad_l;
+            int hend = min(hstart + kernel_h, height);
+            int wend = min(wstart + kernel_w, width);
+            hstart = max(hstart, 0);
+            wstart = max(wstart, 0);
+            // Make sure that all pixels were not padding
+            int pool_size = max((hend - hstart) * (wend - wstart), 1);
+            gradient +=
+                top_diff_slice[(ph * pooled_width + pw) * channels] / pool_size;
+          }
+        }
+        bottom_diff[index] += gradient;
+      }
+    }
+    """
+_mod_avepool_bwd_fp32 = SourceModule(__avepool_bwd_fp32_kernel)
+_avepool_bwd_fp32_impl = _mod_avepool_bwd_fp32.get_function("ave_pool_bwd")

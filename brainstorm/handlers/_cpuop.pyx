@@ -19,7 +19,8 @@ cdef inline DTYPE_t dtype_t_max(DTYPE_t a, DTYPE_t b) nogil:
 cdef inline int int_max(int a, int b) nogil: return a if a >= b else b
 cdef inline int int_min(int a, int b) nogil: return a if a <= b else b
 
-# Note: this is forked from Anders Boesen Lindbo Larsen's cudarray code
+# ---------------------------- Cudarray routines ---------------------------- #
+# Please see Third Party License file for license information
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -120,6 +121,7 @@ def avgpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
             DTYPE_t[:, :, :, ::1] outputs not None,
             int padding,
             tuple strides not None):
+    # NOTE: Modified to count only non-padding pixels
     cdef int pool_h = kernel[0]
     cdef int pool_w = kernel[1]
     cdef int stride_x = strides[1]
@@ -136,7 +138,7 @@ def avgpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int in_y_max = 0
     cdef int in_x_max = 0
     cdef DTYPE_t value, new_value
-    cdef DTYPE_t pool_size = pool_h * pool_w
+    cdef int pool_size = 0
     with nogil:
         for i in range(n_inputs):
             for c in range(n_channels):
@@ -154,6 +156,8 @@ def avgpool_forward(DTYPE_t[:, :, :, ::1] inputs not None,
                         for in_y in range(y_min, y_max):
                             for in_x in range(x_min, x_max):
                                 value += inputs[i, in_y, in_x, c]
+                        pool_size = int_max((y_max - y_min) * (x_max - x_min),
+                                            1)
                         outputs[i, y_out, x_out, c] = value / pool_size
 
 
@@ -166,6 +170,7 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                      tuple strides not None,
                      DTYPE_t[:, :, :, ::1] in_deltas not None,
                      DTYPE_t[:, :, :, ::1] out_deltas not None):
+    # NOTE: Modified to count only non-padding pixels
     cdef int pool_h = kernel[0]
     cdef int pool_w = kernel[1]
     cdef int stride_x = strides[1]
@@ -177,7 +182,7 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
     cdef int out_h = outputs.shape[1]
     cdef int out_w = outputs.shape[2]
     cdef int i, c, y, x, x_min, x_max, y_min, y_max, x_out, y_out
-    cdef DTYPE_t pool_size = pool_h * pool_w
+    cdef int pool_size = 0
     with nogil:
         for i in range(n_inputs):
             for c in range(n_channels):
@@ -189,6 +194,8 @@ def avgpool_backward(DTYPE_t[:, :, :, ::1] inputs not None,
                         x = x_out * stride_x-padding
                         x_min = int_max(x, 0)
                         x_max = int_min(x + pool_w, in_w)
+                        pool_size = int_max((y_max - y_min) * (x_max - x_min),
+                                            1)
                         for yy in range(y_min, y_max):
                             for xx in range(x_min, x_max):
                                  in_deltas[i, yy, xx, c] += \
@@ -236,6 +243,8 @@ def _crop_images(DTYPE_t[:, :, :, :, ::1] inputs not None,
                                                             k + start_row,
                                                             l + start_col]
 
+# ----------------------------- Caffe2 routines ----------------------------- #
+# Please see Third Party License file for license information
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
