@@ -147,9 +147,9 @@ class EchoState(Initializer):
     radius (default=1.0). Spectral radius should be < 1 to satisfy
     ES-property. Only works for square matrices.
 
-    Example usage:
-    >> net = build_net(InputLayer(5) >> RnnLayer(20, act_func='tanh'))
-    >> net.initialize(default=Gaussian(), RnnLayer={'HR': EchoState(0.77)})
+    Example:
+        >>> net.initialize(default=Gaussian(),
+                           Recurrent={'R': EchoState(0.77)})
     """
 
     __default_values__ = {'spectral_radius': 1.0}
@@ -231,7 +231,7 @@ class LstmOptInit(Initializer):
 
 class Orthogonal(Initializer):
     """
-    Othogonal initialization.
+    Orthogonal initialization.
 
     Reference:
     Saxe, Andrew M., James L. McClelland, and Surya Ganguli.
@@ -296,9 +296,9 @@ class SparseInputs(Initializer):
     neurons and the rest of the parameters are 0.
     The connections are initialized by evaluating the passed sub_initializer.
 
-    Example usage:
-    >> net = build_net(InputLayer(20) >> ForwardLayer(5))
-    >> net.initialize(ForwardLayer=SparseInputs(Gaussian(), connections=10))
+    Example:
+        >>> net.initialize(FullyConnected=SparseInputs(Gaussian(),
+                                                       connections=10))
     """
 
     def __init__(self, sub_initializer, connections=15):
@@ -326,9 +326,9 @@ class SparseOutputs(Initializer):
     number of output neurons, and the rest of the parameters are 0.
     The connections are initialized by evaluating the passed sub_initializer.
 
-    Example usage:
-    >> net = build_net(InputLayer(5) >> ForwardLayer(20))
-    >> net.initialize(ForwardLayer=SparseOutputs(Gaussian(), connections=10))
+    Example:
+        >>> net.initialize(FullyConnected=SparseOutputs(Gaussian(),
+                                                        connections=10))
     """
 
     def __init__(self, sub_initializer, connections=15):

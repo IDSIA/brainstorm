@@ -19,7 +19,7 @@ from brainstorm.layers.merge_layer import Merge
 from brainstorm.layers.mask_layer import Mask
 from brainstorm.layers.noop_layer import NoOp
 from brainstorm.layers.pooling_layer_2d import Pooling2D
-from brainstorm.layers.rnn_layer import Recurrent
+from brainstorm.layers.recurrent_layer import Recurrent
 from brainstorm.layers.squared_difference_layer import SquaredDifference
 from brainstorm.layers.l1_decay import L1Decay
 from brainstorm.layers.l2_decay import L2Decay
