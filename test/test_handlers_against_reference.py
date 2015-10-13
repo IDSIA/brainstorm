@@ -449,7 +449,7 @@ def test_rel_deriv(handler):
 @pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_conv2d_forward(handler):
-    img_shapes = [(1, 1, 3, 3), (3, 1, 32, 32), (2, 3, 6, 4), (1, 2, 3, 4)]
+    img_shapes = [(1, 3, 3, 1), (3, 8, 8, 1), (2, 6, 4, 3), (1, 3, 4, 2)]
     w_shapes = [(1, 1, 1), (3, 3, 3), (6, 2, 2), (2, 1, 3)]
 
     list_x = get_random_arrays(img_shapes)
@@ -458,13 +458,12 @@ def test_conv2d_forward(handler):
 
     for ws in w_shapes:
         for x in list_x:
-            w_shape = (ws[0], x.shape[1], ws[1], ws[2])
+            w_shape = (ws[0], ws[1], ws[2], x.shape[3])
             w = np.random.uniform(size=w_shape).astype(ref_dtype)
             b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
-            oh = (x.shape[2] + 2 * padding - w.shape[2]) / stride[0] + 1
-            ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
-            out = np.zeros((x.shape[0], w.shape[0]) + (oh, ow),
-                           dtype=ref_dtype)
+            oh = (x.shape[1] + 2 * padding - w.shape[1]) / stride[0] + 1
+            ow = (x.shape[2] + 2 * padding - w.shape[2]) / stride[1] + 1
+            out = np.zeros((x.shape[0], oh, ow, w.shape[0]), dtype=ref_dtype)
             ref_args = (x, w, b, out, padding, stride)
 
             passed = operation_check(handler, 'conv2d_forward_batch', ref_args,
@@ -477,8 +476,8 @@ def test_conv2d_forward(handler):
 @pytest.mark.skipif(has_cudnn is False, reason='requires cuDNN wrappers')
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_conv2d_backward(handler):
-    img_shapes = [(1, 1, 3, 3), (10, 3, 32, 32), (10, 10, 6, 4), (1, 2, 3, 4)]
-    w_shapes = [(3, 3, 3), (6, 4, 5), (2, 5, 3)]
+    img_shapes = [(1, 3, 3, 1), (4, 8, 8, 1), (3, 6, 4, 10), (1, 3, 4, 2)]
+    w_shapes = [(1, 1, 1), (3, 1, 1), (6, 2, 3), (2, 1, 3)]
 
     list_x = get_random_arrays(img_shapes)
     stride = (1, 1)
@@ -486,12 +485,12 @@ def test_conv2d_backward(handler):
 
     for ws in w_shapes:
         for x in list_x:
-            w_shape = (ws[0], x.shape[1], ws[1], ws[2])
+            w_shape = (ws[0], ws[1], ws[2], x.shape[3])
             w = np.random.uniform(size=w_shape).astype(ref_dtype)
             b = np.random.uniform(size=(w.shape[0],)).astype(ref_dtype)
-            oh = (x.shape[2] + 2 * padding - w.shape[2]) / stride[0] + 1
-            ow = (x.shape[3] + 2 * padding - w.shape[3]) / stride[1] + 1
-            out_shape = (x.shape[0], w.shape[0]) + (oh, ow)
+            oh = (x.shape[1] + 2 * padding - w.shape[1]) / stride[0] + 1
+            ow = (x.shape[2] + 2 * padding - w.shape[2]) / stride[1] + 1
+            out_shape = (x.shape[0], oh, ow, w.shape[0])
             o_deltas = np.random.uniform(size=out_shape).astype(ref_dtype)
             i_deltas = np.zeros_like(x, dtype=ref_dtype)
             w_deltas = np.zeros_like(w, dtype=ref_dtype)
@@ -500,7 +499,7 @@ def test_conv2d_backward(handler):
             ref_args = (x, w, padding, stride, i_deltas,
                         o_deltas, w_deltas, b_deltas)
             passed = operation_check(handler, 'conv2d_backward_batch',
-                                     ref_args, atol=1e-4)
+                                     ref_args, atol=1e-6)
             if not passed:
                 print(x.shape, w.shape)
             assert passed

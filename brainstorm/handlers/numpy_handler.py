@@ -105,21 +105,19 @@ class NumpyHandler(Handler):
         np.clip(a, a_min, a_max, out)
 
     def conv2d_backward_batch(self, inputs, params, padding, stride,
-                              in_deltas, out_deltas, dparams,
-                              dbias):
+                              in_deltas, out_deltas, dparams, dbias):
         num_filters = params.shape[0]
         num_images, input_rows, input_cols, num_input_maps = inputs.shape
-        _, output_rows, output_cols, num_output_maps = out_deltas.shape
         kernel_shape = params.shape[1:]
         num_output_pixels = out_deltas.shape[1] * out_deltas.shape[2]
         num_kernel_params = np.prod(kernel_shape)
 
         dparams.fill(0.0)
         dbias.fill(0.0)
+        col = np.zeros((num_output_pixels, num_kernel_params),
+                           dtype=self.dtype)
 
         for i in range(num_images):
-            col = np.zeros((num_output_pixels, num_kernel_params),
-                           dtype=self.dtype)
             _cpuop.im2col(inputs[i].reshape(inputs[i].size),
                           input_rows, input_cols, num_input_maps,
                           kernel_shape[0], kernel_shape[1],

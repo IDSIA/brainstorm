@@ -156,77 +156,128 @@ class PyCudaHandler(Handler):
     def clip_t(self, a, a_min, a_max, out):
         clip_kernel(a, out, a_min, a_max)
 
-    def conv2d_backward_batch(self, inputs, weights, padding, stride,
-                              in_deltas, out_deltas, weight_deltas,
-                              bias_deltas):
-        upscalex, upscaley = 1, 1  # currently not exposed to API
+    def conv2d_backward_batch(self, inputs, params, padding, stride,
+                              in_deltas, out_deltas, dparams, dbias):
+        num_filters = params.shape[0]
+        num_images, input_rows, input_cols, num_input_maps = inputs.shape
+        kernel_shape = params.shape[1:]
+        num_output_pixels = out_deltas.shape[1] * out_deltas.shape[2]
+        num_kernel_params = np.prod(kernel_shape)
 
-        n, h, w, c = inputs.shape
-        x_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, n, c, h, w)
-        id_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type,
-                                         n, c, h, w)
-        n, h, w, c = out_deltas.shape
-        od_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type,
-                                         n, c, h, w)
-        w_desc = cudnn.cudnnCreateFilterDescriptor()
-        cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
-                                         *weights.shape)
-        dw_desc = cudnn.cudnnCreateFilterDescriptor()
-        cudnn.cudnnSetFilter4dDescriptor(dw_desc, self.cudnn_data_type,
-                                         *weight_deltas.shape)
-        db_desc = cudnn.cudnnCreateTensorDescriptor()
-        cudnn.cudnnSetTensor4dDescriptor(db_desc, self.cudnn_tensor_format,
-                                         self.cudnn_data_type, 1,
-                                         bias_deltas.size, 1, 1)
-        conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
-        cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
-                                              stride[0], stride[1], upscalex,
-                                              upscaley, self.cudnn_convmode)
+        dparams.fill(0.0)
+        dbias.fill(0.0)
+        tmp = self.zeros(dbias.shape)
+        col = self.zeros((num_output_pixels, num_kernel_params))
 
-        alpha, beta = 1.0, 0.0
-        x_data = ctypes.c_void_p(int(inputs.gpudata))
-        w_data = ctypes.c_void_p(int(weights.gpudata))
-        id_data = ctypes.c_void_p(int(in_deltas.gpudata))
-        od_data = ctypes.c_void_p(int(out_deltas.gpudata))
-        dw_data = ctypes.c_void_p(int(weight_deltas.gpudata))
-        db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
+        for i in range(num_images):
+            num_cuda_kernels = num_output_pixels * num_input_maps
 
-        cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
-                                             x_desc, x_data, od_desc, od_data,
-                                             conv_desc, beta,
-                                             dw_desc, dw_data)
+            _im2col_fp32_impl(np.int32(num_cuda_kernels), inputs[i],
+                              np.int32(input_rows), np.int32(input_cols),
+                              np.int32(kernel_shape[0]),
+                              np.int32(kernel_shape[1]),
+                              np.int32(padding), np.int32(padding),
+                              np.int32(stride[0]), np.int32(stride[1]),
+                              np.int32(out_deltas.shape[2]),
+                              np.int32(num_input_maps),
+                              col.gpudata,
+                              block=(get_blocks(num_cuda_kernels), 1, 1),
+                              grid=(NUM_CUDA_THREADS, 1, 1))
 
-        cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
-                                           od_desc, od_data, beta, db_desc,
-                                           db_data)
-        beta = 1.0  # Gradients w.r.t. inputs should be added
-        cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
-                                           w_desc, w_data, od_desc, od_data,
-                                           conv_desc, beta,
-                                           id_desc, id_data)
-        cudnn.cudnnDestroyTensorDescriptor(x_desc)
-        cudnn.cudnnDestroyFilterDescriptor(w_desc)
-        cudnn.cudnnDestroyTensorDescriptor(id_desc)
-        cudnn.cudnnDestroyTensorDescriptor(od_desc)
-        cudnn.cudnnDestroyFilterDescriptor(dw_desc)
-        cudnn.cudnnDestroyFilterDescriptor(db_desc)
-        cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
+            # Compute gradients
+            reshaped_dparams = dparams.reshape(num_filters, num_kernel_params)
+            reshaped_out_deltas = out_deltas[i].reshape((num_output_pixels,
+                                                         num_filters))
+            self.dot_add_mm(reshaped_out_deltas, col, out=reshaped_dparams,
+                            transa=True)
 
-    def conv2d_forward_batch(self, inputs, weights, bias, outputs,
+            self.sum_t(reshaped_out_deltas, axis=0, out=tmp)
+            self.add_tt(tmp, dbias, out=dbias)
+
+            # Compute in_deltas
+            reshaped_params = params.reshape((num_filters, num_kernel_params))
+            self.dot_mm(reshaped_out_deltas, reshaped_params, out=col)
+            num_cuda_kernels = input_rows * input_cols * num_input_maps
+            _col2im_fp32_impl(np.int32(num_cuda_kernels), col.gpudata,
+                              np.int32(input_cols), np.int32(num_input_maps),
+                              np.int32(kernel_shape[0]),
+                              np.int32(kernel_shape[1]),
+                              np.int32(padding), np.int32(padding),
+                              np.int32(stride[0]), np.int32(stride[1]),
+                              np.int32(out_deltas.shape[1]),
+                              np.int32(out_deltas.shape[2]),
+                              in_deltas[i],
+                              block=(get_blocks(num_cuda_kernels), 1, 1),
+                              grid=(NUM_CUDA_THREADS, 1, 1))
+
+        # upscalex, upscaley = 1, 1  # currently not exposed to API
+        #
+        # n, h, w, c = inputs.shape
+        # x_desc = cudnn.cudnnCreateTensorDescriptor()
+        # cudnn.cudnnSetTensor4dDescriptor(x_desc, self.cudnn_tensor_format,
+        #                                  self.cudnn_data_type, n, c, h, w)
+        # id_desc = cudnn.cudnnCreateTensorDescriptor()
+        # cudnn.cudnnSetTensor4dDescriptor(id_desc, self.cudnn_tensor_format,
+        #                                  self.cudnn_data_type,
+        #                                  n, c, h, w)
+        # n, h, w, c = out_deltas.shape
+        # od_desc = cudnn.cudnnCreateTensorDescriptor()
+        # cudnn.cudnnSetTensor4dDescriptor(od_desc, self.cudnn_tensor_format,
+        #                                  self.cudnn_data_type,
+        #                                  n, c, h, w)
+        # w_desc = cudnn.cudnnCreateFilterDescriptor()
+        # cudnn.cudnnSetFilter4dDescriptor(w_desc, self.cudnn_data_type,
+        #                                  *weights.shape)
+        # dw_desc = cudnn.cudnnCreateFilterDescriptor()
+        # cudnn.cudnnSetFilter4dDescriptor(dw_desc, self.cudnn_data_type,
+        #                                  *weight_deltas.shape)
+        # db_desc = cudnn.cudnnCreateTensorDescriptor()
+        # cudnn.cudnnSetTensor4dDescriptor(db_desc, self.cudnn_tensor_format,
+        #                                  self.cudnn_data_type, 1,
+        #                                  bias_deltas.size, 1, 1)
+        # conv_desc = cudnn.cudnnCreateConvolutionDescriptor()
+        # cudnn.cudnnSetConvolution2dDescriptor(conv_desc, padding, padding,
+        #                                       stride[0], stride[1], upscalex,
+        #                                       upscaley, self.cudnn_convmode)
+        #
+        # alpha, beta = 1.0, 0.0
+        # x_data = ctypes.c_void_p(int(inputs.gpudata))
+        # w_data = ctypes.c_void_p(int(weights.gpudata))
+        # id_data = ctypes.c_void_p(int(in_deltas.gpudata))
+        # od_data = ctypes.c_void_p(int(out_deltas.gpudata))
+        # dw_data = ctypes.c_void_p(int(weight_deltas.gpudata))
+        # db_data = ctypes.c_void_p(int(bias_deltas.gpudata))
+        #
+        # cudnn.cudnnConvolutionBackwardFilter(self.cudnn_context, alpha,
+        #                                      x_desc, x_data, od_desc, od_data,
+        #                                      conv_desc, beta,
+        #                                      dw_desc, dw_data)
+        #
+        # cudnn.cudnnConvolutionBackwardBias(self.cudnn_context, alpha,
+        #                                    od_desc, od_data, beta, db_desc,
+        #                                    db_data)
+        # beta = 1.0  # Gradients w.r.t. inputs should be added
+        # cudnn.cudnnConvolutionBackwardData(self.cudnn_context, alpha,
+        #                                    w_desc, w_data, od_desc, od_data,
+        #                                    conv_desc, beta,
+        #                                    id_desc, id_data)
+        # cudnn.cudnnDestroyTensorDescriptor(x_desc)
+        # cudnn.cudnnDestroyFilterDescriptor(w_desc)
+        # cudnn.cudnnDestroyTensorDescriptor(id_desc)
+        # cudnn.cudnnDestroyTensorDescriptor(od_desc)
+        # cudnn.cudnnDestroyFilterDescriptor(dw_desc)
+        # cudnn.cudnnDestroyFilterDescriptor(db_desc)
+        # cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
+
+    def conv2d_forward_batch(self, inputs, params, bias, outputs,
                              padding, stride):
-        num_filters = weights.shape[0]
-        num_images, input_rows, input_cols, channels = inputs.shape
-        kernel_shape = weights.shape[1:]
+        num_filters = params.shape[0]
+        num_images, input_rows, input_cols, num_input_maps = inputs.shape
+        kernel_shape = params.shape[1:]
         num_output_pixels = outputs.shape[1] * outputs.shape[2]
         num_kernel_params = np.prod(kernel_shape)
         out_shape = (num_output_pixels, num_filters)
-        num_cuda_kernels = num_output_pixels * channels
+        num_cuda_kernels = num_output_pixels * num_input_maps
 
         for i in range(num_images):
             col = self.zeros((num_output_pixels, num_kernel_params))
@@ -237,12 +288,12 @@ class PyCudaHandler(Handler):
                               np.int32(padding), np.int32(padding),
                               np.int32(stride[0]), np.int32(stride[1]),
                               np.int32(outputs.shape[2]),
-                              np.int32(channels),
+                              np.int32(num_input_maps),
                               col.gpudata,
                               block=(get_blocks(num_cuda_kernels), 1, 1),
                               grid=(NUM_CUDA_THREADS, 1, 1))
 
-            reshaped_params = weights.reshape(num_filters, num_kernel_params)
+            reshaped_params = params.reshape(num_filters, num_kernel_params)
             culinalg.dot(col, reshaped_params, transb='T',
                          out=outputs[i].reshape(out_shape))
 
@@ -739,7 +790,7 @@ __col2im_fp32_kernel_code = """
             val += data_col[offset + h_col * coeff_h_col + w_col * coeff_w_col];
           }
         }
-        data_im[index] = val;
+        data_im[index] += val;
       }
     }
     """
