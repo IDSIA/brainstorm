@@ -29,6 +29,7 @@ class PyCudaHandler(Handler):
                        'cudnn_addmode'}
 
     def __init__(self, seed=None, init_cudnn=True):
+        super(PyCudaHandler, self).__init__()
         self.dtype = np.float32
         self.context = cumisc._global_cublas_handle
         self.EMPTY = gpuarray.zeros((), dtype=self.dtype)

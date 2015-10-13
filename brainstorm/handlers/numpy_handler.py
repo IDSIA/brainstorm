@@ -14,6 +14,7 @@ class NumpyHandler(Handler):
     __undescribed__ = {'context', 'EMPTY', 'rnd'}
 
     def __init__(self, dtype, seed=None):
+        super(NumpyHandler, self).__init__()
         self.dtype = dtype
         self.context = 'numpy'
         self.EMPTY = np.zeros(0)

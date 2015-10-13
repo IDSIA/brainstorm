@@ -21,8 +21,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
 
     def setup(self, kwargs, in_shapes):
-        self.act_func = None
-        self.act_func_deriv = None
+        self.activation = kwargs.get('activation', 'tanh')
         self.size = kwargs.get('size', in_shapes['default'].feature_size)
 
         if not isinstance(self.size, int):
@@ -91,32 +90,6 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
         return outputs, parameters, internals
 
-    def _setup_hyperparameters(self):
-        self.act_func = None
-        self.act_func_deriv = None
-        self.size = self.kwargs.get('size',
-                                    self.in_shapes['default'].feature_size)
-
-        if not isinstance(self.size, int):
-            raise LayerValidationError('size must be int but was {}'.
-                                       format(self.size))
-
-    def set_handler(self, new_handler):
-        super(ClockworkLstmPeepLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_func_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(x, y),
-                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'tanh')]
-
-
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
@@ -159,7 +132,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
             # Block input
             _h.dot_add_mm(y[t - 1], Rz, Za[t], transb=True)
             _h.add_mv(Za[t], bz.reshape((1, self.size)), Za[t])
-            self.act_func(Za[t], Zb[t])
+            _h.act_func[self.activation](Za[t], Zb[t])
 
             # Input Gate
             _h.dot_add_mm(y[t - 1], Ri, Ia[t], transb=True)
@@ -184,7 +157,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
             _h.sigmoid(Oa[t], Ob[t])
 
             # Block output
-            self.act_func(Ca[t], Cb[t])
+            _h.act_func[self.activation](Ca[t], Cb[t])
             _h.mult_tt(Ob[t], Cb[t], y[t])
 
             if t > 0:
@@ -265,7 +238,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
-            self.act_func_deriv(Ca[t], Cb[t], dCb[t], dCb[t])  # Important change to standard LSTM
+            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])  # Important change to standard LSTM
             _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dCb[t])
             _h.add_tt(dCa[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], Fb[t + 1], dCa[t])
@@ -280,7 +253,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
             # Block Input
             _h.mult_tt(dCa[t], Ib[t], dZb[t])
-            self.act_func_deriv(Za[t], Zb[t], dZb[t], dZa[t])
+            _h.act_func_deriv[self.activation](Za[t], Zb[t], dZb[t], dZa[t])
 
             # Copy over the error from previous inactive nodes:
             _h.clw_copy_add_act_of_inactive(batch_size, feature_size, tmp, dy[t], dy[t-1])

@@ -23,32 +23,18 @@ class ElementwiseLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'activation'}
 
-    def set_handler(self, new_handler):
-        super(ElementwiseLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_dunc_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(x, y),
-                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'rel')]
-
     def setup(self, kwargs, in_shapes):
-        self.act_func = None
-        self.act_func_deriv = None
+        self.activation = kwargs.get('activation', 'rel')
         return in_shapes, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
-        self.act_func(buffers.inputs.default, buffers.outputs.default)
+        self.handler.act_func[self.activation](buffers.inputs.default,
+                                               buffers.outputs.default)
 
     def backward_pass(self, buffers):
         tmp = self.handler.allocate(buffers.input_deltas.default.shape)
-        self.act_func_deriv(buffers.inputs.default, buffers.outputs.default,
-                            buffers.output_deltas.default, tmp)
+        self.handler.act_func_deriv[self.activation](
+            buffers.inputs.default, buffers.outputs.default,
+            buffers.output_deltas.default, tmp)
         self.handler.add_tt(buffers.input_deltas.default, tmp,
                             buffers.input_deltas.default)

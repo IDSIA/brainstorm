@@ -23,8 +23,7 @@ class RecurrentLayerImpl(Layer):
     expected_kwargs = {'size', 'activation'}
 
     def setup(self, kwargs, in_shapes):
-        self.act_func = None
-        self.act_func_deriv = None
+        self.activation = kwargs.get('activation', 'tanh')
         self.size = kwargs.get('size', self.in_shapes['default'].feature_size)
         if not isinstance(self.size, int):
             raise LayerValidationError('size must be int but was {}'.
@@ -47,21 +46,6 @@ class RecurrentLayerImpl(Layer):
         internals['dHb'] = BufferStructure('T', 'B', self.size, context_size=1,
                                            is_backward_only=True)
         return outputs, parameters, internals
-
-    def set_handler(self, new_handler):
-        super(RecurrentLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_func_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(x, y),
-                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'tanh')]
     
     def forward_pass(self, buffers, training_pass=True):
         # prepare
@@ -79,7 +63,7 @@ class RecurrentLayerImpl(Layer):
 
         for t in range(inputs.shape[0]):
             _h.dot_add_mm(outputs[t - 1], R, Ha[t], transb=True)
-            self.act_func(Ha[t], outputs[t])
+            _h.act_func[self.activation](Ha[t], outputs[t])
 
     def backward_pass(self, buffers):
         # prepare
@@ -94,11 +78,11 @@ class RecurrentLayerImpl(Layer):
 
         _h.copy_to(doutputs, dHb)
         T = inputs.shape[0] - 1
-        self.act_func_deriv(Ha[T], outputs[T], dHb[T], dHa[T])
+        _h.act_func_deriv[self.activation](Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
             _h.dot_add_mm(dHa[t + 1], R, dHb[t])
-            self.act_func_deriv(Ha[t], outputs[t],
-                                dHb[t], dHa[t])
+            _h.act_func_deriv[self.activation](Ha[t], outputs[t],
+                                               dHb[t], dHa[t])
 
         flat_inputs = flatten_time(inputs)
         flat_dinputs = flatten_time(dinputs)

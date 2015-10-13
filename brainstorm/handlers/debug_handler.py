@@ -62,9 +62,13 @@ class DebugHandler(Handler):
     __undescribed__ = {'EMPTY', 'array_type'}
 
     def __init__(self, handler):
+        super(DebugHandler, self).__init__()
         self.handler = handler
         self.EMPTY = DebugArray(arr=handler.EMPTY)
         self.array_type = DebugArray
+
+    def __init_from_description__(self, description):
+        self.__init__(self.handler)
 
     # ------------------------- Allocate new memory ------------------------- #
 

@@ -18,13 +18,11 @@ def LstmOpt(size, activation='tanh', name=None):
 
 # noinspection PyPep8Naming
 class LstmOptLayerImpl(Layer):
-    
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation'}
 
     def setup(self, kwargs, in_shapes):
-        self.act_func = lambda x, y: None
-        self.act_func_deriv = lambda x, y, dy, dx: None
+        self.activation = kwargs.get('activation', 'tanh')
         in_size = in_shapes['default'].feature_size
         self.size = kwargs.get('size', in_size)
 
@@ -50,21 +48,6 @@ class LstmOptLayerImpl(Layer):
         internals['dCb'] = BufferStructure('T', 'B', self.size, context_size=1,
                                            is_backward_only=True)
         return outputs, parameters, internals
-
-    def set_handler(self, new_handler):
-        super(LstmOptLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_func_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(x, y),
-                       lambda x, y, dy, dx: self.handler.copy_to(dy, dx)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'tanh')]
 
     def slice_state(self, S):
         gates = S[:, :, self.size:]
@@ -98,7 +81,7 @@ class LstmOptLayerImpl(Layer):
             _h.dot_add_mm(y[t - 1], R, S[t], transb=True)
 
             # Activations for Z and gates
-            self.act_func(Z[t], Z[t])
+            _h.act_func[self.activation](Z[t], Z[t])
             _h.sigmoid(gates[t], gates[t])
 
             # Cell
@@ -106,7 +89,7 @@ class LstmOptLayerImpl(Layer):
             _h.mult_add_tt(F[t], Ca[t - 1], Ca[t])
 
             # Block output
-            self.act_func(Ca[t], Cb[t])
+            _h.act_func[self.activation](Ca[t], Cb[t])
             _h.mult_tt(O[t], Cb[t], y[t])
 
     def backward_pass(self, buffers):
@@ -141,7 +124,7 @@ class LstmOptLayerImpl(Layer):
 
             # Cell
             _h.mult_tt(dy[t], O[t], dCb[t])
-            self.act_func_deriv(Ca[t], Cb[t], dCb[t], dCa[t])
+            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], F[t + 1], dCa[t])
 
             # Block Input and Gates
@@ -151,7 +134,7 @@ class LstmOptLayerImpl(Layer):
             _h.mult_tt(dy[t], Cb[t], dO[t])
 
             # Activation functions
-            self.act_func_deriv(None, Z[t], dZ[t], dZ[t])
+            _h.act_func_deriv[self.activation](None, Z[t], dZ[t], dZ[t])
             _h.sigmoid_deriv(None, gates[t], dgates[t], dgates[t])
 
         # Gradient for the recurrent weights
