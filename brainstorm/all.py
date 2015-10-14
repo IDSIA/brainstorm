@@ -13,6 +13,7 @@ from brainstorm.initializers import *
 from brainstorm.layers import *
 from brainstorm.randomness import global_rnd
 from brainstorm.structure import Network, generate_architecture
+from brainstorm.scorers import *
 from brainstorm.tools import *
 from brainstorm.training import *
 from brainstorm.value_modifiers import *

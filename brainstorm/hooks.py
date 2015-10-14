@@ -142,7 +142,6 @@ class ModifyStepperAttribute(Hook):
     def start(self, net, stepper, verbose, monitor_kwargs):
         super(ModifyStepperAttribute, self).start(net, stepper, verbose,
                                                   monitor_kwargs)
-        assert isinstance(stepper, TrainingStep)
         assert hasattr(stepper, self.attr_name), \
             "The stepper {} does not have the attribute {}".format(
                 stepper.__class__.__name__, self.attr_name)
