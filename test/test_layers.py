@@ -201,9 +201,16 @@ def avgpooling_layer_2d(spec):
     return layer, spec
 
 
-def batch_norm_layer(spec):
+def batch_norm_layer_fc(spec):
     layer = BatchNormLayerImpl('BatchNorm',
-                               {'default': BufferStructure('T', 'B', 3, 2)},
+                               {'default': BufferStructure('T', 'B', 3)},
+                               NO_CON, NO_CON)
+    return layer, spec
+
+
+def batch_norm_layer_nhwc(spec):
+    layer = BatchNormLayerImpl('BatchNorm',
+                               {'default': BufferStructure('T', 'B', 3, 2, 4)},
                                NO_CON, NO_CON)
     return layer, spec
 
@@ -298,7 +305,8 @@ layers_to_test = [
     convolution_layer_2d,
     maxpooling_layer_2d,
     avgpooling_layer_2d,
-    batch_norm_layer,
+    batch_norm_layer_fc,
+    batch_norm_layer_nhwc,
     elementwise_layer,
     l1_decay_layer,
     l2_decay_layer,
