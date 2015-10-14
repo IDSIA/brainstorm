@@ -115,7 +115,7 @@ def softmax_ce_layer(spec):
                                NO_CON)
 
     spec['skip_inputs'] = ['targets']
-    spec['skip_outputs'] = ['output']
+    spec['skip_outputs'] = ['probabilities']
     spec['targets'] = targets
     return layer, spec
 
@@ -199,9 +199,16 @@ def avgpooling_layer_2d(spec):
     return layer, spec
 
 
-def batch_norm_layer(spec):
+def batch_norm_layer_fc(spec):
     layer = BatchNormLayerImpl('BatchNorm',
-                               {'default': BufferStructure('T', 'B', 3, 2)},
+                               {'default': BufferStructure('T', 'B', 3)},
+                               NO_CON, NO_CON)
+    return layer, spec
+
+
+def batch_norm_layer_nhwc(spec):
+    layer = BatchNormLayerImpl('BatchNorm',
+                               {'default': BufferStructure('T', 'B', 3, 2, 4)},
                                NO_CON, NO_CON)
     return layer, spec
 
@@ -296,7 +303,8 @@ layers_to_test = [
     convolution_layer_2d,
     maxpooling_layer_2d,
     avgpooling_layer_2d,
-    batch_norm_layer,
+    batch_norm_layer_fc,
+    batch_norm_layer_nhwc,
     elementwise_layer,
     l1_decay_layer,
     l2_decay_layer,
@@ -434,7 +442,8 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         layer.backward_pass(layer_buffers)
         for key, value in layer_buffers.input_deltas.items():
             assert np.allclose(deltas[key], HANDLER.get_numpy_copy(value),
-                               rtol=eps, atol=eps), "Failed for internal.{} when inspecting {}".format(internal, key)
+                               rtol=eps, atol=eps), \
+                "Failed for internal.{} when inspecting {}".format(internal, key)
 
 
 def test_layer_add_to_deltas(layer_specs):
@@ -467,13 +476,14 @@ def test_layer_add_to_deltas(layer_specs):
 
     # assert all input deltas are 1.0 bigger
     for key, value in layer_buffers.input_deltas.items():
-        passed = np.allclose(deltas[key] + 1.0, HANDLER.get_numpy_copy(value),
+        obtained = HANDLER.get_numpy_copy(value)
+        passed = np.allclose(deltas[key] + 1.0, obtained,
                              rtol=eps, atol=eps)
         if not passed:
             print("Adding deltas test failed for {}!".format(key))
-            print("Calculated Deltas:\n", value)
+            print("Calculated Deltas:\n", obtained)
             print("Expected Deltas:\n", deltas[key] + 1.0)
-            print("Difference:\n", deltas[key] + 1.0 - value)
+            print("Difference:\n", deltas[key] + 1.0 - obtained)
         assert passed, key
 
 
