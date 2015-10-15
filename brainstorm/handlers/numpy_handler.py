@@ -74,6 +74,9 @@ class NumpyHandler(Handler):
     def abs_t(self, a, out):
         np.abs(a, out=out)
 
+    def add_into_if(self, a, out, cond):
+        out[cond != 0] += a[cond != 0]
+
     def add_mv(self, m, v, out):
         out[:] = m + v
 
@@ -215,6 +218,9 @@ class NumpyHandler(Handler):
 
         outputs += bias.reshape((1, num_filters, 1, 1))
 
+    def copy_to_if(self, src, dest, cond):
+        dest[cond != 0] = src[cond != 0]
+
     def dot_add_mm(self, a, b, out, transa=False, transb=False):
         x = a.T if transa else a
         y = b.T if transb else b
@@ -234,6 +240,9 @@ class NumpyHandler(Handler):
 
     def fill_gaussian(self, mean, std, out):
         out[:] = std * self.rnd.standard_normal(out.shape) + mean
+
+    def fill_if(self, mem, val, cond):
+        mem[cond != 0] = val
 
     def generate_probability_mask(self, mask, probability):
         mask[:] = self.rnd.uniform(size=mask.shape) < probability
@@ -286,6 +295,9 @@ class NumpyHandler(Handler):
                                 stride, argmax):
         _cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
+
+    def modulo_mm(self, a, b, out):
+        np.fmod(a, b, out)
 
     def mult_add_st(self, s, t, out):
         out[:] += s * t
@@ -352,15 +364,3 @@ class NumpyHandler(Handler):
 
     def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
-
-    def modulo_mm(self, a, b, out):
-        np.fmod(a, b, out)
-
-    def copy_to_if(self, src, dest, cond):
-        dest[cond != 0] = src[cond != 0]
-
-    def add_into_if(self, a, out, cond):
-        out[cond != 0] += a[cond != 0]
-
-    def fill_if(self, mem, val, cond):
-        mem[cond != 0] = val

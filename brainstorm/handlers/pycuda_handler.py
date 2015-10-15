@@ -111,6 +111,9 @@ class PyCudaHandler(Handler):
     def abs_t(self, a, out):
         cumath.fabs(a, out=out)
 
+    def add_into_if(self, a, out, cond):
+        add_into_if_kernel(a, out, cond)
+
     def add_mv(self, m, v, out):
         cumisc.add_matvec(m, v, out=out)
 
@@ -146,33 +149,8 @@ class PyCudaHandler(Handler):
     def clip_t(self, a, a_min, a_max, out):
         clip_kernel(a, out, a_min, a_max)
 
-    # NEW  -----------------------------------------------------------------
-
-    # def modulo_mm(self, a, b, out):
-    #     modulo_mm_kernel(a, b, out)
-
-    # def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
-    #     clw_undo_update_kernel(batch_size, feature_size, timing_mod, b, out)
-    #
-    # def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
-    #     clw_copy_add_act_of_inactive_kernel(batch_size, feature_size, timing, hb_t, out)
-    #
-    # def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
-    #     clw_set_inactive_to_zero_kernel(batch_size, feature_size, timing, out)
-
-    def modulo_mm(self, a, b, out):
-        modulo_mm_kernel(a, b, out)
-
-    def copy_to_if(self, src, dest, cond):
-        copy_to_if_kernel(src, dest, cond)
-
-    def add_into_if(self, a, out, cond):
-        add_into_if_kernel(a, out, cond)
-
     def fill_if(self, mem, val, cond):
         fill_if_kernel(mem, val, cond)
-
-    # END NEW  -------------------------------------------------------------
 
     def conv2d_backward_batch(self, inputs, weights, padding, stride,
                               in_deltas, out_deltas, weight_deltas,
@@ -292,6 +270,9 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
         # cudnn.cudnnDestroy(cudnn_context)
 
+    def copy_to_if(self, src, dest, cond):
+        copy_to_if_kernel(src, dest, cond)
+
     def dot_add_mm(self, a, b, out, transa=False, transb=False):
         transa = 'T' if transa else 'N'
         transb = 'T' if transb else 'N'
@@ -335,6 +316,9 @@ class PyCudaHandler(Handler):
         pool_mode = cudnn.cudnnPoolingMode['CUDNN_POOLING_MAX']
         self._pool2d_forward_batch(inputs, window, outputs, padding,
                                    stride, argmax, pool_mode)
+
+    def modulo_mm(self, a, b, out):
+        modulo_mm_kernel(a, b, out)
 
     def mult_add_st(self, s, t, out):
         mult_add_st_kernel(s, t, out)
@@ -478,52 +462,11 @@ class PyCudaHandler(Handler):
 
 # -------------------------- Activation functions --------------------------- #
 
-# NEW ----------------------------------------------------------------------
-
-modulo_mm_kernel = ElementwiseKernel(
-    "int* a, int* b, int* out",
-    "out[i] = a[i] % b[i]",
-    "modulo_mm_kernel"
-)
-
-# clw_undo_update_kernel = ElementwiseKernel(
-#     "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
-#     "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = y[i/batch_size + (i % batch_size)*feature_size]",
-#     "clw_undo_update_kernel"
-# )
-#
-# clw_copy_add_act_of_inactive_kernel = ElementwiseKernel(
-#     "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
-#     "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] += y[i/batch_size + (i % batch_size)*feature_size]",
-#     "clw_copy_add_act_of_inactive_kernel"
-# )
-#
-# clw_set_inactive_to_zero_kernel = ElementwiseKernel(
-#     "int batch_size, int feature_size, float* timing_mod, float* out",
-#     "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = 0.0",
-#     "clw_undo_update_kernel"
-# )
-
-copy_to_if_kernel = ElementwiseKernel(
-    "float* src, float* dest, float* cond",
-    "if (cond[i] != 0) dest[i] = src[i]",
-    "copy_to_if_kernel"
-)
-
 add_into_if_kernel = ElementwiseKernel(
     "float* a, float* out, float* cond",
     "if (cond[i] != 0) out[i] += a[i]",
     "add_into_if_kernel"
 )
-
-fill_if_kernel = ElementwiseKernel(
-    "float* mem, float val, float* cond",
-    "if (cond[i] != 0) mem[i] = val",
-    "fill_if_kernel"
-)
-# NEW END ------------------------------------------------------------------
-
-
 add_mm_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] + y[i]",
@@ -560,6 +503,12 @@ clip_kernel = ElementwiseKernel(
     "clip_kernel"
 )
 
+copy_to_if_kernel = ElementwiseKernel(
+    "float* src, float* dest, float* cond",
+    "if (cond[i] != 0) dest[i] = src[i]",
+    "copy_to_if_kernel"
+)
+
 create_probabilistic_mask_kernel = ElementwiseKernel(
     "float* inp, float prob, float* mask",
     "if (inp[i] < prob) mask[i] = 1; else mask[i] = 0;",
@@ -572,10 +521,22 @@ div_kernel = ElementwiseKernel(
     "div_kernel"
 )
 
+fill_if_kernel = ElementwiseKernel(
+    "float* mem, float val, float* cond",
+    "if (cond[i] != 0) mem[i] = val",
+    "fill_if_kernel"
+)
+
 index_m_by_v_kernel = ElementwiseKernel(
     "float* out, float* v, float* m, int nrows, int ncols",
     "out[i] = m[i * ncols + int(v[i])]",
     "index_m_by_v_kernel"
+)
+
+modulo_mm_kernel = ElementwiseKernel(
+    "int* a, int* b, int* out",
+    "out[i] = a[i] % b[i]",
+    "modulo_mm_kernel"
 )
 
 mult_add_kernel = ElementwiseKernel(

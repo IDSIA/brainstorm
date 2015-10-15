@@ -56,9 +56,6 @@ class ClockworkRnnLayerImpl(Layer):
         outputs = buffers.outputs.default
         Ha = buffers.internals.Ha
 
-        # batch_size = W.shape[1]
-        # feature_size = timing.shape[0]
-
         flat_inputs = flatten_time(inputs)
         flat_H = flatten_time(Ha[:-1])
 
