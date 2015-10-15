@@ -94,6 +94,12 @@ class DebugHandler(Handler):
         self.handler.copy_to(src.array, dest.array)
 
     @check_for_inf_or_nan
+    def copy_to_if(self, src, dest, cond):
+        assert_debug_arrays(src, dest, cond)
+        assert_shapes_equal(src, dest, cond)
+        self.handler.copy_to_if(src.array, dest.array, cond.array)
+
+    @check_for_inf_or_nan
     def create_from_numpy(self, arr):
         assert isinstance(arr, np.ndarray)
         return DebugArray(self.handler.create_from_numpy(arr))
@@ -103,6 +109,13 @@ class DebugHandler(Handler):
         assert_debug_arrays(mem)
         assert_is_scalar(val)
         self.handler.fill(mem.array, val)
+
+    @check_for_inf_or_nan
+    def fill_if(self, mem, val, cond):
+        assert_is_scalar(val)
+        assert_debug_arrays(mem, cond)
+        assert_shapes_equal(mem, cond)
+        self.handler.fill_if(mem.array, val, cond.array)
 
     @check_for_inf_or_nan
     def get_numpy_copy(self, mem):
@@ -124,10 +137,17 @@ class DebugHandler(Handler):
 
     # ----------------------- Mathematical operations ----------------------- #
 
+    @check_for_inf_or_nan
     def abs_t(self, a, out):
         assert_debug_arrays(a, out)
         assert_shapes_equal(a, out)
         self.handler.abs_t(a.array, out.array)
+
+    @check_for_inf_or_nan
+    def add_into_if(self, a, out, cond):
+        assert_debug_arrays(a, out, cond)
+        assert_shapes_equal(a, out, cond)
+        self.handler.add_into_if(a.array, out.array, cond.array)
 
     @check_for_inf_or_nan
     def add_mv(self, m, v, out):
@@ -193,19 +213,13 @@ class DebugHandler(Handler):
         self.handler.binarize_v(v.array, out.array)
 
     @check_for_inf_or_nan
-    def broadcast_features_t(self, a, out):
+    def broadcast_t(self, a, axis, out):
         assert_debug_arrays(a, out)
-        assert len(a.shape) >= 3 and len(out.shape) >= 3
-        assert a.shape[-1] == 1
-        assert len(a.shape) == len(out.shape), \
-            "broadcast_features_t supports broadcasting to multiple " \
-            "dimensions, but we currently assume that layer implementations " \
-            "do not add dimensions. This check can be removed later."
-        assert a.shape == out.shape[:-1] + (1,), \
-            "broadcast_features_t supports broadcasting to multiple " \
-            "dimensions, but we currently assume that layer implementations " \
-            "do not add dimensions. This check can be removed later."
-        self.handler.broadcast_features_t(a.array, out.array)
+        assert (isinstance(axis, int) and 0 <= axis < len(out.shape)),\
+            "invalid axis {}".format(axis)
+        assert a.shape[axis] == 1
+        assert a.shape == out.shape[:axis] + (1,) + out.shape[axis+1:]
+        self.handler.broadcast_t(a.array, axis, out.array)
 
     @check_for_inf_or_nan
     def clip_t(self, a, a_min, a_max, out):
@@ -363,6 +377,12 @@ class DebugHandler(Handler):
                                              argmax.array)
 
     @check_for_inf_or_nan
+    def modulo_tt(self, a, b, out):
+        assert_debug_arrays(a, b, out)
+        assert_shapes_equal(a, b, out)
+        self.handler.modulo_tt(a.array, b.array, out.array)
+
+    @check_for_inf_or_nan
     def mult_add_st(self, s, t, out):
         assert_debug_arrays(t, out)
         assert_is_scalar(s)
@@ -405,37 +425,6 @@ class DebugHandler(Handler):
         assert_debug_arrays(a, b, out)
         assert_shapes_equal(a, b, out)
         self.handler.mult_tt(a.array, b.array, out.array)
-
-# NEW:-------------------------------------------
-
-    def modulo_mm(self, a, b, out):
-        assert_debug_arrays(a, b, out)
-        assert_shapes_equal(a, b, out)
-        self.handler.modulo_mm(a.array, b.array, out.array)
-
-    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
-        assert_debug_arrays(b, out)
-        assert_is_scalar(batch_size)
-        assert_is_scalar(feature_size)
-        assert_shapes_equal(b, out)
-        self.handler.clw_undo_update(batch_size, feature_size, timing_mod.array, b.array, out.array)
-
-    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing_mod, hb_t, out):
-        assert_debug_arrays(timing_mod, hb_t, out)
-        assert_is_scalar(batch_size)
-        assert_is_scalar(feature_size)
-        assert_shapes_equal(hb_t, out)
-        self.handler.clw_copy_add_act_of_inactive(batch_size, feature_size, timing_mod.array, hb_t.array, out.array)
-
-    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing_mod, out):
-        assert_debug_arrays(timing_mod, out)
-        assert_is_scalar(batch_size)
-        assert_is_scalar(feature_size)
-        self.handler.clw_set_inactive_to_zero(batch_size, feature_size, timing_mod.array, out.array)
-
-
-# NEW END: --------------------------------------
-
 
     @check_for_inf_or_nan
     def sign_t(self, a, out):

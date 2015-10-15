@@ -83,11 +83,17 @@ class PyCudaHandler(Handler):
         # Copy data from src to dest (both must be GPUArrays)
         pycuda.driver.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 
+    def copy_to_if(self, src, dest, cond):
+        copy_to_if_kernel(src, dest, cond)
+
     def create_from_numpy(self, arr):
         return gpuarray.to_gpu(arr.astype(self.dtype))
 
     def fill(self, mem, val):
         mem.fill(val)
+
+    def fill_if(self, mem, val, cond):
+        fill_if_kernel(mem, val, cond)
 
     def get_numpy_copy(self, mem):
         assert type(mem) == self.array_type
@@ -110,6 +116,9 @@ class PyCudaHandler(Handler):
 
     def abs_t(self, a, out):
         cumath.fabs(a, out=out)
+
+    def add_into_if(self, a, out, cond):
+        add_into_if_kernel(a, out, cond)
 
     def add_mv(self, m, v, out):
         cumisc.add_matvec(m, v, out=out)
@@ -138,32 +147,13 @@ class PyCudaHandler(Handler):
     def binarize_v(self, v, out):
         binarize_v_kernel(out, v, out.shape[0], out.shape[1])
 
-    def broadcast_features_t(self, a, out):
-        assert len(a.shape) == 3
-        assert a.shape[2] == 1
-        assert len(out.shape) > 2
-        a_flat = a.reshape(a.size)
-        out_flat = out.reshape(out.size)
-        broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
+    def broadcast_t(self, a, axis, out):
+        broadcast_dim = int(out.shape[axis])
+        stride = int(np.prod(out.shape[axis+1:]))
+        broadcast_t_kernel(out, a, broadcast_dim, stride)
 
     def clip_t(self, a, a_min, a_max, out):
         clip_kernel(a, out, a_min, a_max)
-
-    # NEW  -----------------------------------------------------------------
-
-    def modulo_mm(self, a, b, out):
-        modulo_mm_kernel(a, b, out)
-
-    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
-        clw_undo_update_kernel(batch_size, feature_size, timing_mod, b, out)
-
-    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
-        clw_copy_add_act_of_inactive_kernel(batch_size, feature_size, timing, hb_t, out)
-
-    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
-        clw_set_inactive_to_zero_kernel(batch_size, feature_size, timing, out)
-
-    # END NEW  -------------------------------------------------------------
 
     def conv2d_backward_batch(self, inputs, weights, padding, stride,
                               in_deltas, out_deltas, weight_deltas,
@@ -327,6 +317,9 @@ class PyCudaHandler(Handler):
         self._pool2d_forward_batch(inputs, window, outputs, padding,
                                    stride, argmax, pool_mode)
 
+    def modulo_tt(self, a, b, out):
+        modulo_tt_kernel(a, b, out)
+
     def mult_add_st(self, s, t, out):
         mult_add_st_kernel(s, t, out)
 
@@ -469,33 +462,11 @@ class PyCudaHandler(Handler):
 
 # -------------------------- Activation functions --------------------------- #
 
-# NEW ----------------------------------------------------------------------
-
-modulo_mm_kernel = ElementwiseKernel(
-    "int* x, int* y, int* out",
-    "out[i] = x[i] % y[i]",
-    "modulo_mm_kernel")
-
-clw_undo_update_kernel = ElementwiseKernel(
-    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
-    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = y[i/batch_size + (i % batch_size)*feature_size]",
-    "clw_undo_update_kernel"
+add_into_if_kernel = ElementwiseKernel(
+    "float* a, float* out, float* cond",
+    "if (cond[i] != 0) out[i] += a[i]",
+    "add_into_if_kernel"
 )
-
-clw_copy_add_act_of_inactive_kernel = ElementwiseKernel(
-    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
-    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] += y[i/batch_size + (i % batch_size)*feature_size]",
-    "clw_copy_add_act_of_inactive_kernel"
-)
-
-clw_set_inactive_to_zero_kernel = ElementwiseKernel(
-    "int batch_size, int feature_size, float* timing_mod, float* out",
-    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = 0.0",
-    "clw_undo_update_kernel"
-)
-# NEW END ------------------------------------------------------------------
-
-
 add_mm_kernel = ElementwiseKernel(
     "float* x, float* y, float *out",
     "out[i] = x[i] + y[i]",
@@ -514,22 +485,28 @@ binarize_v_kernel = ElementwiseKernel(
     "binarize_v_kernel"
 )
 
-broadcast_features_kernel = ElementwiseKernel(
-    "float* out, float* a, unsigned int broadcast_size",
-    "out[i] = a[i / broadcast_size]",
-    "bc_features_kernel"
+broadcast_t_kernel = ElementwiseKernel(
+    "float* out, float* a, unsigned int broadcast_dim, unsigned int stride",
+    "out[i] = a[i % stride + (i / (broadcast_dim * stride)) * stride]",
+    "broadcast_t_kernel"
 )
 
 check_inf_or_nan_kernel = ElementwiseKernel(
-    b"float* inp, float* result",
-    b"if (isnan(inp[i]) || isinf(inp[i])) result[i] = 1;",
-    b"check_inf_or_nan_kernel"
+    "float* inp, float* result",
+    "if (isnan(inp[i]) || isinf(inp[i])) result[i] = 1;",
+    "check_inf_or_nan_kernel"
 )
 
 clip_kernel = ElementwiseKernel(
     "float* a, float* out, float a_min, float a_max",
     "out[i] = fminf(fmaxf(a[i], a_min), a_max);",
     "clip_kernel"
+)
+
+copy_to_if_kernel = ElementwiseKernel(
+    "float* src, float* dest, float* cond",
+    "if (cond[i] != 0) dest[i] = src[i]",
+    "copy_to_if_kernel"
 )
 
 create_probabilistic_mask_kernel = ElementwiseKernel(
@@ -544,10 +521,22 @@ div_kernel = ElementwiseKernel(
     "div_kernel"
 )
 
+fill_if_kernel = ElementwiseKernel(
+    "float* mem, float val, float* cond",
+    "if (cond[i] != 0) mem[i] = val",
+    "fill_if_kernel"
+)
+
 index_m_by_v_kernel = ElementwiseKernel(
     "float* out, float* v, float* m, int nrows, int ncols",
     "out[i] = m[i * ncols + int(v[i])]",
     "index_m_by_v_kernel"
+)
+
+modulo_tt_kernel = ElementwiseKernel(
+    "int* a, int* b, int* out",
+    "out[i] = a[i] % b[i]",
+    "modulo_mm_kernel"
 )
 
 mult_add_kernel = ElementwiseKernel(
