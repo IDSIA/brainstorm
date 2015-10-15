@@ -407,26 +407,21 @@ class DebugHandler(Handler):
         assert_shapes_equal(a, b, out)
         self.handler.modulo_mm(a.array, b.array, out.array)
 
-    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
-        assert_debug_arrays(b, out)
-        assert_is_scalar(batch_size)
-        assert_is_scalar(feature_size)
-        assert_shapes_equal(b, out)
-        self.handler.clw_undo_update(batch_size, feature_size, timing_mod.array, b.array, out.array)
+    def copy_to_if(self, src, dest, cond):
+        assert_debug_arrays(src, dest, cond)
+        assert_shapes_equal(src, dest, cond)
+        self.handler.copy_to_if(src.array, dest.array, cond.array)
 
-    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing_mod, hb_t, out):
-        assert_debug_arrays(timing_mod, hb_t, out)
-        assert_is_scalar(batch_size)
-        assert_is_scalar(feature_size)
-        assert_shapes_equal(hb_t, out)
-        self.handler.clw_copy_add_act_of_inactive(batch_size, feature_size, timing_mod.array, hb_t.array, out.array)
+    def add_into_if(self, a, out, cond):
+        assert_debug_arrays(a, out, cond)
+        assert_shapes_equal(a, out, cond)
+        self.handler.add_into_if(a.array, out.array, cond.array)
 
-    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing_mod, out):
-        assert_debug_arrays(timing_mod, out)
-        assert_is_scalar(batch_size)
-        assert_is_scalar(feature_size)
-        self.handler.clw_set_inactive_to_zero(batch_size, feature_size, timing_mod.array, out.array)
-
+    def fill_if(self, mem, val, cond):
+        assert_is_scalar(val)
+        assert_debug_arrays(mem, cond)
+        assert_shapes_equal(mem, cond)
+        self.handler.fill_if(mem.array, val, cond.array)
 
 # NEW END: --------------------------------------
 

@@ -763,3 +763,74 @@ class Handler(Describable):
         Returns:
             None
         """
+    @abc.abstractclassmethod
+    def modulo_mm(self, a, b, out):
+        """Take modulo of one matrix or vector with another.
+        Operation:
+            'out = a % b'
+
+        Args:
+            a (array_type): Input to the modulo_mm function.
+                            This is the matrix/vector of which the modulo is taken.
+            b (array_type): Input to the modulo_mm function.
+                            This is the matrix/vector to the base of which the modulo is applied to a.
+            out (array_type): Output of the modulo_mm function.
+        Returns:
+            None
+        """
+
+    @abc.abstractclassmethod
+    def copy_to_if(self, src, dest, cond):
+        """Copy element of 'src' to element of 'dest' if cond is not equal to 0.
+        Operation:
+            'if (cond[i]!=0)    dest[i] = src[i]'  (kernel operation)
+
+        Args:
+            src (array_type): Input to the copy_to_if function.
+                            This is the matrix/vector of whose elements (might) be copied into 'dest'.
+            dest (array_type): Output of the copy_to_if function.
+                            This is the matrix/vector of where the elements of 'src' (might) be copied into.
+            cond (array_type): Input to the copy_to_if function.
+                            This array specifies the conditions that regulate whether or not an element
+                            of src is copied into 'dest'. In this case the corresponding element of 'cond' is !=0 .
+        Returns:
+            None
+        """
+
+    @abc.abstractclassmethod
+    def add_into_if(self, a, out, cond):
+        """Add element of 'a' to element of 'out' if cond is not equal to 0.
+        Operation:
+            'if (cond[i]!=0)    out[i] += a[i]'  (kernel operation)
+
+        Args:
+            a (array_type): Input to the add_into_if function.
+                            This is the matrix/vector of whose elements (might) be added to elements of 'out'.
+            out (array_type): Output of the add_into_if function.
+                            This is the matrix/vector to which the elements of a (might) be added.
+            cond (array_type): Input to the add_into_if function.
+                            This array specifies the conditions that regulate whether or not an element
+                            of a is added to an element of 'out'.
+                            In this case the corresponding element of 'cond' is !=0 .
+        Returns:
+            None
+        """
+
+    @abc.abstractclassmethod
+    def fill_if(self, mem, val, cond):
+        """Copy value of 'val' to element of 'mem' if cond is not equal to 0.
+        Operation:
+            'if (cond[i]!=0)    mem[i] = val'  (kernel operation)
+
+        Args:
+            mem (array_type): Output to the fill_if function.
+                            This is the matrix/vector of whose elements (might) be copied into 'mem'
+            val (dtype): Input of the fill_if function.
+                            This is the scalar which (might) be copied to elements of 'mem'.
+            cond (array_type): Input to the fill_if function.
+                            This array specifies the conditions that regulate whether or not 'val'
+                            is copied into an element of 'mem'.
+                            In this case the corresponding element of 'cond' is !=0 .
+        Returns:
+            None
+        """

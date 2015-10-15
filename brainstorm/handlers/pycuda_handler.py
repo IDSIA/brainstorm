@@ -506,13 +506,13 @@ modulo_mm_kernel = ElementwiseKernel(
 
 copy_to_if_kernel = ElementwiseKernel(
     "float* src, float* dest, float* cond",
-    "if (cond[i]!=0) dest[i] = src[i]",
+    "if (cond[i] != 0) dest[i] = src[i]",
     "copy_to_if_kernel"
 )
 
 add_into_if_kernel = ElementwiseKernel(
     "float* a, float* out, float* cond",
-    "if (cond[i]!=0) out[i] += a[i]",
+    "if (cond[i] != 0) out[i] += a[i]",
     "add_into_if_kernel"
 )
 
