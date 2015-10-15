@@ -108,7 +108,7 @@ class BinomialCrossEntropyLayerImpl(Layer):
 
         # ceed_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_features_t(ceed_sum, tmp)
+        _h.broadcast_t(ceed_sum, 2, tmp)
         _h.mult_tt(ceed, tmp, ceed)
 
         _h.add_tt(ceed, yd, yd)
