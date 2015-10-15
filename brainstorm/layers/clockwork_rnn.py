@@ -56,8 +56,8 @@ class ClockworkRnnLayerImpl(Layer):
         outputs = buffers.outputs.default
         Ha = buffers.internals.Ha
 
-        batch_size = W.shape[1]
-        feature_size = timing.shape[0]
+        # batch_size = W.shape[1]
+        # feature_size = timing.shape[0]
 
         flat_inputs = flatten_time(inputs)
         flat_H = flatten_time(Ha[:-1])
@@ -66,6 +66,7 @@ class ClockworkRnnLayerImpl(Layer):
         _h.add_mv(flat_H, bias.reshape((1, self.size)), flat_H)
 
         tmp = _h.zeros(timing.shape)
+        cond = _h.zeros(outputs[0].shape)
         for t in range(inputs.shape[0]):
             _h.dot_add_mm(outputs[t - 1], R, Ha[t], transb=True)
             _h.act_func[self.activation](Ha[t], outputs[t])
@@ -75,8 +76,9 @@ class ClockworkRnnLayerImpl(Layer):
             if t > 0:
                 _h.fill(tmp, t)
                 _h.modulo_mm(tmp, timing, tmp)
+                _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
                 # For inactive nodes activations are reset:
-                _h.clw_undo_update(batch_size, feature_size, tmp, outputs[t-1], outputs[t])
+                _h.copy_to_if(outputs[t-1], outputs[t], cond)
 
     def backward_pass(self, buffers):
         # prepare
@@ -90,17 +92,17 @@ class ClockworkRnnLayerImpl(Layer):
         Ha, dHa, dHb = buffers.internals
 
         tmp = _h.zeros(timing.shape)
-        batch_size = W.shape[1]
-        feature_size = timing.shape[0]
+        cond = _h.zeros(outputs[0].shape)
+
         _h.copy_to(doutputs, dHb)
         T = inputs.shape[0] - 1
         _h.act_func_deriv[self.activation](Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
             _h.fill(tmp, t+1)
             _h.modulo_mm(tmp, timing, tmp)
-            _h.clw_copy_add_act_of_inactive(batch_size, feature_size, tmp, dHb[t+1], dHb[t])
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dHa[t+1])
-
+            _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
+            _h.add_into_if(dHb[t+1], dHb[t], cond)
+            _h.fill_if(dHa[t+1], 0.0, cond)
             _h.dot_add_mm(dHa[t + 1], R, dHb[t])
             _h.act_func_deriv[self.activation](Ha[t], outputs[t], dHb[t],
                                                dHa[t])

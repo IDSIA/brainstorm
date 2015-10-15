@@ -112,10 +112,9 @@ class ClockworkLstmPeepLayerImpl(Layer):
         y = buffers.outputs.default
         time_size, batch_size, in_size = x.shape
 
-        feature_size = timing.shape[0]
-
         # Temporary variable to be filled with the current value of time t
         tmp = _h.zeros(timing.shape)
+        cond = _h.zeros(y[0].shape)
 
         flat_x = flatten_time(x)
         flat_Za = flatten_time(Za[:-1])
@@ -163,13 +162,14 @@ class ClockworkLstmPeepLayerImpl(Layer):
             if t > 0:
                 _h.fill(tmp, t)
                 _h.modulo_mm(tmp, timing, tmp)
+                _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
             # -----------------------------------
             # Clockwork part: Undo updates:
             # -----------------------------------
             # Reset Cell
-                _h.clw_undo_update(batch_size, feature_size, tmp, Ca[t-1], Ca[t])
+                _h.copy_to_if(Ca[t-1], Ca[t], cond)
             # Reset Block output
-                _h.clw_undo_update(batch_size, feature_size, tmp, y[t-1], y[t])
+                _h.copy_to_if(y[t-1], y[t], cond)
 
     def backward_pass(self, buffers):
         # prepare
@@ -205,13 +205,13 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
         dy = _h.allocate(y.shape)
 
-        feature_size = timing.shape[0]
-
         time_size, batch_size, in_size = x.shape
 
         # Temporary variable to be filled with the current value of time t
         tmp = _h.zeros(timing.shape)
         _h.fill(dCa, 0.0)
+        cond = _h.zeros(y[0].shape)
+
 
         for t in range(time_size - 1, -1, - 1):
             # Cumulate recurrent deltas
@@ -219,6 +219,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
             _h.fill(tmp, t)
             _h.modulo_mm(tmp, timing, tmp)
+            _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
 
             _h.dot_add_mm(dIa[t + 1], Ri, dy[t])
             _h.dot_add_mm(dFa[t + 1], Rf, dy[t])
@@ -231,7 +232,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
             # Output Gate
             _h.mult_tt(dy[t], Cb[t], dOb[t])
 
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dOb[t])
+            _h.fill_if(dOb[t], 0.0, cond)  # Set inactive to 0
             _h.sigmoid_deriv(Oa[t], Ob[t], dOb[t], dOa[t])
             # Output influence on peephole:
             _h.mult_add_mv(dOa[t], Wco.reshape((1, self.size)), dCa[t])
@@ -239,7 +240,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
             _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])  # Important change to standard LSTM
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dCb[t])
+            _h.fill_if(dCb[t], 0.0, cond)
             _h.add_tt(dCa[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], Fb[t + 1], dCa[t])
 
@@ -256,13 +257,14 @@ class ClockworkLstmPeepLayerImpl(Layer):
             _h.act_func_deriv[self.activation](Za[t], Zb[t], dZb[t], dZa[t])
 
             # Copy over the error from previous inactive nodes:
-            _h.clw_copy_add_act_of_inactive(batch_size, feature_size, tmp, dy[t], dy[t-1])
-            _h.clw_copy_add_act_of_inactive(batch_size, feature_size, tmp, dCa[t], dCa[t-1])
+            _h.add_into_if(dy[t], dy[t-1], cond)
+            _h.add_into_if(dCa[t], dCa[t-1], cond)
+
             # Undo updates to inactive nodes:
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dIa[t])
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dFa[t])
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, dZa[t])
-            _h.clw_set_inactive_to_zero(batch_size, feature_size, tmp, Fb[t])
+            _h.fill_if(dIa[t], 0.0, cond)
+            _h.fill_if(dFa[t], 0.0, cond)
+            _h.fill_if(dZa[t], 0.0, cond)
+            _h.fill_if(Fb[t], 0.0, cond)
 
         # Same as for standard RNN:
         flat_inputs = flatten_time(x)
