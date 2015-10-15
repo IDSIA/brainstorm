@@ -16,6 +16,7 @@ from brainstorm import optional
 from brainstorm.structure.network import Network
 from brainstorm.tools import evaluate
 from brainstorm.utils import get_by_path, progress_bar, get_brainstorm_info
+from optional import MissingDependencyMock
 
 
 class Hook(Describable):
@@ -475,7 +476,9 @@ class StopOnSigQuit(Hook):
         if self.quit:
             raise StopIteration('Received SIGQUIT signal.')
 
-if optional.has_bokeh:
+if not optional.has_bokeh:
+    BokehVisualizer = MissingDependencyMock('bokeh')
+else:
     import bokeh.plotting as bk
 
     class BokehVisualizer(Hook):

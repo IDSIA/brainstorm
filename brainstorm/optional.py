@@ -2,6 +2,20 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 
+
+class MissingDependencyMock(object):
+    def __init__(self, depends_on):
+        self.depends_on = depends_on
+
+    def __getattribute__(self, item):
+        raise ImportError('Depends on missing "{}" package.'
+                          .format(object.__getattribute__(self, 'depends_on')))
+
+    def __call__(self, *args, **kwargs):
+        raise ImportError('Depends on missing "{}" package.'
+                          .format(object.__getattribute__(self, 'depends_on')))
+
+
 try:
     import pycuda
     from pycuda import gpuarray, cumath
@@ -33,4 +47,4 @@ except ImportError:
     has_bokeh = False
 
 
-__all__ = ['has_pycuda', 'has_cudnn', 'has_bokeh']
+__all__ = ['has_pycuda', 'has_cudnn', 'has_bokeh', 'MissingDependencyMock']
