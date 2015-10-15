@@ -138,13 +138,10 @@ class PyCudaHandler(Handler):
     def binarize_v(self, v, out):
         binarize_v_kernel(out, v, out.shape[0], out.shape[1])
 
-    def broadcast_features_t(self, a, out):
-        assert len(a.shape) == 3
-        assert a.shape[2] == 1
-        assert len(out.shape) > 2
-        a_flat = a.reshape(a.size)
-        out_flat = out.reshape(out.size)
-        broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
+    def broadcast_t(self, a, axis, out):
+        broadcast_dim = out.shape[axis]
+        stride = np.prod(out.shape[axis+1:])
+        broadcast_features_kernel(out, a, broadcast_dim, stride)
 
     def clip_t(self, a, a_min, a_max, out):
         clip_kernel(a, out, a_min, a_max)
@@ -546,15 +543,15 @@ binarize_v_kernel = ElementwiseKernel(
 )
 
 broadcast_features_kernel = ElementwiseKernel(
-    "float* out, float* a, unsigned int broadcast_size",
-    "out[i] = a[i / broadcast_size]",
+    "float* out, float* a, unsigned int broadcast_dim, unsigned int stride",
+    "out[i] = a[i % stride + (s / (broadcast_dim * stride)) * stride]",
     "bc_features_kernel"
 )
 
 check_inf_or_nan_kernel = ElementwiseKernel(
-    b"float* inp, float* result",
-    b"if (isnan(inp[i]) || isinf(inp[i])) result[i] = 1;",
-    b"check_inf_or_nan_kernel"
+    "float* inp, float* result",
+    "if (isnan(inp[i]) || isinf(inp[i])) result[i] = 1;",
+    "check_inf_or_nan_kernel"
 )
 
 clip_kernel = ElementwiseKernel(

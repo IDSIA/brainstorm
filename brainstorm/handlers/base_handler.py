@@ -275,28 +275,24 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def broadcast_features_t(self, a, out):
-        """Broadcast the right-most dimension of an array by copying elements.
+    def broadcast_t(self, a, axis, out):
+        """Broadcast the given axis of an array by copying elements.
 
         This function provides a numpy-broadcast-like operation for the
-        right-most dimension of an array. E.g. an array with shape (2, 3, 4, 1)
-        may be broadcasted to shape (2, 3, 4, 5), by copying all the elements
-        5 times.
-
-        Note:
-            This function supports more general cases, such as broadcasting
-            an array of shape (2, 3, 1) to shape (2, 3, 1, 3, 2). However,
-            currently it is assumed that this function will be used with
-            both :attr:`a` and :attr:`out` having the same number of dimensions.
+        the dimension given by axis. E.g. for axis=3 an array with shape
+        (2, 3, 4, 1) may be broadcasted to shape (2, 3, 4, 5), by copying
+        all the elements 5 times.
 
         Args:
-            a (array_type): Array whose elements should be broadcasted. Must
-                            be at least 3D and the rightmost dimension must
-                            be of size 1.
-            out (array_type): Array into which the output is placed. Must be at
-                              at least 3D and have same the number of
-                              dimensions as :attr:`a`. Only the right-most
-                              dimension can be different from :attr:`a`.
+            a (array_type):
+                Array whose elements should be broadcasted. The dimension
+                corresponding to axis must be of size 1.
+            axis (int):
+                the axis along which to broadcast
+            out (array_type):
+                Array into which the output is placed. Must have same the
+                number of dimensions as `a`. Only the dimension corresponding
+                to axis can differ from `a`.
         Returns:
             None
         """

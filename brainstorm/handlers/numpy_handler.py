@@ -81,7 +81,6 @@ class NumpyHandler(Handler):
         out[:] = t + s
 
     def add_tt(self, a, b, out):
-        assert a.shape == b.shape == out.shape
         out[:] = a + b
 
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
@@ -98,12 +97,9 @@ class NumpyHandler(Handler):
         for i in range(v.shape[0]):
             out[i, int(v[i])] = 1.0
 
-    def broadcast_features_t(self, a, out):
-        num_extra_dims = len(out.shape) - 3
-        shape_to_add = tuple([1] * num_extra_dims)
-        b = np.reshape(a, a.shape + shape_to_add)
-        shape_to_tile = (1, 1) + out.shape[2:]
-        out[:] = np.tile(b, shape_to_tile)
+    def broadcast_t(self, a, axis, out):
+        assert (out.shape[:axis] + (1,) + out.shape[axis+1:]) == a.shape
+        out[:] = a[:]  # automatically does the right thing via broadcasting
 
     def clip_t(self, a, a_min, a_max, out):
         np.clip(a, a_min, a_max, out)
