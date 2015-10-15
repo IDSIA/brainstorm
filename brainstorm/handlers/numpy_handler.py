@@ -46,6 +46,9 @@ class NumpyHandler(Handler):
 
     def copy_to(self, src, dest):
         # FIXME: change casting to 'no'
+        # Can't be done right now, because it will lead to problems with
+        # provide_external_data trying to call this function on ndarrays with
+        # the wrong dtype.
         np.copyto(dest, src, casting='same_kind')
 
     def create_from_numpy(self, arr):
@@ -357,17 +360,11 @@ class NumpyHandler(Handler):
     def modulo_mm(self, a, b, out):
         np.fmod(a, b, out)
 
-    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
-        indices = np.where(timing_mod != 0)
-        if indices[0].shape[0]:
-            out[:, indices] = b[:, indices]
+    def copy_to_if(self, src, dest, cond):
+        dest[cond != 0] = src[cond != 0]
 
-    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing_mod, hb_t, out):
-        indices = np.where(timing_mod != 0)
-        if indices[0].shape[0]:
-            out[:, indices] += hb_t[:, indices]
+    def add_into_if(self, a, out, cond):
+        out[cond != 0] += a[cond != 0]
 
-    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing_mod, out):
-        indices = np.where(timing_mod != 0)
-        if indices[0].shape[0]:
-            out[:, indices] = 0.0
+    def fill_if(self, mem, val, cond):
+        mem[cond != 0] = val
