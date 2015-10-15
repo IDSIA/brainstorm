@@ -296,7 +296,7 @@ class NumpyHandler(Handler):
         _cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
 
-    def modulo_mm(self, a, b, out):
+    def modulo_tt(self, a, b, out):
         np.fmod(a, b, out)
 
     def mult_add_st(self, s, t, out):

@@ -104,6 +104,22 @@ class Handler(Describable):
             None
         """
 
+    @abc.abstractclassmethod
+    def copy_to_if(self, src, dest, cond):
+        """Copy element of 'src' to element of 'dest' if cond is not equal to 0.
+
+        Args:
+            src (array_type):
+                Source array whose elements (might) be copied into `dest`.
+            dest (array_type):
+                Destination array.
+            cond (array_type):
+                The condition array. Only those `src` elements get copied to
+                `dest` whose corresponding `cond` elements are non-zero.
+        Returns:
+            None
+        """
+
     @abc.abstractmethod
     def create_from_numpy(self, arr):
         """Create a new array with the same entries as a Numpy array.
@@ -123,6 +139,24 @@ class Handler(Describable):
         Args:
             mem (array_type): Array to be filled.
             val (dtype): Value to fill.
+        Returns:
+            None
+        """
+
+    @abc.abstractclassmethod
+    def fill_if(self, mem, val, cond):
+        """Set the elements of `mem` to `val` if corresponding `cond` element
+        is non-zero.
+
+        Args:
+            mem (array_type):
+                Array to be filled.
+            val (dtype):
+                The scalar which the elements of `mem` (might) be set to.
+            cond (array_type):
+                The condition array. Only those `mem` elements are set to
+                `val` whose corresponding `cond` elements are non-zero.
+
         Returns:
             None
         """
@@ -171,6 +205,24 @@ class Handler(Describable):
             a (array_type): Array whose absolute values are to be computed.
             out (array_type): Array into which the output is placed. Must
                               have the same shape as :attr:`a`.
+        Returns:
+            None
+        """
+
+    @abc.abstractclassmethod
+    def add_into_if(self, a, out, cond):
+        """Add element of `a` to element of `out` if corresponding element in
+        `cond` is non-zero.
+
+        Args:
+            a (array_type):
+                Array whose elements (might) be added to `out`.
+            out (array_type):
+                Output array, whose values might be increased by values from
+                `a`.
+            cond (array_type):
+                The condition array. Only those entries from `a` are added into
+                `out` whose corresponding `cond` elements are non-zero.
         Returns:
             None
         """
@@ -435,12 +487,12 @@ class Handler(Describable):
         """Fill an array with zeros and ones.
 
         Fill an array with zeros and ones such that the probability of an
-        entry being one is equal to :attr:`probability`.
+        element being one is equal to :attr:`probability`.
 
         Args:
             mask (array_type): Array to will be filled.
-            probability (float): Probability of an entry of :attr:`mask` being
-            equal to one.
+            probability (float): Probability of an element of :attr:`mask`
+            being equal to one.
         Returns:
             None
         """
@@ -451,7 +503,7 @@ class Handler(Describable):
 
         :attr:`v` and :attr:`out` must be column vectors of the same size.
         Elements from the matrix :attr:`m` are copied using the indices given
-        by a column vector. From row `i` of the matrix, the entry from column
+        by a column vector. From row `i` of the matrix, the element from column
         `v[i, 0]` is copied to out, such that `out[i, 0] = m[i, v[i, 0]]`.
 
         Note that `m` must have enough columns such that all indices in
@@ -513,6 +565,22 @@ class Handler(Describable):
             padding (int):
             stride (tuple[int]):
             argmax (array_type):
+        Returns:
+            None
+        """
+
+    @abc.abstractclassmethod
+    def modulo_tt(self, a, b, out):
+        """Take the modulo between two arrays elementwise. (out = a % b)
+
+        Args:
+            a (array_type):
+                First array (dividend).
+            b (array_type):
+                Second array (divisor). Must have the same shape as `a`.
+            out (array_type):
+                Array into which the remainder is placed. Must have the same
+                shape as :attr:`a` and :attr:`b`.
         Returns:
             None
         """
@@ -760,77 +828,6 @@ class Handler(Describable):
             dy (array_type): Derivatives with respect to the outputs.
             dx (array_type): Array in which the derivatives with respect to
                              the inputs are placed.
-        Returns:
-            None
-        """
-    @abc.abstractclassmethod
-    def modulo_mm(self, a, b, out):
-        """Take modulo of one matrix or vector with another.
-        Operation:
-            'out = a % b'
-
-        Args:
-            a (array_type): Input to the modulo_mm function.
-                            This is the matrix/vector of which the modulo is taken.
-            b (array_type): Input to the modulo_mm function.
-                            This is the matrix/vector to the base of which the modulo is applied to a.
-            out (array_type): Output of the modulo_mm function.
-        Returns:
-            None
-        """
-
-    @abc.abstractclassmethod
-    def copy_to_if(self, src, dest, cond):
-        """Copy element of 'src' to element of 'dest' if cond is not equal to 0.
-        Operation:
-            'if (cond[i]!=0)    dest[i] = src[i]'  (kernel operation)
-
-        Args:
-            src (array_type): Input to the copy_to_if function.
-                            This is the matrix/vector of whose elements (might) be copied into 'dest'.
-            dest (array_type): Output of the copy_to_if function.
-                            This is the matrix/vector of where the elements of 'src' (might) be copied into.
-            cond (array_type): Input to the copy_to_if function.
-                            This array specifies the conditions that regulate whether or not an element
-                            of src is copied into 'dest'. In this case the corresponding element of 'cond' is !=0 .
-        Returns:
-            None
-        """
-
-    @abc.abstractclassmethod
-    def add_into_if(self, a, out, cond):
-        """Add element of 'a' to element of 'out' if cond is not equal to 0.
-        Operation:
-            'if (cond[i]!=0)    out[i] += a[i]'  (kernel operation)
-
-        Args:
-            a (array_type): Input to the add_into_if function.
-                            This is the matrix/vector of whose elements (might) be added to elements of 'out'.
-            out (array_type): Output of the add_into_if function.
-                            This is the matrix/vector to which the elements of a (might) be added.
-            cond (array_type): Input to the add_into_if function.
-                            This array specifies the conditions that regulate whether or not an element
-                            of a is added to an element of 'out'.
-                            In this case the corresponding element of 'cond' is !=0 .
-        Returns:
-            None
-        """
-
-    @abc.abstractclassmethod
-    def fill_if(self, mem, val, cond):
-        """Copy value of 'val' to element of 'mem' if cond is not equal to 0.
-        Operation:
-            'if (cond[i]!=0)    mem[i] = val'  (kernel operation)
-
-        Args:
-            mem (array_type): Output to the fill_if function.
-                            This is the matrix/vector of whose elements (might) be copied into 'mem'
-            val (dtype): Input of the fill_if function.
-                            This is the scalar which (might) be copied to elements of 'mem'.
-            cond (array_type): Input to the fill_if function.
-                            This array specifies the conditions that regulate whether or not 'val'
-                            is copied into an element of 'mem'.
-                            In this case the corresponding element of 'cond' is !=0 .
         Returns:
             None
         """

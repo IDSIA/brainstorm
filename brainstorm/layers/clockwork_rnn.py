@@ -72,7 +72,7 @@ class ClockworkRnnLayerImpl(Layer):
             # -----------------------------------
             if t > 0:
                 _h.fill(tmp, t)
-                _h.modulo_mm(tmp, timing, tmp)
+                _h.modulo_tt(tmp, timing, tmp)
                 _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
                 # For inactive nodes activations are reset:
                 _h.copy_to_if(outputs[t-1], outputs[t], cond)
@@ -96,7 +96,7 @@ class ClockworkRnnLayerImpl(Layer):
         _h.act_func_deriv[self.activation](Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
             _h.fill(tmp, t+1)
-            _h.modulo_mm(tmp, timing, tmp)
+            _h.modulo_tt(tmp, timing, tmp)
             _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
             _h.add_into_if(dHb[t+1], dHb[t], cond)
             _h.fill_if(dHa[t+1], 0.0, cond)

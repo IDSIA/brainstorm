@@ -83,11 +83,17 @@ class PyCudaHandler(Handler):
         # Copy data from src to dest (both must be GPUArrays)
         pycuda.driver.memcpy_dtod(dest.gpudata, src.gpudata, dest.nbytes)
 
+    def copy_to_if(self, src, dest, cond):
+        copy_to_if_kernel(src, dest, cond)
+
     def create_from_numpy(self, arr):
         return gpuarray.to_gpu(arr.astype(self.dtype))
 
     def fill(self, mem, val):
         mem.fill(val)
+
+    def fill_if(self, mem, val, cond):
+        fill_if_kernel(mem, val, cond)
 
     def get_numpy_copy(self, mem):
         assert type(mem) == self.array_type
@@ -144,13 +150,10 @@ class PyCudaHandler(Handler):
     def broadcast_t(self, a, axis, out):
         broadcast_dim = int(out.shape[axis])
         stride = int(np.prod(out.shape[axis+1:]))
-        broadcast_features_kernel(out, a, broadcast_dim, stride)
+        broadcast_t_kernel(out, a, broadcast_dim, stride)
 
     def clip_t(self, a, a_min, a_max, out):
         clip_kernel(a, out, a_min, a_max)
-
-    def fill_if(self, mem, val, cond):
-        fill_if_kernel(mem, val, cond)
 
     def conv2d_backward_batch(self, inputs, weights, padding, stride,
                               in_deltas, out_deltas, weight_deltas,
@@ -270,9 +273,6 @@ class PyCudaHandler(Handler):
         cudnn.cudnnDestroyConvolutionDescriptor(conv_desc)
         # cudnn.cudnnDestroy(cudnn_context)
 
-    def copy_to_if(self, src, dest, cond):
-        copy_to_if_kernel(src, dest, cond)
-
     def dot_add_mm(self, a, b, out, transa=False, transb=False):
         transa = 'T' if transa else 'N'
         transb = 'T' if transb else 'N'
@@ -317,8 +317,8 @@ class PyCudaHandler(Handler):
         self._pool2d_forward_batch(inputs, window, outputs, padding,
                                    stride, argmax, pool_mode)
 
-    def modulo_mm(self, a, b, out):
-        modulo_mm_kernel(a, b, out)
+    def modulo_tt(self, a, b, out):
+        modulo_tt_kernel(a, b, out)
 
     def mult_add_st(self, s, t, out):
         mult_add_st_kernel(s, t, out)
@@ -485,10 +485,10 @@ binarize_v_kernel = ElementwiseKernel(
     "binarize_v_kernel"
 )
 
-broadcast_features_kernel = ElementwiseKernel(
+broadcast_t_kernel = ElementwiseKernel(
     "float* out, float* a, unsigned int broadcast_dim, unsigned int stride",
     "out[i] = a[i % stride + (i / (broadcast_dim * stride)) * stride]",
-    "bc_features_kernel"
+    "broadcast_t_kernel"
 )
 
 check_inf_or_nan_kernel = ElementwiseKernel(
@@ -533,7 +533,7 @@ index_m_by_v_kernel = ElementwiseKernel(
     "index_m_by_v_kernel"
 )
 
-modulo_mm_kernel = ElementwiseKernel(
+modulo_tt_kernel = ElementwiseKernel(
     "int* a, int* b, int* out",
     "out[i] = a[i] % b[i]",
     "modulo_mm_kernel"

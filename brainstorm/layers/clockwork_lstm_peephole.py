@@ -161,7 +161,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
             if t > 0:
                 _h.fill(tmp, t)
-                _h.modulo_mm(tmp, timing, tmp)
+                _h.modulo_tt(tmp, timing, tmp)
                 _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
             # -----------------------------------
             # Clockwork part: Undo updates:
@@ -218,7 +218,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
             _h.add_tt(dy[t], deltas[t], dy[t])
 
             _h.fill(tmp, t)
-            _h.modulo_mm(tmp, timing, tmp)
+            _h.modulo_tt(tmp, timing, tmp)
             _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
 
             _h.dot_add_mm(dIa[t + 1], Ri, dy[t])
