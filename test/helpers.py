@@ -189,8 +189,8 @@ def run_gradients_test(layer, specs, parameter_name, outputs_name):
     print("Gradient check for '{}' WRT parameter '{}' failed with a MSE of {}"
           .format(outputs_name, parameter_name,
                   np.sqrt(np.sum((grad_calc - grad_approx)**2))))
-    print("Calculated Deltas:\n", grad_calc)
-    print("Approx Deltas:\n", grad_approx)
+    print("Calculated Gradients:\n", grad_calc)
+    print("Approx Gradients:\n", grad_approx)
     print("Difference:\n", grad_calc - grad_approx)
 
     return False

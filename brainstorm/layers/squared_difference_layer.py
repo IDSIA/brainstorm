@@ -71,7 +71,7 @@ class SquaredDifferenceLayerImpl(Layer):
         tmp = _h.allocate(inputs_2.shape)
         # out_deltas has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_features_t(out_deltas, grad_diff)
+        _h.broadcast_t(out_deltas, 2, grad_diff)
 
         grad_diff = flatten_time(grad_diff)
         # calculate

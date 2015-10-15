@@ -46,6 +46,9 @@ class NumpyHandler(Handler):
 
     def copy_to(self, src, dest):
         # FIXME: change casting to 'no'
+        # Can't be done right now, because it will lead to problems with
+        # provide_external_data trying to call this function on ndarrays with
+        # the wrong dtype.
         np.copyto(dest, src, casting='same_kind')
 
     def create_from_numpy(self, arr):
@@ -71,6 +74,9 @@ class NumpyHandler(Handler):
     def abs_t(self, a, out):
         np.abs(a, out=out)
 
+    def add_into_if(self, a, out, cond):
+        out[cond != 0] += a[cond != 0]
+
     def add_mv(self, m, v, out):
         out[:] = m + v
 
@@ -78,7 +84,6 @@ class NumpyHandler(Handler):
         out[:] = t + s
 
     def add_tt(self, a, b, out):
-        assert a.shape == b.shape == out.shape
         out[:] = a + b
 
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
@@ -95,12 +100,9 @@ class NumpyHandler(Handler):
         for i in range(v.shape[0]):
             out[i, int(v[i])] = 1.0
 
-    def broadcast_features_t(self, a, out):
-        num_extra_dims = len(out.shape) - 3
-        shape_to_add = tuple([1] * num_extra_dims)
-        b = np.reshape(a, a.shape + shape_to_add)
-        shape_to_tile = (1, 1) + out.shape[2:]
-        out[:] = np.tile(b, shape_to_tile)
+    def broadcast_t(self, a, axis, out):
+        # assert (out.shape[:axis] + (1,) + out.shape[axis+1:]) == a.shape
+        out[:] = a[:]  # automatically does the right thing via broadcasting
 
     def clip_t(self, a, a_min, a_max, out):
         np.clip(a, a_min, a_max, out)
@@ -166,6 +168,9 @@ class NumpyHandler(Handler):
 
         outputs += bias.reshape((1, 1, 1, num_filters))
 
+    def copy_to_if(self, src, dest, cond):
+        dest[cond != 0] = src[cond != 0]
+
     def dot_add_mm(self, a, b, out, transa=False, transb=False):
         x = a.T if transa else a
         y = b.T if transb else b
@@ -185,6 +190,9 @@ class NumpyHandler(Handler):
 
     def fill_gaussian(self, mean, std, out):
         out[:] = std * self.rnd.standard_normal(out.shape) + mean
+
+    def fill_if(self, mem, val, cond):
+        mem[cond != 0] = val
 
     def generate_probability_mask(self, mask, probability):
         mask[:] = self.rnd.uniform(size=mask.shape) < probability
@@ -237,6 +245,9 @@ class NumpyHandler(Handler):
                                 stride, argmax):
         _cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
+
+    def modulo_tt(self, a, b, out):
+        np.fmod(a, b, out)
 
     def mult_add_st(self, s, t, out):
         out[:] += s * t
@@ -303,21 +314,3 @@ class NumpyHandler(Handler):
 
     def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
-
-    def modulo_mm(self, a, b, out):
-        np.fmod(a, b, out)
-
-    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
-        indices = np.where(timing_mod != 0)
-        if indices[0].shape[0]:
-            out[:, indices] = b[:, indices]
-
-    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing_mod, hb_t, out):
-        indices = np.where(timing_mod != 0)
-        if indices[0].shape[0]:
-            out[:, indices] += hb_t[:, indices]
-
-    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing_mod, out):
-        indices = np.where(timing_mod != 0)
-        if indices[0].shape[0]:
-            out[:, indices] = 0.0

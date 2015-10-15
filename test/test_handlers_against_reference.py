@@ -239,25 +239,23 @@ def test_add_mv(handler):
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
-def test_broadcast_features_t(handler):
-    shapes_to_check = [[1, 1, 1], [1, 2, 1], [3, 2, 1], [4, 1, 1]]
+def test_broadcast_t(handler):
+    args_to_check = [
+        ([1], 0, [3]),
+        ([1], 0, [1]),
+        ([1, 2], 0, [3, 2]),
+        ([3, 1], 1, [3, 2]),
+        ([1, 2, 5], 0, [3, 2, 5]),
+        ([3, 1, 5], 1, [3, 2, 5]),
+        ([3, 2, 1], 2, [3, 2, 5])
+    ]
+    a_shapes, axes, out_shapes = list(zip(*args_to_check))
 
-    list_a = get_random_arrays(shapes_to_check)
-    sizes_to_expand = [1, 3]
-    for a, size in itertools.product(list_a, sizes_to_expand):
-        out = np.zeros(a.shape[:2] + (size,), dtype=ref_dtype)
-        ref_args = (a, out)
+    list_a = get_random_arrays(a_shapes)
+    list_out = get_random_arrays(out_shapes)
+    for ref_args in zip(list_a, axes, list_out):
+        assert operation_check(handler, 'broadcast_t', ref_args)
 
-    assert operation_check(handler, 'broadcast_features_t', ref_args)
-
-    list_a = get_random_arrays(shapes_to_check)
-    shapes_to_add = [(1,), (2, 2), (3, 1, 1)]
-
-    for a, shape_to_add in itertools.product(list_a, shapes_to_add):
-        out = np.zeros(a.shape + shape_to_add, dtype=ref_dtype)
-        ref_args = (a, out)
-
-        assert operation_check(handler, 'broadcast_features_t', ref_args)
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
