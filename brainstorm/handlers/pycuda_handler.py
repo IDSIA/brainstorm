@@ -151,17 +151,29 @@ class PyCudaHandler(Handler):
 
     # NEW  -----------------------------------------------------------------
 
+    # def modulo_mm(self, a, b, out):
+    #     modulo_mm_kernel(a, b, out)
+
+    # def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
+    #     clw_undo_update_kernel(batch_size, feature_size, timing_mod, b, out)
+    #
+    # def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
+    #     clw_copy_add_act_of_inactive_kernel(batch_size, feature_size, timing, hb_t, out)
+    #
+    # def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
+    #     clw_set_inactive_to_zero_kernel(batch_size, feature_size, timing, out)
+
     def modulo_mm(self, a, b, out):
         modulo_mm_kernel(a, b, out)
 
-    def clw_undo_update(self, batch_size, feature_size, timing_mod, b, out):
-        clw_undo_update_kernel(batch_size, feature_size, timing_mod, b, out)
+    def copy_to_if(self, src, dest, cond):
+        copy_to_if_kernel(src, dest, cond)
 
-    def clw_copy_add_act_of_inactive(self, batch_size, feature_size, timing, hb_t, out):
-        clw_copy_add_act_of_inactive_kernel(batch_size, feature_size, timing, hb_t, out)
+    def add_into_if(self, a, out, cond):
+        add_into_if_kernel(a, out, cond)
 
-    def clw_set_inactive_to_zero(self, batch_size, feature_size, timing, out):
-        clw_set_inactive_to_zero_kernel(batch_size, feature_size, timing, out)
+    def fill_if(self, mem, val, cond):
+        fill_if_kernel(mem, val, cond)
 
     # END NEW  -------------------------------------------------------------
 
@@ -472,26 +484,45 @@ class PyCudaHandler(Handler):
 # NEW ----------------------------------------------------------------------
 
 modulo_mm_kernel = ElementwiseKernel(
-    "int* x, int* y, int* out",
-    "out[i] = x[i] % y[i]",
-    "modulo_mm_kernel")
-
-clw_undo_update_kernel = ElementwiseKernel(
-    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
-    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = y[i/batch_size + (i % batch_size)*feature_size]",
-    "clw_undo_update_kernel"
+    "int* a, int* b, int* out",
+    "out[i] = a[i] % b[i]",
+    "modulo_mm_kernel"
 )
 
-clw_copy_add_act_of_inactive_kernel = ElementwiseKernel(
-    "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
-    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] += y[i/batch_size + (i % batch_size)*feature_size]",
-    "clw_copy_add_act_of_inactive_kernel"
+# clw_undo_update_kernel = ElementwiseKernel(
+#     "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
+#     "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = y[i/batch_size + (i % batch_size)*feature_size]",
+#     "clw_undo_update_kernel"
+# )
+#
+# clw_copy_add_act_of_inactive_kernel = ElementwiseKernel(
+#     "int batch_size, int feature_size, float* timing_mod, float* y, float* out",
+#     "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] += y[i/batch_size + (i % batch_size)*feature_size]",
+#     "clw_copy_add_act_of_inactive_kernel"
+# )
+#
+# clw_set_inactive_to_zero_kernel = ElementwiseKernel(
+#     "int batch_size, int feature_size, float* timing_mod, float* out",
+#     "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = 0.0",
+#     "clw_undo_update_kernel"
+# )
+
+copy_to_if_kernel = ElementwiseKernel(
+    "float* src, float* dest, float* cond",
+    "if (cond[i]!=0) dest[i] = src[i]",
+    "copy_to_if_kernel"
 )
 
-clw_set_inactive_to_zero_kernel = ElementwiseKernel(
-    "int batch_size, int feature_size, float* timing_mod, float* out",
-    "if (timing_mod[i / batch_size]!=0) out[i/batch_size + (i % batch_size)*feature_size] = 0.0",
-    "clw_undo_update_kernel"
+add_into_if_kernel = ElementwiseKernel(
+    "float* a, float* out, float* cond",
+    "if (cond[i]!=0) out[i] += a[i]",
+    "add_into_if_kernel"
+)
+
+fill_if_kernel = ElementwiseKernel(
+    "float* mem, float val, float* cond",
+    "if (cond[i] != 0) mem[i] = val",
+    "fill_if_kernel"
 )
 # NEW END ------------------------------------------------------------------
 
