@@ -139,8 +139,8 @@ class PyCudaHandler(Handler):
         binarize_v_kernel(out, v, out.shape[0], out.shape[1])
 
     def broadcast_t(self, a, axis, out):
-        broadcast_dim = out.shape[axis]
-        stride = np.prod(out.shape[axis+1:])
+        broadcast_dim = int(out.shape[axis])
+        stride = int(np.prod(out.shape[axis+1:]))
         broadcast_features_kernel(out, a, broadcast_dim, stride)
 
     def clip_t(self, a, a_min, a_max, out):
@@ -544,7 +544,7 @@ binarize_v_kernel = ElementwiseKernel(
 
 broadcast_features_kernel = ElementwiseKernel(
     "float* out, float* a, unsigned int broadcast_dim, unsigned int stride",
-    "out[i] = a[i % stride + (s / (broadcast_dim * stride)) * stride]",
+    "out[i] = a[i % stride + (i / (broadcast_dim * stride)) * stride]",
     "bc_features_kernel"
 )
 
