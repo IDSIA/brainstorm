@@ -130,6 +130,28 @@ class SaveLogs(Hook):
                 group.create_dataset(name, data=np.array(log))
 
 
+class ModifyStepperAttribute(Hook):
+    """Modify an attribute of the training stepper."""
+    def __init__(self, schedule, attr_name='learning_rate',
+                 timescale='epoch', interval=1, name=None, verbose=None):
+        super(ModifyStepperAttribute, self).__init__(name, timescale,
+                                                     interval, verbose)
+        self.schedule = schedule
+        self.attr_name = attr_name
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(ModifyStepperAttribute, self).start(net, stepper, verbose,
+                                                  monitor_kwargs)
+        assert hasattr(stepper, self.attr_name), \
+            "The stepper {} does not have the attribute {}".format(
+                stepper.__class__.__name__, self.attr_name)
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        setattr(stepper, self.attr_name,
+                self.schedule(epoch_nr, update_nr, self.timescale,
+                              self.interval, net, stepper, logs))
+
+
 class MonitorLayerParameters(Hook):
     """
     Monitor some properties of a layer.

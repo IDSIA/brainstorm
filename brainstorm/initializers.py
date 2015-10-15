@@ -10,9 +10,9 @@ from brainstorm.utils import InitializationError
 
 # somehow this construction is needed because in __all__ unicode does not work
 __all__ = [str(a) for a in [
-    'ArrayInitializer', 'Gaussian', 'Uniform', 'DenseSqrtFanIn',
-    'DenseSqrtFanInOut', 'SparseInputs', 'SparseOutputs', 'EchoState',
-    'LstmOptInit', 'Identity']]
+    'ArrayInitializer', 'DenseSqrtFanIn', 'DenseSqrtFanInOut', 'EchoState',
+    'Gaussian', 'Identity', 'LstmOptInit', 'Orthogonal', 'RandomWalk',
+    'SparseInputs', 'SparseOutputs', 'Uniform']]
 
 
 # ########################### Support Classes #################################
@@ -53,47 +53,6 @@ class ArrayInitializer(Initializer):
 
     def __describe__(self):
         return self.array.tolist()
-
-
-class Gaussian(Initializer):
-    """
-    Initializes the parameters randomly according to a normal distribution of
-    given mean and standard deviation.
-    """
-    __default_values__ = {'mean': 0.0}
-
-    def __init__(self, std=0.1, mean=0.0):
-        super(Gaussian, self).__init__()
-        self.std = std
-        self.mean = mean
-
-    def __call__(self, shape):
-        return self.rnd.randn(*shape) * self.std + self.mean
-
-
-class Uniform(Initializer):
-    """
-    Initializes the parameters randomly according to a uniform distribution
-    over the interval [low, high].
-    """
-    __default_values__ = {'low': None}
-
-    def __init__(self, low=0.1, high=None):
-        super(Uniform, self).__init__()
-        self.low = low
-        self.high = high
-        self.__init_from_description__(None)
-
-    def __init_from_description__(self, description):
-        if self.high is None:
-            self.low, self.high = sorted([-self.low, self.low])
-        assert self.low < self.high, \
-            "low has to be smaller than high but {} >= {}".format(self.low,
-                                                                  self.high)
-
-    def __call__(self, shape):
-        v = ((self.high - self.low) * self.rnd.rand(*shape)) + self.low
-        return v
 
 
 class DenseSqrtFanIn(Initializer):
@@ -168,6 +127,22 @@ class EchoState(Initializer):
         # normalizing and setting spectral radius (correct, slow):
         rho_parameters = max(abs(np.linalg.eig(parameters)[0]))
         return parameters * (self.spectral_radius / rho_parameters)
+
+
+class Gaussian(Initializer):
+    """
+    Initializes the parameters randomly according to a normal distribution of
+    given mean and standard deviation.
+    """
+    __default_values__ = {'mean': 0.0}
+
+    def __init__(self, std=0.1, mean=0.0):
+        super(Gaussian, self).__init__()
+        self.std = std
+        self.mean = mean
+
+    def __call__(self, shape):
+        return self.rnd.randn(*shape) * self.std + self.mean
 
 
 class Identity(Initializer):
@@ -347,6 +322,31 @@ class SparseOutputs(Initializer):
         for i in range(shape[0]):
             self.rnd.shuffle(connection_mask[i, :])
         return sub_result * connection_mask
+
+
+class Uniform(Initializer):
+    """
+    Initializes the parameters randomly according to a uniform distribution
+    over the interval [low, high].
+    """
+    __default_values__ = {'low': None}
+
+    def __init__(self, low=0.1, high=None):
+        super(Uniform, self).__init__()
+        self.low = low
+        self.high = high
+        self.__init_from_description__(None)
+
+    def __init_from_description__(self, description):
+        if self.high is None:
+            self.low, self.high = sorted([-self.low, self.low])
+        assert self.low < self.high, \
+            "low has to be smaller than high but {} >= {}".format(self.low,
+                                                                  self.high)
+
+    def __call__(self, shape):
+        v = ((self.high - self.low) * self.rnd.rand(*shape)) + self.low
+        return v
 
 
 # ########################### helper methods ##################################
