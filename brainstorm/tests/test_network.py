@@ -12,7 +12,7 @@ from brainstorm.initializers import Gaussian
 from brainstorm.layers import Classification, Input, Lstm, Recurrent
 from brainstorm.training.utils import run_network
 
-from .helpers import HANDLER
+from brainstorm.tests.helpers import HANDLER
 
 np.random.seed(1234)
 

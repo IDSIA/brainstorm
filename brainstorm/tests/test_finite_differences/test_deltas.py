@@ -10,7 +10,7 @@ from brainstorm.initializers import Gaussian
 from brainstorm.randomness import global_rnd
 from brainstorm.structure.network import Network
 
-from ..helpers import approx_fprime
+from brainstorm.tests.helpers import approx_fprime
 
 
 @pytest.fixture(scope='module')

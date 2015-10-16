@@ -44,7 +44,6 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 
-readme = open('README.md').read()
 doclink = """
 Documentation
 -------------
