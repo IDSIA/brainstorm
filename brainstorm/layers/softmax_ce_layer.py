@@ -28,7 +28,7 @@ def SoftmaxCE(name=None):
         This layer does not compute derivatives wrt the 'targets' input.
         It also does not use the deltas coming in from the 'probabilities'.
     """
-    return ConstructionWrapper.create('SoftmaxCE', name=name)
+    return ConstructionWrapper.create(SoftmaxCELayerImpl, name=name)
 
 
 class SoftmaxCELayerImpl(Layer):

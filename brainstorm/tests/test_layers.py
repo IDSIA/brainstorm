@@ -11,6 +11,7 @@ from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
 from brainstorm.layers.softmax_ce_layer import SoftmaxCELayerImpl
+from brainstorm.layers.sigmoid_ce_layer import SigmoidCELayerImpl
 from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
 from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
@@ -112,6 +113,24 @@ def softmax_ce_layer(spec):
                  'targets': BufferStructure('T', 'B', *target_shape[2:])}
 
     layer = SoftmaxCELayerImpl('SoftmaxCELayer', in_shapes, NO_CON,
+                               NO_CON)
+
+    spec['skip_inputs'] = ['targets']
+    spec['skip_outputs'] = ['probabilities']
+    spec['targets'] = targets
+    return layer, spec
+
+
+def sigmoid_ce_layer(spec):
+    time_steps = spec.get('time_steps', 3)
+    batch_size = spec.get('batch_size', 2)
+    feature_dim = (2, 3, 5)
+    target_shape = (time_steps, batch_size) + feature_dim
+    targets = np.random.randint(0, 2, target_shape)
+    in_shapes = {'default': BufferStructure('T', 'B', *feature_dim),
+                 'targets': BufferStructure('T', 'B', *target_shape[2:])}
+
+    layer = SigmoidCELayerImpl('SigmoidCELayer', in_shapes, NO_CON,
                                NO_CON)
 
     spec['skip_inputs'] = ['targets']
@@ -296,6 +315,7 @@ layers_to_test = [
     highway_layer,
     binomial_crossentropy_layer,
     softmax_ce_layer,
+    sigmoid_ce_layer,
     rnn_layer,
     squared_difference_layer,
     lstm_layer,

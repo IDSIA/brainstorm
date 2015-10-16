@@ -88,6 +88,77 @@ def get_in_out_layers_for_classification(in_shape, nr_classes,
     return inp_layer, fc_layer
 
 
+def get_in_out_layers_for_multi_label_classification(
+        in_shape, out_shape, data_name='default', targets_name='targets',
+        fc_name=None, out_name="Output", mask_name=None):
+    """Prepare input and output layers for building a multi-label classifier.
+
+    This is a helper function for quickly building a typical multi-label
+    classifier. It returns an ``Input`` layer and a ``FullyConnected`` layer
+    which are already connected to other layers needed for this common case,
+
+    The returned ``FullyConnected`` layer is already connected to the output
+    layer (with the specified name) which is a ``SigmoidCE`` layer.
+    The targets are already connected to the SigmoidCE layer as well.
+    Finally, the ``loss`` output of the output layer is already connected to a
+    ``Loss`` layer to make the network trainable.
+
+    Example:
+        >>> from brainstorm import tools, Network, layers
+        >>> inp, out = tools.get_in_out_layers_for_multi_label_classification(784, 10)
+        >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
+    Args:
+        in_shape (int or tuple[int]): Shape of the input data.
+        out_shape (int or tuple[int]): Number of possible classes.
+        data_name (Optional[str]):
+            Name of the input data which will be provided by a data iterator.
+            Defaults to 'default'.
+        targets_name (Optional[str]):
+            Name of the ground-truth target data which will be provided by a
+            data iterator. Defaults to 'targets'.
+        fclayer_name (Optional[str]):
+            Name for the fully connected layer which connects to the softmax
+            layer. If unspecified, it is set to outlayer_name + '_FC'.
+        outlayer_name (Optional[str]):
+            Name for the output layer. Defaults to 'Output'.
+        mask_name (Optional[str]):
+            Name of the mask data which will be provided by a data iterator.
+            Defaults to None.
+
+            The mask is needed if error should be injected
+            only at certain time steps (for sequential data).
+    Returns:
+        tuple: An ``Input`` and a ``FullyConnected`` layer.
+    NOTE:
+        This tool provides the output layer for `multi-label` classification,
+        not `multi-class` classification
+    """
+    if isinstance(in_shape, int):
+        in_shape = (in_shape, )
+    if isinstance(out_shape, int):
+        out_shape = (out_shape, )
+    fc_name = out_name + '_FC' if fc_name is None else fc_name
+    fc_layer = layers.FullyConnected(out_shape, name=fc_name)
+    out_layer = layers.SigmoidCE(name=out_name)
+    fc_layer >> out_layer
+
+    if mask_name is None:
+        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
+                                             targets_name: ('T', 'B', 1)})
+        inp_layer - targets_name >> 'targets' - out_layer
+        out_layer - 'loss' >> layers.Loss()
+    else:
+        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
+                                             targets_name: ('T', 'B', 1),
+                                             mask_name: ('T', 'B', 1)})
+        mask_layer = layers.Mask()
+        inp_layer - targets_name >> 'targets' - out_layer
+        out_layer - 'loss' >> mask_layer >> layers.Loss()
+        inp_layer - mask_name >> 'mask' - mask_layer
+
+    return inp_layer, fc_layer
+
+
 def get_in_out_layers_for_regression(in_shape, nr_outputs,
                                      data_name='default',
                                      targets_name='targets',
