@@ -104,7 +104,7 @@ class Handler(Describable):
             None
         """
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def copy_to_if(self, src, dest, cond):
         """Copy element of 'src' to element of 'dest' if cond is not equal to 0.
 
@@ -143,7 +143,7 @@ class Handler(Describable):
             None
         """
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def fill_if(self, mem, val, cond):
         """Set the elements of `mem` to `val` if corresponding `cond` element
         is non-zero.
@@ -209,7 +209,7 @@ class Handler(Describable):
             None
         """
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def add_into_if(self, a, out, cond):
         """Add element of `a` to element of `out` if corresponding element in
         `cond` is non-zero.
@@ -569,7 +569,7 @@ class Handler(Describable):
             None
         """
 
-    @abc.abstractclassmethod
+    @abc.abstractmethod
     def modulo_tt(self, a, b, out):
         """Take the modulo between two arrays elementwise. (out = a % b)
 
