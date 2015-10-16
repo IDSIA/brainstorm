@@ -36,7 +36,7 @@ from brainstorm.layers.lstm_peephole import LstmPeepholeLayerImpl
 from brainstorm.layers.clockwork_lstm_peephole import ClockworkLstmPeepLayerImpl
 from brainstorm.layers.merge_layer import MergeLayerImpl
 
-from .helpers import (HANDLER, approx_fprime, run_deltas_test,
+from brainstorm.tests.helpers import (HANDLER, approx_fprime, run_deltas_test,
                       run_gradients_test, set_up_layer)
 
 np.random.seed(1234)
