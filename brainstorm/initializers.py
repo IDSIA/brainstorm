@@ -60,13 +60,16 @@ class DenseSqrtFanIn(Initializer):
     """
     Initializes the parameters randomly according to a uniform distribution
     over the interval [-scale/sqrt(n), scale/sqrt(n)] where n is the number of
-    inputs to each neuron. Uses scale=sqrt(12) by default which is appropriate
+    inputs to each unit. Uses scale=sqrt(6) by default which is appropriate
     for rel units.
+    
+    When number of inputs and outputs are the same, this is equivalent to
+    using ``DenseSqrtFanInOut``.
 
     Scaling:
-        * rel: sqrt(12)
-        * tanh: sqrt(6)
-        * sigmoid: 4 * sqrt(6)
+        * rel: sqrt(6)
+        * tanh: sqrt(3)
+        * sigmoid: 4 * sqrt(3)
         * linear: 1
 
     Args:
@@ -76,15 +79,15 @@ class DenseSqrtFanIn(Initializer):
             Defaults to 'rel'.
     """
 
-    __default_values__ = {'scale': np.sqrt(6)}
+    __default_values__ = {'scale': 'rel'}
 
     def __init__(self, scale='rel'):
         super(DenseSqrtFanIn, self).__init__()
         if isinstance(scale, six.string_types):
             scale = {
-                'rel': np.sqrt(12),
-                'tanh': np.sqrt(6),
-                'sigmoid': 4 * np.sqrt(6),
+                'rel': np.sqrt(6),
+                'tanh': np.sqrt(3),
+                'sigmoid': 4 * np.sqrt(3),
                 'linear': 1
             }[scale]
 
@@ -100,7 +103,7 @@ class DenseSqrtFanInOut(Initializer):
     """
     Initializes the parameters randomly according to a uniform distribution
     over the interval [-scale/sqrt(n1+n2), scale/sqrt(n1+n2)] where n1 is the
-    number of inputs to each neuron and n2 is the number of neurons in the
+    number of inputs to each unit and n2 is the number of units in the
     current layer. Uses scale=sqrt(12) by default which is appropriate for rel
     units.
 
@@ -122,7 +125,7 @@ class DenseSqrtFanInOut(Initializer):
         networks" International conference on artificial intelligence and
         statistics. 2010.
     """
-    __default_values__ = {'scale': np.sqrt(12)}
+    __default_values__ = {'scale': 'rel'}
 
     def __init__(self, scale='rel'):
         super(DenseSqrtFanInOut, self).__init__()
@@ -308,8 +311,8 @@ class RandomWalk(Initializer):
 
 class SparseInputs(Initializer):
     """
-    Makes sure every neuron only gets activation from a certain number of input
-    neurons and the rest of the parameters are 0.
+    Makes sure every unit only gets activation from a certain number of input
+    units and the rest of the parameters are 0.
     The connections are initialized by evaluating the passed sub_initializer.
 
     Example:
@@ -338,8 +341,8 @@ class SparseInputs(Initializer):
 
 class SparseOutputs(Initializer):
     """
-    Makes sure every neuron is propagating its activation only to a certain
-    number of output neurons, and the rest of the parameters are 0.
+    Makes sure every unit is propagating its activation only to a certain
+    number of output units, and the rest of the parameters are 0.
     The connections are initialized by evaluating the passed sub_initializer.
 
     Example:
