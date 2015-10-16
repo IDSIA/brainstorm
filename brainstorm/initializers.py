@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 
 import numpy as np
+import six
 
 from brainstorm.describable import Describable
 from brainstorm.randomness import Seedable
@@ -58,15 +59,35 @@ class ArrayInitializer(Initializer):
 class DenseSqrtFanIn(Initializer):
     """
     Initializes the parameters randomly according to a uniform distribution
-    over the interval [-1/sqrt(n), 1/sqrt(n)] where n is the number of inputs
-    to each neuron. Uses scaling = sqrt(6) by default which is appropriate for
-    rel units.
+    over the interval [-scale/sqrt(n), scale/sqrt(n)] where n is the number of
+    inputs to each neuron. Uses scale=sqrt(12) by default which is appropriate
+    for rel units.
+
+    Scaling:
+        * rel: sqrt(12)
+        * tanh: sqrt(6)
+        * sigmoid: 4 * sqrt(6)
+        * linear: 1
+
+    Args:
+        scale (Optional(float or str)):
+            The activation function dependent scaling factor. Can be either
+            float or one of ['rel', 'tanh', 'sigmoid', 'linear'].
+            Defaults to 'rel'.
     """
 
     __default_values__ = {'scale': np.sqrt(6)}
 
-    def __init__(self, scale=np.sqrt(6)):
+    def __init__(self, scale='rel'):
         super(DenseSqrtFanIn, self).__init__()
+        if isinstance(scale, six.string_types):
+            scale = {
+                'rel': np.sqrt(12),
+                'tanh': np.sqrt(6),
+                'sigmoid': 4 * np.sqrt(6),
+                'linear': 1
+            }[scale]
+
         self.scale = scale
 
     def __call__(self, shape):
@@ -78,20 +99,40 @@ class DenseSqrtFanIn(Initializer):
 class DenseSqrtFanInOut(Initializer):
     """
     Initializes the parameters randomly according to a uniform distribution
-    over the interval [-1/sqrt(n1+n2), 1/sqrt(n1+n2)] where n1 is the number of
-    inputs to each neuron and n2 is the number of neurons in the current layer.
-    Use scaling = 4*sqrt(6) for sigmoid units, sqrt(6) for tanh units and
-    sqrt(12) for rel units (used by default).
+    over the interval [-scale/sqrt(n1+n2), scale/sqrt(n1+n2)] where n1 is the
+    number of inputs to each neuron and n2 is the number of neurons in the
+    current layer. Uses scale=sqrt(12) by default which is appropriate for rel
+    units.
+
+    Scaling:
+        * rel: sqrt(12)
+        * tanh: sqrt(6)
+        * sigmoid: 4 * sqrt(6)
+        * linear: 1
+
+    Args:
+        scale (Optional(float or str)):
+            The activation function dependent scaling factor. Can be either
+            float or one of ['rel', 'tanh', 'sigmoid', 'linear'].
+            Defaults to 'rel'.
 
     Reference:
-    Glorot, Xavier, and Yoshua Bengio.
-    "Understanding the difficulty of training deep feedforward neural networks"
-    International conference on artificial intelligence and statistics. 2010.
+        Glorot, Xavier, and Yoshua Bengio.
+        "Understanding the difficulty of training deep feedforward neural
+        networks" International conference on artificial intelligence and
+        statistics. 2010.
     """
     __default_values__ = {'scale': np.sqrt(12)}
 
-    def __init__(self, scale=np.sqrt(12)):
+    def __init__(self, scale='rel'):
         super(DenseSqrtFanInOut, self).__init__()
+        if isinstance(scale, six.string_types):
+            scale = float({
+                'rel': np.sqrt(12),
+                'tanh': np.sqrt(6),
+                'sigmoid': 4 * np.sqrt(6),
+                'linear': 1
+            }[scale])
         self.scale = scale
 
     def __call__(self, shape):
