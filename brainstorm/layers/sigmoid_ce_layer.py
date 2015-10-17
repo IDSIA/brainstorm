@@ -41,7 +41,7 @@ class SigmoidCELayerImpl(Layer):
         if tar_shape != in_shape:
             raise LayerValidationError('input and targets must have the same '
                                        'shapes. But got {} != {}'
-                                       .format(in_shapes, tar_shape))
+                                       .format(in_shape, tar_shape))
 
         outputs = OrderedDict()
         outputs['probabilities'] = BufferStructure('T', 'B', *in_shape)

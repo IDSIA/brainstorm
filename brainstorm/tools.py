@@ -148,12 +148,12 @@ def get_in_out_layers_for_multi_label_classification(
 
     if mask_name is None:
         inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B', 1)})
+                                             targets_name: ('T', 'B') + out_shape})
         inp_layer - targets_name >> 'targets' - out_layer
         out_layer - 'loss' >> layers.Loss()
     else:
         inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B', 1),
+                                             targets_name: ('T', 'B') + out_shape,
                                              mask_name: ('T', 'B', 1)})
         mask_layer = layers.Mask()
         inp_layer - targets_name >> 'targets' - out_layer
@@ -201,7 +201,7 @@ def get_in_out_layers_for_regression(in_shape, nr_outputs,
     if isinstance(in_shape, int):
         in_shape = (in_shape, )
 
-    fc_layer = layers.FullyConnected(nr_outputs, name=outlayer_name,
+    fc_layer = layers.FullyConnected(nr_outputs, name=outlayer_name + '_FC',
                                      activation='linear')
     out_layer = layers.SquaredDifference(name=outlayer_name)
 
@@ -583,14 +583,17 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='defaul
         inp, outp = get_in_out_layers_for_classification(
             in_shape, out_shape, data_name=data_name, mask_name=mask_name,
             targets_name=targets_name)
+        default_output = 'Output.probabilities'
     elif task_type == 'regression':
         inp, outp = get_in_out_layers_for_regression(
             in_shape, out_shape, data_name=data_name, mask_name=mask_name,
             targets_name=targets_name)
+        default_output = 'Output_FC.default'
     elif task_type == 'multi-label':
         inp, outp = get_in_out_layers_for_multi_label_classification(
             in_shape, out_shape, data_name=data_name, mask_name=mask_name,
             targets_name=targets_name)
+        default_output = 'Output.probabilities'
     else:
         raise ValueError('unknown type {}'.format(task_type))
 
@@ -611,7 +614,7 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='defaul
         current_layer >>= create_layer(layer_type, args)
 
     net = Network.from_layer(current_layer >> outp)
-    net.default_output = current_layer.layer.name + '.default'
+    net.default_output = default_output
 
     init_dict = {
         name: initializers.DenseSqrtFanInOut(l.activation)

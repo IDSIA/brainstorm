@@ -130,7 +130,7 @@ class AddSaltNPepper(DataIterator):
 
     def __call__(self, handler):
         for data in self.iter(handler):
-            for pr, key in self.prob_dict.items():
+            for key, pr in self.prob_dict.items():
                 ratio = self.ratio_dict.get(key, 0.5)
                 d = data[key].copy()
                 r = self.rnd.rand(*d.shape)
