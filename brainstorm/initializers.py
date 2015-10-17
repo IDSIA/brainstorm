@@ -83,20 +83,21 @@ class DenseSqrtFanIn(Initializer):
 
     def __init__(self, scale='rel'):
         super(DenseSqrtFanIn, self).__init__()
-        if isinstance(scale, six.string_types):
-            scale = {
-                'rel': np.sqrt(6),
-                'tanh': np.sqrt(3),
-                'sigmoid': 4 * np.sqrt(3),
-                'linear': 1
-            }[scale]
-
         self.scale = scale
 
     def __call__(self, shape):
         self._assert_atleast2d(shape)
         num_in = np.prod(shape[1:])
-        return self.scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(num_in)
+        if isinstance(self.scale, six.string_types):
+            scale = {
+                'rel': np.sqrt(6),
+                'tanh': np.sqrt(3),
+                'sigmoid': 4 * np.sqrt(3),
+                'linear': 1
+            }[self.scale]
+        else:
+            scale = self.scale
+        return scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(num_in)
 
 
 class DenseSqrtFanInOut(Initializer):
@@ -129,19 +130,21 @@ class DenseSqrtFanInOut(Initializer):
 
     def __init__(self, scale='rel'):
         super(DenseSqrtFanInOut, self).__init__()
-        if isinstance(scale, six.string_types):
-            scale = float({
-                'rel': np.sqrt(12),
-                'tanh': np.sqrt(6),
-                'sigmoid': 4 * np.sqrt(6),
-                'linear': 1
-            }[scale])
         self.scale = scale
 
     def __call__(self, shape):
         self._assert_atleast2d(shape)
         n1, n2 = shape[0], np.prod(shape[1:])
-        return self.scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(n1 + n2)
+        if isinstance(self.scale, six.string_types):
+            scale = {
+                'rel': np.sqrt(12),
+                'tanh': np.sqrt(6),
+                'sigmoid': 4 * np.sqrt(6),
+                'linear': 1
+            }[self.scale]
+        else:
+            scale = self.scale
+        return scale * (2 * self.rnd.rand(*shape) - 1) / np.sqrt(n1 + n2)
 
 
 class EchoState(Initializer):

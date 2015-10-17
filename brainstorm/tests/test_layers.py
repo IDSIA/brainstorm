@@ -11,6 +11,7 @@ from brainstorm.layers.batch_normalization_layer import BatchNormLayerImpl
 from brainstorm.layers.binomial_cross_entropy_layer import \
     BinomialCrossEntropyLayerImpl
 from brainstorm.layers.softmax_ce_layer import SoftmaxCELayerImpl
+from brainstorm.layers.sigmoid_ce_layer import SigmoidCELayerImpl
 from brainstorm.layers.convolution_layer_2d import Convolution2DLayerImpl
 from brainstorm.layers.elementwise_layer import ElementwiseLayerImpl
 from brainstorm.layers.fully_connected_layer import FullyConnectedLayerImpl
@@ -65,6 +66,15 @@ def fully_connected_layer(spec):
     return layer, spec
 
 
+def fully_connected_layer_2d(spec):
+    in_shapes = {'default': BufferStructure('T', 'B', 2, 3)}
+    layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
+                                    NO_CON, NO_CON,
+                                    size=(3, 3, 1),
+                                    activation=spec['act_func'])
+    return layer, spec
+
+
 def highway_layer(spec):
     in_shapes = {'H': BufferStructure('T', 'B', 2, 3),
                  'T': BufferStructure('T', 'B', 2, 3),
@@ -112,6 +122,24 @@ def softmax_ce_layer(spec):
                  'targets': BufferStructure('T', 'B', *target_shape[2:])}
 
     layer = SoftmaxCELayerImpl('SoftmaxCELayer', in_shapes, NO_CON,
+                               NO_CON)
+
+    spec['skip_inputs'] = ['targets']
+    spec['skip_outputs'] = ['probabilities']
+    spec['targets'] = targets
+    return layer, spec
+
+
+def sigmoid_ce_layer(spec):
+    time_steps = spec.get('time_steps', 3)
+    batch_size = spec.get('batch_size', 2)
+    feature_dim = (2, 3, 5)
+    target_shape = (time_steps, batch_size) + feature_dim
+    targets = np.random.randint(0, 2, target_shape)
+    in_shapes = {'default': BufferStructure('T', 'B', *feature_dim),
+                 'targets': BufferStructure('T', 'B', *target_shape[2:])}
+
+    layer = SigmoidCELayerImpl('SigmoidCELayer', in_shapes, NO_CON,
                                NO_CON)
 
     spec['skip_inputs'] = ['targets']
@@ -257,6 +285,7 @@ def clockwork_lstm(spec):
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
+
 def lstm_peephole_layer(spec):
     layer = LstmPeepholeLayerImpl('LstmPeepholeLayer',
                           {'default': BufferStructure('T', 'B', 5)},
@@ -264,6 +293,7 @@ def lstm_peephole_layer(spec):
                           size=7,
                           activation=spec['act_func'])
     return layer, spec
+
 
 def clockwork_lstm_peephole(spec):
     layer = ClockworkLstmPeepLayerImpl('ClockworkLstmPeepLayer',
@@ -289,9 +319,11 @@ layers_to_test = [
     noop_layer,
     loss_layer,
     fully_connected_layer,
+    fully_connected_layer_2d,
     highway_layer,
     binomial_crossentropy_layer,
     softmax_ce_layer,
+    sigmoid_ce_layer,
     rnn_layer,
     squared_difference_layer,
     lstm_layer,
