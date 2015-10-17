@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 import h5py
 import six
 
-from brainstorm import layers, Network
+from brainstorm import layers, Network, initializers
 from brainstorm.scorers import (aggregate_losses_and_scores,
                                 gather_losses_and_scores)
 from brainstorm.training.trainer import run_network
@@ -575,7 +575,9 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='defaul
 
     Returns:
         brainstorm.structure.network.Network:
-            The constructed network
+            The constructed network initialized with DenseSqrtFanInOut for
+            layers with activation function and a simple Gaussian default and
+            fallback.
     """
     if task_type == 'classification':
         inp, outp = get_in_out_layers_for_classification(
@@ -610,4 +612,14 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='defaul
 
     net = Network.from_layer(current_layer >> outp)
     net.default_output = current_layer.layer.name + '.default'
+
+    init_dict = {
+        name: initializers.DenseSqrtFanInOut(l.activation)
+        for name, l in net.layers.items() if hasattr(l, 'activation')
+    }
+    init_dict['default'] = initializers.Gaussian()
+    init_dict['fallback'] = initializers.Gaussian()
+
+    net.initialize(init_dict)
+
     return net
