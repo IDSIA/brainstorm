@@ -66,6 +66,15 @@ def fully_connected_layer(spec):
     return layer, spec
 
 
+def fully_connected_layer_2d(spec):
+    in_shapes = {'default': BufferStructure('T', 'B', 2, 3)}
+    layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
+                                    NO_CON, NO_CON,
+                                    size=(3, 3, 1),
+                                    activation=spec['act_func'])
+    return layer, spec
+
+
 def highway_layer(spec):
     in_shapes = {'H': BufferStructure('T', 'B', 2, 3),
                  'T': BufferStructure('T', 'B', 2, 3),
@@ -312,6 +321,7 @@ layers_to_test = [
     noop_layer,
     loss_layer,
     fully_connected_layer,
+    fully_connected_layer_2d,
     highway_layer,
     binomial_crossentropy_layer,
     softmax_ce_layer,
