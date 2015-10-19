@@ -12,6 +12,7 @@ from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.utils import IteratorValidationError
 
 # ######################### Nested Iterators ##################################
+from data_iterators import _calculate_lengths_from_mask
 
 inner = Undivided(default=np.random.randn(2, 3, 1, 2, 2))
 
@@ -196,7 +197,7 @@ def test_undivided_named_targets():
         next(iter)
 
 
-# ########################### Online ##########################################
+# ########################### Minibatches ################################### #
 
 def test_online_default():
     input_data = np.zeros((4, 5, 3))
@@ -228,3 +229,85 @@ def test_online_default():
     assert x['my_targets'].shape == (4, 1, 1)
     with pytest.raises(StopIteration):
         next(it)
+
+
+def test_minibatch_default():
+    input_data = np.zeros((4, 5, 3))
+    targets = np.ones((4, 5, 1))
+    it = Minibatches(
+            batch_size=3,
+            my_data=input_data,
+            my_targets=targets,
+            shuffle=False)(default_handler)
+    x = next(it)
+    assert set(x.keys()) == {'my_data', 'my_targets'}
+    assert x['my_data'].shape == (4, 3, 3)
+    assert x['my_targets'].shape == (4, 3, 1)
+    x = next(it)
+    assert set(x.keys()) == {'my_data', 'my_targets'}
+    assert x['my_data'].shape == (4, 2, 3)
+    assert x['my_targets'].shape == (4, 2, 1)
+    with pytest.raises(StopIteration):
+        next(it)
+
+
+def test_minibatch_with_mask():
+    input_data = np.zeros((4, 5, 3))
+    targets = np.ones((4, 5, 1))
+    mask = np.array([
+        [1, 1, 0, 0],
+        [1, 1, 1, 0],
+        [1, 1, 1, 0],
+        [1, 0, 0, 0],
+        [1, 1, 0, 0],
+    ]).T[:, :, None]
+    it = Minibatches(
+            batch_size=3,
+            my_data=input_data,
+            my_targets=targets,
+            mask=mask,
+            shuffle=False)(default_handler)
+    x = next(it)
+    assert set(x.keys()) == {'my_data', 'my_targets', 'mask'}
+    assert x['my_data'].shape == (3, 3, 3)
+    assert x['my_targets'].shape == (3, 3, 1)
+    assert x['mask'].shape == (3, 3, 1)
+    x = next(it)
+    assert set(x.keys()) == {'my_data', 'my_targets', 'mask'}
+    assert x['my_data'].shape == (2, 2, 3)
+    assert x['my_targets'].shape == (2, 2, 1)
+    assert x['mask'].shape == (2, 2, 1)
+    with pytest.raises(StopIteration):
+        next(it)
+
+
+def test_minibatch_with_length():
+    input_data = np.zeros((4, 5, 3))
+    targets = np.ones((4, 5, 1))
+    seq_lens = [2, 3, 4, 1, 2]
+    it = Minibatches(
+            batch_size=3,
+            cut_according_to=seq_lens,
+            my_data=input_data,
+            my_targets=targets,
+            shuffle=False)(default_handler)
+    x = next(it)
+    assert set(x.keys()) == {'my_data', 'my_targets'}
+    assert x['my_data'].shape == (4, 3, 3)
+    assert x['my_targets'].shape == (4, 3, 1)
+    x = next(it)
+    assert set(x.keys()) == {'my_data', 'my_targets'}
+    assert x['my_data'].shape == (2, 2, 3)
+    assert x['my_targets'].shape == (2, 2, 1)
+    with pytest.raises(StopIteration):
+        next(it)
+
+
+def test_calculate_lengths_from_mask():
+    mask = np.array([
+        [1, 1, 1, 1, 1, 0, 0, 0],
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0]]).T[:, :, None]
+    assert all(_calculate_lengths_from_mask(mask) == [5, 8, 3, 4, 0])
