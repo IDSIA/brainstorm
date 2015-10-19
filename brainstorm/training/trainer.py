@@ -80,8 +80,7 @@ class Trainer(Describable):
         self.stepper.start(net)
         named_data_iters['training_data_iter'] = training_data_iter
         self._start_hooks(net, named_data_iters)
-        self._emit_hooks(net, 'update')
-        if self._emit_hooks(net, 'epoch'):
+        if self._emit_hooks(net, 'update') or self._emit_hooks(net, 'epoch'):
             return
 
         should_stop = False
