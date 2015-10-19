@@ -30,7 +30,7 @@ class Trainer(Describable):
         """Create a new Trainer.
 
         Args:
-            stepper (brainstorm.training.steppers.TrainingStep):
+            stepper (brainstorm.training.steppers.TrainingStepper):
             verbose (bool):
         """
         self.stepper = stepper

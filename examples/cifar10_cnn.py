@@ -47,8 +47,8 @@ network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
 # ------------------------------ Set up Trainer ----------------------------- #
 
 scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
-trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.01,
-                                              momentum=0.9))
+trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01,
+                                                 momentum=0.9))
 trainer.train_scorers = scorers
 trainer.add_hook(bs.hooks.ProgressBar())
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
