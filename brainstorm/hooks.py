@@ -72,25 +72,32 @@ class SaveNetwork(Hook):
 
 class SaveBestNetwork(Hook):
     """
-    Check every epoch to see if the given objective is at it's best value and
-    if so, save the network to the specified file.
+    Check every update to see if the specified log entry is at it's best value
+    and if so, save the network to the specified file.
     """
     __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
 
     def __init__(self, log_name, filename=None, name=None,
                  criterion='max', verbose=None):
-        super(SaveBestNetwork, self).__init__(name, 'epoch', 1, verbose)
+        super(SaveBestNetwork, self).__init__(name, 'update', 1, verbose)
         self.log_name = log_name
         self.filename = filename
         self.parameters = None
         assert criterion == 'min' or criterion == 'max'
+        self.best_so_far = np.inf if criterion == 'min' else -np.inf
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         e = get_by_path(logs, self.log_name)
-        best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
-        if best_idx == len(e) - 1:
+        last = e[-1]
+        if self.criterion == 'min':
+            imp = last < self.best_so_far
+        else:
+            imp = last > self.best_so_far
+
+        if imp:
+            self.best_so_far = last
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
                 self.message("{} improved. Saving network to {} ...".
@@ -100,9 +107,6 @@ class SaveBestNetwork(Hook):
                 self.message("{} improved. Caching parameters ...".
                              format(self.log_name))
                 self.parameters = params
-        elif self.run_verbosity:
-            self.message("Last saved parameters after epoch {} when {} was {}".
-                         format(best_idx, self.log_name, e[best_idx]))
 
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
