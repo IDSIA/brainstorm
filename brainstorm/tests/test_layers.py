@@ -108,7 +108,6 @@ def binomial_crossentropy_layer(spec):
 
     spec['default'] = default
     spec['targets'] = targets
-    spec['skip_inputs'] = ['targets']
     return layer, spec
 
 
@@ -124,8 +123,6 @@ def softmax_ce_layer(spec):
     layer = SoftmaxCELayerImpl('SoftmaxCELayer', in_shapes, NO_CON,
                                NO_CON)
 
-    spec['skip_inputs'] = ['targets']
-    spec['skip_outputs'] = ['probabilities']
     spec['targets'] = targets
     return layer, spec
 
@@ -142,8 +139,6 @@ def sigmoid_ce_layer(spec):
     layer = SigmoidCELayerImpl('SigmoidCELayer', in_shapes, NO_CON,
                                NO_CON)
 
-    spec['skip_inputs'] = ['targets']
-    spec['skip_outputs'] = ['probabilities']
     spec['targets'] = targets
     return layer, spec
 
@@ -180,7 +175,6 @@ def mask_layer(spec):
                           {'default': BufferStructure('T', 'B', 3, 2),
                            'mask': BufferStructure('T', 'B', 1)},
                           NO_CON, NO_CON)
-    spec['skip_inputs'] = ['mask']
     return layer, spec
 
 
@@ -271,7 +265,6 @@ def clockwork_rnn(spec):
                                   NO_CON, NO_CON,
                                   size=7,
                                   activation=spec['activation'])
-    spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
@@ -283,7 +276,6 @@ def clockwork_lstm(spec):
                                   size=7,
                                   activation=spec['activation'])
 
-    spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
@@ -304,7 +296,6 @@ def clockwork_lstm_peephole(spec):
                                   size=7,
                                   activation=spec['activation'])
 
-    spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
@@ -378,15 +369,13 @@ def layer_specs(request, spec):
 
 def test_deltas_calculation_of_layer(layer_specs):
     layer, specs = layer_specs
-    skip_outputs = specs.get('skip_outputs', [])
-    skip_inputs = specs.get('skip_inputs', [])
     successful = True
     for outputs_name in layer.out_shapes:
-        if outputs_name in skip_outputs:
+        if outputs_name in layer.takes_no_output_deltas_from:
             continue
 
         for inputs_name in layer.in_shapes:
-            if inputs_name in skip_inputs:
+            if inputs_name in layer.computes_no_input_deltas_for:
                 continue
             successful &= run_deltas_test(layer, specs, inputs_name,
                                           outputs_name)
@@ -396,15 +385,13 @@ def test_deltas_calculation_of_layer(layer_specs):
 
 def test_gradients_for_layer(layer_specs):
     layer, specs = layer_specs
-    skip_outputs = specs.get('skip_outputs', [])
-    skip_parameters = specs.get('skip_parameters', [])
     successful = True
     for outputs_name in layer.out_shapes:
-        if outputs_name in skip_outputs:
+        if outputs_name in layer.takes_no_output_deltas_from:
             continue
 
         for param_name in layer.parameter_shapes:
-            if param_name in skip_parameters:
+            if param_name in layer.computes_no_gradients_for:
                 continue
             successful &= run_gradients_test(layer, specs, param_name,
                                              outputs_name)

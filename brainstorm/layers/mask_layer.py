@@ -20,6 +20,8 @@ class MaskLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
                        'mask': StructureTemplate('T', 'B', 1)}
 
+    computes_no_input_deltas_for = ['mask']
+
     def setup(self, kwargs, in_shapes):
         outputs = OrderedDict()
         outputs['default'] = in_shapes['default']

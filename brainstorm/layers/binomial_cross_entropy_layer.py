@@ -36,6 +36,8 @@ class BinomialCrossEntropyLayerImpl(Layer):
 
     expected_kwargs = {}
 
+    computes_no_input_deltas_for = ['targets']
+
     def setup(self, kwargs, in_shapes):
         if in_shapes['default'] != in_shapes['targets']:
             raise LayerValidationError("{}: default and targets must have the "
