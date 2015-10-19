@@ -79,8 +79,9 @@ class SaveBestNetwork(Hook):
     __default_values__ = {'filename': None}
 
     def __init__(self, log_name, filename=None, name=None,
-                 criterion='max', verbose=None):
-        super(SaveBestNetwork, self).__init__(name, 'update', 1, verbose)
+                 criterion='max', timescale='epoch', interval=1, verbose=None):
+        super(SaveBestNetwork, self).__init__(name, timescale,
+                                              interval, verbose)
         self.log_name = log_name
         self.filename = filename
         self.parameters = None
@@ -89,8 +90,6 @@ class SaveBestNetwork(Hook):
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        if epoch_nr == 0:
-            return
         e = get_by_path(logs, self.log_name)
         last = e[-1]
         if self.criterion == 'min':
