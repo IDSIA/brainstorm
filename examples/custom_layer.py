@@ -11,7 +11,8 @@ import brainstorm as bs
 from brainstorm.layers import FullyConnected
 from brainstorm.data_iterators import Minibatches
 from brainstorm.layers.base_layer import Layer
-from brainstorm.structure.buffer_structure import StructureTemplate
+from brainstorm.structure.buffer_structure import (StructureTemplate,
+                                                   BufferStructure)
 from brainstorm.structure.construction import ConstructionWrapper
 
 bs.global_rnd.set_seed(42)
@@ -51,11 +52,24 @@ class SquareLayerImpl(Layer):
         inputs = buffers.inputs.default
         outputs = buffers.outputs.default
         self.handler.mult_tt(inputs, inputs, outputs)
+        self.handler.mult_st(0.5, outputs, outputs)
 
     def backward_pass(self, buffers):
+        inputs = buffers.inputs.default
         output_deltas = buffers.output_deltas.default
         input_deltas = buffers.input_deltas.default
-        self.handler.mult_add_st(2, output_deltas, input_deltas)
+        self.handler.mult_add_tt(inputs, output_deltas, input_deltas)
+
+# --------------------------- Testing the Layer ----------------------------- #
+# This obviously doesn't have to happen before every run. So we recommend
+# having a layer implementation + the tests in a separate file.
+from brainstorm.tests.tools import get_test_configurations, run_layer_tests
+
+for cfg in get_test_configurations():
+    layer = SquareLayerImpl('Square',
+                            {'default': BufferStructure('T', 'B', 3)},
+                            set(), set())
+    run_layer_tests(layer, cfg)
 
 
 # ---------------------------- Set up Iterators ----------------------------- #
@@ -73,7 +87,7 @@ getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
-inp, out = bs.tools.get_in_out_layers_for_classification(784, 10)
+inp, out = bs.tools.get_in_out_layers_for_classification((1, 28, 28), 10)
 network = bs.Network.from_layer(
     inp >>
     FullyConnected(500, name='Hid1', activation='linear') >>

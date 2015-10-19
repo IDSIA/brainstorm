@@ -55,7 +55,7 @@ setup(
     name='brainstorm',
     version=about['__version__'],
     description='A fresh start for the pylstm RNN library',
-    long_description=readme + '\n\n' + doclink + '\n\n' + history,
+    long_description=doclink + '\n\n' + history,
     author=about['__author__'],
     url=about['__url__'],
     packages=['brainstorm',

@@ -34,6 +34,9 @@ class SigmoidCELayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
                        'targets': StructureTemplate('T', 'B', '...')}
 
+    computes_no_input_deltas_for = ['targets']
+    takes_no_output_deltas_from = ['probabilities']
+
     def setup(self, kwargs, in_shapes):
         in_shape = in_shapes['default'].feature_shape
         tar_shape = in_shapes['targets'].feature_shape

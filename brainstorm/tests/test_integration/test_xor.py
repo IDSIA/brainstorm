@@ -13,9 +13,6 @@ from brainstorm.layers import *
 from brainstorm.training import SgdStep
 
 
-# from brainstorm.handlers.pycuda_handler import PyCudaHandler
-
-
 @pytest.mark.slow
 def test_learn_xor_function():
     # set up the network
@@ -35,8 +32,7 @@ def test_learn_xor_function():
     # print(net.buffer.parameters)
 
     # set up the trainer
-    tr = Trainer(SgdStep(learning_rate=4.0), verbose=False,
-                 double_buffering=False)
+    tr = Trainer(SgdStep(learning_rate=4.0), verbose=False)
     tr.add_hook(StopAfterEpoch(300))
 
     # generate the data

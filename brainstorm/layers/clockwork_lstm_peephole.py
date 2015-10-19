@@ -20,6 +20,8 @@ class ClockworkLstmPeepLayerImpl(Layer):
     expected_kwargs = {'size', 'timing', 'activation'}
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
 
+    computes_no_gradients_for = ['timing']
+
     def setup(self, kwargs, in_shapes):
         self.activation = kwargs.get('activation', 'tanh')
         self.size = kwargs.get('size', in_shapes['default'].feature_size)

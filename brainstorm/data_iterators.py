@@ -16,18 +16,18 @@ class DataIterator(Seedable):
 
     Attributes:
         data_shapes (dict[str, tuple[int]]):
-            list of input names that this iterator provides
+            List of input names that this iterator provides.
         length (int | None):
-            for how many iterations this iterator will run
+            Number of iterations that this iterator will run.
     """
 
     def __init__(self, data_shapes, length):
         """
         Args:
             data_shapes (dict[str, tuple[int]]):
-                list of input names that this iterator provides
+                List of input names that this iterator provides.
             length (int | None):
-                for how many iterations this iterator will run
+                Number of iterations that this iterator will run.
         """
         super(DataIterator, self).__init__()
         self.data_shapes = data_shapes
@@ -51,13 +51,13 @@ class AddGaussianNoise(DataIterator):
         """
         Args:
             iter (DataIterator):
-                any DataIterator which iterates over data that noise should be
-                added to
+                Any DataIterator which iterates over data that noise should be
+                added to.
             std_dict (dict[str, float]):
-                specifies the standard deviation of the noise that should be
-                added for some of the named data items
+                Specifies the standard deviation of the noise that should be
+                added for some of the named data items.
             mean_dict (Optional(dict[str, float])):
-                specifies the mean of the gaussian noise that should be
+                Specifies the mean of the gaussian noise that should be
                 added for some of the named data items.
                 Defaults to None meaning all means are treated as 0.
         """
@@ -101,14 +101,14 @@ class AddSaltNPepper(DataIterator):
         """
         Args:
             iter (DataIterator):
-                any DataIterator which iterates over data that noise should be
-                added to
+                Any DataIterator which iterates over data that noise should be
+                added to.
             prob_dict (dict[str, float]):
-                specifies the probability that an input is affected for some of
+                Specifies the probability that an input is affected for some of
                 the named data items. Omitted data items are treated as having
                 an amount of 0.
             ratio_dict (Optional(dict[str, float])):
-                specifies the ratio of salt of all corrupted inputs.
+                Specifies the ratio of salt of all corrupted inputs.
                 Defaults to None meaning the ratio is treated as 0.5.
         """
         DataIterator.__init__(self, iter.data_shapes, iter.length)
@@ -155,9 +155,10 @@ class Flip(DataIterator):
         """
         Args:
             iter (DataIterator):
-                any DataIterator which iterates over data to be flipped
+                Any DataIterator which iterates over data to be flipped.
             prob_dict (dict[str, float]):
-                specifies the probability of flipping for some named data items
+                Specifies the probability of flipping for some named
+                data items.
         """
         Seedable.__init__(self)
         super(Flip, self).__init__(iter.data_shapes, iter.length)
@@ -183,6 +184,48 @@ class Flip(DataIterator):
             yield data
 
 
+class OneHot(DataIterator):
+
+    """
+    Convert data to one hot vectors, according to provided vocabulary sizes.
+    If vocabulary size is not provided for some data item, it is yielded as is.
+
+    Currently this iterator only supports 3D data where the last (right-most)
+    dimension is sized 1.
+    """
+
+    def __init__(self, iter, vocab_size_dict):
+        """
+        Args:
+            iter (DataIterator):
+                DataIterator which iterates over the images to be padded.
+            vocab_size_dict (dict[str, int]):
+                Specifies the size of one hot vectors (the vocabulary size)
+                for some named data items.
+        """
+        DataIterator.__init__(self, iter.data_shapes, iter.length)
+        for key in vocab_size_dict.keys():
+            if key not in iter.data_shapes:
+                raise IteratorValidationError(
+                    "key {} is not present in iterator. Available keys: {"
+                    "}".format(key, iter.data_shapes.keys()))
+            if not isinstance(vocab_size_dict[key], int):
+                raise IteratorValidationError("Vocabulary size must be int")
+            shape = iter.data_shapes[key]
+            if not (shape[-1] == 1 and len(shape) == 3):
+                raise IteratorValidationError("Only 3D data is supported")
+        self.vocab_size_dict = vocab_size_dict
+        self.iter = iter
+
+    def __call__(self, handler, verbose=False):
+        for data in self.iter(handler):
+            for name in self.vocab_size_dict.keys():
+                eye = np.eye(self.vocab_size_dict[name], dtype=np.bool)
+                new_data = np.squeeze(eye[data[name][:, :, 0]])
+                data[name] = new_data
+                yield data
+
+
 class Pad(DataIterator):
     """
     Pads images equally on all sides. Images are generated by another
@@ -197,11 +240,11 @@ class Pad(DataIterator):
         """
         Args:
             iter (DataIterator):
-                DataIterator which iterates over the images to be padded
+                A DataIterator which iterates over the images to be padded.
             size_dict (dict[str, int]):
-                specifies the padding sizes for some named data items
+                Specifies the padding sizes for some named data items.
             value_dict (dict[str, int]):
-                specifies the pad values for some named data items
+                Specifies the pad values for some named data items.
         """
         super(Pad, self).__init__(iter.data_shapes, iter.length)
         if value_dict is not None:
@@ -247,9 +290,9 @@ class RandomCrop(DataIterator):
         """
         Args:
             iter (DataIterator):
-                DataIterator which iterates over data to be cropped
+                A DataIterator which iterates over data to be cropped.
             shape_dict (dict[str, (int, int)]):
-                specifies the crop shapes for some named data items
+                Specifies the crop shapes for some named data items.
         """
         super(RandomCrop, self).__init__(iter.data_shapes, iter.length)
         for key, val in shape_dict.items():
@@ -295,7 +338,7 @@ class Undivided(DataIterator):
         """
         Args:
             **named_data (dict[str, np.ndarray]):
-                named arrays with 3+ dimensions ('T', 'B', ...)
+                Named arrays with 3+ dimensions i.e. ('T', 'B', ...).
         """
         _assert_correct_data_format(named_data)
         data_shapes = {n: v.shape for n, v in named_data.items()}
@@ -311,33 +354,23 @@ class Minibatches(DataIterator):
     """
     Minibatch iterator for inputs and targets.
 
-    Args:
-        batch_size (int): The number of data instances per batch. Defaults
-                          to 1.
-
-                          Brainstorm assumes that the second dimension (from
-                          the left) of the data indexes independent data
-                          items.
-        shuffle (Optional[bool]): Flag indicating whether the order of
-                                  batches should be randomized at the
-                                  beginning of every pass through
-                                  the data.
-        **named_data (dict[str, np.ndarray]):
-                named arrays with 3+ dimensions ('T', 'B', ...)
     Note:
-        When shuffle is true, this iterator only randomizes the order of
+        When shuffling is enabled, this iterator only randomizes the order of
         minibatches, but doesn't re-shuffle instances across batches.
     """
 
     def __init__(self, batch_size=1, shuffle=True, **named_data):
         """
         Args:
-            **named_data (dict[str, np.ndarray]):
-                named arrays with 3+ dimensions ('T', 'B', ...)
             batch_size (int):
-                size of the produced minibatches.
-            shuffle (Optional[bool]):
-                Determines if the data should be shuffled. Defaults to True.
+            The number of data instances per batch. Defaults to 1.
+            Brainstorm assumes that the second dimension (from the left) of
+            the data indexes independent data items.
+        shuffle (Optional[bool]):
+            Flag indicating whether the order of batches should be randomized
+            at the beginning of every pass through the data.
+        **named_data (dict[str, np.ndarray]):
+            Named arrays with 3+ dimensions i.e. ('T', 'B', ...).
         """
         nr_sequences = _assert_correct_data_format(named_data)
         data_shapes = {n: v.shape for n, v in named_data.items()}
