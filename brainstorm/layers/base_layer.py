@@ -58,6 +58,10 @@ class Layer(object):
     expected_inputs = {}
     """Names and shape-templates for all inputs of this layer"""
 
+    computes_no_input_deltas_for = ()
+    computes_no_gradients_for = ()
+    takes_no_output_deltas_from = ()
+
     def __init__(self, name, in_shapes, incoming_connections,
                  outgoing_connections, **kwargs):
         self.name = name

@@ -62,7 +62,7 @@ def fully_connected_layer(spec):
     layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
                                     NO_CON, NO_CON,
                                     size=4,
-                                    activation=spec['act_func'])
+                                    activation=spec['activation'])
     return layer, spec
 
 
@@ -71,7 +71,7 @@ def fully_connected_layer_2d(spec):
     layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
                                     NO_CON, NO_CON,
                                     size=(3, 3, 1),
-                                    activation=spec['act_func'])
+                                    activation=spec['activation'])
     return layer, spec
 
 
@@ -108,7 +108,6 @@ def binomial_crossentropy_layer(spec):
 
     spec['default'] = default
     spec['targets'] = targets
-    spec['skip_inputs'] = ['targets']
     return layer, spec
 
 
@@ -124,8 +123,6 @@ def softmax_ce_layer(spec):
     layer = SoftmaxCELayerImpl('SoftmaxCELayer', in_shapes, NO_CON,
                                NO_CON)
 
-    spec['skip_inputs'] = ['targets']
-    spec['skip_outputs'] = ['probabilities']
     spec['targets'] = targets
     return layer, spec
 
@@ -142,8 +139,6 @@ def sigmoid_ce_layer(spec):
     layer = SigmoidCELayerImpl('SigmoidCELayer', in_shapes, NO_CON,
                                NO_CON)
 
-    spec['skip_inputs'] = ['targets']
-    spec['skip_outputs'] = ['probabilities']
     spec['targets'] = targets
     return layer, spec
 
@@ -153,7 +148,7 @@ def rnn_layer(spec):
                          {'default': BufferStructure('T', 'B', 5)},
                          NO_CON, NO_CON,
                          size=7,
-                         activation=spec['act_func'])
+                         activation=spec['activation'])
     return layer, spec
 
 
@@ -162,7 +157,7 @@ def lstm_layer(spec):
                           {'default': BufferStructure('T', 'B', 5)},
                           NO_CON, NO_CON,
                           size=7,
-                          activation=spec['act_func'])
+                          activation=spec['activation'])
     return layer, spec
 
 
@@ -171,7 +166,7 @@ def lstm_opt_layer(spec):
                              {'default': BufferStructure('T', 'B', 5)},
                              NO_CON, NO_CON,
                              size=7,
-                             activation=spec['act_func'])
+                             activation=spec['activation'])
     return layer, spec
 
 
@@ -180,7 +175,6 @@ def mask_layer(spec):
                           {'default': BufferStructure('T', 'B', 3, 2),
                            'mask': BufferStructure('T', 'B', 1)},
                           NO_CON, NO_CON)
-    spec['skip_inputs'] = ['mask']
     return layer, spec
 
 
@@ -190,7 +184,7 @@ def convolution_layer_2d(spec, input_shape=(1, 4, 4),
     layer = Convolution2DLayerImpl('Convolution2DLayer', {'default': x},
                                    NO_CON, NO_CON, num_filters=num_filters,
                                    kernel_size=kernel_size, stride=stride,
-                                   activation=spec['act_func'])
+                                   activation=spec['activation'])
     return layer, spec
 
 
@@ -247,7 +241,7 @@ def elementwise_layer(spec):
     layer = ElementwiseLayerImpl('Elementwise',
                                  {'default': BufferStructure('T', 'B', 3, 2)},
                                  NO_CON, NO_CON,
-                                 activation=spec['act_func'])
+                                 activation=spec['activation'])
     return layer, spec
 
 
@@ -270,8 +264,7 @@ def clockwork_rnn(spec):
                                   {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation=spec['act_func'])
-    spec['skip_parameters'] = ['timing']
+                                  activation=spec['activation'])
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
@@ -281,9 +274,8 @@ def clockwork_lstm(spec):
                                   {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation=spec['act_func'])
+                                  activation=spec['activation'])
 
-    spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
@@ -293,7 +285,7 @@ def lstm_peephole_layer(spec):
                           {'default': BufferStructure('T', 'B', 5)},
                           NO_CON, NO_CON,
                           size=7,
-                          activation=spec['act_func'])
+                          activation=spec['activation'])
     return layer, spec
 
 
@@ -302,9 +294,8 @@ def clockwork_lstm_peephole(spec):
                                   {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation=spec['act_func'])
+                                  activation=spec['activation'])
 
-    spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 
@@ -362,11 +353,11 @@ spec_ids = ['{}{}{}'.format(*p) for p in spec_list]
 
 @pytest.fixture(params=spec_list, ids=spec_ids)
 def spec(request):
-    time_steps, batch_size, act_func = request.param
+    time_steps, batch_size, activation = request.param
     return {
         'time_steps': time_steps,
         'batch_size': batch_size,
-        'act_func': act_func
+        'activation': activation
     }
 
 
@@ -378,15 +369,13 @@ def layer_specs(request, spec):
 
 def test_deltas_calculation_of_layer(layer_specs):
     layer, specs = layer_specs
-    skip_outputs = specs.get('skip_outputs', [])
-    skip_inputs = specs.get('skip_inputs', [])
     successful = True
     for outputs_name in layer.out_shapes:
-        if outputs_name in skip_outputs:
+        if outputs_name in layer.takes_no_output_deltas_from:
             continue
 
         for inputs_name in layer.in_shapes:
-            if inputs_name in skip_inputs:
+            if inputs_name in layer.computes_no_input_deltas_for:
                 continue
             successful &= run_deltas_test(layer, specs, inputs_name,
                                           outputs_name)
@@ -396,15 +385,13 @@ def test_deltas_calculation_of_layer(layer_specs):
 
 def test_gradients_for_layer(layer_specs):
     layer, specs = layer_specs
-    skip_outputs = specs.get('skip_outputs', [])
-    skip_parameters = specs.get('skip_parameters', [])
     successful = True
     for outputs_name in layer.out_shapes:
-        if outputs_name in skip_outputs:
+        if outputs_name in layer.takes_no_output_deltas_from:
             continue
 
         for param_name in layer.parameter_shapes:
-            if param_name in skip_parameters:
+            if param_name in layer.computes_no_gradients_for:
                 continue
             successful &= run_gradients_test(layer, specs, param_name,
                                              outputs_name)
