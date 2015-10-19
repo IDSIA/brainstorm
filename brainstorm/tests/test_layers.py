@@ -62,7 +62,7 @@ def fully_connected_layer(spec):
     layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
                                     NO_CON, NO_CON,
                                     size=4,
-                                    activation=spec['act_func'])
+                                    activation=spec['activation'])
     return layer, spec
 
 
@@ -71,7 +71,7 @@ def fully_connected_layer_2d(spec):
     layer = FullyConnectedLayerImpl('FullyConnectedLayer', in_shapes,
                                     NO_CON, NO_CON,
                                     size=(3, 3, 1),
-                                    activation=spec['act_func'])
+                                    activation=spec['activation'])
     return layer, spec
 
 
@@ -153,7 +153,7 @@ def rnn_layer(spec):
                          {'default': BufferStructure('T', 'B', 5)},
                          NO_CON, NO_CON,
                          size=7,
-                         activation=spec['act_func'])
+                         activation=spec['activation'])
     return layer, spec
 
 
@@ -162,7 +162,7 @@ def lstm_layer(spec):
                           {'default': BufferStructure('T', 'B', 5)},
                           NO_CON, NO_CON,
                           size=7,
-                          activation=spec['act_func'])
+                          activation=spec['activation'])
     return layer, spec
 
 
@@ -171,7 +171,7 @@ def lstm_opt_layer(spec):
                              {'default': BufferStructure('T', 'B', 5)},
                              NO_CON, NO_CON,
                              size=7,
-                             activation=spec['act_func'])
+                             activation=spec['activation'])
     return layer, spec
 
 
@@ -190,7 +190,7 @@ def convolution_layer_2d(spec, input_shape=(1, 4, 4),
     layer = Convolution2DLayerImpl('Convolution2DLayer', {'default': x},
                                    NO_CON, NO_CON, num_filters=num_filters,
                                    kernel_size=kernel_size, stride=stride,
-                                   activation=spec['act_func'])
+                                   activation=spec['activation'])
     return layer, spec
 
 
@@ -247,7 +247,7 @@ def elementwise_layer(spec):
     layer = ElementwiseLayerImpl('Elementwise',
                                  {'default': BufferStructure('T', 'B', 3, 2)},
                                  NO_CON, NO_CON,
-                                 activation=spec['act_func'])
+                                 activation=spec['activation'])
     return layer, spec
 
 
@@ -270,7 +270,7 @@ def clockwork_rnn(spec):
                                   {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation=spec['act_func'])
+                                  activation=spec['activation'])
     spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
@@ -281,7 +281,7 @@ def clockwork_lstm(spec):
                                   {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation=spec['act_func'])
+                                  activation=spec['activation'])
 
     spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
@@ -293,7 +293,7 @@ def lstm_peephole_layer(spec):
                           {'default': BufferStructure('T', 'B', 5)},
                           NO_CON, NO_CON,
                           size=7,
-                          activation=spec['act_func'])
+                          activation=spec['activation'])
     return layer, spec
 
 
@@ -302,7 +302,7 @@ def clockwork_lstm_peephole(spec):
                                   {'default': BufferStructure('T', 'B', 5)},
                                   NO_CON, NO_CON,
                                   size=7,
-                                  activation=spec['act_func'])
+                                  activation=spec['activation'])
 
     spec['skip_parameters'] = ['timing']
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
@@ -362,11 +362,11 @@ spec_ids = ['{}{}{}'.format(*p) for p in spec_list]
 
 @pytest.fixture(params=spec_list, ids=spec_ids)
 def spec(request):
-    time_steps, batch_size, act_func = request.param
+    time_steps, batch_size, activation = request.param
     return {
         'time_steps': time_steps,
         'batch_size': batch_size,
-        'act_func': act_func
+        'activation': activation
     }
 
 
