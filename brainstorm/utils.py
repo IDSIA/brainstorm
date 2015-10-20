@@ -115,14 +115,15 @@ def get_by_path(d, path):
         KeyError:
             if any key along the path was not found.
     """
-    try:
-        for p in path.split('.'):
-            d = d[p]
-    except KeyError:
-        print('Did not find entry `{}`. Available entries are {}'.format(
-            path, flatten_keys(d)))
-        raise
-    return d
+    current_node = d
+    for p in path.split('.'):
+        try:
+            current_node = current_node[p]
+        except KeyError:
+            raise KeyError('Path "{}" could not be resolved. Key "{}" missing.'
+                           ' Available keys are: [{}]'.format(
+                            path, p, ", ".join(sorted(current_node.keys()))))
+    return current_node
 
 
 def get_normalized_path(*args):

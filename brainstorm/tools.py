@@ -221,7 +221,7 @@ def get_in_out_layers_for_regression(in_shape, nr_outputs,
 
     fc_layer >> 'inputs_1' - out_layer
 
-    return inp_layer, fc_layer, out_layer
+    return inp_layer, fc_layer
 
 
 def draw_network(network, file_name='network.png'):
@@ -356,8 +356,7 @@ def extract_and_save(network, iter, buffer_names, file_name):
             network.forward_pass()
             first_pass = False if len(ds) > 0 else True
             for num, buffer_name in enumerate(buffer_names):
-                data = network.handler.get_numpy_copy(
-                    get_by_path(network.buffer, buffer_name))
+                data = network.get(buffer_name)
                 if num == 0:
                     num_items += data.shape[1]
                 if first_pass:

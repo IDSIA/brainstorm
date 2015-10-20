@@ -22,6 +22,8 @@ class LossLayerImpl(Layer):
     expected_kwargs = {'importance'}
 
     def setup(self, kwargs, in_shapes):
+        assert self.name != 'total_loss'
+
         self.importance = kwargs.get('importance', 1.0)
         self.batch_index = None
         if in_shapes['default'].scales_with_time:

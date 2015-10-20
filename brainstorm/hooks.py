@@ -101,7 +101,7 @@ class SaveBestNetwork(Hook):
         if imp:
             self.best_so_far = last
             self.best_t = epoch_nr if self.timescale == 'epoch' else update_nr
-            params = net.handler.get_numpy_copy(net.buffer.parameters)
+            params = net.get('parameters')
             if self.filename is not None:
                 self.message("{} improved. Saving network to {} ...".
                              format(self.log_name, self.filename))
@@ -361,8 +361,7 @@ class StopOnNan(Hook):
                 self.message("NaN or inf detected in {}!".format(log_name))
                 raise StopIteration()
         if self.check_parameters:
-            params = net.handler.get_numpy_copy(net.buffer.parameters)
-            if not np.all(np.isfinite(params)):
+            if not net.handler.is_fully_finite(net.buffer.parameters):
                 self.message("NaN or inf detected in parameters!")
                 raise StopIteration()
 

@@ -42,7 +42,8 @@ def test_empty_list_param_view():
     empty = BufferView([], [], buff)
     assert empty._full_buffer is buff
     assert empty._buffer_names == ()
-    assert set(empty.__dict__.keys()) == {'_full_buffer', '_buffer_names'}
+    assert set(empty.__dict__.keys()) == {'_full_buffer', '_buffer_names',
+                                          '_keys'}
 
 
 def test_buffer_view_tuple_upacking(buffer_view):
@@ -75,7 +76,7 @@ def test_buffer_view_dict_getitem(buffer_view):
     assert buffer_view['R'] is R
     assert buffer_view['b'] is b
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(KeyError):
         _ = buffer_view['nonexisting']
 
 
@@ -101,7 +102,7 @@ def test_buffer_view_getattr(buffer_view):
 
 def test_buffer_view_dict_for_autocompletion(buffer_view):
     assert set(buffer_view.__dict__.keys()) == {'W', 'R', 'b', '_buffer_names',
-                                                '_full_buffer'}
+                                                '_full_buffer', '_keys'}
 
 
 def test_buffer_view_as_dict(buffer_view):
