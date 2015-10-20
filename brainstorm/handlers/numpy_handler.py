@@ -287,6 +287,20 @@ class NumpyHandler(Handler):
             keepdims = False
         np.sum(a, axis=axis, out=out, keepdims=keepdims)
 
+    def merge_tt(self, a, b, out):
+        out_flat = out.reshape(-1, out.shape[-1])
+        sa = a.shape[-1]
+        out_flat[:, :sa] = a.reshape(-1, a.shape[-1])
+        out_flat[:, sa:] = b.reshape(-1, b.shape[-1])
+
+    def split_add_tt(self, x, out_a, out_b):
+        oa = out_a.reshape(-1, out_a.shape[-1])
+        ob = out_b.reshape(-1, out_b.shape[-1])
+        x_flat = x.reshape(-1, x.shape[-1])
+        sa = oa.shape[-1]
+        oa[:] += x_flat[:, :oa.shape[-1]]
+        ob[:] += x_flat[:, oa.shape[-1]:]
+
     # ------------------------ Activation functions ------------------------- #
 
     def rel(self, x, y):

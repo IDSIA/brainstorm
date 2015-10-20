@@ -634,3 +634,37 @@ def test_softmax_m(handler):
         out = np.zeros_like(m, dtype=ref_dtype)
         ref_args = (m, out)
         assert operation_check(handler, 'softmax_m', ref_args)
+
+
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_merge_tt(handler):
+    shapes = [((5, 4), (5, 3)),
+              ((1, 2, 1), (1, 2, 2)),
+              ((10, 4, 3), (10, 4, 7)),
+              ((1, 2, 3, 4), (1, 2, 3, 5)),
+              ((2049, 3), (2049, 1025)),]
+    for sa, sb in shapes:
+        a = np.random.randn(*sa).astype(ref_dtype)
+        b = np.random.randn(*sb).astype(ref_dtype)
+        sout = list(sa)
+        sout[-1] = sa[-1] + sb[-1]
+        out = np.zeros(sout, dtype=ref_dtype)
+        ref_args = (a, b, out)
+        assert operation_check(handler, 'merge_tt', ref_args)
+
+
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_split_add_tt(handler):
+    shapes = [((5, 4), (5, 3)),
+              ((1, 2, 1), (1, 2, 2)),
+              ((10, 4, 3), (10, 4, 7)),
+              ((1, 2, 3, 4), (1, 2, 3, 5)),
+              ((2049, 3), (2049, 1025)),]
+    for sa, sb in shapes:
+        a = np.zeros(sa, dtype=ref_dtype)
+        b = np.ones(sb, dtype=ref_dtype)
+        sx = list(sa)
+        sx[-1] = sa[-1] + sb[-1]
+        x = np.random.randn(*sx).astype(ref_dtype)
+        ref_args = (x, a, b)
+        assert operation_check(handler, 'split_add_tt', ref_args)

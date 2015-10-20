@@ -368,7 +368,7 @@ def test_get_network_from_description():
 # ################# test describing a Trainer #################################
 
 def test_describe_trainer():
-    tr = bs.Trainer(bs.training.SgdStep(learning_rate=0.7), verbose=False)
+    tr = bs.Trainer(bs.training.SgdStepper(learning_rate=0.7), verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
@@ -388,14 +388,14 @@ def test_describe_trainer():
                 'logs_to_check': [],
                 'priority': 2}},
         'stepper': {
-            '@type': 'SgdStep',
+            '@type': 'SgdStepper',
             'learning_rate': 0.7},
         'train_scorers': []
     }
 
 
 def test_recreate_trainer_from_description():
-    tr = bs.Trainer(bs.training.SgdStep(learning_rate=0.7), verbose=False)
+    tr = bs.Trainer(bs.training.SgdStepper(learning_rate=0.7), verbose=False)
     tr.add_hook(bs.hooks.StopAfterEpoch(23))
     tr.add_hook(bs.hooks.StopOnNan())
 
@@ -406,5 +406,5 @@ def test_recreate_trainer_from_description():
     assert tr2.verbose is False
     assert list(tr2.hooks.keys()) == ['StopAfterEpoch', 'StopOnNan']
     assert tr2.hooks['StopAfterEpoch'].max_epochs == 23
-    assert isinstance(tr2.stepper, bs.training.SgdStep)
+    assert isinstance(tr2.stepper, bs.training.SgdStepper)
     assert tr2.stepper.learning_rate == 0.7

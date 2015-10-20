@@ -99,8 +99,8 @@ network.initialize(bs.initializers.Gaussian(0.01))
 
 # ----------------------------- Set up Trainer ------------------------------ #
 
-trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.01,
-                                              momentum=0.9))
+trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01,
+                                                 momentum=0.9))
 trainer.add_hook(bs.hooks.ProgressBar())
 scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,

@@ -5,7 +5,7 @@ from __future__ import division, print_function, unicode_literals
 import math
 
 import numpy as np
-
+import six
 from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.randomness import Seedable
 from brainstorm.utils import IteratorValidationError
@@ -354,12 +354,18 @@ class Minibatches(DataIterator):
     """
     Minibatch iterator for inputs and targets.
 
+    If either a 'mask' is given or some other means of determining sequence
+    length is specified by `cut_according_to`, this iterator also cuts the
+    sequences in each minibatch to their maximum length (which can be less
+    than the maximum length over the whole dataset).
+
     Note:
         When shuffling is enabled, this iterator only randomizes the order of
         minibatches, but doesn't re-shuffle instances across batches.
     """
 
-    def __init__(self, batch_size=1, shuffle=True, **named_data):
+    def __init__(self, batch_size=1, shuffle=True, cut_according_to='mask',
+                 **named_data):
         """
         Args:
             batch_size (int):
@@ -369,16 +375,32 @@ class Minibatches(DataIterator):
         shuffle (Optional[bool]):
             Flag indicating whether the order of batches should be randomized
             at the beginning of every pass through the data.
+        cut_according_to (Optional[str or list or array]:
+            Specify how to determine the length of the sequences for shortening
+            them to the longest sequence of the current mini-batch.
+            Defaults to 'mask' in which case it will determine the length of
+            the sequences from the 'mask' named data entry. Can be any other
+            data name, or a list where the i-th entry is an integer specifying
+            the length of the i-th sequence.
         **named_data (dict[str, np.ndarray]):
             Named arrays with 3+ dimensions i.e. ('T', 'B', ...).
         """
-        nr_sequences = _assert_correct_data_format(named_data)
+        nr_sequences, time_steps = _assert_correct_data_format(named_data)
         data_shapes = {n: v.shape for n, v in named_data.items()}
         nr_batches = int(math.ceil(nr_sequences / batch_size))
         super(Minibatches, self).__init__(data_shapes, nr_batches)
         self.data = named_data
         self.shuffle = shuffle
         self.batch_size = batch_size
+        if isinstance(cut_according_to, six.string_types):
+            if cut_according_to in named_data:
+                self.seq_lens = _calculate_lengths_from_mask(
+                    named_data[cut_according_to])
+            else:
+                self.seq_lens = np.ones(nr_sequences, dtype=np.int) * time_steps
+        else:
+            self.seq_lens = np.array(cut_according_to)
+            assert self.seq_lens.shape == (nr_sequences, )
         self.sample_size = int(
             sum(d.shape[0] * np.prod(d.shape[2:]) * batch_size
                 for d in self.data.values()))
@@ -388,10 +410,11 @@ class Minibatches(DataIterator):
         if self.shuffle:
             self.rnd.shuffle(indices)
         for i, idx in enumerate(indices):
-            chunk = (slice(None),
-                     slice(idx * self.batch_size, (idx + 1) * self.batch_size))
-
-            data = {k: v[chunk] for k, v in self.data.items()}
+            batch_slice = slice(idx * self.batch_size,
+                                (idx + 1) * self.batch_size)
+            time_slice = slice(None, np.max(self.seq_lens[batch_slice]) )
+            data = {k: v[time_slice, batch_slice]
+                    for k, v in self.data.items()}
             yield data
 
 
@@ -419,4 +442,12 @@ def _assert_correct_data_format(named_data):
             'The number of time steps of all inputs must be equal, '
             'but got {}'.format(nr_timesteps))
 
-    return int(min(nr_sequences.values()))
+    return int(min(nr_sequences.values())), min(nr_timesteps.values())
+
+
+def _calculate_lengths_from_mask(mask):
+    assert mask.shape[2:] == (1,)
+    b = mask[:, :, 0] != 0
+    lengths = mask.shape[0] - b[::-1].argmax(axis=0)
+    lengths[b.max(axis=0) == 0] = 0
+    return lengths

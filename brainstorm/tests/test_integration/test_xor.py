@@ -10,7 +10,7 @@ from brainstorm.data_iterators import Undivided
 from brainstorm.hooks import StopAfterEpoch
 from brainstorm.initializers import Gaussian
 from brainstorm.layers import *
-from brainstorm.training import SgdStep
+from brainstorm.training import SgdStepper
 
 
 @pytest.mark.slow
@@ -32,7 +32,7 @@ def test_learn_xor_function():
     # print(net.buffer.parameters)
 
     # set up the trainer
-    tr = Trainer(SgdStep(learning_rate=4.0), verbose=False)
+    tr = Trainer(SgdStepper(learning_rate=4.0), verbose=False)
     tr.add_hook(StopAfterEpoch(300))
 
     # generate the data
