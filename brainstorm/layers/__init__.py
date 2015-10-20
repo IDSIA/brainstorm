@@ -6,7 +6,7 @@ from brainstorm.layers.base_layer import Layer
 from brainstorm.layers.batch_normalization_layer import BatchNorm
 from brainstorm.layers.binomial_cross_entropy_layer import BinomialCrossEntropy
 from brainstorm.layers.clockwork_lstm_layer import ClockworkLstm
-from brainstorm.layers.clockwork_rnn_layer import ClockworkRnn
+from brainstorm.layers.clockwork_layer import Clockwork
 from brainstorm.layers.convolution_layer_2d import Convolution2D
 from brainstorm.layers.deltas_scaling_layer import DeltasScalingLayerImpl
 from brainstorm.layers.dropout_layer import Dropout

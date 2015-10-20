@@ -31,7 +31,7 @@ from brainstorm.layers.squared_difference_layer import \
 from brainstorm.structure.architecture import Connection
 from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.utils import LayerValidationError
-from brainstorm.layers.clockwork_rnn_layer import ClockworkRnnLayerImpl
+from brainstorm.layers.clockwork_layer import ClockworkLayerImpl
 from brainstorm.layers.clockwork_lstm_layer import ClockworkLstmLayerImpl
 from brainstorm.layers.merge_layer import MergeLayerImpl
 
@@ -258,11 +258,11 @@ def l2_decay_layer(spec):
 
 
 def clockwork_rnn(spec):
-    layer = ClockworkRnnLayerImpl('ClockworkRnn',
-                                  {'default': BufferStructure('T', 'B', 5)},
-                                  NO_CON, NO_CON,
-                                  size=7,
-                                  activation=spec['activation'])
+    layer = ClockworkLayerImpl('ClockworkRnn',
+                               {'default': BufferStructure('T', 'B', 5)},
+                               NO_CON, NO_CON,
+                               size=7,
+                               activation=spec['activation'])
     spec['inits'] = {'timing': np.array([2, 2, 2, 2, 2, 2, 2])}
     return layer, spec
 

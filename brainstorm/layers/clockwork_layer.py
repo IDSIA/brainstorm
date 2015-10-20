@@ -5,18 +5,19 @@ from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.layers.base_layer import Layer
-from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
+from brainstorm.structure.buffer_structure import BufferStructure, \
+    StructureTemplate
 
 
-def ClockworkRnn(size, timing, activation='tanh', name=None):
-    return ConstructionWrapper.create(ClockworkRnnLayerImpl,
+def Clockwork(size, timing, activation='tanh', name=None):
+    return ConstructionWrapper.create(ClockworkLayerImpl,
                                       size=size,
                                       timing=timing,
                                       name=name,
                                       activation=activation)
 
 
-class ClockworkRnnLayerImpl(Layer):
+class ClockworkLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'timing', 'activation'}
 
