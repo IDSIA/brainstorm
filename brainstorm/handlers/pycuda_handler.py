@@ -64,6 +64,28 @@ class PyCudaHandler(Handler):
     def __init_from_description__(self, description):
         self.__init__()
 
+
+    def _get_gridsize(self, n):
+        min_threads = 32
+        max_threads = 256
+        max_blocks = 384
+
+        if n < min_threads:
+            block_count = 1
+            threads_per_block = min_threads
+        elif n < (max_blocks * min_threads):
+            block_count = (n + min_threads - 1) // min_threads
+            threads_per_block = min_threads
+        elif n < (max_blocks * max_threads):
+            block_count = max_blocks
+            grp = (n + min_threads - 1) // min_threads
+            threads_per_block = ((grp + max_blocks - 1) // max_blocks) * min_threads
+        else:
+            block_count = max_blocks
+            threads_per_block = max_threads
+
+        return (block_count, 1), (threads_per_block, 1, 1)
+
     # ------------------------- Allocate new memory ------------------------- #
 
     def allocate(self, size):
@@ -459,6 +481,22 @@ class PyCudaHandler(Handler):
     def tanh_deriv(self, x, y, dy, dx):
         tanh_deriv_kernel(x, y, dy, dx)
 
+    def merge_tt(self, a, b, out):
+        assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
+        n = int(np.prod(out.shape[:-1]))
+        grid, block = self._get_gridsize(n)
+        _merge_impl(a.gpudata, b.gpudata, out.gpudata,
+                    np.int32(n), np.int32(a.shape[-1]), np.int32(b.shape[-1]),
+                    block=block, grid=grid)
+
+    def split_add_tt(self, x, out_a, out_b):
+        assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
+        n = int(np.prod(x.shape[:-1]))
+        grid, block = self._get_gridsize(n)
+        _split_add_impl(x.gpudata, out_a.gpudata, out_b.gpudata,
+                    np.int32(n), np.int32(out_a.shape[-1]),
+                    np.int32(out_b.shape[-1]),
+                    block=block, grid=grid)
 
 # --------------------------- Kernel Definitions ---------------------------- #
 
@@ -610,6 +648,51 @@ tanh_kernel = ElementwiseKernel(
     "y[i] = tanh(x[i])",
     "tanh_kernel"
 )
+
+
+__merge_kernel_code = """
+    #include "float.h"
+
+    __global__ void merge_kernel(float* a, float* b, float* out,
+                                 int n_rows, const int a_cols, const int b_cols) {
+        const int row = blockIdx.x * blockDim.x + threadIdx.x;
+        const int n_cols = a_cols + b_cols;
+        if (row >= n_rows)
+            return;
+        const int offset = row*n_cols;
+        for (int i = 0; i < n_cols; ++i){
+            if (i < a_cols)
+                out[offset + i] = a[row * a_cols + i];
+            else
+                out[offset + i] = b[row * b_cols + i-a_cols];
+        }
+    }
+    """
+_mod = SourceModule(__merge_kernel_code)
+_merge_impl = _mod.get_function("merge_kernel")
+
+
+__split_kernel_code = """
+    #include "float.h"
+
+    __global__ void split_kernel(float* x, float* out_a, float* out_b,
+                                 int n_rows, const int a_cols, const int b_cols) {
+        const int row = blockIdx.x * blockDim.x + threadIdx.x;
+        const int n_cols = a_cols + b_cols;
+        if (row >= n_rows)
+            return;
+        const int offset = row*n_cols;
+        for (int i = 0; i < n_cols; ++i){
+            if (i < a_cols)
+                out_a[row * a_cols + i] += x[offset + i];
+            else
+                out_b[row * b_cols + i-a_cols] += x[offset + i];
+        }
+    }
+    """
+_mod = SourceModule(__split_kernel_code)
+_split_add_impl = _mod.get_function("split_kernel")
+
 
 __softmax_kernel_code = """
     #include "float.h"

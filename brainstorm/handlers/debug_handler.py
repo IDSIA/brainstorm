@@ -462,6 +462,18 @@ class DebugHandler(Handler):
         # TODO check shapes of a and out
         self.handler.sum_t(a.array, axis, out.array)
 
+    @check_for_inf_or_nan
+    def merge_tt(self, a, b, out):
+        assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
+        assert_debug_arrays(a, b, out)
+        self.handler.merge_tt(a.array, b.array, out.array)
+
+    @check_for_inf_or_nan
+    def split_add_tt(self, x, out_a, out_b):
+        assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
+        assert_debug_arrays(out_a, out_b, x)
+        self.handler.split_add_tt(x.array, out_a.array, out_b.array)
+
     # ------------------------ Activation functions ------------------------- #
 
     @check_for_inf_or_nan
