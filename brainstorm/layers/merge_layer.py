@@ -45,23 +45,13 @@ class MergeLayerImpl(Layer):
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare
-        _h = self.handler
-        inputs_1 = flatten_all_but_last(buffers.inputs.inputs_1)
-        inputs_2 = flatten_all_but_last(buffers.inputs.inputs_2)
-        outputs = flatten_all_but_last(buffers.outputs.default)
-
-        size_1 = inputs_1.shape[1]
-
-        _h.copy_to(inputs_1, outputs[:, :size_1])
-        _h.copy_to(inputs_2, outputs[:, size_1:])
+        self.handler.merge_tt(buffers.inputs.inputs_1,
+                              buffers.inputs.inputs_2,
+                              buffers.outputs.default)
 
     def backward_pass(self, buffers):
         # prepare
         _h = self.handler
-        input_deltas_1 = flatten_all_but_last(buffers.input_deltas.inputs_1)
-        input_deltas_2 = flatten_all_but_last(buffers.input_deltas.inputs_2)
-        output_deltas = flatten_all_but_last(buffers.output_deltas.default)
-        size_1 = input_deltas_1.shape[1]
-
-        _h.add_tt(output_deltas[:, :size_1], input_deltas_1, input_deltas_1)
-        _h.add_tt(output_deltas[:, size_1:], input_deltas_2, input_deltas_2)
+        self.handler.split_add_tt(buffers.output_deltas.default,
+                                  buffers.input_deltas.inputs_1,
+                                  buffers.input_deltas.inputs_2)
