@@ -53,4 +53,4 @@ def test_learn_xor_function():
         print('Rounded output:', np.round(out.flatten()))
         print('Targets       :', targets.flatten())
         raise AssertionError("Network training did not succeed.")
-    assert min(tr.logs['rolling_training']['Loss']) < 0.5
+    assert min(tr.logs['rolling_training']['total_loss']) < 0.5

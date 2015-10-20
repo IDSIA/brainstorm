@@ -63,7 +63,7 @@ def test_deltas_finite_differences(net, input_data):
     def f(x):
         net.provide_external_data({'default': x.reshape(input_data.shape)})
         net.forward_pass()
-        return net.get_loss_values()['Loss']
+        return net.get_loss_values()['total_loss']
     delta_approx = approx_fprime(input_data.copy().flatten(), f, 1e-5)
 
     # ######## compare them #############
@@ -90,7 +90,7 @@ def test_gradient_finite_differences(net, input_data):
     def f(x):
         net.buffer.parameters[:] = x
         net.forward_pass()
-        return net.get_loss_values()['Loss']
+        return net.get_loss_values()['total_loss']
     initial_weigths = net.buffer.parameters.copy()
     gradient_approx = approx_fprime(initial_weigths, f, 1e-6)
 
