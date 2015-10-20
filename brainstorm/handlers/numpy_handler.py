@@ -101,7 +101,7 @@ class NumpyHandler(Handler):
             out[i, int(v[i])] = 1.0
 
     def broadcast_t(self, a, axis, out):
-        # assert (out.shape[:axis] + (1,) + out.shape[axis+1:]) == a.shape
+        assert (out.shape[:axis] + (1,) + out.shape[axis+1:]) == a.shape
         out[:] = a[:]  # automatically does the right thing via broadcasting
 
     def clip_t(self, a, a_min, a_max, out):
