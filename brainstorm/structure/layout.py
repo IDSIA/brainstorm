@@ -289,7 +289,8 @@ def get_by_path(path, layout):
             current_node = current_node[p]
         except KeyError:
             raise KeyError('Path "{}" could not be resolved. Key "{}" missing.'
-                           .format(path, p))
+                           ' Available keys are: [{}]'.format(
+                            path, p, ", ".join(sorted(current_node.keys()))))
     return current_node
 
 

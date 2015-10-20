@@ -2,6 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 
+from brainstorm.structure.layout import get_by_path
+
 
 class BufferView(list):
     def __init__(self, buffer_names, buffers, full_buffer=None):
@@ -11,6 +13,7 @@ class BufferView(list):
                              " {})".format(len(buffers), len(buffer_names)))
         self._full_buffer = full_buffer
         self._buffer_names = tuple(buffer_names)
+        self._keys = set(buffer_names)
         for i, n in enumerate(buffer_names):
             self.__dict__[n] = self[i]
 
@@ -37,9 +40,13 @@ class BufferView(list):
     def __getitem__(self, item):
         if isinstance(item, int):
             return super(BufferView, self).__getitem__(item)
-        assert item in self.keys(), '{} is not present. Available items are ' \
-                                    '{}'.format(item, self.keys())
-        return self.__dict__[item]
+        if item in self._keys:
+            return self.__dict__[item]
+        elif '.' in item:
+            return get_by_path(item, self)
+
+        raise KeyError('{} is not present. Available items are [{}]'
+                       .format(item, ", ".join(sorted(self._keys))))
 
     def __contains__(self, item):
         return item in self._buffer_names

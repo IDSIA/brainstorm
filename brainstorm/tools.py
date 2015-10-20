@@ -221,7 +221,7 @@ def get_in_out_layers_for_regression(in_shape, nr_outputs,
 
     fc_layer >> 'inputs_1' - out_layer
 
-    return inp_layer, fc_layer, out_layer
+    return inp_layer, fc_layer
 
 
 def draw_network(network, file_name='network.png'):
