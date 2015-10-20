@@ -103,30 +103,11 @@ class Network(Seedable):
         self.gradient_modifiers = {}
         self.default_output = None
 
-    def get_output(self, out_name=''):
-        out_name = out_name if out_name else self.default_output
-        if not out_name:
-            raise KeyError(
-                'No output specified. Either pass an out_name to this function'
-                ' or set network.default_output to fix this.')
-        if not re.match(r'\w+\.\w+', out_name):
-            raise ValueError('Invalid out_name "{}". Should be of the form '
-                             '"LAYERNAME.OUT_NAME"'.format(out_name))
-        layername, _, output_name = out_name.partition('.')
-        if layername not in self.layers:
-            raise KeyError('Invalid layer name "{}". Available names are: {}'
-                           .format(layername, list(self.layers.keys())))
-        layer_buffer = self.buffer[layername]
-        if output_name not in layer_buffer.outputs:
-            raise KeyError('Invalid view name "{}". Available names are: {}'
-                           .format(output_name,
-                                   list(layer_buffer.outputs.keys())))
-
-        return self.handler.get_numpy_copy(layer_buffer.outputs[output_name])
+    def get(self, buffer_path):
+        return self.handler.get_numpy_copy(self.buffer[buffer_path])
 
     def get_input(self, input_name):
-        return self.handler.get_numpy_copy(
-            self.buffer.Input.outputs[input_name])
+        return self.get('Input.outputs.' + input_name)
 
     # -------------------------- Setup Methods --------------------------------
 
@@ -358,8 +339,7 @@ class Network(Seedable):
         loss = 0.
         losses = OrderedDict()
         for loss_layer_name in self.loss_layers:
-            l = float(self.handler.get_numpy_copy(
-                self.buffer[loss_layer_name].outputs.loss))
+            l = float(self.get(loss_layer_name + '.outputs.loss'))
             losses[loss_layer_name] = l
             loss += l
         if len(losses) > 1:
@@ -402,7 +382,7 @@ class Network(Seedable):
             f['description'] = json.dumps(description).encode()
             f.create_dataset(
                 'parameters', compression='gzip',
-                data=self.handler.get_numpy_copy(self.buffer.parameters))
+                data=self.get('parameters'))
 
 
 # ########################### Helper Methods ##################################
