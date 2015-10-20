@@ -27,5 +27,3 @@ from brainstorm.layers.recurrent_layer import Recurrent
 from brainstorm.layers.sigmoid_ce_layer import SigmoidCE
 from brainstorm.layers.softmax_ce_layer import SoftmaxCE
 from brainstorm.layers.squared_difference_layer import SquaredDifference
-from brainstorm.layers.l1_decay import L1Decay
-from brainstorm.layers.l2_decay import L2Decay
