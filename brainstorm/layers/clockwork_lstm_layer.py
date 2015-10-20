@@ -8,15 +8,15 @@ from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
 
 
-def ClockworkLstmPeep(size, timing, activation='tanh', name=None):
-    return ConstructionWrapper.create(ClockworkLstmPeepLayerImpl,
+def ClockworkLstm(size, timing, activation='tanh', name=None):
+    return ConstructionWrapper.create(ClockworkLstmLayerImpl,
                                       size=size,
                                       timing=timing,
                                       name=name,
                                       activation=activation)
 
 
-class ClockworkLstmPeepLayerImpl(Layer):
+class ClockworkLstmLayerImpl(Layer):
     expected_kwargs = {'size', 'timing', 'activation'}
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
 
@@ -41,9 +41,9 @@ class ClockworkLstmPeepLayerImpl(Layer):
         parameters['Wf'] = BufferStructure(self.size, in_size)
         parameters['Wo'] = BufferStructure(self.size, in_size)
 
-        parameters['Wci'] = BufferStructure(self.size)
-        parameters['Wcf'] = BufferStructure(self.size)
-        parameters['Wco'] = BufferStructure(self.size)
+        parameters['Wpi'] = BufferStructure(self.size)
+        parameters['Wpf'] = BufferStructure(self.size)
+        parameters['Wpo'] = BufferStructure(self.size)
 
         parameters['Rz'] = BufferStructure(self.size, self.size)
         parameters['Ri'] = BufferStructure(self.size, self.size)
@@ -70,25 +70,25 @@ class ClockworkLstmPeepLayerImpl(Layer):
         internals['Cb'] = BufferStructure('T', 'B', self.size, context_size=1)
 
         internals['dZa'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dZb'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dIa'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dIb'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dFa'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dFb'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dOa'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dOb'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dCa'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
         internals['dCb'] = BufferStructure('T', 'B', self.size, context_size=1,
-                                         is_backward_only=True)
+                                           is_backward_only=True)
 
         return outputs, parameters, internals
 
@@ -96,20 +96,12 @@ class ClockworkLstmPeepLayerImpl(Layer):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
-         Wci, Wcf, Wco,
+         pi, pf, po,
          Rz, Ri, Rf, Ro,
          bz, bi, bf, bo,
          timing) = buffers.parameters
-        (Za, Zb,
-         Ia, Ib,
-         Fa, Fb,
-         Oa, Ob,
-         Ca, Cb,
-         dZa, dZb,
-         dIa, dIb,
-         dFa, dFb,
-         dOa, dOb,
-         dCa, dCb) = buffers.internals
+        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
+         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
         x = buffers.inputs.default
         y = buffers.outputs.default
         time_size, batch_size, in_size = x.shape
@@ -137,13 +129,13 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
             # Input Gate
             _h.dot_add_mm(y[t - 1], Ri, Ia[t], transb=True)
-            _h.mult_add_mv(Ca[t - 1], Wci.reshape((1, self.size)), Ia[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t - 1], pi.reshape((1, self.size)), Ia[t])
             _h.add_mv(Ia[t], bi.reshape((1, self.size)), Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
             _h.dot_add_mm(y[t - 1], Rf, Fa[t], transb=True)
-            _h.mult_add_mv(Ca[t - 1], Wcf.reshape((1, self.size)), Fa[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t - 1], pf.reshape((1, self.size)), Fa[t])
             _h.add_mv(Fa[t], bf.reshape((1, self.size)), Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
 
@@ -153,7 +145,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
 
             # Output Gate
             _h.dot_add_mm(y[t - 1], Ro, Oa[t], transb=True)
-            _h.mult_add_mv(Ca[t], Wco.reshape((1, self.size)), Oa[t])  # ADDED PEEPHOLE CONNECTION
+            _h.mult_add_mv(Ca[t], po.reshape((1, self.size)), Oa[t])
             _h.add_mv(Oa[t], bo.reshape((1, self.size)), Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
 
@@ -165,9 +157,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
                 _h.fill(tmp, t)
                 _h.modulo_tt(tmp, timing, tmp)
                 _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
-            # -----------------------------------
-            # Clockwork part: Undo updates:
-            # -----------------------------------
+
             # Reset Cell
                 _h.copy_to_if(Ca[t-1], Ca[t], cond)
             # Reset Block output
@@ -178,27 +168,19 @@ class ClockworkLstmPeepLayerImpl(Layer):
         _h = self.handler
 
         (dWz, dWi, dWf, dWo,
-         dWci, dWcf, dWco,
+         dpi, dpf, dpo,
          dRz, dRi, dRf, dRo,
          dbz, dbi, dbf, dbo,
          dtiming) = buffers.gradients
 
         (Wz, Wi, Wf, Wo,
-         Wci, Wcf, Wco,
-        Rz, Ri, Rf, Ro,
-        bz, bi, bf, bo,
-        timing) = buffers.parameters
+         pi, pf, po,
+         Rz, Ri, Rf, Ro,
+         bz, bi, bf, bo,
+         timing) = buffers.parameters
 
-        (Za, Zb,
-        Ia, Ib,
-        Fa, Fb,
-        Oa, Ob,
-        Ca, Cb,
-        dZa, dZb,
-        dIa, dIb,
-        dFa, dFb,
-        dOa, dOb,
-        dCa, dCb) = buffers.internals
+        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
+         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
 
         x = buffers.inputs.default
         dx = buffers.input_deltas.default
@@ -214,9 +196,8 @@ class ClockworkLstmPeepLayerImpl(Layer):
         _h.fill(dCa, 0.0)
         cond = _h.zeros(y[0].shape)
 
-
         for t in range(time_size - 1, -1, - 1):
-            # Cumulate recurrent deltas
+            # Accumulate recurrent deltas
             _h.add_tt(dy[t], deltas[t], dy[t])
 
             _h.fill(tmp, t)
@@ -228,20 +209,20 @@ class ClockworkLstmPeepLayerImpl(Layer):
             _h.dot_add_mm(dOa[t + 1], Ro, dy[t])
             _h.dot_add_mm(dZa[t + 1], Rz, dy[t])
 
-            _h.mult_add_mv(dIa[t + 1], Wci.reshape((1, self.size)), dCa[t])
-            _h.mult_add_mv(dFa[t + 1], Wcf.reshape((1, self.size)), dCa[t])
+            _h.mult_add_mv(dIa[t + 1], pi.reshape((1, self.size)), dCa[t])
+            _h.mult_add_mv(dFa[t + 1], pf.reshape((1, self.size)), dCa[t])
 
             # Output Gate
             _h.mult_tt(dy[t], Cb[t], dOb[t])
 
-            _h.fill_if(dOb[t], 0.0, cond)  # Set inactive to 0
+            _h.fill_if(dOb[t], 0.0, cond)
             _h.sigmoid_deriv(Oa[t], Ob[t], dOb[t], dOa[t])
-            # Output influence on peephole:
-            _h.mult_add_mv(dOa[t], Wco.reshape((1, self.size)), dCa[t])
+            # Output influence on peephole
+            _h.mult_add_mv(dOa[t], po.reshape((1, self.size)), dCa[t])
 
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
-            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])  # Important change to standard LSTM
+            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])
             _h.fill_if(dCb[t], 0.0, cond)
             _h.add_tt(dCa[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], Fb[t + 1], dCa[t])
@@ -258,7 +239,7 @@ class ClockworkLstmPeepLayerImpl(Layer):
             _h.mult_tt(dCa[t], Ib[t], dZb[t])
             _h.act_func_deriv[self.activation](Za[t], Zb[t], dZb[t], dZa[t])
 
-            # Copy over the error from previous inactive nodes:
+            # Copy over the error from previous inactive nodes
             _h.add_into_if(dy[t], dy[t-1], cond)
             _h.add_into_if(dCa[t], dCa[t-1], cond)
 
@@ -304,11 +285,12 @@ class ClockworkLstmPeepLayerImpl(Layer):
         flat_cell2 = flatten_time(Ca[:-1])
 
         dWco_tmp = _h.allocate(flat_cell2.shape)
-        dWc_tmp = _h.allocate(dWco.shape)
-        # Peephole connection output weight:
+        dWc_tmp = _h.allocate(dpo.shape)
+
+        # Output gate Peephole
         _h.mult_tt(flat_cell2, flat_dOa, dWco_tmp)
         _h.sum_t(dWco_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWco, dWc_tmp, dWco)
+        _h.add_tt(dpo, dWc_tmp, dpo)
 
         flat_dIa = flatten_time(dIa[1:-1])
         flat_dFa = flatten_time(dFa[1:-1])
@@ -325,19 +307,19 @@ class ClockworkLstmPeepLayerImpl(Layer):
         _h.dot_add_mm(dOa[0], dy[-1], dRo, transa=True)
         _h.dot_add_mm(dZa[0], dy[-1], dRz, transa=True)
 
-        # Peephole connection weights:
+        # Other Peephole connections
         dWcif_tmp = _h.allocate(flat_cell.shape)
         _h.mult_tt(flat_cell, flat_dIa, dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWci, dWc_tmp, dWci)
+        _h.add_tt(dpi, dWc_tmp, dpi)
         _h.mult_tt(flat_cell, flat_dFa, dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWcf, dWc_tmp, dWcf)
+        _h.add_tt(dpf, dWc_tmp, dpf)
 
         dWcif_tmp = _h.allocate(dIa[0].shape)
         _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWci, dWc_tmp, dWci)
+        _h.add_tt(dpi, dWc_tmp, dpi)
         _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
         _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
-        _h.add_tt(dWcf, dWc_tmp, dWcf)
+        _h.add_tt(dpf, dWc_tmp, dpf)
