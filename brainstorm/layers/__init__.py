@@ -5,6 +5,8 @@ from __future__ import division, print_function
 from brainstorm.layers.base_layer import Layer
 from brainstorm.layers.batch_normalization_layer import BatchNorm
 from brainstorm.layers.binomial_cross_entropy_layer import BinomialCrossEntropy
+from brainstorm.layers.clockwork_lstm_layer import ClockworkLstm
+from brainstorm.layers.clockwork_rnn_layer import ClockworkRnn
 from brainstorm.layers.convolution_layer_2d import Convolution2D
 from brainstorm.layers.deltas_scaling_layer import DeltasScalingLayerImpl
 from brainstorm.layers.dropout_layer import Dropout
@@ -27,4 +29,3 @@ from brainstorm.layers.softmax_ce_layer import SoftmaxCE
 from brainstorm.layers.squared_difference_layer import SquaredDifference
 from brainstorm.layers.l1_decay import L1Decay
 from brainstorm.layers.l2_decay import L2Decay
-from brainstorm.layers.deltas_scaling_layer import DeltasScalingLayerImpl
