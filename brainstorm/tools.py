@@ -583,17 +583,17 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='defaul
         inp, outp = get_in_out_layers_for_classification(
             in_shape, out_shape, data_name=data_name, mask_name=mask_name,
             targets_name=targets_name)
-        default_output = 'Output.probabilities'
+        default_output = 'Output.outputs.probabilities'
     elif task_type == 'regression':
         inp, outp = get_in_out_layers_for_regression(
             in_shape, out_shape, data_name=data_name, mask_name=mask_name,
             targets_name=targets_name)
-        default_output = 'Output_FC.default'
+        default_output = 'Output_FC.outputs.default'
     elif task_type == 'multi-label':
         inp, outp = get_in_out_layers_for_multi_label_classification(
             in_shape, out_shape, data_name=data_name, mask_name=mask_name,
             targets_name=targets_name)
-        default_output = 'Output.probabilities'
+        default_output = 'Output.outputs.probabilities'
     else:
         raise ValueError('unknown type {}'.format(task_type))
 

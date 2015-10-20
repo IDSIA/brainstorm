@@ -132,7 +132,7 @@ class PyCudaHandler(Handler):
     def is_fully_finite(self, a):
         temp = gpuarray.zeros_like(a)
         check_inf_or_nan_kernel(a, temp)
-        return np.all(temp.get())
+        return not np.any(temp.get())
 
     # ----------------------- Mathematical operations ----------------------- #
 
