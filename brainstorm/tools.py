@@ -513,6 +513,7 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='defaul
     Spec:
         Capital letters specify the layer type and are followed by arguments to
         the layer. Supported layers are:
+
           * F : FullyConnected
           * R : Recurrent
           * L : Lstm

@@ -1,6 +1,76 @@
-======
+#########
+Internals
+#########
+
+Here you can find some details about the internal design of brainstorm.
+This description is however very much work in progress and by no means
+complete.
+
+***********
+Conventions
+***********
+
+When naming the extra properties of layers, a couple of conventions should be
+met. A property name should:
+
+    * be a valid python identifier
+    * be lowercase with underscores
+    * be ``shape`` if it controls the size of the layer directly
+    * be ``activation_function`` if it controls the activation function
+
+
+************
+Architecture
+************
+
+Network architecture is a dictionary mapping layer names to their properties.
+There are two special properties:
+
+  1. ``@type``: a string that specifies the class of the layer
+  2. ``@outgoing_connections``: a dictionary mapping the named outputs
+     (sources) of the layer to the lists of sinks it connects to.
+     A sink name is a layer-name followed by a ``.`` and the name of that
+     layers input. If the layer has only one input the second part can be omitted.
+
+There can be more properties that will be passed on to the layer class when
+instantiating them.
+
+An example showcasing most features
+
+.. code-block:: python
+
+    architecture = {
+        'InputLayer': {
+            '@type': 'InputLayer',
+            '@outgoing_connections': {
+                'default': ['splitter.default', 'output.default']
+            },
+            'shape': 20},
+        'splitter': {
+            '@type': 'SplitLayer',
+            '@outgoing_connections': {
+                'foo': ['adder.A']
+                'bar': ['adder.B']},
+            'split_at': 10},
+        'adder': {
+            '@type': 'PointwiseAdditionLayer',
+            '@outgoing_connections': {
+                'default':['output.default']
+            }
+        },
+        'output': {
+            '@type': 'FullyConnectedLayer',
+            '@outgoing_connections': {},
+            'shape': 10,
+            'activation_function': 'softmax'
+        }
+    }
+
+
+******
 Layout
-======
+******
+
 Layouts describe how the memory for the network should be arranged.
 
 .. _buffer_types:
@@ -35,7 +105,7 @@ and resize them in response to input-sizes. That big chunk of memory is also
 split up into a tree of named buffers according to the *layout*.
 
 Shape templates
----------------
+===============
 When implementing a layer there are many places where a shape of a buffer
 needs to be specified. But the size of the time-size and the batch-size are
 both unknown at implementation time. So we use so called *shape-templates* to
@@ -62,7 +132,7 @@ Each node has to have an ``@type`` field that is either ``BufferView`` or
 ``array``.
 
 View-Nodes
-----------
+==========
 View-nodes will be turned into BufferView objects by the BufferManager.
 Each of them is a dictionary and has to contain a  and a ``@index``
 entry. The entries not starting with an ``@`` are the child-nodes.
@@ -99,7 +169,7 @@ Another example including the optional ``@slice``:
     }
 
 Array-Nodes
------------
+===========
 Array-nodes will be turned into arrays (exact type depends on the handler), by
 the buffer manager.
 Array-Nodes are also dictionaries but they *must have* a ``@slice`` and a
@@ -134,7 +204,7 @@ Example leaf for the output of a layer with 10 hidden units:
 
 
 Full Layout Example
--------------------
+===================
 We use the following network as an example here:
 
 .. code-block:: python

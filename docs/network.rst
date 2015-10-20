@@ -1,53 +1,99 @@
-=======
+#######
 Network
-=======
+#######
+Networks are the central structure in brainstorm. They contain an manage a
+directed acyclic graph of layers, manage the memory and provide access to all
+the internal states.
 
+********
+Creating
+********
+There are essentially 4 different ways of creating a network in brainstorm.
 
-Buffer Access
-=============
-We should decide on the API of the buffer management. I thought up 3 variants,
-that you could maybe have a look at.
+  1. with the ``create_network_from_spec`` tool
+  2. using layer wiring in python (with and without helpers)
+  3. writing an architecture yourself (advanced)
+  4. instantiating the layers by hand and setting up a layout (don't do this)
 
-Variant 1
----------
-Here ``net.buffer`` would be the BufferManager that keeps a ``forward`` and a
-``backward`` BufferView containing all the sub-buffers.
-
-.. code-block:: python
-
-    net.buffer.A.outputs.default   # output of layer A
-    net.buffer.B.parameters.W      # weight matrix of layer B
-
-    net.buffer.A.output_deltas.default  # out-deltas of layer A
-    net.buffer.B.gradients.W     # gradient matrix for layer B
-
-Variant 2
----------
-Almost like variant 1 but with two buffer managers. This will make dotted
-access impossible though:
+Setting the Handler
+===================
+If you want to run on CPU in 32bit mode you don't need to do anything.
+For GPU you need to do:
 
 .. code-block:: python
 
-    net.forward_buffer['A'].outputs.default   # output of layer A
-    net.forward_buffer['B'].parameters.W      # weight matrix of layer B
-
-    net.backward_buffer['A'].outputs.default  # out-deltas of layer A
-    net.backward_buffer['B'].parameters.W     # gradient matrix for layer B
+    from brainstorm.handlers import PyCudaHandler
+    net.set_handler(PyCudaHandler())
 
 
-Variant 2
----------
-We could move the buffers to the layers, like this. But it would couple the
-layers and the BufferManager, and make it harder to access all buffers
-together in one common-place:
+Initializing
+============
 
-.. code-block:: python
-
-    net.layers['A'].forward_buffer.outputs.default  # output of layer A
-    net.layers['B'].forward_buffer.parameters.W     # weight matrix of layer B
-
-    net.layers['A'].backward_buffer.outputs.default  # out-deltas of layer A
-    net.layers['B'].backward_buffer.parameters.W    # gradient matrix for layer B
+Just use the ``net.initialize`` method.
 
 
+Weight and Gradient Modifiers
+=============================
 
+``net.set_weight_modifiers()``
+
+``net.set_gradient_modifiers()``
+
+*******
+Running
+*******
+Normally a trainer will run the network for you. But if you want to run a
+network yourself you have to do this in order:
+
+  1. ``net.provide_external_data(my_data)``
+  2. ``net.forward_pass()``
+  3. (optional) ``net.backward_pass()``
+
+*******************
+Accessing Internals
+*******************
+
+The recommended way is to always use ``net.get(PATH)`` because that returns
+a copy of the buffer in numpy format. If you for some reason want to tamper
+with the memory that the network is actually using you can get access with:
+``net.buffer[PATH]``.
+
+Parameters
+==========
+  * ``'parameters'`` for an array of all parameters
+  * ``'LAYER_NAME.parameters.PARAM_NAME'`` for a specific parameter buffer
+
+For the corresponding derivatives calculated during the backward pass:
+  * ``'gradients'``
+  * ``'LAYER_NAME.gradients.GRAD_NAME'``
+
+Inputs and Outputs
+==================
+To access the inputs that have been passed to the network you can use the
+shortcut ``net.get_inputs(IN_NAME)``.
+
+To access inputs and outputs of layers use the following paths:
+
+  * ``'LAYER_NAME.inputs.IN_NAME'`` (often IN_NAME = default)
+  * ``'LAYER_NAME.outputs.OUT_NAME'`` (often OUT_NAME = default)
+
+For the corresponding derivatives calculated during the backward pass:
+
+  * ``'LAYER_NAME.input_deltas.IN_NAME'``
+  * ``'LAYER_NAME.output_deltas.OUT_NAME'``
+
+Internals
+=========
+Some layers also expose some internal buffers. You can access them with this
+path:
+
+  * ``'LAYER_NAME.internals.INTERNAL_NAME'``
+
+
+******************
+Loading and Saving
+******************
+
+``net.save_as_hdf5(filename)``
+
+``net = Network.from_hdf5(filename)``

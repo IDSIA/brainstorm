@@ -1,17 +1,18 @@
-===========
+###########
 Data Format
-===========
+###########
 
+*****
 Shape
-=====
+*****
 All data passed to the iterators has to match the shape ``(T, B, ...)`` where
 ``T`` is the maximum sequence length and ``B`` is the number of sequences.
 This has to be true even if the data is not sequential. In that case it would
 be ``(1, B, ...)``.
 
-
+***********
 File Format
-===========
+***********
 There is no requirement on how to store the data in ``brainstorm``, but we
 highly recommend the HDF5 format using the h5py library.
 
