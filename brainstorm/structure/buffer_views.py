@@ -2,7 +2,7 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 
-from brainstorm.structure.layout import get_by_path
+from brainstorm.utils import get_by_path
 
 
 class BufferView(list):
@@ -43,7 +43,7 @@ class BufferView(list):
         if item in self._keys:
             return self.__dict__[item]
         elif '.' in item:
-            return get_by_path(item, self)
+            return get_by_path(self, item)
 
         raise KeyError('{} is not present. Available items are [{}]'
                        .format(item, ", ".join(sorted(self._keys))))

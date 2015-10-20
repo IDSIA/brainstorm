@@ -357,7 +357,7 @@ def extract_and_save(network, iter, buffer_names, file_name):
             first_pass = False if len(ds) > 0 else True
             for num, buffer_name in enumerate(buffer_names):
                 data = network.handler.get_numpy_copy(
-                    get_by_path(network.buffer, buffer_name))
+                    network.buffer[buffer_name])
                 if num == 0:
                     num_items += data.shape[1]
                 if first_pass:

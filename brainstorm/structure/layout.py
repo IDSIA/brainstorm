@@ -8,7 +8,7 @@ from collections import OrderedDict
 import numpy as np
 
 from brainstorm.structure.buffer_structure import BufferStructure
-from brainstorm.utils import (NetworkValidationError,
+from brainstorm.utils import (NetworkValidationError, get_by_path,
                               convert_to_nested_indices, flatten,
                               get_normalized_path, sort_by_index_key)
 
@@ -25,7 +25,7 @@ class Hub(object):
         nesting = convert_to_nested_indices(sorted_sources)
 
         # get buffer type for hub and assert its uniform
-        structs = [BufferStructure.from_layout(get_by_path(s, layout))
+        structs = [BufferStructure.from_layout(get_by_path(layout, s))
                    for s in flat_sources]
         btype = ensure_uniform([s.buffer_type for s in structs])
         # max context size
@@ -165,7 +165,7 @@ def layout_hubs(hubs, layout):
     """
     for hub_nr, hub in enumerate(hubs):
         for buffer_name, _slice in hub.get_indices():
-            buffer_layout = get_by_path(buffer_name, layout)
+            buffer_layout = get_by_path(layout, buffer_name)
             buffer_layout['@slice'] = _slice
             buffer_layout['@hub'] = hub_nr
 
@@ -280,18 +280,6 @@ def get_layout_stub_for_layer(layer):
     layout['gradients']['@index'] = 6
 
     return layout
-
-
-def get_by_path(path, layout):
-    current_node = layout
-    for p in path.split('.'):
-        try:
-            current_node = current_node[p]
-        except KeyError:
-            raise KeyError('Path "{}" could not be resolved. Key "{}" missing.'
-                           ' Available keys are: [{}]'.format(
-                            path, p, ", ".join(sorted(current_node.keys()))))
-    return current_node
 
 
 def gather_array_nodes(layout):
