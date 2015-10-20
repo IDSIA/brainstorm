@@ -5,18 +5,19 @@ from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError, flatten_time
 from brainstorm.layers.base_layer import Layer
-from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
+from brainstorm.structure.buffer_structure import BufferStructure, \
+    StructureTemplate
 
 
-def ClockworkRnn(size, timing, activation='tanh', name=None):
-    return ConstructionWrapper.create(ClockworkRnnLayerImpl,
+def Clockwork(size, timing, activation='tanh', name=None):
+    return ConstructionWrapper.create(ClockworkLayerImpl,
                                       size=size,
                                       timing=timing,
                                       name=name,
                                       activation=activation)
 
 
-class ClockworkRnnLayerImpl(Layer):
+class ClockworkLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'timing', 'activation'}
 
@@ -69,15 +70,12 @@ class ClockworkRnnLayerImpl(Layer):
         for t in range(inputs.shape[0]):
             _h.dot_add_mm(outputs[t - 1], R, Ha[t], transb=True)
             _h.act_func[self.activation](Ha[t], outputs[t])
-            # -----------------------------------
-            # Clockwork part: Undo updates:
-            # -----------------------------------
+            # Undo updates
             if t > 0:
                 _h.fill(tmp, t)
                 _h.modulo_tt(tmp, timing, tmp)
                 _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
-                # For inactive nodes activations are reset:
-                _h.copy_to_if(outputs[t-1], outputs[t], cond)
+                _h.copy_to_if(outputs[t - 1], outputs[t], cond)
 
     def backward_pass(self, buffers):
         # prepare
@@ -97,21 +95,20 @@ class ClockworkRnnLayerImpl(Layer):
         T = inputs.shape[0] - 1
         _h.act_func_deriv[self.activation](Ha[T], outputs[T], dHb[T], dHa[T])
         for t in range(T - 1, -1, -1):
-            _h.fill(tmp, t+1)
+            _h.fill(tmp, t + 1)
             _h.modulo_tt(tmp, timing, tmp)
             _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
-            _h.add_into_if(dHb[t+1], dHb[t], cond)
+            _h.add_into_if(dHb[t + 1], dHb[t], cond)
             _h.fill_if(dHa[t+1], 0.0, cond)
             _h.dot_add_mm(dHa[t + 1], R, dHb[t])
             _h.act_func_deriv[self.activation](Ha[t], outputs[t], dHb[t],
                                                dHa[t])
 
-        # Same as for standard RNN:
         flat_inputs = flatten_time(inputs)
         flat_dinputs = flatten_time(dinputs)
         flat_dHa = flatten_time(dHa[:-1])
 
-        # calculate in_deltas and gradients
+        # Calculate in_deltas and gradients
         _h.dot_add_mm(flat_dHa, W, flat_dinputs)
         _h.dot_add_mm(flat_dHa, flat_inputs, dW, transa=True)
         dbias_tmp = _h.allocate(dbias.shape)
