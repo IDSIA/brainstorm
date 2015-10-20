@@ -72,8 +72,8 @@ class SaveNetwork(Hook):
 
 class SaveBestNetwork(Hook):
     """
-    Check every update to see if the specified log entry is at it's best value
-    and if so, save the network to the specified file.
+    Checks to see if the specified log entry is at it's best value
+    and if so, saves the network to a specified file.
     """
     __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
@@ -87,6 +87,7 @@ class SaveBestNetwork(Hook):
         self.parameters = None
         assert criterion == 'min' or criterion == 'max'
         self.best_so_far = np.inf if criterion == 'min' else -np.inf
+        self.best_t = None
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
@@ -99,6 +100,7 @@ class SaveBestNetwork(Hook):
 
         if imp:
             self.best_so_far = last
+            self.best_t = epoch_nr if self.timescale == 'epoch' else update_nr
             params = net.handler.get_numpy_copy(net.buffer.parameters)
             if self.filename is not None:
                 self.message("{} improved. Saving network to {} ...".
@@ -108,6 +110,10 @@ class SaveBestNetwork(Hook):
                 self.message("{} improved. Caching parameters ...".
                              format(self.log_name))
                 self.parameters = params
+        else:
+            self.message("Last saved parameters at {} {} when {} was {}".
+                         format(self.timescale, self.best_t, self.log_name,
+                                self.best_so_far))
 
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
