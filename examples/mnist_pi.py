@@ -27,7 +27,7 @@ getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
-inp, fc = bs.tools.get_in_out_layers_for_classification((1, 28, 28), 10, fc_name='FC')
+inp, fc = bs.tools.get_in_out_layers('classification', (1, 28, 28), 10, projection_name='FC')
 network = bs.Network.from_layer(
     inp >>
     bs.layers.Dropout(drop_prob=0.2) >>
@@ -46,7 +46,7 @@ network.set_weight_modifiers({"FC": bs.value_modifiers.ConstrainL2Norm(1)})
 
 trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.1, momentum=0.9))
 trainer.add_hook(bs.hooks.ProgressBar())
-scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
+scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
 trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
@@ -58,5 +58,4 @@ trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("Best validation set accuracy:",
-      max(trainer.logs["validation"]["Accuracy"]))
+print("Best validation accuracy:", max(trainer.logs["validation"]["Accuracy"]))
