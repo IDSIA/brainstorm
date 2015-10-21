@@ -130,27 +130,37 @@ def extract_and_save(network, iter, buffer_names, file_name):
 
 def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
                       targets_name='targets', projection_name=None,
-                      outlayer_name='Output', mask_name=None):
+                      outlayer_name=None, mask_name=None):
     """Prepare input and output layers for building a network.
 
     This is a helper function for quickly building networks.
     It returns an ``Input`` layer and a projection layer which is a
     ``FullyConnected`` or ``Convolution2D`` layer depending on the shape of the
-    targets. Also creates a mask layer if a mask name is provided, and connects
-    it appropriately. An appropriate layer to compute the loss is connected,
-    depending on the task_type:
+    targets. It creates a mask layer if a mask name is provided, and connects
+    it appropriately.
+
+    An appropriate layer to compute the matching loss is connected, depending
+    on the task_type:
 
     classification:
-    The projection layer is connected to a SoftmaxCE layer, which is the output
-    layer.
+    The projection layer is connected to a SoftmaxCE layer, which receives
+    targets from the input layer. This is suitable for a single-label
+    classification task.
 
     multi-label:
-    The projection layer is connected to a SigmoidCE layer, which is the output
-    layer.
+    The projection layer is connected to a SigmoidCE layer, which receives
+    targets from the input layer. This is suitable for a multi-label
+    classification task.
 
     regression:
-    The projection layer is connected to a SquaredDifference layer, which is
-    the output layer.
+    The projection layer is connected to a SquaredDifference layer, which
+    receives targets from the input layer. This is suitable for least squares
+    regression.
+
+    Note:
+        The projection layer uses parameters, so it should be initialized after
+        network creation. Check argument descriptions to understand how it will
+        be named.
 
     Example:
         >>> from brainstorm import tools, Network, layers
@@ -167,11 +177,11 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
             Name of the ground-truth target data which will be provided by a
             data iterator. Defaults to 'targets'.
         projection_name (Optional[str]):
-            Name for the projection layer which connects to the softmax
-            layer. If unspecified, it is set to outlayer_name + '_FC' or
-            outlayer_name + '_Conv'.
+            Name for the projection layer which connects to the softmax layer.
+            If unspecified, will be set to ``outlayer_name`` + '_projection' if
+            ``outlayer_name`` is provided, and 'Output_projection' otherwise.
         outlayer_name (Optional[str]):
-            Name for the output layer. Defaults to 'Output'.
+            Name for the output layer. If unspecified, named to 'Output'.
         mask_name (Optional[str]):
             Name of the mask data which will be provided by a data iterator.
             Defaults to None.
@@ -184,24 +194,30 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     in_shape = (in_shape,) if isinstance(in_shape, int) else in_shape
     out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
 
+    if task_type == 'regression':
+        projection_name = projection_name or 'Output_projection'
+        assert outlayer_name is None, 'outlayer_name should not be specified ' \
+                                      'for regression tasks.'
+        out_layer = layers.SquaredDifference()
+    else:
+        outlayer_name = outlayer_name or 'Output'
+        projection_name = projection_name or outlayer_name + '_projection'
+        if task_type == 'classification':
+            out_layer = layers.SoftmaxCE(name=outlayer_name)
+        elif task_type == 'multi-label':
+            out_layer = layers.SigmoidCE(name=outlayer_name)
+        else:
+            raise ValueError('Unknown task type {}'.format(task_type))
+
     if len(out_shape) == 1:
-        projection_name = projection_name or outlayer_name + '_FC'
         proj_layer = layers.FullyConnected(out_shape, activation='linear',
                                            name=projection_name)
     elif len(out_shape) == 3:
-        projection_name = projection_name or outlayer_name + '_Conv'
         proj_layer = layers.Convolution2D(out_shape[-1], (1, 1),
                                           activation='linear',
                                           name=projection_name)
-
-    if task_type == 'classification':
-        out_layer = layers.SoftmaxCE(name=outlayer_name)
-    elif task_type == 'regression':
-        out_layer = layers.SquaredDifference(name=outlayer_name)
-    elif task_type == 'multi-label':
-        out_layer = layers.SigmoidCE(name=outlayer_name)
     else:
-        raise ValueError('Unknown task type {}'.format(task_type))
+        raise ValueError('Unsupported output length {}'.format(len(out_shape)))
     proj_layer >> out_layer
 
     t_shape = out_shape[:-1] + (1,)
