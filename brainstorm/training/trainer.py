@@ -116,7 +116,7 @@ class Trainer(Describable):
         return self.results
 
     def __init_from_description__(self, description):
-        """Recover the hooks in order of priority and set their names."""
+        # Recover the hooks in order of priority and set their names.
         def get_priority(x):
             return getattr(x[1], 'priority', 0)
         ordered_mon = sorted(self.hooks.items(), key=get_priority)

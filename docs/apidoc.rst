@@ -9,7 +9,6 @@ Network
 
 .. autoclass:: brainstorm.structure.network.Network
     :members:
-    :inherited-members:
     :special-members: __init__
 
 *******
@@ -17,7 +16,6 @@ Trainer
 *******
 .. autoclass:: brainstorm.training.trainer.Trainer
     :members:
-    :inherited-members:
     :special-members: __init__
 
 *****

@@ -363,6 +363,7 @@ class Network(Seedable):
 
         Examples:
             Use this to run a network on the GPU using the pycuda:
+
             >>> from brainstorm.handlers import PyCudaHandler
             >>> net.set_handler(PyCudaHandler())
 

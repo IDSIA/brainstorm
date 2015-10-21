@@ -1,3 +1,5 @@
 #####
 Hooks
 #####
+
+.. code-block::
