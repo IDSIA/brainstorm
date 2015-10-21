@@ -22,7 +22,7 @@ def SoftmaxCE(name=None):
     stored in the 'loss' output.
 
     For pixel/voxel-wise classification, the `channel` dimension must be
-    right-most (knowns as NHWC or NDHWC format).
+    right-most (known as NHWC or NDHWC format).
 
     WARNING:
         This layer does not compute derivatives wrt the 'targets' input.

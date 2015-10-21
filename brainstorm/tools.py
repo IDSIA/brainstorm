@@ -11,217 +11,8 @@ from brainstorm.scorers import (aggregate_losses_and_scores,
 from brainstorm.training.trainer import run_network
 from brainstorm.utils import get_by_path, get_brainstorm_info
 
-__all__ = ['get_in_out_layers_for_classification',
-           'get_in_out_layers_for_regression', 'draw_network',
-           'print_network_info', 'evaluate', 'extract_and_save',
-           'get_in_out_layers_for_multi_label_classification',
-           'create_net_from_spec']
-
-
-def get_in_out_layers_for_classification(in_shape, nr_classes,
-                                         data_name='default',
-                                         targets_name='targets',
-                                         fc_name=None,
-                                         out_name="Output",
-                                         mask_name=None):
-    """Prepare input and output layers for building a multi-class classifier.
-
-    This is a helper function for quickly building a typical multi-class
-    classifier. It returns an ``Input`` layer and a ``FullyConnected`` layer
-    which are already connected to other layers needed for this common case,
-
-    The returned ``FullyConnected`` layer is already connected to the output
-    layer (with the specified name) which is a ``SoftmaxCE`` layer.
-    The targets are already connected to the SoftmaxCE layer as well.
-    Finally, the ``loss`` output of the output layer is already connected to a
-    ``Loss`` layer to make the network trainable.
-
-    Example:
-        >>> from brainstorm import tools, Network, layers
-        >>> inp, out = tools.get_in_out_layers_for_classification(784, 10)
-        >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
-    Args:
-        in_shape (int or tuple[int]): Shape of the input data.
-        nr_classes (int): Number of possible classes.
-        data_name (Optional[str]):
-            Name of the input data which will be provided by a data iterator.
-            Defaults to 'default'.
-        targets_name (Optional[str]):
-            Name of the ground-truth target data which will be provided by a
-            data iterator. Defaults to 'targets'.
-        fclayer_name (Optional[str]):
-            Name for the fully connected layer which connects to the softmax
-            layer. If unspecified, it is set to outlayer_name + '_FC'.
-        outlayer_name (Optional[str]):
-            Name for the output layer. Defaults to 'Output'.
-        mask_name (Optional[str]):
-            Name of the mask data which will be provided by a data iterator.
-            Defaults to None.
-
-            The mask is needed if error should be injected
-            only at certain time steps (for sequential data).
-    Returns:
-        tuple: An ``Input`` and a ``FullyConnected`` layer.
-    NOTE:
-        This tool provides the output layer for `multi-class` classification,
-        not `multi-label` classification.
-    """
-    if isinstance(in_shape, int):
-        in_shape = (in_shape, )
-    fc_name = out_name + '_FC' if fc_name is None else fc_name
-    fc_layer = layers.FullyConnected(nr_classes, activation='linear',
-                                     name=fc_name)
-    out_layer = layers.SoftmaxCE(name=out_name)
-    fc_layer >> out_layer
-
-    if mask_name is None:
-        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B', 1)})
-        inp_layer - targets_name >> 'targets' - out_layer
-        out_layer - 'loss' >> layers.Loss()
-    else:
-        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B', 1),
-                                             mask_name: ('T', 'B', 1)})
-        mask_layer = layers.Mask()
-        inp_layer - targets_name >> 'targets' - out_layer
-        out_layer - 'loss' >> mask_layer >> layers.Loss()
-        inp_layer - mask_name >> 'mask' - mask_layer
-
-    return inp_layer, fc_layer
-
-
-def get_in_out_layers_for_multi_label_classification(
-        in_shape, out_shape, data_name='default', targets_name='targets',
-        fc_name=None, out_name="Output", mask_name=None):
-    """Prepare input and output layers for building a multi-label classifier.
-
-    This is a helper function for quickly building a typical multi-label
-    classifier. It returns an ``Input`` layer and a ``FullyConnected`` layer
-    which are already connected to other layers needed for this common case,
-
-    The returned ``FullyConnected`` layer is already connected to the output
-    layer (with the specified name) which is a ``SigmoidCE`` layer.
-    The targets are already connected to the SigmoidCE layer as well.
-    Finally, the ``loss`` output of the output layer is already connected to a
-    ``Loss`` layer to make the network trainable.
-
-    Example:
-        >>> from brainstorm import tools, Network, layers
-        >>> inp, out = tools.get_in_out_layers_for_multi_label_classification(784, 10)
-        >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
-    Args:
-        in_shape (int or tuple[int]): Shape of the input data.
-        out_shape (int or tuple[int]): Number of possible classes.
-        data_name (Optional[str]):
-            Name of the input data which will be provided by a data iterator.
-            Defaults to 'default'.
-        targets_name (Optional[str]):
-            Name of the ground-truth target data which will be provided by a
-            data iterator. Defaults to 'targets'.
-        fclayer_name (Optional[str]):
-            Name for the fully connected layer which connects to the softmax
-            layer. If unspecified, it is set to outlayer_name + '_FC'.
-        outlayer_name (Optional[str]):
-            Name for the output layer. Defaults to 'Output'.
-        mask_name (Optional[str]):
-            Name of the mask data which will be provided by a data iterator.
-            Defaults to None.
-
-            The mask is needed if error should be injected
-            only at certain time steps (for sequential data).
-    Returns:
-        tuple: An ``Input`` and a ``FullyConnected`` layer.
-    NOTE:
-        This tool provides the output layer for `multi-label` classification,
-        not `multi-class` classification
-    """
-    if isinstance(in_shape, int):
-        in_shape = (in_shape, )
-    if isinstance(out_shape, int):
-        out_shape = (out_shape, )
-    fc_name = out_name + '_FC' if fc_name is None else fc_name
-    fc_layer = layers.FullyConnected(out_shape, activation='linear',
-                                     name=fc_name)
-    out_layer = layers.SigmoidCE(name=out_name)
-    fc_layer >> out_layer
-
-    if mask_name is None:
-        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B') + out_shape})
-        inp_layer - targets_name >> 'targets' - out_layer
-        out_layer - 'loss' >> layers.Loss()
-    else:
-        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B') + out_shape,
-                                             mask_name: ('T', 'B', 1)})
-        mask_layer = layers.Mask()
-        inp_layer - targets_name >> 'targets' - out_layer
-        out_layer - 'loss' >> mask_layer >> layers.Loss()
-        inp_layer - mask_name >> 'mask' - mask_layer
-
-    return inp_layer, fc_layer
-
-
-def get_in_out_layers_for_regression(in_shape, nr_outputs,
-                                     data_name='default',
-                                     targets_name='targets',
-                                     outlayer_name="Output",
-                                     mask_name=None):
-    """Prepare input and output layers for building a multi-class classifier.
-
-    This is a helper function for quickly building a typical network for a
-    regression task with Mean Squared Loss. The output layer is a
-    ``FullyConnected`` layer with linear activation.
-
-    Example:
-        >>> from brainstorm import tools, Network, layers
-        >>> inp, out = tools.get_in_out_layers_for_regression(100, 10)
-        >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
-    Args:
-        in_shape (int or tuple[int]): Shape of the input data.
-        nr_classes (int): Number of outputs.
-        data_name (Optional[str]):
-            Name of the input data which will be provided by a data iterator.
-            Defaults to 'default'.
-        targets_name (Optional[str]):
-            Name of the ground-truth target data which will be provided by a
-            data iterator. Defaults to 'targets'.
-        outlayer_name (Optional[str]):
-            Name for the output layer.
-        mask_name (Optional[str]):
-            Name of the mask data which will be provided by a data iterator.
-            Defaults to None.
-
-            The mask is needed if error should be injected
-            only at certain time steps (for sequential data).
-    Returns:
-        tuple: An input and an output layer.
-    """
-    if isinstance(in_shape, int):
-        in_shape = (in_shape, )
-
-    fc_layer = layers.FullyConnected(nr_outputs, name=outlayer_name + '_FC',
-                                     activation='linear')
-    out_layer = layers.SquaredDifference(name=outlayer_name)
-
-    if mask_name is None:
-        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B', 1)})
-        inp_layer - targets_name >> 'inputs_2' - out_layer
-        out_layer >> layers.Loss()
-    else:
-        inp_layer = layers.Input(out_shapes={data_name: ('T', 'B') + in_shape,
-                                             targets_name: ('T', 'B', 1),
-                                             mask_name: ('T', 'B', 1)})
-        mask_layer = layers.Mask()
-        inp_layer - targets_name >> 'inputs_2' - out_layer
-        out_layer >> mask_layer >> layers.Loss()
-        inp_layer - mask_name >> 'mask' - mask_layer
-
-    fc_layer >> 'inputs_1' - out_layer
-
-    return inp_layer, fc_layer
+__all__ = ['draw_network', 'evaluate', 'extract_and_save',
+           'print_network_info', 'get_in_out_layers', 'create_net_from_spec']
 
 
 def draw_network(network, file_name='network.png'):
@@ -246,41 +37,9 @@ def draw_network(network, file_name='network.png'):
 
         graph.draw(file_name, prog='dot')
         print('Network drawing saved as {}'.format(file_name))
-    except ImportError:
+    except ImportError as err:
         print("pygraphviz is required for drawing networks but was not found.")
-
-
-def print_network_info(network):
-    """Print detailed information about the network.
-
-    This tools prints the input, output and parameter shapes for all the
-    layers. It also prints the total number of parameters in each layer and
-    in the full network.
-
-    Args:
-        network (brainstorm.structure.Network):
-            A network for which the details are printed.
-    """
-    print('=' * 30, "Network information", '=' * 30)
-    print('total number of parameters: ', network.buffer.parameters.size)
-    for layer in network.layers.values():
-        print(layer.name)
-        num_params = 0
-        for view in network.buffer[layer.name].parameters.keys():
-            view_size = network.buffer[layer.name].parameters[view].size
-            view_shape = network.buffer[layer.name].parameters[view].shape
-            print('\t', view, view_shape)
-            num_params += view_size
-        print('number of parameters:', num_params)
-        print('input shapes:')
-        for view in layer.in_shapes.keys():
-            print('\t', view, layer.in_shapes[view].feature_shape, end='\t')
-        print()
-        print('output shapes:')
-        for view in layer.out_shapes.keys():
-            print('\t', view, layer.out_shapes[view].feature_shape, end='\t')
-        print()
-        print('-' * 80)
+        raise err
 
 
 def evaluate(network, iter, scorers=(), out_name='', targets_name='targets',
@@ -367,6 +126,135 @@ def extract_and_save(network, iter, buffer_names, file_name):
                 else:
                     ds[num].resize(size=num_items, axis=1)
                     ds[num][:, num_items - data.shape[1]:num_items, ...] = data
+
+
+def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
+                      targets_name='targets', projection_name=None,
+                      outlayer_name='Output', mask_name=None):
+    """Prepare input and output layers for building a network.
+
+    This is a helper function for quickly building networks.
+    It returns an ``Input`` layer and a projection layer which is a
+    ``FullyConnected`` or ``Convolution2D`` layer depending on the shape of the
+    targets. Also creates a mask layer if a mask name is provided, and connects
+    it appropriately. An appropriate layer to compute the loss is connected,
+    depending on the task_type:
+
+    classification:
+    The projection layer is connected to a SoftmaxCE layer, which is the output
+    layer.
+
+    multi-label:
+    The projection layer is connected to a SigmoidCE layer, which is the output
+    layer.
+
+    regression:
+    The projection layer is connected to a SquaredDifference layer, which is
+    the output layer.
+
+    Example:
+        >>> from brainstorm import tools, Network, layers
+        >>> inp, out = tools.get_in_out_layers('classification', 784, 10)
+        >>> net = Network.from_layer(inp >> layers.FullyConnected(1000) >> out)
+    Args:
+        task_type (str): one of ['classification', 'regression', 'multi-label']
+        in_shape (int or tuple[int]): Shape of the input data.
+        out_shape (int or tuple[int]): Shape of the network output.
+        data_name (Optional[str]):
+            Name of the input data which will be provided by a data iterator.
+            Defaults to 'default'.
+        targets_name (Optional[str]):
+            Name of the ground-truth target data which will be provided by a
+            data iterator. Defaults to 'targets'.
+        projection_name (Optional[str]):
+            Name for the projection layer which connects to the softmax
+            layer. If unspecified, it is set to outlayer_name + '_FC' or
+            outlayer_name + '_Conv'.
+        outlayer_name (Optional[str]):
+            Name for the output layer. Defaults to 'Output'.
+        mask_name (Optional[str]):
+            Name of the mask data which will be provided by a data iterator.
+            Defaults to None.
+
+            The mask is needed if error should be injected
+            only at certain time steps (for sequential data).
+    Returns:
+        tuple[Layer]
+    """
+    in_shape = (in_shape,) if isinstance(in_shape, int) else in_shape
+    out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
+
+    if len(out_shape) == 1:
+        projection_name = projection_name or outlayer_name + '_FC'
+        proj_layer = layers.FullyConnected(out_shape, activation='linear',
+                                           name=projection_name)
+    elif len(out_shape) == 3:
+        projection_name = projection_name or outlayer_name + '_Conv'
+        proj_layer = layers.Convolution2D(out_shape[-1], (1, 1),
+                                          activation='linear',
+                                          name=projection_name)
+
+    if task_type == 'classification':
+        out_layer = layers.SoftmaxCE(name=outlayer_name)
+    elif task_type == 'regression':
+        out_layer = layers.SquaredDifference(name=outlayer_name)
+    elif task_type == 'multi-label':
+        out_layer = layers.SigmoidCE(name=outlayer_name)
+    else:
+        raise ValueError('Unknown task type {}'.format(task_type))
+    proj_layer >> out_layer
+
+    t_shape = out_shape[:-1] + (1,)
+    if mask_name is None:
+        inp_layer = layers.Input(
+            out_shapes={data_name: ('T', 'B') + in_shape,
+                        targets_name: ('T', 'B') + t_shape})
+        inp_layer - targets_name >> 'targets' - out_layer
+        out_layer - 'loss' >> layers.Loss()
+    else:
+        inp_layer = layers.Input(
+            out_shapes={data_name: ('T', 'B') + in_shape,
+                        targets_name: ('T', 'B') + t_shape,
+                        mask_name: ('T', 'B', 1)})
+        mask_layer = layers.Mask()
+        inp_layer - targets_name >> 'targets' - out_layer
+        out_layer - 'loss' >> mask_layer >> layers.Loss()
+        inp_layer - mask_name >> 'mask' - mask_layer
+
+    return inp_layer, proj_layer
+
+
+def print_network_info(network):
+    """Print detailed information about the network.
+
+    This tools prints the input, output and parameter shapes for all the
+    layers. It also prints the total number of parameters in each layer and
+    in the full network.
+
+    Args:
+        network (brainstorm.structure.Network):
+            A network for which the details are printed.
+    """
+    print('=' * 30, "Network information", '=' * 30)
+    print('total number of parameters: ', network.buffer.parameters.size)
+    for layer in network.layers.values():
+        print(layer.name)
+        num_params = 0
+        for view in network.buffer[layer.name].parameters.keys():
+            view_size = network.buffer[layer.name].parameters[view].size
+            view_shape = network.buffer[layer.name].parameters[view].shape
+            print('\t', view, view_shape)
+            num_params += view_size
+        print('number of parameters:', num_params)
+        print('input shapes:')
+        for view in layer.in_shapes.keys():
+            print('\t', view, layer.in_shapes[view].feature_shape, end='\t')
+        print()
+        print('output shapes:')
+        for view in layer.out_shapes.keys():
+            print('\t', view, layer.out_shapes[view].feature_shape, end='\t')
+        print()
+        print('-' * 80)
 
 
 # ############################# Net from Spec #################################
@@ -505,14 +393,16 @@ def trynumber(a):
             return a
 
 
-def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='default',
-                         targets_name='targets', mask_name=None):
+def create_net_from_spec(task_type, in_shape, out_shape, spec,
+                         data_name='default', targets_name='targets',
+                         mask_name=None):
     """
     Create a complete network from a spec line like this "F50 F20 F50".
 
     Spec:
         Capital letters specify the layer type and are followed by arguments to
         the layer. Supported layers are:
+
           * F : FullyConnected
           * R : Recurrent
           * L : Lstm
@@ -578,23 +468,19 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec, data_name='defaul
             layers with activation function and a simple Gaussian default and
             fallback.
     """
-    if task_type == 'classification':
-        inp, outp = get_in_out_layers_for_classification(
-            in_shape, out_shape, data_name=data_name, mask_name=mask_name,
-            targets_name=targets_name)
-        default_output = 'Output.probabilities'
+    out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
+    inp, outp = get_in_out_layers(task_type, in_shape, out_shape,
+                                  data_name=data_name, mask_name=mask_name,
+                                  targets_name=targets_name)
+    if task_type in ['classification', 'multi-label']:
+        default_output = 'Output.outputs.probabilities'
     elif task_type == 'regression':
-        inp, outp = get_in_out_layers_for_regression(
-            in_shape, out_shape, data_name=data_name, mask_name=mask_name,
-            targets_name=targets_name)
-        default_output = 'Output_FC.default'
-    elif task_type == 'multi-label':
-        inp, outp = get_in_out_layers_for_multi_label_classification(
-            in_shape, out_shape, data_name=data_name, mask_name=mask_name,
-            targets_name=targets_name)
-        default_output = 'Output.probabilities'
+        if len(out_shape) == 1:
+            default_output = 'Output_FC.outputs.default'
+        else:
+            default_output = 'Output_Conv.outputs.default'
     else:
-        raise ValueError('unknown type {}'.format(task_type))
+        raise ValueError('Unknown task type {}'.format(task_type))
 
     import re
     LAYER_TYPE = r'(?P<layer_type>[A-Z])'

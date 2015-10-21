@@ -10,6 +10,11 @@ from brainstorm.randomness import Seedable
 
 class ValueModifier(Seedable, Describable):
 
+    """
+    ValueModifiers can be installed in a :class:`Network` to affect either the
+    parameters or the gradients.
+    """
+
     __undescribed__ = {'layer_name', 'view_name'}
 
     def __init__(self):

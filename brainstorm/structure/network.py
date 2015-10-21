@@ -44,7 +44,7 @@ class Network(Seedable):
                 Some layer used to wire up an architecture with `>>`
 
         Returns:
-            brainstorm.structure.Network:
+            Network:
                 A fully functional Network instance.
         """
         arch = generate_architecture(some_layer)
@@ -59,7 +59,7 @@ class Network(Seedable):
             architecture (dict):
                 JSON serializable Architecture description.
         Returns:
-            brainstorm.structure.Network:
+            Network:
                 A fully functional Network instance.
         """
         layers = instantiate_layers_from_architecture(architecture)
@@ -93,7 +93,7 @@ class Network(Seedable):
                 The loaded network.
 
         See Also:
-            Network.save_as_hdf5
+            :meth:`.save_as_hdf5`
         """
         with h5py.File(filename, 'r') as f:
             description = json.loads(f['description'].value.decode())
@@ -149,15 +149,12 @@ class Network(Seedable):
         """
         Get a numpy copy of one of the named inputs that are currently used.
 
-        Shorthand for net.get('Input.outputs.input_name')
         Args:
-            input_name (str):
-                The name of the input that should be retrieved.
+            input_name (str): The name of the input that should be retrieved.
 
         Returns:
             numpy.ndarray:
                 A numpy array copy of the specified input.
-
         """
         return self.get('Input.outputs.' + input_name)
 
@@ -279,17 +276,19 @@ class Network(Seedable):
 
     def set_weight_modifiers(self, default_or_mod_dict=None, **kwargs):
         """
-        Install :class:`ValueModifiers` in the network to change the weights.
+        Install
+        :class:`ValueModifiers <brainstorm.value_modifiers.ValueModifier>` in
+        the network to change the weights.
 
         They can be run manually using :meth:`.apply_weight_modifiers`,
         but they will also be called by the trainer after each weight update.
 
-        :class:`ValueModifiers` can be set for specific weights in the same way
-        :class:`Initializer` can, but there is no ``fallback``.
+        Value modifiers can be set for specific weights in the same way
+        initializers can, but there is no fallback.
         (see :meth:`.initialize` for details)
 
 
-        A modifier can be a :class:`ValueModifiers` object or a list of them.
+        A modifier can be a ValueModifiers object or a list of them.
         So for example:
 
         >>> net.set_weight_modifiers(
@@ -319,16 +318,18 @@ class Network(Seedable):
 
     def set_gradient_modifiers(self, default_or_mod_dict=None, **kwargs):
         """
-        Install :class:`ValueModifiers` in the network to change the gradient.
+        Install
+        :class:`ValueModifiers <brainstorm.value_modifiers.ValueModifier>` in
+        the network to change the gradient.
 
         They can be run manually using :meth:`.apply_gradient_modifiers`, but
         they will also be called by the network after each backward pass.
 
         Gradient modifiers can be set for specific weights in the same way as
-        :class:`Initializer` can, but there is no ``fallback``.
+        initializers can, but there is no fallback.
         (see :meth:`.initialize` for details)
 
-        A modifier can be a :class:`ValueModifiers` object or a list of them.
+        A modifier can be a ValueModifiers object or a list of them.
         So for example:
 
         >>> net.set_gradient_modifiers(
@@ -362,6 +363,7 @@ class Network(Seedable):
 
         Examples:
             Use this to run a network on the GPU using the pycuda:
+
             >>> from brainstorm.handlers import PyCudaHandler
             >>> net.set_handler(PyCudaHandler())
 
@@ -407,7 +409,8 @@ class Network(Seedable):
 
         Note:
             All the input data to be used during this forward pass have to be
-            passed to the network beforehand using provide_external_data.
+            passed to the network beforehand using
+            :meth:`.provide_external_data`
 
         Args:
             training_pass (Optional[bool]):

@@ -26,7 +26,7 @@ getter_va = Minibatches(100, default=ds['validation']['default'][:],
 
 # ------------------------------ Set up Network ----------------------------- #
 
-inp, fc = bs.tools.get_in_out_layers_for_classification((32, 32, 3), 10)
+inp, fc = bs.tools.get_in_out_layers('classification', (32, 32, 2), 10)
 
 (inp >>
     bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='Conv1') >>
@@ -46,9 +46,8 @@ network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
 
 # ------------------------------ Set up Trainer ----------------------------- #
 
-scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
-trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01,
-                                                 momentum=0.9))
+scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
+trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01, momentum=0.9))
 trainer.train_scorers = scorers
 trainer.add_hook(bs.hooks.ProgressBar())
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
@@ -62,5 +61,4 @@ trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 # --------------------------------- Train ----------------------------------- #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("\nBest validation accuracy:",
-      max(trainer.logs["validation"]["Accuracy"]))
+print("Best validation accuracy:", max(trainer.logs["validation"]["Accuracy"]))
