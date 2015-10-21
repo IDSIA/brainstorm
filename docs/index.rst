@@ -7,8 +7,12 @@ Contents:
     :maxdepth: 2
 
     quickstart
-    network
+    examples
     data_format
+    network
+    layers
+    trainer
+    hooks
     apidoc
     internals
     contributing

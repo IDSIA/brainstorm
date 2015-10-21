@@ -29,7 +29,7 @@ For GPU you need to do:
 Initializing
 ============
 
-Just use the ``net.initialize`` method.
+Just use the :meth:`~brainstorm.structure.network.Network.initialize` method.
 
 
 Weight and Gradient Modifiers
