@@ -42,7 +42,7 @@ network = bs.Network.from_layer(fc)
 network.set_handler(PyCudaHandler())
 network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
                     'FC': {'W': Gaussian(0.1), 'bias': 0},
-                    'Output_FC': {'W': Gaussian(0.1), 'bias': 0}})
+                    'Output_projection': {'W': Gaussian(0.1), 'bias': 0}})
 
 # ------------------------------ Set up Trainer ----------------------------- #
 

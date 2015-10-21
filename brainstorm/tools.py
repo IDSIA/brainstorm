@@ -157,6 +157,11 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     receives targets from the input layer. This is suitable for least squares
     regression.
 
+    Note:
+        The projection layer uses parameters, so it should be initialized after
+        network creation. Check argument descriptions to understand how it will
+        be named.
+
     Example:
         >>> from brainstorm import tools, Network, layers
         >>> inp, out = tools.get_in_out_layers('classification', 784, 10)
@@ -173,10 +178,8 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
             data iterator. Defaults to 'targets'.
         projection_name (Optional[str]):
             Name for the projection layer which connects to the softmax layer.
-            If unspecified:
-                will be set to 'projection' for regression tasks.
-                will be set to outlayer_name + '_FC' or outlayer_name + '_Conv'
-                for classification tasks.
+            If unspecified, will be set to ``outlayer_name`` + '_projection' if
+            ``outlayer_name`` is provided, and 'Output_projection' otherwise.
         outlayer_name (Optional[str]):
             Name for the output layer. If unspecified, named to 'Output'.
         mask_name (Optional[str]):
@@ -192,12 +195,13 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
 
     if task_type == 'regression':
-        projection_name = projection_name or 'projection'
+        projection_name = projection_name or 'Output_projection'
         assert outlayer_name is None, 'outlayer_name should not be specified ' \
                                       'for regression tasks.'
         out_layer = layers.SquaredDifference()
     else:
         outlayer_name = outlayer_name or 'Output'
+        projection_name = projection_name or outlayer_name + '_projection'
         if task_type == 'classification':
             out_layer = layers.SoftmaxCE(name=outlayer_name)
         elif task_type == 'multi-label':
@@ -206,15 +210,14 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
             raise ValueError('Unknown task type {}'.format(task_type))
 
     if len(out_shape) == 1:
-        projection_name = projection_name or outlayer_name + '_FC'
         proj_layer = layers.FullyConnected(out_shape, activation='linear',
                                            name=projection_name)
     elif len(out_shape) == 3:
-        projection_name = projection_name or outlayer_name + '_Conv'
         proj_layer = layers.Convolution2D(out_shape[-1], (1, 1),
                                           activation='linear',
                                           name=projection_name)
-
+    else:
+        raise ValueError('Unsupported output length {}'.format(len(out_shape)))
     proj_layer >> out_layer
 
     t_shape = out_shape[:-1] + (1,)
