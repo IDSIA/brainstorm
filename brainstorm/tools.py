@@ -495,12 +495,12 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
                                   data_name=data_name, mask_name=mask_name,
                                   targets_name=targets_name)
     if task_type in ['classification', 'multi-label']:
-        default_output = 'Output.outputs.probabilities'
+        output_name = 'Output.outputs.probabilities'
     elif task_type == 'regression':
         if len(out_shape) == 1:
-            default_output = 'Output_FC.outputs.default'
+            output_name = 'Output_FC.outputs.default'
         else:
-            default_output = 'Output_Conv.outputs.default'
+            output_name = 'Output_Conv.outputs.default'
     else:
         raise ValueError('Unknown task type {}'.format(task_type))
 
@@ -521,7 +521,7 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
         current_layer >>= create_layer(layer_type, args)
 
     net = Network.from_layer(current_layer >> outp)
-    net.default_output = default_output
+    net.output_name = output_name
 
     init_dict = {
         name: initializers.DenseSqrtFanInOut(l.activation)
