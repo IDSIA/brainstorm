@@ -37,6 +37,12 @@ def draw_network(network, file_name='network.png'):
 
         graph.draw(file_name, prog='dot')
         print('Network drawing saved as {}'.format(file_name))
+
+        try:
+            from IPython.display import Image
+            return Image(filename=file_name)
+        except ImportError:
+            return None
     except ImportError as err:
         print("pygraphviz is required for drawing networks but was not found.")
         raise err
