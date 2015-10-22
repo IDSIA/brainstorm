@@ -15,7 +15,7 @@ Pre-requisites: You need the Ubuntu packages `python-dev`, `libhdf5-dev` as well
 
 To install:
 
-* Clone the repository: `git clone git@github.com:Qwlouse/brainstorm.git`
+* Clone the repository: `git clone git@github.com:IDSIA/brainstorm.git`
 * To install for development: `cd brainstorm; pip install -e .`. This links the installed library directly to the brainstorm directory, so that changes made to the library can be directly used.
 * To install for usage: `cd brainstorm; python setup.py install`
 

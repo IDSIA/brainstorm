@@ -13,5 +13,5 @@ __all__ = ("__version__", "__author__", "__url__", "__license__")
 
 __version__ = "0.5b"
 __author__ = "Klaus Greff"
-__url__ = "https://github.com/Qwlouse/brainstorm"
+__url__ = "https://github.com/IDSIA/brainstorm"
 __license__ = "MIT"
