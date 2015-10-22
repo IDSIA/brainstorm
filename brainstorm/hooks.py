@@ -486,7 +486,7 @@ class StopOnSigQuit(Hook):
             raise StopIteration('Received SIGQUIT signal.')
 
 if not optional.has_bokeh:
-    BokehVisualizer = optional.MissingDependencyMock('bokeh')
+    BokehVisualizer = optional.bokeh_mock
 else:
     import bokeh.plotting as bk
 

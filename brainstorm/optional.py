@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
+import sys
+import six
 
 
 class MissingDependencyMock(object):
-    def __init__(self, depends_on):
-        self.depends_on = depends_on
+    def __init__(self, error):
+        self.error = error
 
     def __getattribute__(self, item):
-        raise ImportError('Depends on missing "{}" package.'
-                          .format(object.__getattribute__(self, 'depends_on')))
+        six.reraise(*object.__getattribute__(self, 'error'))
 
     def __call__(self, *args, **kwargs):
-        raise ImportError('Depends on missing "{}" package.'
-                          .format(object.__getattribute__(self, 'depends_on')))
+        six.reraise(*object.__getattribute__(self, 'error'))
 
 
 try:
@@ -27,24 +27,18 @@ try:
     import skcuda.linalg as culinalg
     import skcuda.misc as cumisc
     has_pycuda = True
-except ImportError:
+    pycuda_mock = None
+except ImportError as e:
     has_pycuda = False
+    pycuda_mock = MissingDependencyMock(sys.exc_info())
 
-
-has_cudnn = False
-if has_pycuda:
-    try:
-        import ctypes
-        import libcudnn as cudnn
-        has_cudnn = True
-    except ImportError:
-        pass
 
 try:
     import bokeh
     has_bokeh = True
 except ImportError:
     has_bokeh = False
+    bokeh_mock = MissingDependencyMock(sys.exc_info())
 
 
 __all__ = ['has_pycuda', 'has_cudnn', 'has_bokeh', 'MissingDependencyMock']

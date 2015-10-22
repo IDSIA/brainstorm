@@ -7,7 +7,6 @@ import numpy as np
 import pytest
 
 from brainstorm.handlers import NumpyHandler
-from brainstorm.optional import has_cudnn
 
 # np.random.seed(1234)
 dtype = np.float32
