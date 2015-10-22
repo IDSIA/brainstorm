@@ -41,9 +41,9 @@ class ClockworkLstmLayerImpl(Layer):
         parameters['Wf'] = BufferStructure(self.size, in_size)
         parameters['Wo'] = BufferStructure(self.size, in_size)
 
-        parameters['Wpi'] = BufferStructure(self.size)
-        parameters['Wpf'] = BufferStructure(self.size)
-        parameters['Wpo'] = BufferStructure(self.size)
+        parameters['pi'] = BufferStructure(1, self.size)
+        parameters['pf'] = BufferStructure(1, self.size)
+        parameters['po'] = BufferStructure(1, self.size)
 
         parameters['Rz'] = BufferStructure(self.size, self.size)
         parameters['Ri'] = BufferStructure(self.size, self.size)
@@ -100,8 +100,17 @@ class ClockworkLstmLayerImpl(Layer):
          Rz, Ri, Rf, Ro,
          bz, bi, bf, bo,
          timing) = buffers.parameters
-        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
-         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
+
+        (Za, Zb,
+         Ia, Ib,
+         Fa, Fb,
+         Oa, Ob,
+         Ca, Cb,
+         dZa, dZb,
+         dIa, dIb,
+         dFa, dFb,
+         dOa, dOb,
+         dCa, dCb) = buffers.internals
         x = buffers.inputs.default
         y = buffers.outputs.default
         time_size, batch_size, in_size = x.shape
@@ -129,13 +138,13 @@ class ClockworkLstmLayerImpl(Layer):
 
             # Input Gate
             _h.dot_add_mm(y[t - 1], Ri, Ia[t], transb=True)
-            _h.mult_add_mv(Ca[t - 1], pi.reshape((1, self.size)), Ia[t])
+            _h.mult_add_mv(Ca[t - 1], pi, Ia[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Ia[t], bi.reshape((1, self.size)), Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
             _h.dot_add_mm(y[t - 1], Rf, Fa[t], transb=True)
-            _h.mult_add_mv(Ca[t - 1], pf.reshape((1, self.size)), Fa[t])
+            _h.mult_add_mv(Ca[t - 1], pf, Fa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Fa[t], bf.reshape((1, self.size)), Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
 
@@ -145,7 +154,7 @@ class ClockworkLstmLayerImpl(Layer):
 
             # Output Gate
             _h.dot_add_mm(y[t - 1], Ro, Oa[t], transb=True)
-            _h.mult_add_mv(Ca[t], po.reshape((1, self.size)), Oa[t])
+            _h.mult_add_mv(Ca[t], po, Oa[t])  # ADDED PEEPHOLE CONNECTION
             _h.add_mv(Oa[t], bo.reshape((1, self.size)), Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
 
@@ -175,9 +184,9 @@ class ClockworkLstmLayerImpl(Layer):
 
         (Wz, Wi, Wf, Wo,
          pi, pf, po,
-         Rz, Ri, Rf, Ro,
-         bz, bi, bf, bo,
-         timing) = buffers.parameters
+        Rz, Ri, Rf, Ro,
+        bz, bi, bf, bo,
+        timing) = buffers.parameters
 
         (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
          dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
@@ -193,13 +202,13 @@ class ClockworkLstmLayerImpl(Layer):
 
         # Temporary variable to be filled with the current value of time t
         tmp = _h.zeros(timing.shape)
+
         _h.fill(dCa, 0.0)
         cond = _h.zeros(y[0].shape)
 
         for t in range(time_size - 1, -1, - 1):
             # Accumulate recurrent deltas
             _h.add_tt(dy[t], deltas[t], dy[t])
-
             _h.fill(tmp, t)
             _h.modulo_tt(tmp, timing, tmp)
             _h.broadcast_t(tmp.reshape((1, tmp.shape[0])), 0, cond)
@@ -209,21 +218,20 @@ class ClockworkLstmLayerImpl(Layer):
             _h.dot_add_mm(dOa[t + 1], Ro, dy[t])
             _h.dot_add_mm(dZa[t + 1], Rz, dy[t])
 
-            _h.mult_add_mv(dIa[t + 1], pi.reshape((1, self.size)), dCa[t])
-            _h.mult_add_mv(dFa[t + 1], pf.reshape((1, self.size)), dCa[t])
+            _h.mult_add_mv(dIa[t + 1], pi, dCa[t])
+            _h.mult_add_mv(dFa[t + 1], pf, dCa[t])
 
             # Output Gate
             _h.mult_tt(dy[t], Cb[t], dOb[t])
-
-            _h.fill_if(dOb[t], 0.0, cond)
+            _h.fill_if(dOb[t], 0, cond)  # Set inactive to 0
             _h.sigmoid_deriv(Oa[t], Ob[t], dOb[t], dOa[t])
-            # Output influence on peephole
-            _h.mult_add_mv(dOa[t], po.reshape((1, self.size)), dCa[t])
+            # Output influence on peephole:
+            _h.mult_add_mv(dOa[t], po, dCa[t])
 
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
-            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])
-            _h.fill_if(dCb[t], 0.0, cond)
+            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])  # Important change to standard LSTM
+            _h.fill_if(dCb[t], 0, cond)
             _h.add_tt(dCa[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], Fb[t + 1], dCa[t])
 
@@ -244,10 +252,10 @@ class ClockworkLstmLayerImpl(Layer):
             _h.add_into_if(dCa[t], dCa[t-1], cond)
 
             # Undo updates to inactive nodes:
-            _h.fill_if(dIa[t], 0.0, cond)
-            _h.fill_if(dFa[t], 0.0, cond)
-            _h.fill_if(dZa[t], 0.0, cond)
-            _h.fill_if(Fb[t], 0.0, cond)
+            _h.fill_if(dIa[t], 0, cond)
+            _h.fill_if(dFa[t], 0, cond)
+            _h.fill_if(dZa[t], 0, cond)
+            _h.fill_if(Fb[t], 0, cond)
 
         # Same as for standard RNN:
         flat_inputs = flatten_time(x)
@@ -286,8 +294,7 @@ class ClockworkLstmLayerImpl(Layer):
 
         dWco_tmp = _h.allocate(flat_cell2.shape)
         dWc_tmp = _h.allocate(dpo.shape)
-
-        # Output gate Peephole
+        # Peephole connection output weight:
         _h.mult_tt(flat_cell2, flat_dOa, dWco_tmp)
         _h.sum_t(dWco_tmp, axis=0, out=dWc_tmp)
         _h.add_tt(dpo, dWc_tmp, dpo)
