@@ -26,7 +26,7 @@ getter_va = Minibatches(100, default=ds['validation']['default'][:],
 
 # ------------------------------ Set up Network ----------------------------- #
 
-inp, fc = bs.tools.get_in_out_layers('classification', (32, 32, 2), 10)
+inp, fc = bs.tools.get_in_out_layers('classification', (32, 32, 3), 10)
 
 (inp >>
     bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='Conv1') >>
