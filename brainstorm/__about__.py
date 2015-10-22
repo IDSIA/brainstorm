@@ -11,7 +11,7 @@ from __future__ import division, print_function, unicode_literals
 
 __all__ = ("__version__", "__author__", "__url__", "__license__")
 
-__version__ = "0.4"
+__version__ = "0.5b"
 __author__ = "Klaus Greff"
 __url__ = "https://github.com/Qwlouse/brainstorm"
 __license__ = "MIT"

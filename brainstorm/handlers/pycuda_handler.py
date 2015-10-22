@@ -178,10 +178,6 @@ class PyCudaHandler(Handler):
         kernel_shape = params.shape[1:]
         num_output_pixels = out_deltas.shape[1] * out_deltas.shape[2]
         num_kernel_params = np.prod(kernel_shape)
-    def conv2d_backward_batch(self, inputs, weights, padding, stride,
-                              in_deltas, out_deltas, weight_deltas,
-                              bias_deltas):
-        upscalex, upscaley = 1, 1  # currently not exposed to API
 
         dparams.fill(0.0)
         dbias.fill(0.0)
