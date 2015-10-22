@@ -12,7 +12,7 @@ from brainstorm.handlers._cpuop import _crop_images
 from brainstorm.utils import IteratorValidationError
 
 # ######################### Nested Iterators ##################################
-from data_iterators import _calculate_lengths_from_mask
+from brainstorm.data_iterators import _calculate_lengths_from_mask
 
 inner = Undivided(default=np.random.randn(2, 3, 1, 2, 2))
 
