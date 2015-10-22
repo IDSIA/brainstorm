@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
-
-from brainstorm.uniquely_named import UniquelyNamed
+from structure.construction import UniquelyNamed
 
 
 def test_basename():
