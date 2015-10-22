@@ -76,7 +76,7 @@ class Network(Seedable):
             create_from_description(description['gradient_modifiers']))
         net.set_weight_modifiers(
             create_from_description(description['weight_modifiers']))
-        net.default_output = description.get('default_output')
+        net.output_name = description.get('output_name')
         return net
 
     @classmethod
@@ -115,7 +115,7 @@ class Network(Seedable):
         self.initializers = {}
         self.weight_modifiers = {}
         self.gradient_modifiers = {}
-        self.default_output = None
+        self.output_name = None
 
     def get(self, buffer_path):
         """

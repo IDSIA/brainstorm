@@ -349,7 +349,7 @@ def test_describe_network():
         'initializers': {'default': 1},
         'weight_modifiers': {},
         'gradient_modifiers': {},
-        'default_output': None
+        'output_name': None
     }
 
 
