@@ -220,8 +220,8 @@ class OneHot(DataIterator):
     def __call__(self, handler, verbose=False):
         for data in self.iter(handler):
             for name in self.vocab_size_dict.keys():
-                eye = np.eye(self.vocab_size_dict[name], dtype=np.bool)
-                new_data = np.squeeze(eye[data[name][:, :, 0]])
+                new_data = np.eye(self.vocab_size_dict[name], dtype=np.bool)[data[name]]
+                new_data = np.reshape(new_data, (new_data.shape[0], new_data.shape[1], new_data.shape[3]))
                 data[name] = new_data
                 yield data
 

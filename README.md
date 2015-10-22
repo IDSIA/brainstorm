@@ -4,6 +4,8 @@ Brainstorm
 
 Brainstorm is a library designed to make working with neural networks fast, flexible and fun.
 
+For help in using Brainstorm, please use the [mailing list](https://groups.google.com/forum/#!forum/mailstorm).
+
 Installation
 ------------
 

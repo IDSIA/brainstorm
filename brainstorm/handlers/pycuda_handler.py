@@ -485,9 +485,9 @@ index_m_by_v_kernel = ElementwiseKernel(
 )
 
 modulo_tt_kernel = ElementwiseKernel(
-    "int* a, int* b, int* out",
-    "out[i] = a[i] % b[i]",
-    "modulo_mm_kernel"
+    "float* a, float* b, float* out",
+    "out[i] =  (float)((int)((a >= 0) ? a[i]+0.5: a[i]-0.5) % (int)((b>=0) ? b[i]+0.5: b[i]-0.5))",
+    "modulo_tt_kernel"
 )
 
 mult_add_kernel = ElementwiseKernel(

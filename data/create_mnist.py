@@ -48,7 +48,14 @@ http://deeplearning.net/data/mnist/mnist.pkl.gz
 which hosts a normalized version of the data originally from:
 http://yann.lecun.com/exdb/mnist/
 
-Variants:
+Attributes
+==========
+
+description: This description.
+
+Variants
+========
+
 normalized_full: Contains 'training' and 'test' sets. Image data has been
 normalized by dividing all pixel values by 255.
 
