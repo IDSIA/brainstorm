@@ -176,7 +176,7 @@ def mask_layer(spec):
     return layer, spec
 
 
-def convolution_layer_2d(spec, input_shape=(1, 4, 4),
+def convolution_layer_2d(spec, input_shape=(4, 4, 1),
                          num_filters=1, kernel_size=(2, 2), stride=(1, 1)):
     x = BufferStructure('T', 'B', *input_shape)
     layer = Convolution2DLayerImpl('Convolution2DLayer', {'default': x},
@@ -187,23 +187,22 @@ def convolution_layer_2d(spec, input_shape=(1, 4, 4),
 
 
 def convolution_layer_2d_a(spec):
-    return convolution_layer_2d(spec, input_shape=(2, 3, 4))
+    return convolution_layer_2d(spec, input_shape=(3, 4, 2))
 
 
 def convolution_layer_2d_b(spec):
-    return convolution_layer_2d(spec, input_shape=(2, 3, 4), num_filters=2)
+    return convolution_layer_2d(spec, input_shape=(3, 4, 2), num_filters=2)
 
 
 def convolution_layer_2d_c(spec):
-    return convolution_layer_2d(spec, input_shape=(2, 3, 4), num_filters=2,
+    return convolution_layer_2d(spec, input_shape=(3, 4, 2), num_filters=2,
                                 kernel_size=(2, 3))
 
 
 def maxpooling_layer_2d(spec):
-    y = BufferStructure('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
                                {'default':
-                                BufferStructure('T', 'B', 1, 4, 4)},
+                                BufferStructure('T', 'B', 4, 4, 1)},
                                NO_CON, NO_CON,
                                kernel_size=(2, 2), stride=(1, 1),
                                type="max")
@@ -211,10 +210,9 @@ def maxpooling_layer_2d(spec):
 
 
 def avgpooling_layer_2d(spec):
-    y = BufferStructure('T', 'B', 3, 5, 4)
     layer = Pooling2DLayerImpl('Pooling2DLayer',
                                {'default':
-                                BufferStructure('T', 'B', 1, 4, 4)},
+                                BufferStructure('T', 'B', 4, 4, 1)},
                                NO_CON, NO_CON,
                                kernel_size=(2, 2), stride=(1, 1),
                                type="avg")
