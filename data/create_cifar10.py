@@ -61,7 +61,17 @@ images per class. There are 50000 training images and 10000 test images.
 The dataset was obtained from the link:
 http://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
 
-Variants:
+Attributes
+==========
+
+description: This description.
+
+mean: The pixel-wise mean of the first 40000 training set images.
+
+std: The pixel-wise standard deviation of the first 40000 training set images.
+
+Variants
+========
 
 normalized_full: Contains 'training' and 'test' sets. Image data has been
 normalized to have zero mean and unit standard deviation.
@@ -73,6 +83,8 @@ standard deviation.
 
 """
 f.attrs['description'] = description
+f.attrs['mean'] = tr_mean
+f.attrs['std'] = tr_std
 
 variant = f.create_group('normalized_split')
 group = variant.create_group('training')

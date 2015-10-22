@@ -43,8 +43,8 @@ raw_data = zipfile.ZipFile(hutter_file).read('enwik8')
 print("Done.")
 
 print("Preparing data for Brainstorm ...")
-raw_data = np.fromstring(raw_data, dtype=np.int8)
-uniq, data = np.unique(raw_data, return_inverse=True)
+raw_data = np.fromstring(raw_data, dtype=np.uint8)
+unique, data = np.unique(raw_data, return_inverse=True)
 
 train_data = data[: -2 * num_test_chars]
 train_targets = data[1: -2 * num_test_chars + 1]
@@ -70,15 +70,26 @@ description = """
 The Hutter Prize Wikipedia dataset, prepared for character-level language
 modeling.
 
-The data was obtained from http://mattmahoney.net/dc/enwik8.zip.
+The data was obtained from the link:
+http://mattmahoney.net/dc/enwik8.zip
 
-Variants:
+Attributes
+==========
+
+description: This description.
+
+unique: A 1-D array of unique characters (0-255 ASCII values) in the dataset.
+The index of each character was used as the class ID for preparing the data.
+
+Variants
+========
 
 split: Split into 'training', 'validation' and 'test' tests of size 90, 10 and
 10 million characters respectively. Each sequence is {} characters long. The
 dataset has been prepared expecting minibatches of {} sequences.
 """.format(seq_len, batch_size)
 f.attrs['description'] = description
+f.attrs['unique'] = unique
 
 variant = f.create_group('split')
 group = variant.create_group('training')
