@@ -35,20 +35,37 @@ class Handler(Describable):
       array_type: The type of array object that this handler works with.
     """
 
-    __undescribed__ = {'act_func', 'act_func_deriv'}
+    __undescribed__ = {'inplace_act_func', 'inplace_act_func_deriv',
+                       'act_func', 'act_func_deriv'}
 
     def __init__(self):
+        self.inplace_act_func = {
+            'sigmoid': lambda x: self.sigmoid(x, x),
+            'rel': lambda x: self.rel(x, x),
+            'tanh': lambda x: self.tanh(x, x),
+            'linear': lambda x: None,
+        }
+
+        self.inplace_act_func_deriv = {
+            'sigmoid': lambda y, dy: self.sigmoid_deriv(y, y, dy, dy),
+            'rel': lambda y, dy: self.rel_deriv(y, y, dy, dy),
+            'tanh': lambda y, dy: self.tanh_deriv(y, y, dy, dy),
+            'linear': lambda y, dy: None,
+        }
+
         self.act_func = {
             'sigmoid': self.sigmoid,
             'rel': self.rel,
             'tanh': self.tanh,
-            'linear': lambda x, y: self.copy_to(x, y)}
+            'linear': lambda x, y: self.copy_to(x, y)
+        }
 
         self.act_func_deriv = {
             'sigmoid': self.sigmoid_deriv,
             'rel': self.rel_deriv,
             'tanh': self.tanh_deriv,
-            'linear': lambda x, y, dy, dx: self.copy_to(dy, dx)}
+            'linear': lambda x, y, dy, dx: self.copy_to(dy, dx)
+        }
 
     def __init_from_description__(self, description):
         Handler.__init__(self)

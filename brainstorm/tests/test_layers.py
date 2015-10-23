@@ -464,6 +464,9 @@ def test_layer_add_to_deltas(layer_specs):
     # set all bwd_buffer inputs to 1.0
     for key, value in layer_buffers.input_deltas.items():
         HANDLER.fill(value, 1.0)
+    # output_deltas buffer may have changed due to inplace activation. Reset.
+    for key in layer_buffers.output_deltas.keys():
+        HANDLER.fill(layer_buffers.output_deltas[key], 1.0)
 
     # do a second forward/backward pass
     layer.forward_pass(layer_buffers)

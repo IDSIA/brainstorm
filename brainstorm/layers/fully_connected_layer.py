@@ -47,9 +47,6 @@ class FullyConnectedLayerImpl(Layer):
         parameters['bias'] = BufferStructure(out_size)
 
         internals = OrderedDict()
-        internals['H'] = BufferStructure('T', 'B', out_size)
-        internals['dH'] = BufferStructure('T', 'B', out_size,
-                                          is_backward_only=True)
         return outputs, parameters, internals
 
     def forward_pass(self, buffers, training_pass=True):
@@ -58,12 +55,11 @@ class FullyConnectedLayerImpl(Layer):
         W, bias = buffers.parameters
         inputs = flatten_time_and_features(buffers.inputs.default)
         outputs = flatten_time_and_features(buffers.outputs.default)
-        H = flatten_time(buffers.internals.H)
 
         # calculate outputs
-        _h.dot_mm(inputs, W, H, transb=True)
-        _h.add_mv(H, bias.reshape((1, bias.shape[0])), H)
-        _h.act_func[self.activation](H, outputs)
+        _h.dot_mm(inputs, W, outputs, transb=True)
+        _h.add_mv(outputs, bias.reshape((1, bias.shape[0])), outputs)
+        _h.inplace_act_func[self.activation](outputs)
 
     def backward_pass(self, buffers):
         # prepare
@@ -74,11 +70,9 @@ class FullyConnectedLayerImpl(Layer):
         outputs = flatten_time_and_features(buffers.outputs.default)
         in_deltas = flatten_time_and_features(buffers.input_deltas.default)
         out_deltas = flatten_time_and_features(buffers.output_deltas.default)
-        H = flatten_time(buffers.internals.H)
-        dH = flatten_time(buffers.internals.dH)
 
         # calculate in_deltas and gradients
-        _h.act_func_deriv[self.activation](H, outputs, out_deltas, dH)
-        _h.dot_add_mm(dH, W, out=in_deltas)
-        _h.dot_mm(dH, inputs, out=dW, transa=True)
-        _h.sum_t(dH, axis=0, out=dbias)
+        _h.inplace_act_func_deriv[self.activation](outputs, out_deltas)
+        _h.dot_add_mm(out_deltas, W, out=in_deltas)
+        _h.dot_mm(out_deltas, inputs, out=dW, transa=True)
+        _h.sum_t(out_deltas, axis=0, out=dbias)
