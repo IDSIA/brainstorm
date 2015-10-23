@@ -71,10 +71,6 @@ class Convolution2DLayerImpl(Layer):
         parameters['bias'] = BufferStructure(num_filters)
 
         internals = OrderedDict()
-        internals['H'] = BufferStructure('T', 'B', *out_shape)
-        internals['dH'] = BufferStructure('T', 'B', *out_shape,
-                                          is_backward_only=True)
-
         return outputs, parameters, internals
 
     def forward_pass(self, buffers, training_pass=True):
@@ -83,16 +79,15 @@ class Convolution2DLayerImpl(Layer):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         outputs = buffers.outputs.default
-        H = buffers.internals.H
 
         # reshape
         flat_inputs = flatten_time(inputs)
-        flat_H = flatten_time(H)
+        flat_outputs = flatten_time(outputs)
 
         # calculate outputs
-        _h.conv2d_forward_batch(flat_inputs, W, bias, flat_H,
+        _h.conv2d_forward_batch(flat_inputs, W, bias, flat_outputs,
                                 self.padding, self.stride)
-        _h.act_func[self.activation](H, outputs)
+        _h.inplace_act_func[self.activation](outputs)
 
     def backward_pass(self, buffers):
         # prepare
@@ -103,14 +98,13 @@ class Convolution2DLayerImpl(Layer):
         outputs = buffers.outputs.default
         in_deltas = buffers.input_deltas.default
         out_deltas = buffers.output_deltas.default
-        H, dH = buffers.internals
 
         # reshape
         flat_inputs = flatten_time(inputs)
         flat_in_deltas = flatten_time(in_deltas)
-        flat_dH = flatten_time(dH)
+        flat_out_deltas = flatten_time(out_deltas)
 
         # calculate in_deltas and gradients
-        _h.act_func_deriv[self.activation](H, outputs, out_deltas, dH)
+        _h.inplace_act_func_deriv[self.activation](outputs, out_deltas)
         _h.conv2d_backward_batch(flat_inputs, W, self.padding, self.stride,
-                                 flat_in_deltas, flat_dH, dW, dbias)
+                                 flat_in_deltas, flat_out_deltas, dW, dbias)
