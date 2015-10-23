@@ -304,7 +304,7 @@ class RandomWalk(Initializer):
         if self.scale is None:
             scale = {
                 'linear': np.exp(1 / (2 * N)),
-                'relu': np.sqrt(2) * np.exp(1.2 / (max(N, 6) - 2.4))
+                'rel': np.sqrt(2) * np.exp(1.2 / (max(N, 6) - 2.4))
             }[self.act_func]
         else:
             scale = self.scale
