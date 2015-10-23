@@ -226,7 +226,10 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
         raise ValueError('Unsupported output length {}'.format(len(out_shape)))
     proj_layer >> out_layer
 
-    t_shape = out_shape[:-1] + (1,)
+    if task_type == 'classification':
+        t_shape = out_shape[:-1] + (1,)
+    else:
+        t_shape = out_shape
     if mask_name is None:
         inp_layer = layers.Input(
             out_shapes={data_name: ('T', 'B') + in_shape,
