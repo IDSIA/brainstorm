@@ -485,25 +485,32 @@ class StopOnSigQuit(Hook):
         if self.quit:
             raise StopIteration('Received SIGQUIT signal.')
 
+
 if not optional.has_bokeh:
     BokehVisualizer = optional.bokeh_mock
 else:
     import bokeh.plotting as bk
+    import warnings
 
     class BokehVisualizer(Hook):
         """
-        Visualizes log values using the bokeh.plotting library.
+        Visualizes log values in your browser during training time using the
+        Bokeh plotting library.
 
-        By default the output saved as a .html file, however a display can be
-        enabled.
+        Before running the trainer the user is required to have the Bokeh Server
+        running.
+
+        By default the visualization is discarded upon closing the webbrowser.
+        However if an output file is specified then the .html file will be saved
+        after each iteration at the specified location.
 
         Args:
             log_names (list, array, or dict):
-                Contains the name of the accuracies recorded by the accuracy
-                monitors. Input should be of the form <monitorname>.<log_name>
+                Contains the name of the logs that are being recorded to be
+                visualized. log_names should be of the form <monitorname>.<log_name>
                 where log_name itself may be a nested dictionary key in dot
                 notation.
-            filename (str):
+            filename (Optional, str):
                 The location to which the .html file containing the accuracy
                 plot should be saved.
             timescale (Optional[str]):
@@ -520,24 +527,34 @@ else:
                 and acts as a fallback verbosity for the used data iterator.
                 If not set it defaults to the verbosity setting of the trainer.
         """
-        def __init__(self, log_names, filename, timescale='epoch', interval=1,
+        def __init__(self, log_names, filename=None, timescale='epoch', interval=1,
                      name=None, verbose=None):
             super(BokehVisualizer, self).__init__(name, timescale, interval,
                                                   verbose)
 
-            self.log_names = log_names
+            if isinstance(log_names, basestring):
+                self.log_names = [log_names]
+            else:
+                self.log_names = log_names
+
             self.filename = filename
 
             self.bk = bk
-            self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset"
+            self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset,save"
             self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua',
                            'gray']
 
-            self.bk.output_server(self.__name__)
+            warnings.filterwarnings('error')
+            try:
+                self.bk.output_server(self.__name__)
+                warnings.resetwarnings()
+            except Warning:
+                raise StopIteration('Bokeh server is not running')
+
             self.fig = self.bk.figure(
                 title=self.__name__, x_axis_label=self.timescale,
                 y_axis_label='value', tools=self.TOOLS,
-                x_range=(0, 10), y_range=(0, 1))
+                plot_width=1000, x_range=(0, 25), y_range=(0, 1))
 
         def start(self, net, stepper, verbose, named_data_iters):
             count = 0
@@ -550,11 +567,10 @@ else:
                 count += 1
 
             self.bk.show(self.fig)
-            self.bk.output_file(self.filename + ".html",
-                                title=self.__name__, mode="cdn")
+            self.bk.output_file('bokeh_visualisation.html', title=self.__name__, mode='cdn')
 
         def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-            count = 0
+
             for log_name in self.log_names:
                 renderer = self.fig.select(dict(name=log_name))
 
@@ -567,9 +583,9 @@ else:
                     datasource.data["x"] = range(update_nr)
 
                 self.bk.cursession().store_objects(datasource)
-                count += 1
 
-            self.bk.save(self.fig, filename=self.filename + ".html")
+            if self.filename is not None:
+                self.bk.save(self.fig, filename=self.filename + ".html")
 
 
 class ProgressBar(Hook):

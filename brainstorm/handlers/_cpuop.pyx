@@ -239,7 +239,7 @@ def _crop_images(DTYPE_t[:, :, :, :, ::1] inputs not None,
                 for k in range(0, height):
                     for l in range(0, width):
                         for c in range(0, num_channels):
-                            outputs[t, i, c, k, l] = inputs[t, i,
+                            outputs[t, i, k, l, c] = inputs[t, i,
                                                             k + start_row,
                                                             l + start_col, c]
 

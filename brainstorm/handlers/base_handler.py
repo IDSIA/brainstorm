@@ -553,6 +553,18 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
+    def merge_tt(self, a, b, out):
+        """Merge arrays a and b along their last axis.
+
+        Args:
+            a (array_type): Array to be merged.
+            b (array_type): Array to be merged.
+            out (array_type): Array into which the output is placed.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, argmax, in_deltas, out_deltas):
         """Computes the gradients for 2D max-pooling on a batch of images.
@@ -693,6 +705,18 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
+    def split_add_tt(self, x, out_a, out_b):
+        """Split array x along the last axis and add the parts to out_i.
+
+        Args:
+            x (array_type): Array to be split.
+            out_a (array_type): Array to which 1st part of x is added.
+            out_b (array_type): Array to which 2nd part of x is added.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
     def sqrt_t(self, a, out):
         """Compute the positive square-root of an array, element-wise.
 
@@ -752,29 +776,6 @@ class Handler(Describable):
             None
         """
 
-    @abc.abstractmethod
-    def merge_tt(self, a, b, out):
-        """Merge arrays a and b along their last axis.
-
-        Args:
-            a (array_type): Array to be merged.
-            b (array_type): Array to be merged.
-            out (array_type): Array into which the output is placed.
-        Returns:
-            None
-        """
-
-    @abc.abstractmethod
-    def split_add_tt(self, x, out_a, out_b):
-        """Split array x along the last axis and add the parts to out_i.
-
-        Args:
-            x (array_type): Array to be split.
-            out_a (array_type): Array to which 1st part of x is added.
-            out_b (array_type): Array to which 2nd part of x is added.
-        Returns:
-            None
-        """
     # ------------------------ Activation functions ------------------------- #
 
     @abc.abstractmethod

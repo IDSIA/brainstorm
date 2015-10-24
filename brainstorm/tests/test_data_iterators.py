@@ -27,17 +27,18 @@ def test_flip_dict_mismatch_raises():
 
 
 def test_flip():
-    a = np.random.randn(2, 3, 4, 5, 5)
-    b = np.random.randn(2, 3, 1, 4, 4)
+    a = np.random.randn(2, 3, 5, 5, 4)
+    a_copy = a.copy()
+    b = np.random.randn(2, 3, 4, 4, 1)
     c = np.random.randn(2, 3, 1)
     iterator = Undivided(default=a, secondary=b, targets=c)
-    pad = Flip(iterator, prob_dict={'default': 1.0})(default_handler)
-    x = next(pad)
+    flip = Flip(iterator, prob_dict={'default': 1.0})(default_handler)
+    x = next(flip)
     assert set(x.keys()) == set(iterator.data.keys())
-    assert x['default'].shape == (2, 3, 4, 5, 5)
-    assert x['secondary'].shape == (2, 3, 1, 4, 4)
+    assert x['default'].shape == (2, 3, 5, 5, 4)
+    assert x['secondary'].shape == (2, 3, 4, 4, 1)
     assert x['targets'].shape == (2, 3, 1)
-    assert np.allclose(x['default'][:, :, :, :, ::-1], a)
+    assert np.allclose(x['default'][:, :, :, ::-1, :], a_copy)
     assert np.allclose(x['secondary'], b)
     assert np.allclose(x['targets'], c)
 
@@ -50,17 +51,17 @@ def test_pad_dict_mismatch_raises():
 
 
 def test_pad():
-    a = np.random.randn(2, 3, 4, 5, 5)
-    b = np.random.randn(2, 3, 1, 4, 4)
+    a = np.random.randn(2, 3, 5, 5, 4)
+    b = np.random.randn(2, 3, 4, 4, 1)
     c = np.random.randn(2, 3, 1)
     iterator = Undivided(default=a, secondary=b, targets=c)
     pad = Pad(iterator, size_dict={'default': 1})(default_handler)
     x = next(pad)
     assert set(x.keys()) == set(iterator.data.keys())
-    assert x['default'].shape == (2, 3, 4, 7, 7)
-    assert x['secondary'].shape == (2, 3, 1, 4, 4)
+    assert x['default'].shape == (2, 3, 7, 7, 4)
+    assert x['secondary'].shape == (2, 3, 4, 4, 1)
     assert x['targets'].shape == (2, 3, 1)
-    assert np.allclose(x['default'][:, :, :, 1:-1, 1:-1], a)
+    assert np.allclose(x['default'][:, :, 1:-1, 1:-1, :], a)
     assert np.allclose(x['secondary'], b)
     assert np.allclose(x['targets'], c)
 
@@ -77,27 +78,27 @@ def test_random_crop_dict_mismatch_raises():
 
 
 def test_random_crop():
-    a = np.random.randn(1, 3, 4, 5, 5)
-    b = np.random.randn(1, 3, 1, 4, 4)
+    a = np.random.randn(1, 3, 5, 5, 4)
+    b = np.random.randn(1, 3, 4, 4, 1)
     c = np.random.randn(1, 3, 1)
     iterator = Undivided(default=a, secondary=b, targets=c)
-    pad = RandomCrop(iterator, shape_dict={'default': (3, 3),
+    crop = RandomCrop(iterator, shape_dict={'default': (3, 3),
                                            'secondary': (2, 2)
                                            })(default_handler)
-    x = next(pad)
+    x = next(crop)
     assert set(x.keys()) == set(iterator.data.keys())
-    assert x['default'].shape == (1, 3, 4, 3, 3)
-    assert x['secondary'].shape == (1, 3, 1, 2, 2)
+    assert x['default'].shape == (1, 3, 3, 3, 4)
+    assert x['secondary'].shape == (1, 3, 2, 2, 1)
     assert x['targets'].shape == (1, 3, 1)
     assert np.allclose(x['targets'], c)
 
 
 def test_crop_images_operation():
-    a = np.random.randn(3, 2, 4, 5, 5)
-    out = np.zeros(a.shape[:3] + (3, 3))
+    a = np.random.randn(3, 2, 5, 5, 4)
+    out = np.zeros((3, 2, 3, 3, 4))
     _crop_images(a, 3, 3, np.array([0, 1]), np.array([0, 2]), out)
-    assert np.allclose(out[:, 0, ...], a[:, 0, :, 0:3, 0:3])
-    assert np.allclose(out[:, 1, ...], a[:, 1, :, 1:4, 2:5])
+    assert np.allclose(out[:, 0, ...], a[:, 0, 0:3, 0:3, :])
+    assert np.allclose(out[:, 1, ...], a[:, 1, 1:4, 2:5, :])
 
 
 # ######################## Common Validation Tests ###########################

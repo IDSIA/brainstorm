@@ -178,9 +178,9 @@ class Flip(DataIterator):
     def __call__(self, handler):
         for data in self.iter(handler):
             for name in self.prob_dict.keys():
+                assert isinstance(data[name], np.ndarray)
                 for i in range(data[name].shape[1]):
                     if self.rnd.random_sample() < self.prob_dict[name]:
-                        assert isinstance(data[name], np.ndarray)
                         data[name][:, i, ...] = data[name][:, i, :, ::-1, :]
             yield data
 
@@ -320,14 +320,14 @@ class RandomCrop(DataIterator):
         for data in self.iter(handler):
             for name in self.shape_dict.keys():
                 assert isinstance(data[name], np.ndarray)
+                t, n, h, w, c = data[name].shape
                 crop_h, crop_w = self.shape_dict[name]
-                batch_size = data[name].shape[1]
-                max_r = data[name].shape[2] - crop_h
-                max_c = data[name].shape[3] - crop_w
-                row_indices = self.rnd.random_integers(0, max_r, batch_size)
-                col_indices = self.rnd.random_integers(0, max_c, batch_size)
-                cropped = np.zeros(data[name].shape[:2] + (crop_h, crop_w) +
-                                   (data[name].shape[-1],))
+                max_r = h - crop_h
+                max_c = w - crop_w
+                row_indices = self.rnd.random_integers(0, max_r, n)
+                col_indices = self.rnd.random_integers(0, max_c, n)
+                cropped = np.zeros((t, n, crop_h, crop_w, c))
+                print(cropped.shape)
                 _crop_images(data[name], crop_h, crop_w, row_indices,
                              col_indices, cropped)
                 data[name] = cropped

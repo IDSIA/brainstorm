@@ -48,6 +48,7 @@ try:
     has_nervanagpu = True
     nervanagpu_mock = None
 except ImportError:
+    has_nervanagpu = False
     nervanagpu_mock = MissingDependencyMock(sys.exc_info())
 
 __all__ = ['has_pycuda', 'has_nervanagpu', 'has_bokeh',
