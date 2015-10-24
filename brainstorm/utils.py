@@ -9,6 +9,8 @@ from datetime import datetime
 
 import numpy as np
 
+from brainstorm.__about__ import __version__
+
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 
 NAME_BLACKLIST = {'default', 'fallback'}
@@ -39,15 +41,11 @@ class IteratorValidationError(ValidationError):
     pass
 
 
-class ShapeValidationError(ValidationError):
+class StructureValidationError(ValidationError):
     pass
 
 
 class InitializationError(Exception):
-    pass
-
-
-class WeightModificationError(Exception):
     pass
 
 
@@ -117,14 +115,15 @@ def get_by_path(d, path):
         KeyError:
             if any key along the path was not found.
     """
-    try:
-        for p in path.split('.'):
-            d = d[p]
-    except KeyError:
-        print('Did not find entry `{}`. Available entries are {}'.format(
-            path, flatten_keys(d)))
-        raise
-    return d
+    current_node = d
+    for p in path.split('.'):
+        try:
+            current_node = current_node[p]
+        except KeyError:
+            raise KeyError('Path "{}" could not be resolved. Key "{}" missing.'
+                           ' Available keys are: [{}]'.format(
+                            path, p, ", ".join(sorted(current_node.keys()))))
+    return current_node
 
 
 def get_normalized_path(*args):
@@ -161,6 +160,10 @@ def flatten_time_and_features(array):
 def flatten_features(array, start_idx=2):
     return array.reshape(array.shape[:start_idx] +
                          (int(np.product(array.shape[start_idx:])),))
+
+
+def flatten_all_but_last(array):
+    return array.reshape((int(np.product(array.shape[:-1])), array.shape[-1]))
 
 
 def flatten_keys(dictionary):
@@ -208,3 +211,8 @@ def progress_bar(maximum, prefix='[',
 def silence():
     while True:
         yield ''
+
+
+def get_brainstorm_info():
+    info = 'Created with brainstorm {}'.format(__version__)
+    return info.encode()

@@ -39,10 +39,15 @@ print("Done.")
 ds = np.concatenate(res)
 num_tr = 40000
 x_tr = ds[:num_tr, 1:].reshape((1, num_tr, 3, 32, 32))
+x_tr = x_tr.transpose([0, 1, 3, 4, 2])
 y_tr = ds[:num_tr, 0].reshape((1, num_tr, 1))
-x_va = ds[40000: 50000, 1:].reshape((1, 10000, 3, 32, 32))
-y_va = ds[40000: 50000, 0].reshape((1, 10000, 1))
+
+x_va = ds[num_tr: 50000, 1:].reshape((1, 10000, 3, 32, 32))
+x_va = x_va.transpose([0, 1, 3, 4, 2])
+y_va = ds[num_tr: 50000, 0].reshape((1, 10000, 1))
+
 x_te = ds[50000:, 1:].reshape((1, 10000, 3, 32, 32))
+x_te = x_te.transpose([0, 1, 3, 4, 2])
 y_te = ds[50000:, 0].reshape((1, 10000, 1))
 
 tr_mean = x_tr.squeeze().mean(axis=0)
@@ -61,7 +66,17 @@ images per class. There are 50000 training images and 10000 test images.
 The dataset was obtained from the link:
 http://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
 
-Variants:
+Attributes
+==========
+
+description: This description.
+
+mean: The pixel-wise mean of the first 40000 training set images.
+
+std: The pixel-wise standard deviation of the first 40000 training set images.
+
+Variants
+========
 
 normalized_full: Contains 'training' and 'test' sets. Image data has been
 normalized to have zero mean and unit standard deviation.
@@ -73,6 +88,8 @@ standard deviation.
 
 """
 f.attrs['description'] = description
+f.attrs['mean'] = tr_mean
+f.attrs['std'] = tr_std
 
 variant = f.create_group('normalized_split')
 group = variant.create_group('training')
@@ -87,9 +104,10 @@ group = variant.create_group('test')
 group.create_dataset(name='default', data=x_te, compression='gzip')
 group.create_dataset(name='targets', data=y_te, compression='gzip')
 
-num_tr = 50000
-x_tr = (ds[:num_tr, 1:].reshape((1, num_tr, 3, 32, 32)) - tr_mean) / tr_std
-y_tr = ds[:num_tr, 0].reshape((1, num_tr, 1))
+nr_tr = 50000
+x_tr = ds[:nr_tr, 1:].reshape((1, nr_tr, 3, 32, 32)).transpose([0, 1, 3, 4, 2])
+x_tr = (x_tr - tr_mean) / tr_std
+y_tr = ds[:nr_tr, 0].reshape((1, nr_tr, 1))
 
 variant = f.create_group('normalized_full')
 group = variant.create_group('training')

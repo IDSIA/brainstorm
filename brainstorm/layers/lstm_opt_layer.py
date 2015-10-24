@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -12,19 +12,17 @@ from brainstorm.structure.construction import ConstructionWrapper
 
 def LstmOpt(size, activation='tanh', name=None):
     """Create an LSTMOpt layer."""
-    return ConstructionWrapper.create('LstmOpt', size=size, name=name,
+    return ConstructionWrapper.create(LstmOptLayerImpl, size=size, name=name,
                                       activation=activation)
 
 
 # noinspection PyPep8Naming
-class LstmOptLayerImpl(BaseLayerImpl):
-    
+class LstmOptLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation'}
 
     def setup(self, kwargs, in_shapes):
-        self.act_func = lambda x, y: None
-        self.act_func_deriv = lambda x, y, dy, dx: None
+        self.activation = kwargs.get('activation', 'tanh')
         in_size = in_shapes['default'].feature_size
         self.size = kwargs.get('size', in_size)
 
@@ -51,20 +49,13 @@ class LstmOptLayerImpl(BaseLayerImpl):
                                            is_backward_only=True)
         return outputs, parameters, internals
 
-    def set_handler(self, new_handler):
-        super(LstmOptLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_func_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'tanh')]
+    def slice_state(self, S):
+        gates = S[:, :, self.size:]
+        Z = S[:, :, :self.size]
+        I = S[:, :, self.size:2 * self.size]
+        F = S[:, :, self.size * 2:self.size * 3]
+        O = S[:, :, self.size * 3:]
+        return gates, Z, I, F, O
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare
@@ -75,17 +66,12 @@ class LstmOptLayerImpl(BaseLayerImpl):
         y = buffers.outputs.default
 
         time_size, batch_size, in_size = x.shape
-        out_size = y.shape[2]
         flat_size = time_size * batch_size
         flat_x = x.reshape((flat_size, in_size))
 
         flat_S = S[:-1].reshape((flat_size, S.shape[2]))
 
-        Z = S[:, :, :out_size]
-        gates = S[:, :, out_size:]
-        I = S[:, :, out_size:2 * out_size]
-        F = S[:, :, out_size * 2:out_size * 3]
-        O = S[:, :, out_size * 3:]
+        gates, Z, I, F, O = self.slice_state(S)
 
         _h.dot_mm(flat_x, W, flat_S, transb=True)  # all inputs times weights
         _h.add_mv(flat_S, b.reshape((1, b.shape[0])), flat_S)  # all biases
@@ -95,7 +81,7 @@ class LstmOptLayerImpl(BaseLayerImpl):
             _h.dot_add_mm(y[t - 1], R, S[t], transb=True)
 
             # Activations for Z and gates
-            self.act_func(Z[t], Z[t])
+            _h.act_func[self.activation](Z[t], Z[t])
             _h.sigmoid(gates[t], gates[t])
 
             # Cell
@@ -103,7 +89,7 @@ class LstmOptLayerImpl(BaseLayerImpl):
             _h.mult_add_tt(F[t], Ca[t - 1], Ca[t])
 
             # Block output
-            self.act_func(Ca[t], Cb[t])
+            _h.act_func[self.activation](Ca[t], Cb[t])
             _h.mult_tt(O[t], Cb[t], y[t])
 
     def backward_pass(self, buffers):
@@ -122,25 +108,15 @@ class LstmOptLayerImpl(BaseLayerImpl):
         dy = _h.allocate(y.shape)
 
         time_size, batch_size, in_size = x.shape
-        out_size = y.shape[2]
         flat_size = time_size * batch_size
         flat_dx = dx.reshape((flat_size, in_size))
         flat_x = x.reshape((flat_size, in_size))
         flat_dS = dS[:-1].reshape((flat_size, S.shape[2]))
 
-        gates = S[:, :, out_size:]
-        Z = S[:, :, :out_size]
-        I = S[:, :, out_size:2 * out_size]
-        F = S[:, :, out_size * 2:out_size * 3]
-        O = S[:, :, out_size * 3:]
+        gates, Z, I, F, O = self.slice_state(S)
+        dgates, dZ, dI, dF, dO = self.slice_state(dS)
 
-        dgates = dS[:, :, out_size:]
-        dZ = dS[:, :, :out_size]
-        dI = dS[:, :, out_size:2 * out_size]
-        dF = dS[:, :, out_size * 2:out_size * 3]
-        dO = dS[:, :, out_size * 3:]
-
-        _h.copy_to(dy, deltas)
+        _h.copy_to(deltas, dy)
 
         for t in range(time_size - 1, -1, - 1):
             # cumulate recurrent deltas
@@ -148,7 +124,7 @@ class LstmOptLayerImpl(BaseLayerImpl):
 
             # Cell
             _h.mult_tt(dy[t], O[t], dCb[t])
-            self.act_func_deriv(Ca[t], Cb[t], dCb[t], dCa[t])
+            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], F[t + 1], dCa[t])
 
             # Block Input and Gates
@@ -158,7 +134,7 @@ class LstmOptLayerImpl(BaseLayerImpl):
             _h.mult_tt(dy[t], Cb[t], dO[t])
 
             # Activation functions
-            self.act_func_deriv(None, Z[t], dZ[t], dZ[t])
+            _h.act_func_deriv[self.activation](None, Z[t], dZ[t], dZ[t])
             _h.sigmoid_deriv(None, gates[t], dgates[t], dgates[t])
 
         # Gradient for the recurrent weights

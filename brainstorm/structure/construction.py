@@ -3,9 +3,55 @@
 from __future__ import division, print_function, unicode_literals
 
 import six
-
-from brainstorm.uniquely_named import UniquelyNamed
 from brainstorm.utils import NetworkValidationError, is_valid_layer_name
+
+
+class UniquelyNamed(object):
+    """
+    An object that maintains a scope of names and ensures that its name is
+    unique within that scope by appending an appropriate index.
+
+    If there are no collisions then its name is the same as the given basename.
+    If there are multiple objects with the same name in the scope, then
+    its name is the basename + _index where index is a number given according
+    to the order in which the objects where created.
+    """
+
+    global_counter = 0
+
+    def __init__(self, basename):
+        self._basename = basename
+        self.scope = {basename: [self]}
+        self.creation_id = UniquelyNamed.global_counter
+        UniquelyNamed.global_counter += 1
+
+    def merge_scopes(self, other):
+        new_scope = self.scope
+        for name, scoped_names in other.scope.items():
+            if name not in self.scope:
+                new_scope[name] = []
+            new_scope[name] = sorted(set(self.scope[name] + scoped_names),
+                                     key=lambda x: x.creation_id)
+        for n in new_scope:
+            for sn in new_scope[n]:
+                sn.scope = new_scope
+
+    @property
+    def name(self):
+        if len(self.scope[self._basename]) == 1:
+            return self._basename
+
+        i = 1
+        for un in self.scope[self._basename]:
+            name = "{}_{}".format(self._basename, i)
+            # see if this derived name is already taken
+            # increase the index if need be
+            while name in self.scope and len(self.scope[name]) == 1:
+                i += 1
+                name = "{}_{}".format(self._basename, i)
+            if un is self:
+                return name
+            i += 1
 
 
 class LayerDetails(UniquelyNamed):
@@ -15,7 +61,7 @@ class LayerDetails(UniquelyNamed):
     This information is later used to generate an architecture, from which the
     actual layers are instantiated and combined into a network.
     """
-    def __init__(self, layer_type, shape=None, name=None, **kwargs):
+    def __init__(self, layer_type, name=None, **kwargs):
         if not is_valid_layer_name(layer_type):
             raise NetworkValidationError(
                 "Invalid layer_type: '{}'".format(layer_type))
@@ -48,9 +94,6 @@ class LayerDetails(UniquelyNamed):
         self.layer_kwargs = kwargs
         """Dictionary of additional parameters for this layer"""
 
-        if shape is not None:
-            self.layer_kwargs['shape'] = shape
-
         self._traversing = False
 
     def collect_connected_layers(self):
@@ -82,8 +125,18 @@ class ConstructionWrapper(object):
     """
 
     @classmethod
-    def create(cls, layer_type, shape=None, name=None, **kwargs):
-        details = LayerDetails(layer_type, shape, name, **kwargs)
+    def create(cls, layer_type, name=None, **kwargs):
+        if isinstance(layer_type, six.string_types):
+            layer_type_name = layer_type
+        else:
+            layer_type_name = layer_type.__name__
+
+        if not layer_type_name.endswith('LayerImpl'):
+            raise NetworkValidationError("{} should end with 'LayerImpl'"
+                                         .format(layer_type_name))
+        layer_type_name = layer_type_name[:-9]
+
+        details = LayerDetails(layer_type_name, name=name, **kwargs)
         return ConstructionWrapper(details)
 
     def __init__(self, layer_details, input_name='default',

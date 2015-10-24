@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
@@ -19,11 +19,11 @@ def DeltasScaling(factor, name=None):
     This can be used to invert the deltas and set up an adversarial branch of
     the network.
     """
-    return ConstructionWrapper.create('DeltasScaling', name=name,
+    return ConstructionWrapper.create(DeltasScalingLayerImpl, name=name,
                                       factor=factor)
 
 
-class DeltasScalingLayerImpl(BaseLayerImpl):
+class DeltasScalingLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'factor'}
 
@@ -35,7 +35,7 @@ class DeltasScalingLayerImpl(BaseLayerImpl):
         return out_shapes, OrderedDict(), OrderedDict()
 
     def forward_pass(self, buffers, training_pass=True):
-        self.handler.copy_to(buffers.outputs.default, buffers.inputs.default)
+        self.handler.copy_to(buffers.inputs.default, buffers.outputs.default)
 
     def backward_pass(self, buffers):
         self.handler.mult_add_st(self.factor,

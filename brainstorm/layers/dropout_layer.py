@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.structure.construction import ConstructionWrapper
 
@@ -14,11 +14,11 @@ def Dropout(drop_prob=0.5, name=None):
 
     drop_prob is the probability of a unit being dropped, i.e. 0
     """
-    return ConstructionWrapper.create('Dropout', drop_prob=drop_prob,
+    return ConstructionWrapper.create(DropoutLayerImpl, drop_prob=drop_prob,
                                       name=name)
 
 
-class DropoutLayerImpl(BaseLayerImpl):
+class DropoutLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'drop_prob'}
@@ -44,7 +44,7 @@ class DropoutLayerImpl(BaseLayerImpl):
             _h.mult_st(1 / (1 - self.drop_prob), buffers.outputs.default,
                        out=buffers.outputs.default)
         else:
-            _h.copy_to(buffers.outputs.default, buffers.inputs.default)
+            _h.copy_to(buffers.inputs.default, buffers.outputs.default)
 
     def backward_pass(self, buffers):
         self.handler.mult_add_tt(buffers.output_deltas.default,

@@ -8,7 +8,7 @@ from brainstorm.utils import LayerValidationError, get_by_path, get_inheritors
 
 
 def get_layer_class_from_typename(typename):
-    layer_classes = get_inheritors(BaseLayerImpl)
+    layer_classes = get_inheritors(Layer)
     for layer_class in layer_classes:
         if typename == layer_class.__name__:
             return layer_class
@@ -16,9 +16,9 @@ def get_layer_class_from_typename(typename):
         raise TypeError("Layer-type '{}' unknown!".format(typename))
 
 
-class BaseLayerImpl(object):
+class Layer(object):
     """
-    The base-class of all layer types defined in Python.
+    The base class of all layer types defined in Python.
 
     Each layer has a set of named inputs and outputs.
 
@@ -31,6 +31,26 @@ class BaseLayerImpl(object):
             Set of all incoming connections
         kwargs (dict):
             any further arguments passed to this layer
+
+    Attributes:
+        name (str):
+            The name of this layer as specified in the architecture
+        kwargs (dict):
+            Additional options or hyperparameters for this layer
+        in_shapes (OrderedDict[str, BufferStructure]):
+            Dictionary of `BufferStructure`s for each input.
+        out_shapes (OrderedDict[str, BufferStructure):
+            Dictionary of `BufferStructure`s for each output.
+        parameter_shapes (OrderedDict[str, BufferStructure):
+            Dictionary of `BufferStructure`s for each parameter.
+        internal_shapes (OrderedDict[str, BufferStructure):
+            Dictionary of `BufferStructure`s for each internal buffer.
+        incoming (list):
+            List of incoming connections
+        outgoing (list):
+            List of outgoing connections
+        handler (brainstorm.handlers.base_handler.Handler):
+            The handler currently responsible for this layer
     """
     expected_kwargs = {}
     """Set of all kwargs that this layer accepts"""
@@ -38,41 +58,28 @@ class BaseLayerImpl(object):
     expected_inputs = {}
     """Names and shape-templates for all inputs of this layer"""
 
+    computes_no_input_deltas_for = ()
+    computes_no_gradients_for = ()
+    takes_no_output_deltas_from = ()
+
     def __init__(self, name, in_shapes, incoming_connections,
                  outgoing_connections, **kwargs):
         self.name = name
-        """ The name of this layer as specified in the architecture"""
-
         self.kwargs = kwargs
-        """ Additional options or hyperparameters for this layer"""
-
         self.in_shapes = OrderedDict()
-        """ Dictionary of `BufferStructure`s for each input. """
-
         # make sure in_shapes are an ordered dict
         for key in sorted(in_shapes.keys()):
             self.in_shapes[key] = in_shapes[key]
 
         self.incoming = incoming_connections
-        """ List of incoming connections """
-
         self.outgoing = outgoing_connections
-        """ List of outgoing connections """
-
         self.handler = None
         self._validate_kwargs()
         self._validate_in_shapes()
-        out, param, intern = self.setup(kwargs, in_shapes)
-
+        out, param, intern = self.setup(self.kwargs, self.in_shapes)
         self.out_shapes = out
-        """ Dictionary of `BufferStructure`s for each output. """
-
         self.parameter_shapes = param
-        """ Dictionary of `BufferStructure`s for each parameter. """
-
         self.internal_shapes = intern
-        """ Dictionary of `BufferStructure`s for each internal buffer. """
-
         self._validate_connections()
 
     def setup(self, kwargs, in_shapes):

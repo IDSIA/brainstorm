@@ -39,8 +39,7 @@ def gather_losses_and_scores(net, scorers, scores, out_name='',
 
     for sc in scorers:
         name = sc.__name__
-        predicted = net.get_output(sc.out_name) if sc.out_name\
-            else net.get_output(out_name)
+        predicted = net.get(sc.out_name or out_name or net.output_name)
         true_labels = net.get_input(sc.targets_name) if sc.targets_name\
             else net.get_input(targets_name)
         mask = net.get_input(sc.mask_name) if sc.mask_name\

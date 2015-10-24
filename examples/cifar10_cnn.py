@@ -26,7 +26,7 @@ getter_va = Minibatches(100, default=ds['validation']['default'][:],
 
 # ------------------------------ Set up Network ----------------------------- #
 
-inp, out = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
+inp, fc = bs.tools.get_in_out_layers('classification', (32, 32, 3), 10)
 
 (inp >>
     bs.layers.Convolution2D(32, kernel_size=(5, 5), padding=2, name='Conv1') >>
@@ -36,20 +36,18 @@ inp, out = bs.tools.get_in_out_layers_for_classification((3, 32, 32), 10)
     bs.layers.Convolution2D(64, kernel_size=(5, 5), padding=2, name='Conv3') >>
     bs.layers.Pooling2D(type="max", kernel_size=(3, 3), stride=(2, 2)) >>
     bs.layers.FullyConnected(64, name='FC') >>
-    out)
+    fc)
 
-network = bs.Network.from_layer(out)
+network = bs.Network.from_layer(fc)
 network.set_handler(PyCudaHandler())
 network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
                     'FC': {'W': Gaussian(0.1), 'bias': 0},
-                    'Output': {'W': Gaussian(0.1), 'bias': 0}})
+                    'Output_projection': {'W': Gaussian(0.1), 'bias': 0}})
 
 # ------------------------------ Set up Trainer ----------------------------- #
 
-scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
-trainer = bs.Trainer(bs.training.MomentumStep(learning_rate=0.01,
-                                              momentum=0.9),
-                     double_buffering=False)
+scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
+trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01, momentum=0.9))
 trainer.train_scorers = scorers
 trainer.add_hook(bs.hooks.ProgressBar())
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
@@ -63,5 +61,4 @@ trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 # --------------------------------- Train ----------------------------------- #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("\nBest validation accuracy:",
-      max(trainer.logs["validation"]["Accuracy"]))
+print("Best validation accuracy:", max(trainer.logs["validation"]["Accuracy"]))

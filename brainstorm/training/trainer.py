@@ -9,7 +9,7 @@ from collections import OrderedDict
 from brainstorm.describable import Describable
 from brainstorm.scorers import (aggregate_losses_and_scores,
                                 gather_losses_and_scores)
-from brainstorm.training.utils import run_network, run_network_double_buffer
+from brainstorm.training.utils import run_network
 
 
 class Trainer(Describable):
@@ -26,17 +26,15 @@ class Trainer(Describable):
     }
     __default_values__ = {'verbose': True}
 
-    def __init__(self, stepper, verbose=True, double_buffering=True):
+    def __init__(self, stepper, verbose=True):
         """Create a new Trainer.
 
         Args:
-            stepper (brainstorm.training.steppers.TrainingStep):
+            stepper (brainstorm.training.steppers.TrainingStepper):
             verbose (bool):
-            double_buffering (bool):
         """
         self.stepper = stepper
         self.verbose = verbose
-        self.double_buffering = double_buffering
         self.hooks = OrderedDict()
         self.train_scorers = []
         self.current_epoch_nr = 0
@@ -82,12 +80,8 @@ class Trainer(Describable):
         self.stepper.start(net)
         named_data_iters['training_data_iter'] = training_data_iter
         self._start_hooks(net, named_data_iters)
-        self._emit_hooks(net, 'update')
-        if self._emit_hooks(net, 'epoch'):
+        if self._emit_hooks(net, 'update') or self._emit_hooks(net, 'epoch'):
             return
-
-        run = (run_network_double_buffer if self.double_buffering else
-               run_network)
 
         should_stop = False
         while not should_stop:
@@ -100,7 +94,7 @@ class Trainer(Describable):
                 print('\n\n', 12 * '- ', "Epoch", self.current_epoch_nr,
                       12 * ' -')
             iterator = training_data_iter(handler=net.handler)
-            for _ in run(net, iterator):
+            for _ in run_network(net, iterator):
                 self.current_update_nr += 1
                 self.stepper.run()
                 gather_losses_and_scores(net, self.train_scorers, train_scores)
@@ -122,7 +116,7 @@ class Trainer(Describable):
         return self.results
 
     def __init_from_description__(self, description):
-        """Recover the hooks in order of priority and set their names."""
+        # Recover the hooks in order of priority and set their names.
         def get_priority(x):
             return getattr(x[1], 'priority', 0)
         ordered_mon = sorted(self.hooks.items(), key=get_priority)

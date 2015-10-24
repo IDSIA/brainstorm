@@ -13,13 +13,9 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import (NetworkValidationError, get_normalized_path,
                               is_valid_layer_name)
 
-ConnectionBase = namedtuple('ConnectionBase',
-                            ['start_layer', 'output_name',
-                             'end_layer', 'input_name'])
-
-
-class Connection(ConnectionBase):
-    pass
+Connection = namedtuple('Connection',
+                        ['start_layer', 'output_name',
+                         'end_layer', 'input_name'])
 
 
 def get_layer_description(layer_details):

@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -14,10 +14,10 @@ from brainstorm.utils import (LayerValidationError, flatten_features,
 
 def SquaredDifference(name=None):
     """Create a Squared Difference layer."""
-    return ConstructionWrapper.create('SquaredDifference', name=name)
+    return ConstructionWrapper.create(SquaredDifferenceLayerImpl, name=name)
 
 
-class SquaredDifferenceLayerImpl(BaseLayerImpl):
+class SquaredDifferenceLayerImpl(Layer):
 
     expected_inputs = {'inputs_1': StructureTemplate('T', 'B', '...'),
                        'inputs_2': StructureTemplate('T', 'B', '...')}
@@ -71,7 +71,7 @@ class SquaredDifferenceLayerImpl(BaseLayerImpl):
         tmp = _h.allocate(inputs_2.shape)
         # out_deltas has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_features_t(out_deltas, grad_diff)
+        _h.broadcast_t(out_deltas, 2, grad_diff)
 
         grad_diff = flatten_time(grad_diff)
         # calculate

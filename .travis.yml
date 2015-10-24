@@ -16,7 +16,7 @@ install:
 
 # Run test
 script:
-  - py.test $PYTEST_ARGS
+  - py.test $PYTEST_ARGS brainstorm
 
 matrix:
   include:

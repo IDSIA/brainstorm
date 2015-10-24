@@ -4,20 +4,27 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import flatten_time_and_features
+from brainstorm.utils import flatten_all_but_last
 
 
 def BatchNorm(name=None, decay=0.9, epsilon=1.0e-5):
-    """Create a BatchNormalization layer."""
-    return ConstructionWrapper.create('BatchNorm', name=name, decay=decay,
+    """Create a BatchNormalization layer.
+
+    This layer implements batch normalization over the last (right-most)
+    dimension. Thus, it can be use with both fully connected and convolutional
+    layers (but only with data in NHWC format).
+    """
+    return ConstructionWrapper.create(BatchNormLayerImpl,
+                                      name=name,
+                                      decay=decay,
                                       epsilon=epsilon)
 
 
-class BatchNormLayerImpl(BaseLayerImpl):
+class BatchNormLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'decay', 'epsilon'}
@@ -29,18 +36,16 @@ class BatchNormLayerImpl(BaseLayerImpl):
 
         outputs = OrderedDict()
         outputs['default'] = in_shapes['default']
-        in_size = self.in_shapes['default'].feature_size
-
+        
         parameters = OrderedDict()
-        feature_shape = BufferStructure(in_size)
-        parameters['gamma'] = feature_shape
-        parameters['beta'] = feature_shape
-        parameters['mu'] = feature_shape
-        parameters['sigma'] = feature_shape
+        buf = BufferStructure(self.in_shapes['default'].feature_shape[-1])
+        parameters['gamma'] = buf
+        parameters['beta'] = buf
+        parameters['mu'] = buf
+        parameters['sigma'] = buf
 
         internals = OrderedDict()
-        feature_shape = BufferStructure(self.in_shapes['default'].feature_size)
-        internals['sigma_b'] = feature_shape
+        internals['sigma_b'] = buf
         internals['centered'] = self.in_shapes['default']
         internals['x_hat'] = self.in_shapes['default']
 
@@ -51,10 +56,10 @@ class BatchNormLayerImpl(BaseLayerImpl):
         sigma_b, centered, x_hat = buffers.internals
         gamma, beta, mu, sigma = buffers.parameters
         # Note: we flatten time for all buffers, so we skip the flat_ prefix
-        inputs = flatten_time_and_features(buffers.inputs.default)
-        centered = flatten_time_and_features(centered)
-        x_hat = flatten_time_and_features(x_hat)
-        out = flatten_time_and_features(buffers.outputs.default)
+        inputs = flatten_all_but_last(buffers.inputs.default)
+        centered = flatten_all_but_last(centered)
+        x_hat = flatten_all_but_last(x_hat)
+        out = flatten_all_but_last(buffers.outputs.default)
         m = inputs.shape[0]
 
         if training_pass:
@@ -106,9 +111,9 @@ class BatchNormLayerImpl(BaseLayerImpl):
         dgamma = buffers.gradients.gamma
         dbeta = buffers.gradients.beta
         # Note: we flatten time for all buffers, so we skip the flat_ prefix
-        x_hat = flatten_time_and_features(x_hat)
-        outdeltas = flatten_time_and_features(buffers.output_deltas.default)
-        indeltas = flatten_time_and_features(buffers.input_deltas.default)
+        x_hat = flatten_all_but_last(x_hat)
+        outdeltas = flatten_all_but_last(buffers.output_deltas.default)
+        indeltas = flatten_all_but_last(buffers.input_deltas.default)
         m = outdeltas.shape[0]
 
         big_tmp = _h.allocate(x_hat.shape)     # big

@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
@@ -17,11 +17,11 @@ def Input(out_shapes, name=None):
     The 'out_shapes' keyword argument is required and specifies the names and
     shapes of all external inputs.
     """
-    return ConstructionWrapper.create('Input', name=name,
+    return ConstructionWrapper.create(InputLayerImpl, name=name,
                                       out_shapes=out_shapes)
 
 
-class InputLayerImpl(BaseLayerImpl):
+class InputLayerImpl(Layer):
 
     expected_inputs = {}
     expected_kwargs = {'out_shapes'}

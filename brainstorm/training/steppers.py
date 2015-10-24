@@ -7,7 +7,7 @@ from brainstorm.describable import Describable
 
 # ########################### Base Class ######################################
 
-class TrainingStep(Describable):
+class TrainingStepper(Describable):
     """
     Base class for all training steps. Defines the common interface
     """
@@ -25,7 +25,7 @@ class TrainingStep(Describable):
 
 # ########################## Training Steps ###################################
 
-class ForwardStep(TrainingStep):
+class ForwardStepper(TrainingStepper):
     """
     Only runs the forward pass and returns the error. Does not train the
     network at all.
@@ -35,7 +35,7 @@ class ForwardStep(TrainingStep):
     """
 
     def __init__(self, use_training_pass=False):
-        super(ForwardStep, self).__init__()
+        super(ForwardStepper, self).__init__()
         self.use_training_pass = use_training_pass
 
     def run(self):
@@ -43,19 +43,19 @@ class ForwardStep(TrainingStep):
         return self.net.get_loss_value()
 
 
-class SgdStep(TrainingStep):
+class SgdStepper(TrainingStepper):
     """
     Stochastic Gradient Descent.
     """
     __undescribed__ = {'update'}
 
     def __init__(self, learning_rate=0.1):
-        super(SgdStep, self).__init__()
+        super(SgdStepper, self).__init__()
         self.learning_rate = learning_rate
         self.update = None
 
     def start(self, net):
-        super(SgdStep, self).start(net)
+        super(SgdStepper, self).start(net)
         self.update = net.handler.zeros(net.buffer.parameters.shape)
 
     def run(self):
@@ -69,7 +69,7 @@ class SgdStep(TrainingStep):
                                 out=self.net.buffer.parameters)
 
 
-class MomentumStep(TrainingStep):
+class MomentumStepper(TrainingStepper):
     """
     Stochastic Gradient Descent with a momentum term.
     learning_rate and momentum can be scheduled using
@@ -82,7 +82,7 @@ class MomentumStep(TrainingStep):
 
     def __init__(self, learning_rate=0.1, momentum=0.0,
                  scale_learning_rate=True):
-        super(MomentumStep, self).__init__()
+        super(MomentumStepper, self).__init__()
         self.velocity = None
         self.learning_rate = learning_rate
         self.momentum = momentum
@@ -91,7 +91,7 @@ class MomentumStep(TrainingStep):
         self.scale_learning_rate = scale_learning_rate
 
     def start(self, net):
-        super(MomentumStep, self).start(net)
+        super(MomentumStepper, self).start(net)
         self.velocity = net.handler.zeros(net.buffer.parameters.shape)
 
     def run(self):
@@ -114,7 +114,7 @@ class MomentumStep(TrainingStep):
                                 out=self.net.buffer.parameters)
 
 
-class NesterovStep(MomentumStep):
+class NesterovStepper(MomentumStepper):
     """
     Stochastic Gradient Descent with a Nesterov-style momentum term.
     learning_rate and momentum can be scheduled using

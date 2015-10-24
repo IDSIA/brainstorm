@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -25,15 +25,18 @@ def BinomialCrossEntropy(name=None):
     For outputs outside that range or non-binary targets the result is
     undefined.
     """
-    return ConstructionWrapper.create('BinomialCrossEntropy', name=name)
+    return ConstructionWrapper.create(BinomialCrossEntropyLayerImpl,
+                                      name=name)
 
 
-class BinomialCrossEntropyLayerImpl(BaseLayerImpl):
+class BinomialCrossEntropyLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
                        'targets': StructureTemplate('T', 'B', '...')}
 
     expected_kwargs = {}
+
+    computes_no_input_deltas_for = ['targets']
 
     def setup(self, kwargs, in_shapes):
         if in_shapes['default'] != in_shapes['targets']:
@@ -107,7 +110,7 @@ class BinomialCrossEntropyLayerImpl(BaseLayerImpl):
 
         # ceed_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_features_t(ceed_sum, tmp)
+        _h.broadcast_t(ceed_sum, 2, tmp)
         _h.mult_tt(ceed, tmp, ceed)
 
         _h.add_tt(ceed, yd, yd)

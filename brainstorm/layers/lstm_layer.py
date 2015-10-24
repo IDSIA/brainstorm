@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -13,18 +13,17 @@ from brainstorm.utils import LayerValidationError, flatten_time
 
 def Lstm(size, activation='tanh', name=None):
     """Create an LSTM layer."""
-    return ConstructionWrapper.create('Lstm', size=size, name=name,
-                                      activation=activation)
+    return ConstructionWrapper.create(LstmLayerImpl, size=size,
+                                      name=name, activation=activation)
 
 
-class LstmLayerImpl(BaseLayerImpl):
+class LstmLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
     expected_kwargs = {'size', 'activation'}
 
     def setup(self, kwargs, in_shapes):
-        self.act_func = lambda x, y: None
-        self.act_func_deriv = lambda x, y, dy, dx: None
+        self.activation = kwargs.get('activation', 'tanh')
         in_size = in_shapes['default'].feature_size
         self.size = kwargs.get('size', in_size)
         if not isinstance(self.size, int):
@@ -40,6 +39,11 @@ class LstmLayerImpl(BaseLayerImpl):
         parameters['Wi'] = BufferStructure(self.size, in_size)
         parameters['Wf'] = BufferStructure(self.size, in_size)
         parameters['Wo'] = BufferStructure(self.size, in_size)
+
+        parameters['pi'] = BufferStructure(1, self.size)
+        parameters['pf'] = BufferStructure(1, self.size)
+        parameters['po'] = BufferStructure(1, self.size)
+
         parameters['Rz'] = BufferStructure(self.size, self.size)
         parameters['Ri'] = BufferStructure(self.size, self.size)
         parameters['Rf'] = BufferStructure(self.size, self.size)
@@ -82,27 +86,14 @@ class LstmLayerImpl(BaseLayerImpl):
                                            is_backward_only=True)
         return outputs, parameters, internals
 
-    def set_handler(self, new_handler):
-        super(LstmLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_func_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'tanh')]
-
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
+         pi, pf, po,
          Rz, Ri, Rf, Ro,
          bz, bi, bf, bo) = buffers.parameters
+
         (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
          dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
         x = buffers.inputs.default
@@ -122,17 +113,19 @@ class LstmLayerImpl(BaseLayerImpl):
 
         for t in range(time_size):
             # Block input
-            _h.dot_add_mm(y[t - 1], Rz, Za[t])
+            _h.dot_add_mm(y[t - 1], Rz, Za[t], transb=True)
             _h.add_mv(Za[t], bz.reshape((1, self.size)), Za[t])
-            self.act_func(Za[t], Zb[t])
+            _h.act_func[self.activation](Za[t], Zb[t])
 
             # Input Gate
-            _h.dot_add_mm(y[t - 1], Ri, Ia[t])
+            _h.dot_add_mm(y[t - 1], Ri, Ia[t], transb=True)
+            _h.mult_add_mv(Ca[t - 1], pi, Ia[t])
             _h.add_mv(Ia[t], bi.reshape((1, self.size)), Ia[t])
             _h.sigmoid(Ia[t], Ib[t])
 
             # Forget Gate
-            _h.dot_add_mm(y[t - 1], Rf, Fa[t])
+            _h.dot_add_mm(y[t - 1], Rf, Fa[t], transb=True)
+            _h.mult_add_mv(Ca[t - 1], pf, Fa[t])
             _h.add_mv(Fa[t], bf.reshape((1, self.size)), Fa[t])
             _h.sigmoid(Fa[t], Fb[t])
 
@@ -141,21 +134,24 @@ class LstmLayerImpl(BaseLayerImpl):
             _h.mult_add_tt(Fb[t], Ca[t - 1], Ca[t])
 
             # Output Gate
-            _h.dot_add_mm(y[t - 1], Ro, Oa[t])
+            _h.dot_add_mm(y[t - 1], Ro, Oa[t], transb=True)
+            _h.mult_add_mv(Ca[t], po, Oa[t])
             _h.add_mv(Oa[t], bo.reshape((1, self.size)), Oa[t])
             _h.sigmoid(Oa[t], Ob[t])
 
             # Block output
-            self.act_func(Ca[t], Cb[t])
+            _h.act_func[self.activation](Ca[t], Cb[t])
             _h.mult_tt(Ob[t], Cb[t], y[t])
 
     def backward_pass(self, buffers):
         # prepare
         _h = self.handler
         (Wz, Wi, Wf, Wo,
+         pi, pf, po,
          Rz, Ri, Rf, Ro,
          bz, bi, bf, bo) = buffers.parameters
         (dWz, dWi, dWf, dWo,
+         dpi, dpf, dpo,
          dRz, dRi, dRf, dRo,
          dbz, dbi, dbf, dbo) = buffers.gradients
 
@@ -168,23 +164,31 @@ class LstmLayerImpl(BaseLayerImpl):
         deltas = buffers.output_deltas.default
 
         dy = _h.allocate(y.shape)
+        _h.fill(dCa, 0.0)
 
         time_size, batch_size, in_size = x.shape
         for t in range(time_size - 1, -1, - 1):
-            # cumulate recurrent deltas
-            _h.copy_to(dy[t], deltas[t])
-            _h.dot_add_mm(dIa[t + 1], Ri, dy[t], transb=True)
-            _h.dot_add_mm(dFa[t + 1], Rf, dy[t], transb=True)
-            _h.dot_add_mm(dOa[t + 1], Ro, dy[t], transb=True)
-            _h.dot_add_mm(dZa[t + 1], Rz, dy[t], transb=True)
+            # Accumulate recurrent deltas
+            _h.copy_to(deltas[t], dy[t])
+            _h.dot_add_mm(dIa[t + 1], Ri, dy[t])
+            _h.dot_add_mm(dFa[t + 1], Rf, dy[t])
+            _h.dot_add_mm(dOa[t + 1], Ro, dy[t])
+            _h.dot_add_mm(dZa[t + 1], Rz, dy[t])
+
+            # Peephole connection part:
+            _h.mult_add_mv(dIa[t + 1], pi, dCa[t])
+            _h.mult_add_mv(dFa[t + 1], pf, dCa[t])
 
             # Output Gate
             _h.mult_tt(dy[t], Cb[t], dOb[t])
             _h.sigmoid_deriv(Oa[t], Ob[t], dOb[t], dOa[t])
+            # Peephole connection
+            _h.mult_add_mv(dOa[t], po, dCa[t])
 
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
-            self.act_func_deriv(Ca[t], Cb[t], dCb[t], dCa[t])
+            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])
+            _h.add_tt(dCa[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], Fb[t + 1], dCa[t])
 
             # Forget Gate
@@ -197,9 +201,8 @@ class LstmLayerImpl(BaseLayerImpl):
 
             # Block Input
             _h.mult_tt(dCa[t], Ib[t], dZb[t])
-            self.act_func_deriv(Za[t], Zb[t], dZb[t], dZa[t])
+            _h.act_func_deriv[self.activation](Za[t], Zb[t], dZb[t], dZa[t])
 
-        # Same as for standard RNN:
         flat_inputs = flatten_time(x)
         flat_dinputs = flatten_time(dx)
 
@@ -208,7 +211,7 @@ class LstmLayerImpl(BaseLayerImpl):
         flat_dOa = flatten_time(dOa[:-1])
         flat_dZa = flatten_time(dZa[:-1])
 
-        # calculate in_deltas and gradients
+        # Calculate in_deltas and gradients
         _h.dot_add_mm(flat_dIa, Wi, flat_dinputs)
         _h.dot_add_mm(flat_dFa, Wf, flat_dinputs)
         _h.dot_add_mm(flat_dOa, Wo, flat_dinputs)
@@ -230,17 +233,45 @@ class LstmLayerImpl(BaseLayerImpl):
         _h.add_tt(dbz, dbias_tmp, dbz)
 
         flat_outputs = flatten_time(y[:-2])
+        flat_cell = flatten_time(Ca[:-2])
+        flat_cell2 = flatten_time(Ca[:-1])
+
+        dWco_tmp = _h.allocate(flat_cell2.shape)
+        dWc_tmp = _h.allocate(dpo.shape)
+
+        # Output gate Peephole
+        _h.mult_tt(flat_cell2, flat_dOa, dWco_tmp)
+        _h.sum_t(dWco_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dpo, dWc_tmp, dpo)
+
         flat_dIa = flatten_time(dIa[1:-1])
         flat_dFa = flatten_time(dFa[1:-1])
         flat_dOa = flatten_time(dOa[1:-1])
         flat_dZa = flatten_time(dZa[1:-1])
 
-        _h.dot_add_mm(flat_outputs, flat_dIa, dRi, transa=True)
-        _h.dot_add_mm(flat_outputs, flat_dFa, dRf, transa=True)
-        _h.dot_add_mm(flat_outputs, flat_dOa, dRo, transa=True)
-        _h.dot_add_mm(flat_outputs, flat_dZa, dRz, transa=True)
+        _h.dot_add_mm(flat_dIa, flat_outputs, dRi, transa=True)
+        _h.dot_add_mm(flat_dFa, flat_outputs, dRf, transa=True)
+        _h.dot_add_mm(flat_dOa, flat_outputs, dRo, transa=True)
+        _h.dot_add_mm(flat_dZa, flat_outputs, dRz, transa=True)
 
-        _h.dot_add_mm(dy[-1], dIa[0], dRi, transa=True)
-        _h.dot_add_mm(dy[-1], dFa[0], dRf, transa=True)
-        _h.dot_add_mm(dy[-1], dOa[0], dRo, transa=True)
-        _h.dot_add_mm(dy[-1], dZa[0], dRz, transa=True)
+        _h.dot_add_mm(dIa[0], dy[-1], dRi, transa=True)
+        _h.dot_add_mm(dFa[0], dy[-1], dRf, transa=True)
+        _h.dot_add_mm(dOa[0], dy[-1], dRo, transa=True)
+        _h.dot_add_mm(dZa[0], dy[-1], dRz, transa=True)
+
+        # Other Peephole connections
+        dWcif_tmp = _h.allocate(flat_cell.shape)
+        _h.mult_tt(flat_cell, flat_dIa, dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dpi, dWc_tmp, dpi)
+        _h.mult_tt(flat_cell, flat_dFa, dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dpf, dWc_tmp, dpf)
+
+        dWcif_tmp = _h.allocate(dIa[0].shape)
+        _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dpi, dWc_tmp, dpi)
+        _h.mult_tt(dCa[-1], dIa[0], dWcif_tmp)
+        _h.sum_t(dWcif_tmp, axis=0, out=dWc_tmp)
+        _h.add_tt(dpf, dWc_tmp, dpf)

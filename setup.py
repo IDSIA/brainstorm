@@ -44,7 +44,6 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 
-readme = open('README.md').read()
 doclink = """
 Documentation
 -------------
@@ -55,8 +54,8 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 setup(
     name='brainstorm',
     version=about['__version__'],
-    description='A fresh start for the pylstm RNN library',
-    long_description=readme + '\n\n' + doclink + '\n\n' + history,
+    description='Fast, flexible and fun neural networks.',
+    long_description=doclink + '\n\n' + history,
     author=about['__author__'],
     url=about['__url__'],
     packages=['brainstorm',
@@ -69,7 +68,7 @@ setup(
     cmdclass={'test': PyTest},
     license=about['__license__'],
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',

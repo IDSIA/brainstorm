@@ -11,7 +11,7 @@ from brainstorm.describable import Describable
 
 @six.add_metaclass(abc.ABCMeta)
 class Handler(Describable):
-    """Abstract Base Class for all handlers.
+    """Abstract base class for all handlers.
 
     This base is used mainly to ensure a common interface and provide
     documentation for derived handlers. When implementing new methods
@@ -34,6 +34,41 @@ class Handler(Describable):
       rnd: A random state maintained by this handler.
       array_type: The type of array object that this handler works with.
     """
+
+    __undescribed__ = {'inplace_act_func', 'inplace_act_func_deriv',
+                       'act_func', 'act_func_deriv'}
+
+    def __init__(self):
+        self.inplace_act_func = {
+            'sigmoid': lambda x: self.sigmoid(x, x),
+            'rel': lambda x: self.rel(x, x),
+            'tanh': lambda x: self.tanh(x, x),
+            'linear': lambda x: None,
+        }
+
+        self.inplace_act_func_deriv = {
+            'sigmoid': lambda y, dy: self.sigmoid_deriv(y, y, dy, dy),
+            'rel': lambda y, dy: self.rel_deriv(y, y, dy, dy),
+            'tanh': lambda y, dy: self.tanh_deriv(y, y, dy, dy),
+            'linear': lambda y, dy: None,
+        }
+
+        self.act_func = {
+            'sigmoid': self.sigmoid,
+            'rel': self.rel,
+            'tanh': self.tanh,
+            'linear': lambda x, y: self.copy_to(x, y)
+        }
+
+        self.act_func_deriv = {
+            'sigmoid': self.sigmoid_deriv,
+            'rel': self.rel_deriv,
+            'tanh': self.tanh_deriv,
+            'linear': lambda x, y, dy, dx: self.copy_to(dy, dx)
+        }
+
+    def __init_from_description__(self, description):
+        Handler.__init__(self)
 
     # ------------------------- Allocate new memory ------------------------- #
 
@@ -73,7 +108,7 @@ class Handler(Describable):
     # ---------------------------- Copy and Fill ---------------------------- #
 
     @abc.abstractmethod
-    def copy_to(self, dest, src):
+    def copy_to(self, src, dest):
         """Copy the contents of one array to another.
 
         Both source and destination arrays must be of this handler's supported
@@ -82,6 +117,22 @@ class Handler(Describable):
         Args:
             dest (array_type): Destination array.
             src (array_type): Source array.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
+    def copy_to_if(self, src, dest, cond):
+        """Copy element of 'src' to element of 'dest' if cond is not equal to 0.
+
+        Args:
+            src (array_type):
+                Source array whose elements (might) be copied into `dest`.
+            dest (array_type):
+                Destination array.
+            cond (array_type):
+                The condition array. Only those `src` elements get copied to
+                `dest` whose corresponding `cond` elements are non-zero.
         Returns:
             None
         """
@@ -105,6 +156,24 @@ class Handler(Describable):
         Args:
             mem (array_type): Array to be filled.
             val (dtype): Value to fill.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
+    def fill_if(self, mem, val, cond):
+        """Set the elements of `mem` to `val` if corresponding `cond` element
+        is non-zero.
+
+        Args:
+            mem (array_type):
+                Array to be filled.
+            val (dtype):
+                The scalar which the elements of `mem` (might) be set to.
+            cond (array_type):
+                The condition array. Only those `mem` elements are set to
+                `val` whose corresponding `cond` elements are non-zero.
+
         Returns:
             None
         """
@@ -153,6 +222,24 @@ class Handler(Describable):
             a (array_type): Array whose absolute values are to be computed.
             out (array_type): Array into which the output is placed. Must
                               have the same shape as :attr:`a`.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
+    def add_into_if(self, a, out, cond):
+        """Add element of `a` to element of `out` if corresponding element in
+        `cond` is non-zero.
+
+        Args:
+            a (array_type):
+                Array whose elements (might) be added to `out`.
+            out (array_type):
+                Output array, whose values might be increased by values from
+                `a`.
+            cond (array_type):
+                The condition array. Only those entries from `a` are added into
+                `out` whose corresponding `cond` elements are non-zero.
         Returns:
             None
         """
@@ -257,28 +344,24 @@ class Handler(Describable):
         """
 
     @abc.abstractmethod
-    def broadcast_features_t(self, a, out):
-        """Broadcast the right-most dimension of an array by copying elements.
+    def broadcast_t(self, a, axis, out):
+        """Broadcast the given axis of an array by copying elements.
 
         This function provides a numpy-broadcast-like operation for the
-        right-most dimension of an array. E.g. an array with shape (2, 3, 4, 1)
-        may be broadcasted to shape (2, 3, 4, 5), by copying all the elements
-        5 times.
-
-        Note:
-            This function supports more general cases, such as broadcasting
-            an array of shape (2, 3, 1) to shape (2, 3, 1, 3, 2). However,
-            currently it is assumed that this function will be used with
-            both :attr:`a` and :attr:`out` having the same number of dimensions.
+        the dimension given by axis. E.g. for axis=3 an array with shape
+        (2, 3, 4, 1) may be broadcasted to shape (2, 3, 4, 5), by copying
+        all the elements 5 times.
 
         Args:
-            a (array_type): Array whose elements should be broadcasted. Must
-                            be at least 3D and the rightmost dimension must
-                            be of size 1.
-            out (array_type): Array into which the output is placed. Must be at
-                              at least 3D and have same the number of
-                              dimensions as :attr:`a`. Only the right-most
-                              dimension can be different from :attr:`a`.
+            a (array_type):
+                Array whose elements should be broadcasted. The dimension
+                corresponding to axis must be of size 1.
+            axis (int):
+                the axis along which to broadcast
+            out (array_type):
+                Array into which the output is placed. Must have same the
+                number of dimensions as `a`. Only the dimension corresponding
+                to axis can differ from `a`.
         Returns:
             None
         """
@@ -421,12 +504,12 @@ class Handler(Describable):
         """Fill an array with zeros and ones.
 
         Fill an array with zeros and ones such that the probability of an
-        entry being one is equal to :attr:`probability`.
+        element being one is equal to :attr:`probability`.
 
         Args:
             mask (array_type): Array to will be filled.
-            probability (float): Probability of an entry of :attr:`mask` being
-            equal to one.
+            probability (float): Probability of an element of :attr:`mask`
+            being equal to one.
         Returns:
             None
         """
@@ -437,7 +520,7 @@ class Handler(Describable):
 
         :attr:`v` and :attr:`out` must be column vectors of the same size.
         Elements from the matrix :attr:`m` are copied using the indices given
-        by a column vector. From row `i` of the matrix, the entry from column
+        by a column vector. From row `i` of the matrix, the element from column
         `v[i, 0]` is copied to out, such that `out[i, 0] = m[i, v[i, 0]]`.
 
         Note that `m` must have enough columns such that all indices in
@@ -499,6 +582,22 @@ class Handler(Describable):
             padding (int):
             stride (tuple[int]):
             argmax (array_type):
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
+    def modulo_tt(self, a, b, out):
+        """Take the modulo between two arrays elementwise. (out = a % b)
+
+        Args:
+            a (array_type):
+                First array (dividend).
+            b (array_type):
+                Second array (divisor). Must have the same shape as `a`.
+            out (array_type):
+                Array into which the remainder is placed. Must have the same
+                shape as :attr:`a` and :attr:`b`.
         Returns:
             None
         """
@@ -653,6 +752,29 @@ class Handler(Describable):
             None
         """
 
+    @abc.abstractmethod
+    def merge_tt(self, a, b, out):
+        """Merge arrays a and b along their last axis.
+
+        Args:
+            a (array_type): Array to be merged.
+            b (array_type): Array to be merged.
+            out (array_type): Array into which the output is placed.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
+    def split_add_tt(self, x, out_a, out_b):
+        """Split array x along the last axis and add the parts to out_i.
+
+        Args:
+            x (array_type): Array to be split.
+            out_a (array_type): Array to which 1st part of x is added.
+            out_b (array_type): Array to which 2nd part of x is added.
+        Returns:
+            None
+        """
     # ------------------------ Activation functions ------------------------- #
 
     @abc.abstractmethod

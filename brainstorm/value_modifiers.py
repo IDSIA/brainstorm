@@ -10,6 +10,11 @@ from brainstorm.randomness import Seedable
 
 class ValueModifier(Seedable, Describable):
 
+    """
+    ValueModifiers can be installed in a :class:`Network` to affect either the
+    parameters or the gradients.
+    """
+
     __undescribed__ = {'layer_name', 'view_name'}
 
     def __init__(self):
@@ -169,7 +174,7 @@ class FreezeValues(ValueModifier):
             self.device_weights = handler.allocate(self.weights.shape)
             handler.set_from_numpy(self.device_weights, self.weights)
 
-        handler.copy_to(view, self.device_weights)
+        handler.copy_to(self.device_weights, view)
 
 
 class L1Decay(GradientModifier):

@@ -62,9 +62,13 @@ class DebugHandler(Handler):
     __undescribed__ = {'EMPTY', 'array_type'}
 
     def __init__(self, handler):
+        super(DebugHandler, self).__init__()
         self.handler = handler
         self.EMPTY = DebugArray(arr=handler.EMPTY)
         self.array_type = DebugArray
+
+    def __init_from_description__(self, description):
+        self.__init__(self.handler)
 
     # ------------------------- Allocate new memory ------------------------- #
 
@@ -83,11 +87,17 @@ class DebugHandler(Handler):
     # ---------------------------- Copy and Fill ---------------------------- #
 
     @check_for_inf_or_nan
-    def copy_to(self, dest, src):
+    def copy_to(self, src, dest):
         assert_debug_arrays(dest, src)
         assert_shapes_equal(dest, src)
         assert dest.size == src.size, "{} != {}".format(dest.size, src.size)
-        self.handler.copy_to(dest.array, src.array)
+        self.handler.copy_to(src.array, dest.array)
+
+    @check_for_inf_or_nan
+    def copy_to_if(self, src, dest, cond):
+        assert_debug_arrays(src, dest, cond)
+        assert_shapes_equal(src, dest, cond)
+        self.handler.copy_to_if(src.array, dest.array, cond.array)
 
     @check_for_inf_or_nan
     def create_from_numpy(self, arr):
@@ -99,6 +109,13 @@ class DebugHandler(Handler):
         assert_debug_arrays(mem)
         assert_is_scalar(val)
         self.handler.fill(mem.array, val)
+
+    @check_for_inf_or_nan
+    def fill_if(self, mem, val, cond):
+        assert_is_scalar(val)
+        assert_debug_arrays(mem, cond)
+        assert_shapes_equal(mem, cond)
+        self.handler.fill_if(mem.array, val, cond.array)
 
     @check_for_inf_or_nan
     def get_numpy_copy(self, mem):
@@ -120,10 +137,17 @@ class DebugHandler(Handler):
 
     # ----------------------- Mathematical operations ----------------------- #
 
+    @check_for_inf_or_nan
     def abs_t(self, a, out):
         assert_debug_arrays(a, out)
         assert_shapes_equal(a, out)
         self.handler.abs_t(a.array, out.array)
+
+    @check_for_inf_or_nan
+    def add_into_if(self, a, out, cond):
+        assert_debug_arrays(a, out, cond)
+        assert_shapes_equal(a, out, cond)
+        self.handler.add_into_if(a.array, out.array, cond.array)
 
     @check_for_inf_or_nan
     def add_mv(self, m, v, out):
@@ -189,19 +213,13 @@ class DebugHandler(Handler):
         self.handler.binarize_v(v.array, out.array)
 
     @check_for_inf_or_nan
-    def broadcast_features_t(self, a, out):
+    def broadcast_t(self, a, axis, out):
         assert_debug_arrays(a, out)
-        assert len(a.shape) >= 3 and len(out.shape) >= 3
-        assert a.shape[-1] == 1
-        assert len(a.shape) == len(out.shape), \
-            "broadcast_features_t supports broadcasting to multiple " \
-            "dimensions, but we currently assume that layer implementations " \
-            "do not add dimensions. This check can be removed later."
-        assert a.shape == out.shape[:-1] + (1,), \
-            "broadcast_features_t supports broadcasting to multiple " \
-            "dimensions, but we currently assume that layer implementations " \
-            "do not add dimensions. This check can be removed later."
-        self.handler.broadcast_features_t(a.array, out.array)
+        assert (isinstance(axis, int) and 0 <= axis < len(out.shape)),\
+            "invalid axis {}".format(axis)
+        assert a.shape[axis] == 1
+        assert a.shape == out.shape[:axis] + (1,) + out.shape[axis+1:]
+        self.handler.broadcast_t(a.array, axis, out.array)
 
     @check_for_inf_or_nan
     def clip_t(self, a, a_min, a_max, out):
@@ -359,6 +377,12 @@ class DebugHandler(Handler):
                                              argmax.array)
 
     @check_for_inf_or_nan
+    def modulo_tt(self, a, b, out):
+        assert_debug_arrays(a, b, out)
+        assert_shapes_equal(a, b, out)
+        self.handler.modulo_tt(a.array, b.array, out.array)
+
+    @check_for_inf_or_nan
     def mult_add_st(self, s, t, out):
         assert_debug_arrays(t, out)
         assert_is_scalar(s)
@@ -379,6 +403,15 @@ class DebugHandler(Handler):
         assert v.shape == (m.shape[0], 1) or v.shape == (1, m.shape[1]), \
             "invalid shape {}".format(v.shape)
         self.handler.mult_mv(m.array, v.array, out.array)
+
+    @check_for_inf_or_nan
+    def mult_add_mv(self, m, v, out):
+        assert_debug_arrays(m, v, out)
+        assert_shapes_equal(m, out)
+        assert len(m.shape) == 2, "len({}) != 2".format(m.shape)
+        assert v.shape == (m.shape[0], 1) or v.shape == (1, m.shape[1]), \
+            "invalid shape {}".format(v.shape)
+        self.handler.mult_add_mv(m.array, v.array, out.array)
 
     @check_for_inf_or_nan
     def mult_st(self, s, t, out):
@@ -428,6 +461,18 @@ class DebugHandler(Handler):
             "invalid axis {}".format(axis)
         # TODO check shapes of a and out
         self.handler.sum_t(a.array, axis, out.array)
+
+    @check_for_inf_or_nan
+    def merge_tt(self, a, b, out):
+        assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
+        assert_debug_arrays(a, b, out)
+        self.handler.merge_tt(a.array, b.array, out.array)
+
+    @check_for_inf_or_nan
+    def split_add_tt(self, x, out_a, out_b):
+        assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
+        assert_debug_arrays(out_a, out_b, x)
+        self.handler.split_add_tt(x.array, out_a.array, out_b.array)
 
     # ------------------------ Activation functions ------------------------- #
 

@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import flatten_time, flatten_time_and_features
@@ -12,13 +12,15 @@ from brainstorm.utils import flatten_time, flatten_time_and_features
 
 def Mask(name=None):
     """Create a Mask layer."""
-    return ConstructionWrapper.create('Mask', name=name)
+    return ConstructionWrapper.create(MaskLayerImpl, name=name)
 
 
-class MaskLayerImpl(BaseLayerImpl):
+class MaskLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
                        'mask': StructureTemplate('T', 'B', 1)}
+
+    computes_no_input_deltas_for = ['mask']
 
     def setup(self, kwargs, in_shapes):
         outputs = OrderedDict()

@@ -4,20 +4,22 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
+from brainstorm.utils import flatten_time
 
 
 def Pooling2D(kernel_size, type='max', stride=(1, 1), padding=0, name=None):
     """Create a 2D Pooling layer."""
-    return ConstructionWrapper.create('Pooling2D', kernel_size=kernel_size,
+    return ConstructionWrapper.create(Pooling2DLayerImpl,
+                                      kernel_size=kernel_size,
                                       type=type, stride=stride,
                                       padding=padding, name=name)
 
 
-class Pooling2DLayerImpl(BaseLayerImpl):
+class Pooling2DLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'kernel_size', 'type', 'stride',
@@ -50,21 +52,21 @@ class Pooling2DLayerImpl(BaseLayerImpl):
         kernel_size = self.kernel_size
         padding = self.padding
         stride = self.stride
-        output_height = ((in_shape[1] + 2 * padding - kernel_size[0]) //
+        output_height = ((in_shape[0] + 2 * padding - kernel_size[0]) //
                          stride[0]) + 1
-        output_width = ((in_shape[2] + 2 * padding - kernel_size[1]) //
+        output_width = ((in_shape[1] + 2 * padding - kernel_size[1]) //
                         stride[1]) + 1
         assert output_height > 0 and output_width > 0, \
             "Evaluated output height and width must be positive but were " \
             "({}, {})".format(output_height, output_width)
-        output_shape = (in_shape[0], output_height, output_width)
+        output_shape = (output_height, output_width, in_shape[2])
 
         outputs = OrderedDict()
         outputs['default'] = BufferStructure('T', 'B', *output_shape)
 
         internals = OrderedDict()
         if self.type == 'max':
-            argmax_shape = outputs['default'].feature_shape + (2, )
+            argmax_shape = outputs['default'].feature_shape
             internals['argmax'] = BufferStructure('T', 'B', *argmax_shape)
         return outputs, OrderedDict(), internals
 
@@ -75,14 +77,13 @@ class Pooling2DLayerImpl(BaseLayerImpl):
         outputs = buffers.outputs.default
 
         # reshape
-        t, b, c, h, w = inputs.shape
-        flat_inputs = inputs.reshape((t * b, c, h, w))
-        flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
+        flat_inputs = flatten_time(inputs)
+        flat_outputs = flatten_time(outputs)
 
         # calculate outputs
         if self.type == 'max':
             argmax = buffers.internals.argmax
-            flat_argmax = argmax.reshape((t * b,) + argmax.shape[2:])
+            flat_argmax = flatten_time(argmax)
             _h.maxpool2d_forward_batch(flat_inputs, self.kernel_size,
                                        flat_outputs, self.padding, self.stride,
                                        flat_argmax)
@@ -100,15 +101,14 @@ class Pooling2DLayerImpl(BaseLayerImpl):
         out_deltas = buffers.output_deltas.default
 
         # reshape
-        t, b, c, h, w = inputs.shape
-        flat_inputs = inputs.reshape((t * b, c, h, w))
-        flat_in_deltas = in_deltas.reshape((t * b, c, h, w))
-        flat_out_deltas = out_deltas.reshape((t * b,) + out_deltas.shape[2:])
-        flat_outputs = outputs.reshape((t * b,) + outputs.shape[2:])
+        flat_inputs = flatten_time(inputs)
+        flat_in_deltas = flatten_time(in_deltas)
+        flat_out_deltas = flatten_time(out_deltas)
+        flat_outputs = flatten_time(outputs)
 
         if self.type == 'max':
             argmax = buffers.internals.argmax
-            flat_argmax = argmax.reshape((t * b,) + argmax.shape[2:])
+            flat_argmax = flatten_time(argmax)
             _h.maxpool2d_backward_batch(flat_inputs, self.kernel_size,
                                         flat_outputs, self.padding,
                                         self.stride, flat_argmax,

@@ -12,9 +12,10 @@ import numpy as np
 from six import string_types
 
 from brainstorm.describable import Describable
+from brainstorm import optional
 from brainstorm.structure.network import Network
 from brainstorm.tools import evaluate
-from brainstorm.utils import get_by_path, progress_bar
+from brainstorm.utils import get_by_path, progress_bar, get_brainstorm_info
 
 
 class Hook(Describable):
@@ -71,26 +72,36 @@ class SaveNetwork(Hook):
 
 class SaveBestNetwork(Hook):
     """
-    Check every epoch to see if the given objective is at it's best value and
-    if so, save the network to the specified file.
+    Checks to see if the specified log entry is at it's best value
+    and if so, saves the network to a specified file.
     """
     __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
 
     def __init__(self, log_name, filename=None, name=None,
-                 criterion='max', verbose=None):
-        super(SaveBestNetwork, self).__init__(name, 'epoch', 1, verbose)
+                 criterion='max', timescale='epoch', interval=1, verbose=None):
+        super(SaveBestNetwork, self).__init__(name, timescale,
+                                              interval, verbose)
         self.log_name = log_name
         self.filename = filename
         self.parameters = None
         assert criterion == 'min' or criterion == 'max'
+        self.best_so_far = np.inf if criterion == 'min' else -np.inf
+        self.best_t = None
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         e = get_by_path(logs, self.log_name)
-        best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
-        if best_idx == len(e) - 1:
-            params = net.handler.get_numpy_copy(net.buffer.parameters)
+        last = e[-1]
+        if self.criterion == 'min':
+            imp = last < self.best_so_far
+        else:
+            imp = last > self.best_so_far
+
+        if imp:
+            self.best_so_far = last
+            self.best_t = epoch_nr if self.timescale == 'epoch' else update_nr
+            params = net.get('parameters')
             if self.filename is not None:
                 self.message("{} improved. Saving network to {} ...".
                              format(self.log_name, self.filename))
@@ -99,9 +110,10 @@ class SaveBestNetwork(Hook):
                 self.message("{} improved. Caching parameters ...".
                              format(self.log_name))
                 self.parameters = params
-        elif self.run_verbosity:
-            self.message("Last saved parameters after epoch {} when {} was {}".
-                         format(best_idx, self.log_name, e[best_idx]))
+        else:
+            self.message("Last saved parameters at {} {} when {} was {}".
+                         format(self.timescale, self.best_t, self.log_name,
+                                self.best_so_far))
 
     def load_parameters(self):
         return np.load(self.filename) if self.filename is not None \
@@ -115,6 +127,8 @@ class SaveLogs(Hook):
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         with h5py.File(self.filename, 'w') as f:
+            f.attrs.create('info', get_brainstorm_info())
+            f.attrs.create('format', b'Logs file v1.0')
             SaveLogs._save_recursively(f, logs)
 
     @staticmethod
@@ -125,6 +139,28 @@ class SaveLogs(Hook):
                 SaveLogs._save_recursively(subgroup, log)
             else:
                 group.create_dataset(name, data=np.array(log))
+
+
+class ModifyStepperAttribute(Hook):
+    """Modify an attribute of the training stepper."""
+    def __init__(self, schedule, attr_name='learning_rate',
+                 timescale='epoch', interval=1, name=None, verbose=None):
+        super(ModifyStepperAttribute, self).__init__(name, timescale,
+                                                     interval, verbose)
+        self.schedule = schedule
+        self.attr_name = attr_name
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(ModifyStepperAttribute, self).start(net, stepper, verbose,
+                                                  monitor_kwargs)
+        assert hasattr(stepper, self.attr_name), \
+            "The stepper {} does not have the attribute {}".format(
+                stepper.__class__.__name__, self.attr_name)
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        setattr(stepper, self.attr_name,
+                self.schedule(epoch_nr, update_nr, self.timescale,
+                              self.interval, net, stepper, logs))
 
 
 class MonitorLayerParameters(Hook):
@@ -325,8 +361,7 @@ class StopOnNan(Hook):
                 self.message("NaN or inf detected in {}!".format(log_name))
                 raise StopIteration()
         if self.check_parameters:
-            params = net.handler.get_numpy_copy(net.buffer.parameters)
-            if not np.all(np.isfinite(params)):
+            if not net.handler.is_fully_finite(net.buffer.parameters):
                 self.message("NaN or inf detected in parameters!")
                 raise StopIteration()
 
@@ -450,80 +485,95 @@ class StopOnSigQuit(Hook):
         if self.quit:
             raise StopIteration('Received SIGQUIT signal.')
 
+if not optional.has_bokeh:
+    BokehVisualizer = optional.bokeh_mock
+else:
+    import bokeh.plotting as bk
 
-class VisualiseAccuracy(Hook):
-    """
-    Visualises the accuracy using the bokeh.plotting library.
+    class BokehVisualizer(Hook):
+        """
+        Visualizes log values using the bokeh.plotting library.
 
-    By default the output saved as a .html file, however a display can be
-    enabled
+        By default the output saved as a .html file, however a display can be
+        enabled.
 
-    Args:
-        log_names (list, array, or dict):
-            Contains the name of the accuracies recorded by the accuracy
-            monitors. Input should be of the form <monitorname>.accuracy
-    filename (str):
-        The location to which the .html file containing the accuracy plot
-        should be saved
-    """
-    def __init__(self, log_names, filename, timescale='epoch', interval=1,
-                 name=None, verbose=None):
-        super(VisualiseAccuracy, self).__init__(name, timescale, interval,
-                                                verbose)
+        Args:
+            log_names (list, array, or dict):
+                Contains the name of the accuracies recorded by the accuracy
+                monitors. Input should be of the form <monitorname>.<log_name>
+                where log_name itself may be a nested dictionary key in dot
+                notation.
+            filename (str):
+                The location to which the .html file containing the accuracy
+                plot should be saved.
+            timescale (Optional[str]):
+                Specifies whether the Monitor should be called after each
+                epoch or after each update. Default is 'epoch'
+            interval (Optional[int]):
+                This monitor should be called every ``interval``
+                number of epochs/updates. Default is 1.
+            name (Optional[str]):
+                Name of this monitor. This name is used as a key in the trainer
+                logs. Default is 'MonitorScores'
+            verbose: bool, optional
+                Specifies whether the logs of this monitor should be printed,
+                and acts as a fallback verbosity for the used data iterator.
+                If not set it defaults to the verbosity setting of the trainer.
+        """
+        def __init__(self, log_names, filename, timescale='epoch', interval=1,
+                     name=None, verbose=None):
+            super(BokehVisualizer, self).__init__(name, timescale, interval,
+                                                  verbose)
 
-        self.log_names = log_names
-        self.filename = filename
-
-        try:
-            import bokeh.plotting as bk
+            self.log_names = log_names
+            self.filename = filename
 
             self.bk = bk
             self.TOOLS = "resize,crosshair,pan,wheel_zoom,box_zoom,reset"
             self.colors = ['blue', 'green', 'red', 'olive', 'cyan', 'aqua',
                            'gray']
 
-            self.bk.output_server("Accuracy Monitor")
+            self.bk.output_server(self.__name__)
             self.fig = self.bk.figure(
-                title="Accuracy Monitor", x_axis_label=self.timescale,
-                y_axis_label='accuracy', tools=self.TOOLS,
+                title=self.__name__, x_axis_label=self.timescale,
+                y_axis_label='value', tools=self.TOOLS,
                 x_range=(0, 10), y_range=(0, 1))
 
-        except ImportError:
-            print("bokeh is required for drawing networks but was not found.")
+        def start(self, net, stepper, verbose, named_data_iters):
+            count = 0
 
-    def start(self, net, stepper, verbose, named_data_iters):
-        count = 0
+            # create empty line objects
+            for log_name in self.log_names:
+                self.fig.line([], [], legend=log_name, line_width=2,
+                              color=self.colors[count % len(self.colors)],
+                              name=log_name)
+                count += 1
 
-        # create empty line objects
-        for log_name in self.log_names:
-            self.fig.line([], [], legend=log_name, line_width=2,
-                          color=self.colors[count], name=log_name)
-            count += 1
+            self.bk.show(self.fig)
+            self.bk.output_file(self.filename + ".html",
+                                title=self.__name__, mode="cdn")
 
-        self.bk.show(self.fig)
-        self.bk.output_file(self.filename + ".html", title="Accuracy Monitor",
-                            mode="cdn")
+        def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+            count = 0
+            for log_name in self.log_names:
+                renderer = self.fig.select(dict(name=log_name))
 
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        count = 0
-        for log_name in self.log_names:
-            renderer = self.fig.select(dict(name=log_name))
+                datasource = renderer[0].data_source
+                datasource.data["y"] = get_by_path(logs, log_name)
 
-            datasource = renderer[0].data_source
-            datasource.data["y"] = get_by_path(logs, log_name)
+                if self.timescale == 'epoch':
+                    datasource.data["x"] = range(epoch_nr)
+                elif self.timescale == 'update':
+                    datasource.data["x"] = range(update_nr)
 
-            if self.timescale == 'epoch':
-                datasource.data["x"] = range(epoch_nr)
-            elif self.timescale == 'update':
-                datasource.data["x"] = range(update_nr)
+                self.bk.cursession().store_objects(datasource)
+                count += 1
 
-            self.bk.cursession().store_objects(datasource)
-            count += 1
-
-        self.bk.save(self.fig, filename=self.filename + ".html")
+            self.bk.save(self.fig, filename=self.filename + ".html")
 
 
 class ProgressBar(Hook):
+    """ Adds a progress bar to show the training progress. """
     def __init__(self):
         super(ProgressBar, self).__init__(None, 'update', 1)
         self.length = None

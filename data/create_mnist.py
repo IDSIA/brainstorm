@@ -29,11 +29,11 @@ with gzip.open(mnist_file, 'rb') as f:
 print("Done.")
 
 train_inputs, train_targets = \
-    ds[0][0].reshape((1, 50000, 1, 28, 28)), ds[0][1].reshape((1, 50000, 1))
+    ds[0][0].reshape((1, 50000, 28, 28, 1)), ds[0][1].reshape((1, 50000, 1))
 valid_inputs, valid_targets = \
-    ds[1][0].reshape((1, 10000, 1, 28, 28)), ds[1][1].reshape((1, 10000, 1))
+    ds[1][0].reshape((1, 10000, 28, 28, 1)), ds[1][1].reshape((1, 10000, 1))
 test_inputs, test_targets = \
-    ds[2][0].reshape((1, 10000, 1, 28, 28)), ds[2][1].reshape((1, 10000, 1))
+    ds[2][0].reshape((1, 10000, 28, 28, 1)), ds[2][1].reshape((1, 10000, 1))
 
 print("Creating HDF5 dataset ...")
 f = h5py.File(hdf_file, 'w')
@@ -48,7 +48,14 @@ http://deeplearning.net/data/mnist/mnist.pkl.gz
 which hosts a normalized version of the data originally from:
 http://yann.lecun.com/exdb/mnist/
 
-Variants:
+Attributes
+==========
+
+description: This description.
+
+Variants
+========
+
 normalized_full: Contains 'training' and 'test' sets. Image data has been
 normalized by dividing all pixel values by 255.
 

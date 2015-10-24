@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -12,15 +12,18 @@ from brainstorm.structure.construction import ConstructionWrapper
 
 def Loss(importance=1.0, name=None):
     """Create a Loss layer."""
-    return ConstructionWrapper.create('Loss', importance=importance, name=name)
+    return ConstructionWrapper.create(LossLayerImpl, importance=importance,
+                                      name=name)
 
 
-class LossLayerImpl(BaseLayerImpl):
+class LossLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('...')}
     expected_kwargs = {'importance'}
 
     def setup(self, kwargs, in_shapes):
+        assert self.name != 'total_loss'
+
         self.importance = kwargs.get('importance', 1.0)
         self.batch_index = None
         if in_shapes['default'].scales_with_time:

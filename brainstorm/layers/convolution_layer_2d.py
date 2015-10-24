@@ -3,8 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 
 from collections import OrderedDict
-from brainstorm.handlers.base_handler import Handler
-from brainstorm.layers.base_layer import BaseLayerImpl
+from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
@@ -14,7 +13,7 @@ from brainstorm.utils import flatten_time
 def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                   activation='rel', name=None):
     """Create a 2D Convolution layer."""
-    return ConstructionWrapper.create('Convolution2D',
+    return ConstructionWrapper.create(Convolution2DLayerImpl,
                                       num_filters=num_filters,
                                       kernel_size=kernel_size,
                                       stride=stride,
@@ -23,15 +22,14 @@ def Convolution2D(num_filters, kernel_size, stride=(1, 1), padding=0,
                                       name=name)
 
 
-class Convolution2DLayerImpl(BaseLayerImpl):
+class Convolution2DLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'num_filters', 'kernel_size', 'stride', 'padding',
                        'activation'}
 
     def setup(self, kwargs, in_shapes):
-        self.act_func = None
-        self.act_func_deriv = None
+        self.activation = kwargs.get('activation', 'tanh')
         assert 'num_filters' in kwargs, "num_filters must be specified " \
                                         " for ConvolutionLayer"
         assert 'kernel_size' in kwargs, "kernel_size must be specified " \
@@ -54,45 +52,26 @@ class Convolution2DLayerImpl(BaseLayerImpl):
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "ConvolutionLayer2D must have 3 dimensional input but input " \
             "shape was {}".format(in_shape)
-        num_input_maps = in_shape[0]
+        num_input_maps = in_shape[2]
         num_filters = self.num_filters
         kernel_x, kernel_y = self.kernel_size
         padding, stride = self.padding, self.stride
-        output_height = ((in_shape[1] + 2 * padding - kernel_x) //
+        output_height = ((in_shape[0] + 2 * padding - kernel_x) //
                          stride[0]) + 1
-        output_width = ((in_shape[2] + 2 * padding - kernel_y) //
+        output_width = ((in_shape[1] + 2 * padding - kernel_y) //
                         stride[1]) + 1
-        out_shape = (num_filters, output_height, output_width)
+        out_shape = (output_height, output_width, num_filters)
 
         outputs = OrderedDict()
         outputs['default'] = BufferStructure('T', 'B', *out_shape)
 
         parameters = OrderedDict()
-        parameters['W'] = BufferStructure(num_filters, num_input_maps,
-                                          kernel_x, kernel_y)
+        parameters['W'] = BufferStructure(num_filters, kernel_x, kernel_y,
+                                          num_input_maps)
         parameters['bias'] = BufferStructure(num_filters)
 
         internals = OrderedDict()
-        internals['H'] = BufferStructure('T', 'B', *out_shape)
-        internals['dH'] = BufferStructure('T', 'B', *out_shape,
-                                          is_backward_only=True)
-
         return outputs, parameters, internals
-
-    def set_handler(self, new_handler):
-        super(Convolution2DLayerImpl, self).set_handler(new_handler)
-
-        # Assign act_func and act_dunc_derivs
-        activations = {
-            'sigmoid': (self.handler.sigmoid, self.handler.sigmoid_deriv),
-            'tanh': (self.handler.tanh, self.handler.tanh_deriv),
-            'linear': (lambda x, y: self.handler.copy_to(y, x),
-                       lambda x, y, dy, dx: self.handler.copy_to(dx, dy)),
-            'rel': (self.handler.rel, self.handler.rel_deriv)
-        }
-
-        self.act_func, self.act_func_deriv = activations[
-            self.kwargs.get('activation', 'rel')]
 
     def forward_pass(self, buffers, training_pass=True):
         # prepare
@@ -100,16 +79,15 @@ class Convolution2DLayerImpl(BaseLayerImpl):
         W, bias = buffers.parameters
         inputs = buffers.inputs.default
         outputs = buffers.outputs.default
-        H = buffers.internals.H
 
         # reshape
         flat_inputs = flatten_time(inputs)
-        flat_H = flatten_time(H)
+        flat_outputs = flatten_time(outputs)
 
         # calculate outputs
-        _h.conv2d_forward_batch(flat_inputs, W, bias, flat_H,
+        _h.conv2d_forward_batch(flat_inputs, W, bias, flat_outputs,
                                 self.padding, self.stride)
-        self.act_func(H, outputs)
+        _h.inplace_act_func[self.activation](outputs)
 
     def backward_pass(self, buffers):
         # prepare
@@ -120,14 +98,13 @@ class Convolution2DLayerImpl(BaseLayerImpl):
         outputs = buffers.outputs.default
         in_deltas = buffers.input_deltas.default
         out_deltas = buffers.output_deltas.default
-        H, dH = buffers.internals
 
         # reshape
         flat_inputs = flatten_time(inputs)
         flat_in_deltas = flatten_time(in_deltas)
-        flat_dH = flatten_time(dH)
+        flat_out_deltas = flatten_time(out_deltas)
 
         # calculate in_deltas and gradients
-        self.act_func_deriv(H, outputs, out_deltas, dH)
+        _h.inplace_act_func_deriv[self.activation](outputs, out_deltas)
         _h.conv2d_backward_batch(flat_inputs, W, self.padding, self.stride,
-                                 flat_in_deltas, flat_dH, dW, dbias)
+                                 flat_in_deltas, flat_out_deltas, dW, dbias)
