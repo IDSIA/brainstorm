@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from brainstorm.handlers import NumpyHandler
-from brainstorm.optional import has_pycuda
+from brainstorm.optional import has_pycuda, has_nervanagpu
 
 non_default_handlers = []
 handler_ids = []

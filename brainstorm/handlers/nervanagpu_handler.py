@@ -46,11 +46,17 @@ class NervanaGPUHandler(Handler):
     def copy_to(self, dest, src):
         dest.fill(src)
 
+    def copy_to_if(self, src, dest, cond):
+        pass
+
     def create_from_numpy(self, arr):
         return self.context.array(arr, dtype=self.dtype)
 
     def fill(self, mem, val):
         mem.fill(val)
+
+    def fill_if(self, mem, val, cond):
+        pass
 
     def get_numpy_copy(self, mem):
         assert type(mem) == self.array_type
@@ -77,6 +83,12 @@ class NervanaGPUHandler(Handler):
 
     # ----------------------- Mathematical operations ----------------------- #
 
+    def abs_t(self, a, out):
+        pass
+
+    def add_into_if(self, a, out, cond):
+        add_into_if_kernel(a, out, cond)
+
     def add_mv(self, m, v, out):
         out[:] = m + v
 
@@ -99,7 +111,7 @@ class NervanaGPUHandler(Handler):
         tmp[:] = v
         self.context.onehot(tmp, axis=1, out=out)
 
-    def broadcast_features_t(self, a, out):
+    def broadcast_t(self, a, out):
         assert len(a.shape) == 3
         assert a.shape[2] == 1
         assert len(out.shape) > 2
@@ -162,6 +174,12 @@ class NervanaGPUHandler(Handler):
                                 stride, argmax):
         raise NotImplementedError
 
+    def merge_tt(self, a, b, out):
+        pass
+
+    def modulo_tt(self, a, b, out):
+        pass
+
     def mult_add_st(self, a, b, out):
         out[:] += a * b
 
@@ -179,6 +197,9 @@ class NervanaGPUHandler(Handler):
 
     def sign_t(self, a, out):
         self.context.sgn(a, out)
+
+    def split_add_tt(self, x, out_a, out_b):
+        pass
 
     def sqrt_t(self, a, out):
         self.context.sqrt(a, out)

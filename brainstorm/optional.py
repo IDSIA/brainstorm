@@ -46,6 +46,7 @@ try:
     import pycuda.autoinit
     from neon.backends.nervanagpu import NervanaGPU
     has_nervanagpu = True
+    nervanagpu_mock = None
 except ImportError:
     nervanagpu_mock = MissingDependencyMock(sys.exc_info())
 
