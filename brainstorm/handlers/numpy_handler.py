@@ -197,38 +197,6 @@ class NumpyHandler(Handler):
     def generate_probability_mask(self, mask, probability):
         mask[:] = self.rnd.uniform(size=mask.shape) < probability
 
-    def get_im2col_map(self, num_input_maps, input_rows, input_cols,
-                       kernel_size, stride):
-        # im2col built upon http://stackoverflow.com/a/30110497
-        # Returns a 2D map which performs im2col on a 3D array
-        # Apply map to a 3D array using numpy.take(array, map)
-
-        # Parameters
-        col_extent = input_cols - kernel_size[1] + 1
-        row_extent = input_rows - kernel_size[0] + 1
-
-        # Get Starting block indices
-        start_idx = np.arange(kernel_size[0])[:, None] * input_cols + \
-            np.arange(kernel_size[1])
-
-        # Get offset-ed indices across the height and width of input array
-        offset_idx = np.arange(row_extent)[:, None] * input_cols + \
-            np.arange(col_extent)
-
-        indices = start_idx.ravel()[:, None] + \
-            offset_idx[::stride[0], ::stride[1]].ravel()
-        adder = (np.arange(num_input_maps) * input_rows * input_cols)\
-            .reshape((num_input_maps, 1, 1))
-
-        # Extend to multiple input maps
-        im2col_map = indices + adder
-
-        # Reshape to stack input maps
-        im2col_map = im2col_map.reshape((kernel_size[0] * kernel_size[1] *
-                                         num_input_maps, -1))
-
-        return im2col_map
-
     def index_m_by_v(self, m, v, out):
         for i in range(m.shape[0]):
             out[i] = m[i, int(v[i])]
@@ -245,6 +213,12 @@ class NumpyHandler(Handler):
                                 stride, argmax):
         _cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
+
+    def merge_tt(self, a, b, out):
+        out_flat = out.reshape(-1, out.shape[-1])
+        sa = a.shape[-1]
+        out_flat[:, :sa] = a.reshape(-1, a.shape[-1])
+        out_flat[:, sa:] = b.reshape(-1, b.shape[-1])
 
     def modulo_tt(self, a, b, out):
         np.fmod(a, b, out)
@@ -270,6 +244,14 @@ class NumpyHandler(Handler):
     def sign_t(self, a, out):
         np.sign(a, out=out)
 
+    def split_add_tt(self, x, out_a, out_b):
+        oa = out_a.reshape(-1, out_a.shape[-1])
+        ob = out_b.reshape(-1, out_b.shape[-1])
+        x_flat = x.reshape(-1, x.shape[-1])
+        sa = oa.shape[-1]
+        oa[:] += x_flat[:, :oa.shape[-1]]
+        ob[:] += x_flat[:, oa.shape[-1]:]
+
     def sqrt_t(self, a, out):
         np.sqrt(a, out)
 
@@ -286,20 +268,6 @@ class NumpyHandler(Handler):
         else:
             keepdims = False
         np.sum(a, axis=axis, out=out, keepdims=keepdims)
-
-    def merge_tt(self, a, b, out):
-        out_flat = out.reshape(-1, out.shape[-1])
-        sa = a.shape[-1]
-        out_flat[:, :sa] = a.reshape(-1, a.shape[-1])
-        out_flat[:, sa:] = b.reshape(-1, b.shape[-1])
-
-    def split_add_tt(self, x, out_a, out_b):
-        oa = out_a.reshape(-1, out_a.shape[-1])
-        ob = out_b.reshape(-1, out_b.shape[-1])
-        x_flat = x.reshape(-1, x.shape[-1])
-        sa = oa.shape[-1]
-        oa[:] += x_flat[:, :oa.shape[-1]]
-        ob[:] += x_flat[:, oa.shape[-1]:]
 
     # ------------------------ Activation functions ------------------------- #
 

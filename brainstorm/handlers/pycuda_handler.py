@@ -314,6 +314,14 @@ class PyCudaHandler(Handler):
                                block=(get_blocks(outputs.size), 1, 1),
                                grid=(NUM_CUDA_THREADS, 1, 1))
 
+    def merge_tt(self, a, b, out):
+        assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
+        n = int(np.prod(out.shape[:-1]))
+        grid, block = self._get_gridsize(n)
+        _merge_impl(a.gpudata, b.gpudata, out.gpudata,
+                    np.int32(n), np.int32(a.shape[-1]), np.int32(b.shape[-1]),
+                    block=block, grid=grid)
+
     def modulo_tt(self, a, b, out):
         modulo_tt_kernel(a, b, out)
 
@@ -345,6 +353,15 @@ class PyCudaHandler(Handler):
 
     def sign_t(self, a, out):
         sign_kernel(a, out)
+
+    def split_add_tt(self, x, out_a, out_b):
+        assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
+        n = int(np.prod(x.shape[:-1]))
+        grid, block = self._get_gridsize(n)
+        _split_add_impl(x.gpudata, out_a.gpudata, out_b.gpudata,
+                        np.int32(n), np.int32(out_a.shape[-1]),
+                        np.int32(out_b.shape[-1]),
+                        block=block, grid=grid)
 
     def sqrt_t(self, a, out):
         cumath.sqrt(a, out)
@@ -389,23 +406,6 @@ class PyCudaHandler(Handler):
 
     def tanh_deriv(self, x, y, dy, dx):
         tanh_deriv_kernel(x, y, dy, dx)
-
-    def merge_tt(self, a, b, out):
-        assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
-        n = int(np.prod(out.shape[:-1]))
-        grid, block = self._get_gridsize(n)
-        _merge_impl(a.gpudata, b.gpudata, out.gpudata,
-                    np.int32(n), np.int32(a.shape[-1]), np.int32(b.shape[-1]),
-                    block=block, grid=grid)
-
-    def split_add_tt(self, x, out_a, out_b):
-        assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
-        n = int(np.prod(x.shape[:-1]))
-        grid, block = self._get_gridsize(n)
-        _split_add_impl(x.gpudata, out_a.gpudata, out_b.gpudata,
-                    np.int32(n), np.int32(out_a.shape[-1]),
-                    np.int32(out_b.shape[-1]),
-                    block=block, grid=grid)
 
 # --------------------------- Kernel Definitions ---------------------------- #
 

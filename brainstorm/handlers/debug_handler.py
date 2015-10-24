@@ -377,6 +377,12 @@ class DebugHandler(Handler):
                                              argmax.array)
 
     @check_for_inf_or_nan
+    def merge_tt(self, a, b, out):
+        assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
+        assert_debug_arrays(a, b, out)
+        self.handler.merge_tt(a.array, b.array, out.array)
+
+    @check_for_inf_or_nan
     def modulo_tt(self, a, b, out):
         assert_debug_arrays(a, b, out)
         assert_shapes_equal(a, b, out)
@@ -433,6 +439,12 @@ class DebugHandler(Handler):
         self.handler.sign_t(a.array, out.array)
 
     @check_for_inf_or_nan
+    def split_add_tt(self, x, out_a, out_b):
+        assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
+        assert_debug_arrays(out_a, out_b, x)
+        self.handler.split_add_tt(x.array, out_a.array, out_b.array)
+
+    @check_for_inf_or_nan
     def sqrt_t(self, a, out):
         assert_debug_arrays(a, out)
         assert_shapes_equal(a, out)
@@ -461,18 +473,6 @@ class DebugHandler(Handler):
             "invalid axis {}".format(axis)
         # TODO check shapes of a and out
         self.handler.sum_t(a.array, axis, out.array)
-
-    @check_for_inf_or_nan
-    def merge_tt(self, a, b, out):
-        assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
-        assert_debug_arrays(a, b, out)
-        self.handler.merge_tt(a.array, b.array, out.array)
-
-    @check_for_inf_or_nan
-    def split_add_tt(self, x, out_a, out_b):
-        assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
-        assert_debug_arrays(out_a, out_b, x)
-        self.handler.split_add_tt(x.array, out_a.array, out_b.array)
 
     # ------------------------ Activation functions ------------------------- #
 
