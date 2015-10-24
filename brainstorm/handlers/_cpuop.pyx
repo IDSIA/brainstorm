@@ -229,19 +229,19 @@ def _crop_images(DTYPE_t[:, :, :, :, ::1] inputs not None,
     """
     cdef int batch_size = row_indices.shape[0]
     cdef int time_steps = inputs.shape[0]
-    cdef int num_channels = inputs.shape[2]
+    cdef int num_channels = inputs.shape[4]
     cdef int start_row, start_col, i, j, k, l, t
     with nogil:
         for i in range(batch_size):
             start_row = row_indices[i]
             start_col = col_indices[i]
             for t in range(0, time_steps):
-                for j in range(0, num_channels):
-                    for k in range(0, height):
-                        for l in range(0, width):
-                            outputs[t, i, j, k, l] = inputs[t, i, j,
+                for k in range(0, height):
+                    for l in range(0, width):
+                        for c in range(0, num_channels):
+                            outputs[t, i, c, k, l] = inputs[t, i,
                                                             k + start_row,
-                                                            l + start_col]
+                                                            l + start_col, c]
 
 # -------------------------- Caffe2-based routines -------------------------- #
 # Please see Third Party License file for license information
