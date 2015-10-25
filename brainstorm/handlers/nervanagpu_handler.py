@@ -13,10 +13,12 @@ import skcuda.linalg as culinalg
 import skcuda.misc as cumisc
 culinalg.init()
 
+
 class NervanaGPUHandler(Handler):
     __undescribed__ = {'context', 'dtype', 'EMPTY', 'rnd'}
 
     def __init__(self, seed=None):
+        super(NervanaGPUHandler, self).__init__()
         self.dtype = np.float32
         if seed is None:
             seed = global_rnd.generate_seed()
@@ -47,7 +49,7 @@ class NervanaGPUHandler(Handler):
         dest.fill(src)
 
     def copy_to_if(self, src, dest, cond):
-        pass
+        raise NotImplementedError
 
     def create_from_numpy(self, arr):
         return self.context.array(arr, dtype=self.dtype)
@@ -56,7 +58,7 @@ class NervanaGPUHandler(Handler):
         mem.fill(val)
 
     def fill_if(self, mem, val, cond):
-        pass
+        raise NotImplementedError
 
     def get_numpy_copy(self, mem):
         assert type(mem) == self.array_type
@@ -84,7 +86,7 @@ class NervanaGPUHandler(Handler):
     # ----------------------- Mathematical operations ----------------------- #
 
     def abs_t(self, a, out):
-        pass
+        raise NotImplementedError
 
     def add_into_if(self, a, out, cond):
         add_into_if_kernel(a, out, cond)
@@ -111,13 +113,11 @@ class NervanaGPUHandler(Handler):
         tmp[:] = v
         self.context.onehot(tmp, axis=1, out=out)
 
-    def broadcast_t(self, a, out):
-        assert len(a.shape) == 3
-        assert a.shape[2] == 1
-        assert len(out.shape) > 2
-        a_flat = self.as_gpuarray(a.reshape(a.size))
-        out_flat = self.as_gpuarray(out.reshape(out.size))
-        broadcast_features_kernel(out_flat, a_flat, np.prod(out.shape[2:]))
+    def broadcast_t(self, a, axis, out):
+        broadcast_dim = int(out.shape[axis])
+        stride = int(np.prod(out.shape[axis+1:]))
+        broadcast_t_kernel(self.as_gpuarray(out), self.as_gpuarray(a),
+                           broadcast_dim, stride)
 
     def clip_t(self, a, a_min, a_max, out):
         self.context.clip(a, a_min, a_max, out)
@@ -175,10 +175,10 @@ class NervanaGPUHandler(Handler):
         raise NotImplementedError
 
     def merge_tt(self, a, b, out):
-        pass
+        raise NotImplementedError
 
     def modulo_tt(self, a, b, out):
-        pass
+        raise NotImplementedError
 
     def mult_add_st(self, a, b, out):
         out[:] += a * b
@@ -199,7 +199,7 @@ class NervanaGPUHandler(Handler):
         self.context.sgn(a, out)
 
     def split_add_tt(self, x, out_a, out_b):
-        pass
+        raise NotImplementedError
 
     def sqrt_t(self, a, out):
         self.context.sqrt(a, out)
@@ -249,9 +249,9 @@ class NervanaGPUHandler(Handler):
         dx[:] = dy * y * (1. - y)
 
     def softmax_m(self, m, out):
-        out[:] = (self.context.reciprocal(self.context.sum(
-                  self.context.exp(m - self.context.max(m, axis=0)), axis=0)) *
-                  self.context.exp(m - self.context.max(m, axis=0)))
+        tmp = self.context.zeros_like(out)
+        self.context.reciprocal(self.context.sum(self.context.exp(m - self.context.max(m, axis=0)), axis=0), out=tmp)
+        self.context.multiply(tmp, self.context.exp(m - self.context.max(m, axis=0)), out=out)
 
     def tanh(self, x, y):
         self.context.tanh(x, y)
@@ -261,10 +261,10 @@ class NervanaGPUHandler(Handler):
 
 # -------------------------------- Kernels ---------------------------------- #
 
-broadcast_features_kernel = ElementwiseKernel(
-    "float* out, float* a, unsigned int broadcast_size",
-    "out[i] = a[i / broadcast_size]",
-    "bc_features_kernel"
+broadcast_t_kernel = ElementwiseKernel(
+    "float* out, float* a, unsigned int broadcast_dim, unsigned int stride",
+    "out[i] = a[i % stride + (i / (broadcast_dim * stride)) * stride]",
+    "broadcast_t_kernel"
 )
 
 index_m_by_v_kernel = ElementwiseKernel(
