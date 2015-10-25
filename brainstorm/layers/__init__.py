@@ -18,7 +18,6 @@ from brainstorm.layers.l1_decay import L1Decay
 from brainstorm.layers.l2_decay import L2Decay
 from brainstorm.layers.loss_layer import Loss
 from brainstorm.layers.lstm_layer import Lstm
-from brainstorm.layers.lstm_opt_layer import LstmOpt
 from brainstorm.layers.merge_layer import Merge
 from brainstorm.layers.mask_layer import Mask
 from brainstorm.layers.noop_layer import NoOp

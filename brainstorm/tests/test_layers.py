@@ -21,7 +21,6 @@ from brainstorm.layers.l1_decay import L1DecayLayerImpl
 from brainstorm.layers.l2_decay import L2DecayLayerImpl
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.layers.lstm_layer import LstmLayerImpl
-from brainstorm.layers.lstm_opt_layer import LstmOptLayerImpl
 from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
@@ -159,15 +158,6 @@ def lstm_layer(spec):
     return layer, spec
 
 
-def lstm_opt_layer(spec):
-    layer = LstmOptLayerImpl('LstmOptLayer',
-                             {'default': BufferStructure('T', 'B', 5)},
-                             NO_CON, NO_CON,
-                             size=7,
-                             activation=spec['activation'])
-    return layer, spec
-
-
 def mask_layer(spec):
     layer = MaskLayerImpl('MaskLayer',
                           {'default': BufferStructure('T', 'B', 3, 2),
@@ -296,7 +286,6 @@ layers_to_test = [
     rnn_layer,
     squared_difference_layer,
     lstm_layer,
-    lstm_opt_layer,
     mask_layer,
     convolution_layer_2d_a,
     convolution_layer_2d_b,
