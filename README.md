@@ -2,31 +2,44 @@
 Brainstorm
 ==========
 
-Brainstorm is a library designed to make working with neural networks fast, flexible and fun.
+Brainstorm makes working with neural networks fast, flexible and fun.
 
-For help in using Brainstorm, please use the [mailing list](https://groups.google.com/forum/#!forum/mailstorm).
+It combines lessons from previous projects with new design elements. It is written completely in Python, and has been designed to work on multiple platforms with multiple computing backends.
+
+Status
+------
+Brainstorm is under active development and is currently in beta. 
+
+The currently available feature set includes recurrent (simple, LSTM, Clockwork), 2D convolution/pooling, Highway and batch normalization layers. API documentation is fairly complete and we are currently working on tutorials and usage guides.
+
+Currently, two Brainstorm *handlers* are provided: `NumpyHandler` for computations on the CPU (though Numpy/Cython) and `PyCudaHandler` for the GPU (though PyCUDA and scikit-cuda).
 
 Installation
 ------------
+Here are some quick instructions for installation on Ubuntu.
 
-Note: These instructions are for Ubuntu 14.04.
+```bash
+# Install pre-requisites
+sudo apt-get install python-dev libhdf5-dev
+# Get brainstorm
+git clone git@github.com:IDSIA/brainstorm.git
+# Install
+cd brainstorm
+pip install -r requirements.txt
+python setup.py install
+```
+To use your CUDA installation with brainstorm:
+```bash
+$ pip install -r pycuda_requirements.txt
+```
+Set location for storing datasets:
+```bash
+echo "export BRAINSTORM_DATA_DIR=/home/my_data_dir/" >> ~/.bashrc
+```
 
-Pre-requisites: You need the Ubuntu packages `python-dev`, `libhdf5-dev` as well as the Python package `cython` before you install. 
+Help and Support
+----------------
 
-To install:
+If you have any suggestions or questions, please post to the [google group](https://groups.google.com/forum/#!forum/mailstorm).
 
-* Clone the repository: `git clone git@github.com:IDSIA/brainstorm.git`
-* To install for development: `cd brainstorm; pip install -e .`. This links the installed library directly to the brainstorm directory, so that changes made to the library can be directly used.
-* To install for usage: `cd brainstorm; python setup.py install`
-
-If you'd like to use an NVIDIA GPU, make sure you have CUDA installed, then:
-
-* Get latest PyCUDA: `pip install -U git+https://github.com/inducer/pycuda#egg=pycuda`
-* Get latest scikit-cuda: `pip install -U git+https://github.com/lebedov/scikit-cuda#egg=scikit-cuda`
-
-If you'd like to use convolutional/pooling layers on the GPU, these are provided through NVIDIA cuDNN which you should install from https://developer.nvidia.com/cudnn
-
-Then install the latest Python wrappers for cuDNN (2.0b2 as of this writing): `pip install cudnn-python-wrappers==2.0b2`
-
-Brainstorm uses the HDF5 file format to store datasets, networks etc. It is recommended to use a single location to store all datasets prepared and used by Brainstorm, which can be specified by setting the environment variable `BRAINSTORM_DATA_DIR` in your .bashrc file.
-
+If you encounter any errors or problems, please let us know by opening an issue.
