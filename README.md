@@ -12,11 +12,11 @@ Brainstorm is under active development and is currently in beta.
 
 The currently available feature set includes recurrent (simple, LSTM, Clockwork), 2D convolution/pooling, Highway and batch normalization layers. API documentation is fairly complete and we are currently working on tutorials and usage guides.
 
-Currently, two Brainstorm *handlers* are provided: `NumpyHandler` for computations on the CPU (though Numpy/Cython) and `PyCudaHandler` for the GPU (though PyCUDA and scikit-cuda).
+Brainstorm abstracts computations via *handlers* with a consistent API. Currently, two handlers are provided: `NumpyHandler` for computations on the CPU (through Numpy/Cython) and `PyCudaHandler` for the GPU (through PyCUDA and scikit-cuda).
 
 Installation
 ------------
-Here are some quick instructions for installation on Ubuntu.
+Here are some quick instructions for installing the latest master branch on Ubuntu.
 
 ```bash
 # Install pre-requisites
