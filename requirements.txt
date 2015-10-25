@@ -1,4 +1,5 @@
 numpy
+cython
 six
 wheel>=0.22
 mock
