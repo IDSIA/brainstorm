@@ -51,20 +51,29 @@ Documentation
 The full documentation is at http://brainstorm.rtfd.org."""
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
+tests_require = ['pytest', 'mock']
+
 setup(
     name='brainstorm',
     version=about['__version__'],
     description='Fast, flexible and fun neural networks.',
     long_description=doclink + '\n\n' + history,
     author=about['__author__'],
+    author_email="mailstorm@googlemail.com",
     url=about['__url__'],
     packages=['brainstorm',
               'brainstorm.structure',
               'brainstorm.layers',
               'brainstorm.training',
               'brainstorm.handlers'],
-    install_requires=['six', 'numpy', 'h5py'],
-    tests_require=['pytest', 'mock'],
+    setup_requires=['cython', 'numpy'],
+    install_requires=['cython', 'h5py', 'numpy', 'six'],
+    extras_require={
+        'live_viz':  ['bokeh'],
+        'draw_net': ['pygraphviz'],
+        'test': tests_require
+    },
+    tests_require=tests_require,
     cmdclass={'test': PyTest},
     license=about['__license__'],
     classifiers=[
