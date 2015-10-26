@@ -48,10 +48,7 @@ try:
 except ImportError:
     has_bokeh = False
     bokeh_mock = MissingDependencyMock(sys.exc_info())
-except:
-    print("Dam Son")
-    print(sys.exc_info())
 
 
-
-__all__ = ['has_pycuda', 'has_bokeh', 'MissingDependencyMock']
+__all__ = ['has_pycuda', 'pycuda_mock', 'has_bokeh', 'bokeh_mock',
+           'MissingDependencyMock']
