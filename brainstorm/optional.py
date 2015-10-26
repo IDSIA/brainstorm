@@ -10,9 +10,16 @@ class MissingDependencyMock(object):
         self.error = error
 
     def __getattribute__(self, item):
-        six.reraise(*object.__getattribute__(self, 'error'))
+        if item == "__doc__":
+            object.__getattribute__(self, item)
+        else:
+            print("Attempted to access MissingDependencyMock object. "
+                  "Reraising the import error:", file=sys.stderr)
+            six.reraise(*object.__getattribute__(self, 'error'))
 
     def __call__(self, *args, **kwargs):
+        print("Attempted to call MissingDependencyMock object. "
+              "Reraising the import error:", file=sys.stderr)
         six.reraise(*object.__getattribute__(self, 'error'))
 
 
@@ -39,6 +46,10 @@ try:
 except ImportError:
     has_bokeh = False
     bokeh_mock = MissingDependencyMock(sys.exc_info())
+except:
+    print("Dam Son")
+    print(sys.exc_info())
+
 
 
 __all__ = ['has_pycuda', 'has_bokeh', 'MissingDependencyMock']
