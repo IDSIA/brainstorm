@@ -11,10 +11,12 @@ class MissingDependencyMock(object):
 
     def __getattribute__(self, item):
         if item == "__doc__":
-            object.__getattribute__(self, item)
+            return
+        if item == "__class__":
+            return MissingDependencyMock
         else:
-            print("Attempted to access MissingDependencyMock object. "
-                  "Reraising the import error:", file=sys.stderr)
+            print("Attempted to access '{}' of a MissingDependencyMock object."
+                  " Reraising the import error:".format(item), file=sys.stderr)
             six.reraise(*object.__getattribute__(self, 'error'))
 
     def __call__(self, *args, **kwargs):
