@@ -64,7 +64,7 @@ setup(
               'brainstorm.training',
               'brainstorm.handlers'],
     install_requires=['six', 'numpy', 'h5py'],
-    tests_requires=['pytest', 'mock'],
+    tests_require=['pytest', 'mock'],
     cmdclass={'test': PyTest},
     license=about['__license__'],
     classifiers=[

@@ -54,6 +54,7 @@ coverage: clean-pyc
 
 docs:
 	$(MAKE) -C docs clean
+	python setup.py build_ext --inplace
 	$(MAKE) -C docs html
 	xdg-open docs/_build/html/index.html
 

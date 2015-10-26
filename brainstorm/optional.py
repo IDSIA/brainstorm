@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
 from __future__ import division, print_function, unicode_literals
 import sys
 import six
@@ -45,13 +43,12 @@ except ImportError as e:
 try:
     import bokeh
     has_bokeh = True
-except ImportError:
+except ImportError as e:
     has_bokeh = False
     bokeh_mock = MissingDependencyMock(sys.exc_info())
 except:
     print("Dam Son")
     print(sys.exc_info())
-
 
 
 __all__ = ['has_pycuda', 'has_bokeh', 'MissingDependencyMock']
