@@ -67,7 +67,7 @@ setup(
               'brainstorm.training',
               'brainstorm.handlers'],
     setup_requires=['cython', 'numpy'],
-    install_requires=['cython', 'h5py', 'numpy', 'six'],
+    install_requires=['cython', 'h5py', 'mock', 'numpy', 'six'],
     extras_require={
         'live_viz':  ['bokeh'],
         'draw_net': ['pygraphviz'],
