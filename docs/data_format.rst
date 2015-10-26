@@ -1,14 +1,25 @@
+.. _data_format:
+
 ###########
 Data Format
 ###########
 
-*****
-Shape
-*****
-All data passed to the iterators has to match the shape ``(T, B, ...)`` where
-``T`` is the maximum sequence length and ``B`` is the number of sequences.
-This has to be true even if the data is not sequential. In that case it would
-be ``(1, B, ...)``.
+***********
+Data Shapes
+***********
+All data passed to a network in Brainstorm by a data iterator must match
+the template ``(T, B, ...)`` where ``T`` is the maximum sequence length and
+``B`` is the number of sequences (or batch size, in other words).
+
+To simplify handling both sequential and non-sequential data,
+such shapes should be used even if the data is not sequential. In such cases
+the shape is simply ``(1, B, ...)``. As an example, the MNIST training images
+for classification with an MLP should be shaped ``(1, 60000, 784)`` and the
+corresponding targets should be shaped ``(1, 60000, 1)``.
+
+The data for images/videos should be stored in the ``TNHWC`` format. For
+example, the training images for CIFAR-10 should be shaped
+``(1, 50000, 32, 32, 3)`` and the targets should be shaped ``(1, 50000, 1)``.
 
 ***********
 File Format
@@ -26,7 +37,7 @@ It's amazingly simple to create these files:
     with h5py.File('demo.hdf5', 'w') as f:
         f['training/input_data'] = np.random.randn(7, 100, 15)
         f['training/targets'] = np.random.randn(7, 100, 2)
-        f['training/non_sequential'] = np.random.randn(1, 100, 4)
+        f['training/static_data'] = np.random.randn(1, 100, 4)
 
 And given that file you could use your iterator like this:
 
@@ -39,9 +50,5 @@ And given that file you could use your iterator like this:
 
     train_iter = bs.Online(**ds['training'])
 
-
-.. note::
-
-    H5py offers a lot more features than that. So check them out if you need
-    more specialized features.
-
+H5py offers many more features, which can be utilized to improve data
+storage and access such as chunking and compression.

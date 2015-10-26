@@ -43,3 +43,10 @@ Help and Support
 If you have any suggestions or questions, please post to the [google group](https://groups.google.com/forum/#!forum/mailstorm).
 
 If you encounter any errors or problems, please let us know by opening an issue.
+
+Acknowledgements
+----------------
+
+Klaus Greff and Rupesh Srivastava would like to thank Jürgen Schmidhuber for his continuous supervision and encouragement.
+Funding from EU projects NASCENCE (FP7-ICT-317662) and WAY (FP7-ICT-288551) was instrumental during the development of this project.
+We also thank Nvidia Corporation for their donation of GPUs.
