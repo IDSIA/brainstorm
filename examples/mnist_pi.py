@@ -38,7 +38,8 @@ network = bs.Network.from_layer(
     fc
 )
 
-network.set_handler(PyCudaHandler())
+# Uncomment next line to use GPU
+# network.set_handler(PyCudaHandler())
 network.initialize(bs.initializers.Gaussian(0.01))
 network.set_weight_modifiers({"FC": bs.value_modifiers.ConstrainL2Norm(1)})
 

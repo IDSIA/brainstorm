@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from brainstorm.handlers import NumpyHandler
+from brainstorm.optional import has_pycuda
 
 # np.random.seed(1234)
 dtype = np.float32
@@ -108,6 +109,7 @@ def test_conv2d_forward_batch_numpy():
                                 assert passed
 
 
+@pytest.mark.skipif(has_pycuda is False, reason='requires PyCUDA+scikit-cuda')
 def test_conv2d_forward_batch_pycuda():
     from brainstorm.handlers import PyCudaHandler
     _h = PyCudaHandler()
