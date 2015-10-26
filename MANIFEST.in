@@ -2,3 +2,4 @@ include CONTRIBUTING.rst
 include HISTORY.rst
 include LICENSE
 include README.md
+recursive-include brainstorm *.c *.h *.pyx

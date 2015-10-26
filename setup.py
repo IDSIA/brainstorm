@@ -3,12 +3,21 @@ import os
 import sys
 import numpy as np
 
-from setuptools import setup
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.test import test as TestCommand
+from distutils.errors import CompileError
+from warnings import warn
 
-from setuptools import Extension
-from Cython.Build import cythonize
+# Check if we are going to use Cython to compile the pyx extension files
+try:
+    from Cython.Distutils import build_ext as _build_ext
+except ImportError:
+    use_cython = False
+else:
+    use_cython = True
 
+# Try to get __about__ information
 try:
     from brainstorm import __about__
     about = __about__.__dict__
@@ -25,6 +34,35 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 
+# Add includes for building extensions
+class build_ext(_build_ext):
+    def finalize_options(self):
+        _build_ext.finalize_options(self)
+        __builtins__.__NUMPY_SETUP__ = False
+        import numpy as np
+        self.include_dirs.append(np.get_include())
+
+    def run(self):
+        try:
+            _build_ext.run(self)
+        except CompileError:
+            warn('Failed to build optional extension modules')
+
+# Cythonize pyx if possible, else compile C
+if use_cython:
+    from Cython.Build import cythonize
+    extensions = cythonize([Extension("brainstorm.handlers._cpuop",
+                                     ["brainstorm/handlers/_cpuop.pyx"])])
+
+else:
+    extensions = [
+        Extension(
+            'brainstorm.handlers._cpuop', ['brainstorm/handlers/_cpuop.c'],
+            extra_compile_args=['-w', '-Ofast']),
+    ]
+
+
+# Setup testing
 class PyTest(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
 
@@ -74,7 +112,7 @@ setup(
         'test': tests_require
     },
     tests_require=tests_require,
-    cmdclass={'test': PyTest},
+    cmdclass={'test': PyTest, 'build_ext': build_ext},
     license=about['__license__'],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -85,7 +123,5 @@ setup(
         'Programming Language :: Python :: 3.3',
     ],
 
-    ext_modules=cythonize([Extension("brainstorm.handlers._cpuop",
-                                     ["brainstorm/handlers/_cpuop.pyx"],
-                                     include_dirs=[np.get_include()])]),
+    ext_modules=extensions,
 )
