@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 import numpy as np
 
-from brainstorm.handlers import _cpuop
+import brainstorm.handlers._cpuop
 from brainstorm.handlers.base_handler import Handler
 from brainstorm.randomness import global_rnd
 
@@ -88,12 +88,12 @@ class NumpyHandler(Handler):
 
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, in_deltas, out_deltas):
-        _cpuop.avgpool_backward(inputs, window, outputs, padding, stride,
+        brainstorm.handlers._cpuop.avgpool_backward(inputs, window, outputs, padding, stride,
                                 in_deltas, out_deltas)
 
     def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride):
-        _cpuop.avgpool_forward(inputs, window, outputs, padding, stride)
+        brainstorm.handlers._cpuop.avgpool_forward(inputs, window, outputs, padding, stride)
 
     def binarize_v(self, v, out):
         out[:] = 0.
@@ -121,7 +121,7 @@ class NumpyHandler(Handler):
                        dtype=self.dtype)
 
         for i in range(num_images):
-            _cpuop.im2col(inputs[i].reshape(inputs[i].size),
+            brainstorm.handlers._cpuop.im2col(inputs[i].reshape(inputs[i].size),
                           input_rows, input_cols, num_input_maps,
                           kernel_shape[0], kernel_shape[1],
                           padding, padding, padding, padding,
@@ -138,7 +138,7 @@ class NumpyHandler(Handler):
             # Compute in_deltas
             reshaped_params = params.reshape((num_filters, num_kernel_params))
             np.dot(reshaped_out_deltas, reshaped_params, out=col)
-            _cpuop.col2im(col.reshape(col.size),
+            brainstorm.handlers._cpuop.col2im(col.reshape(col.size),
                           input_rows, input_cols, num_input_maps,
                           kernel_shape[0], kernel_shape[1],
                           padding, padding, padding, padding,
@@ -157,7 +157,7 @@ class NumpyHandler(Handler):
         for i in range(num_images):
             col = np.zeros((num_output_pixels, num_kernel_params),
                            dtype=self.dtype)
-            _cpuop.im2col(inputs[i].reshape(inputs[i].size),
+            brainstorm.handlers._cpuop.im2col(inputs[i].reshape(inputs[i].size),
                           input_rows, input_cols, num_input_maps,
                           kernel_shape[0], kernel_shape[1],
                           padding, padding, padding, padding, stride[0],
@@ -206,12 +206,12 @@ class NumpyHandler(Handler):
 
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, argmax, in_deltas, out_deltas):
-        _cpuop.maxpool_backward(inputs, window, outputs, padding, stride,
+        brainstorm.handlers._cpuop.maxpool_backward(inputs, window, outputs, padding, stride,
                                 argmax, in_deltas, out_deltas)
 
     def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride, argmax):
-        _cpuop.maxpool_forward(inputs, window, outputs, padding,
+        brainstorm.handlers._cpuop.maxpool_forward(inputs, window, outputs, padding,
                                stride, argmax)
 
     def merge_tt(self, a, b, out):
