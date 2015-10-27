@@ -199,6 +199,9 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     """
     in_shape = (in_shape,) if isinstance(in_shape, int) else in_shape
     out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
+    out_inview = 'inputs_1' if task_type == 'regression' else 'default'
+    out_tview = 'inputs_2' if task_type == 'regression' else 'targets'
+    out_loss = 'default' if task_type == 'regression' else 'loss'
 
     if task_type == 'regression':
         projection_name = projection_name or 'Output_projection'
@@ -224,7 +227,7 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
                                           name=projection_name)
     else:
         raise ValueError('Unsupported output length {}'.format(len(out_shape)))
-    proj_layer >> out_layer
+    proj_layer >> out_inview - out_layer
 
     if task_type == 'classification':
         t_shape = out_shape[:-1] + (1,)
@@ -234,16 +237,16 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
         inp_layer = layers.Input(
             out_shapes={data_name: ('T', 'B') + in_shape,
                         targets_name: ('T', 'B') + t_shape})
-        inp_layer - targets_name >> 'targets' - out_layer
-        out_layer - 'loss' >> layers.Loss()
+        inp_layer - targets_name >> out_tview - out_layer
+        out_layer - out_loss >> layers.Loss()
     else:
         inp_layer = layers.Input(
             out_shapes={data_name: ('T', 'B') + in_shape,
                         targets_name: ('T', 'B') + t_shape,
                         mask_name: ('T', 'B', 1)})
         mask_layer = layers.Mask()
-        inp_layer - targets_name >> 'targets' - out_layer
-        out_layer - 'loss' >> mask_layer >> layers.Loss()
+        inp_layer - targets_name >> out_tview - out_layer
+        out_layer - out_loss >> mask_layer >> layers.Loss()
         inp_layer - mask_name >> 'mask' - mask_layer
 
     return inp_layer, proj_layer
@@ -500,10 +503,7 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
     if task_type in ['classification', 'multi-label']:
         output_name = 'Output.outputs.probabilities'
     elif task_type == 'regression':
-        if len(out_shape) == 1:
-            output_name = 'Output_FC.outputs.default'
-        else:
-            output_name = 'Output_Conv.outputs.default'
+        output_name = 'Output_projection.outputs.default'
     else:
         raise ValueError('Unknown task type {}'.format(task_type))
 
