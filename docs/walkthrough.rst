@@ -84,7 +84,7 @@ layer. These names will be used later.
 
 We would like to use CUDA to speed up our network training, so we simply change
 set the network's handler to be a ``PyCudaHandler``. This is not needed if we
-do not have, or with to use the GPU -- the default handler is ``NumpyHandler``.
+do not have, or want to use the GPU -- the default handler is ``NumpyHandler``.
 
 .. code-block:: python
 
