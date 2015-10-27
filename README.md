@@ -4,8 +4,7 @@ Brainstorm
 
 Brainstorm makes working with neural networks fast, flexible and fun.
 
-It combines lessons from previous projects with new design elements. 
-It is written completely in Python, and has been designed to work on multiple platforms with multiple computing backends.
+Combining lessons from previous projects with new design elements, and written entirely in Python, Brainstorm has been designed to work on multiple platforms with multiple computing backends.
 
 If you wish, you can dive into data preparation (``data`` directory) and look at some basic examples (``examples`` directory).
 Documentation is in progress, and is available [here](https://brainstorm.readthedocs.org/en/latest/).
