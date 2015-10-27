@@ -136,7 +136,7 @@ def extract_and_save(network, iter, buffer_names, file_name):
 
 def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
                       targets_name='targets', projection_name=None,
-                      outlayer_name=None, mask_name=None):
+                      outlayer_name=None, mask_name=None, use_conv=None):
     """Prepare input and output layers for building a network.
 
     This is a helper function for quickly building networks.
@@ -194,6 +194,11 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
 
             The mask is needed if error should be injected
             only at certain time steps (for sequential data).
+        use_conv (Optional[bool]):
+            Specify whether the projection layer should be convolutional.
+            If true the projection layer will use 1x1 convolutions otherwise
+            it will be fully connected.
+            Default is to autodetect this based on the output shape.
     Returns:
         tuple[Layer]
     """
@@ -218,10 +223,10 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
         else:
             raise ValueError('Unknown task type {}'.format(task_type))
 
-    if len(out_shape) == 1:
+    if len(out_shape) == 1 or use_conv is False:
         proj_layer = layers.FullyConnected(out_shape, activation='linear',
                                            name=projection_name)
-    elif len(out_shape) == 3:
+    elif len(out_shape) == 3 or use_conv is True:
         proj_layer = layers.Convolution2D(out_shape[-1], (1, 1),
                                           activation='linear',
                                           name=projection_name)
@@ -423,7 +428,7 @@ def trynumber(a):
 
 def create_net_from_spec(task_type, in_shape, out_shape, spec,
                          data_name='default', targets_name='targets',
-                         mask_name=None):
+                         mask_name=None, use_conv=None):
     """
     Create a complete network from a spec line like this "F50 F20 F50".
 
@@ -489,6 +494,11 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
 
             The mask is needed if error should be injected
             only at certain time steps (for sequential data).
+        use_conv (Optional[bool]):
+            Specify whether the projection layer should be convolutional.
+            If true the projection layer will use 1x1 convolutions otherwise
+            it will be fully connected.
+            Default is to autodetect this based on the output shape.
 
     Returns:
         brainstorm.structure.network.Network:
@@ -499,7 +509,7 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
     out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
     inp, outp = get_in_out_layers(task_type, in_shape, out_shape,
                                   data_name=data_name, mask_name=mask_name,
-                                  targets_name=targets_name)
+                                  targets_name=targets_name, use_conv=use_conv)
     if task_type in ['classification', 'multi-label']:
         output_name = 'Output.outputs.probabilities'
     elif task_type == 'regression':
