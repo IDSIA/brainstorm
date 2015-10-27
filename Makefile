@@ -59,10 +59,12 @@ docs:
 	xdg-open docs/_build/html/index.html
 
 release: clean
+	python setup.py build_ext --inplace
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload
 
 dist: clean
+	python setup.py build_ext --inplace
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
