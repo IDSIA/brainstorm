@@ -50,6 +50,11 @@ If you have any suggestions or questions, please post to the [google group](http
 
 If you encounter any errors or problems, please let us know by opening an issue.
 
+License
+-------
+
+MIT License. Please see the LICENSE file.
+
 Acknowledgements
 ----------------
 
