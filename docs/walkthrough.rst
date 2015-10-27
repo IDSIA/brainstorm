@@ -1,15 +1,16 @@
 ###########
 Walkthrough
 ###########
-Let's walk through the ``cifar10_cnn.py`` example in the ``examples``
-directory, which will quickly explain the basics of using brainstorm.
+In this walk through we go over the ``cifar10_cnn.py`` example in the ``examples``
+directory. This example explains the basics of using brainstorm and helps you get started
+with your own project.
 
 Prior to running this example, you will need to prepare the CIFAR-10 dataset
-for brainstorm. This can be done using the script ``create_cifar10.py`` in the
-``data`` directory. To understand how to prepare data for brainstorm, see
+for brainstorm. This can be done by running the ``create_cifar10.py`` script in the
+``data`` directory. A detailed description of how to prepare your data for brainstorm can be found in
 :ref:`data_format`.
 
-To start, let's do our imports first:
+We start the ``cifar10_cnn.py`` example by importing the essential features we will need later:
 
 .. code-block:: python
 
@@ -24,15 +25,15 @@ To start, let's do our imports first:
     from brainstorm.handlers import PyCudaHandler
     from brainstorm.initializers import Gaussian
 
-We now set the seed for global random number generation in Brainstorm. This
-way we can be sure that our experiment is reproducible.
+Next we set the seed for the global random number generator in Brainstorm. By doing so we are
+sure that our experiment is reproducible.
 
 .. code-block:: python
 
     bs.global_rnd.set_seed(42)
 
-Let's load the dataset from the HDF5 file prepared earlier. A Minibatches
-iterator is then set up for both the training and validation sets. We specify
+Let's now load the CIFAR-10 dataset from the HDF5 file, which we prepared earlier. Next we create a
+Minibatches iterator for the training set and validation set. Here we specify
 that we want to use a batch size of 100, and that the image data and targets
 should be named "default" and "targets" respectively.
 
@@ -45,28 +46,26 @@ should be named "default" and "targets" respectively.
     getter_tr = Minibatches(100, default=ds['training']['default'][:], targets=ds['training']['targets'][:])
     getter_va = Minibatches(100, default=ds['validation']['default'][:], targets=ds['validation']['targets'][:])
 
-Now we use a helper tool to easily create two important layers. The first
+In the next step we use a simple helper tool to create two important layers. The first layer
 is an ``Input`` layer which takes external inputs named "default" and "targets"
-(these names are used by the tool by default, but can be specified if
-different). Every brainstorm layer has a name, and this layer will simply be
+(these names are the default names used by this tool and can be altered by specifying
+different names). Every layer in brainstorm has a name, and by default this layer will simply be
 named 'Input'.
 
-The second is the final fully-connected layer which produces 10 outputs, and is
-given the name 'Output_projection' by the tool by default.
-
-In the background, the tool adds a ``SoftmaxCE`` layer (named 'Output' by
-default) which will apply the softmax function and compute the appropriate
-cross-entropy loss using the targets. It also wires this loss to a ``Loss``
-layer, marking that this is a loss that will be minimized.
+The second layer is the fully-connected output layer which produces 10 outputs, and is
+assigned the name 'Output_projection' by default. In the background, a ``SoftmaxCE`` layer
+(named 'Output' by default) is added, which will apply the softmax function and compute the appropriate
+cross-entropy loss using the targets. At the same time this loss is wired to a ``Loss``
+layer, which marks that this is a value to be minimized.
 
 .. code-block:: python
 
     inp, fc = bs.tools.get_in_out_layers('classification', (32, 32, 3), 10)
 
-We can wire up our network using the ``>>`` operator. The layer syntaxes
+In brainstorm we can wire up our network by using the ``>>`` operator. The layer syntaxes below
 should be self-explanatory. Any layer connected to other layers can now be
-passed to ``from_layer`` to create a new network. Note that we also name each
-layer. These names will be used later.
+passed to ``from_layer`` to create a new network. Note that each
+layer is assigned a name, which will be used later.
 
 .. code-block:: python
 
