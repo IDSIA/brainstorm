@@ -325,16 +325,23 @@ class StopAfterEpoch(Hook):
 class EarlyStopper(Hook):
     __default_values__ = {'patience': 1}
 
-    def __init__(self, log_name, patience=1, name=None):
+    def __init__(self, log_name, patience=1, criterion='min', name=None):
         super(EarlyStopper, self).__init__(name, 'epoch', 1)
         self.log_name = log_name
         self.patience = patience
+        if criterion not in ['min', 'max']:
+            raise ValueError("Unknown criterion: '{}'"
+                             "(Should be 'min' or 'max')".format(criterion))
+        self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         e = get_by_path(logs, self.log_name)
-        best_error_idx = np.argmin(e)
+        if self.criterion == 'min':
+            best_error_idx = np.argmin(e)
+        else:  # self.criterion == 'max'
+            best_error_idx = np.argmax(e)
         if len(e) > best_error_idx + self.patience:
-            self.message("Stopping because {} did not decrease for {} epochs.".
+            self.message("Stopping because {} did not improve for {} epochs.".
                          format(self.log_name, self.patience))
             raise StopIteration()
 
