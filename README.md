@@ -45,7 +45,7 @@ echo "export BRAINSTORM_DATA_DIR=/home/my_data_dir/" >> ~/.bashrc
 Help and Support
 ----------------
 
-If you have any suggestions or questions, please post to the [google group](https://groups.google.com/forum/#!forum/mailstorm).
+If you have any suggestions or questions, please post to the [Google group](https://groups.google.com/forum/#!forum/mailstorm).
 
 If you encounter any errors or problems, please let us know by opening an issue.
 
