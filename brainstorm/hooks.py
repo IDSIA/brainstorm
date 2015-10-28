@@ -29,14 +29,16 @@ class Hook(Describable):
         'verbose': None
     }
 
-    def __init__(self, name=None, timescale='epoch', interval=1, verbose=None):
+    def __init__(self, name=None, timescale='epoch', interval=1, verbose=None, 
+                 logging_function=print):
         self.timescale = timescale
         self.interval = interval
         self.__name__ = name or self.__class__.__name__
         self.priority = 0
         self.verbose = verbose
         self.run_verbosity = None
-
+        self.logging_function = logging_function
+        
     def start(self, net, stepper, verbose, named_data_iters):
         if self.verbose is None:
             self.run_verbosity = verbose
@@ -46,7 +48,7 @@ class Hook(Describable):
     def message(self, msg):
         """Print an output message if :attr:`run_verbosity` is True."""
         if self.run_verbosity:
-            print("{} >> {}".format(self.__name__, msg))
+            self.logging_function("{} >> {}".format(self.__name__, msg))
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
         pass
@@ -59,8 +61,10 @@ class SaveNetwork(Hook):
     the timescale and interval parameters.
     """
 
-    def __init__(self, filename, name=None, timescale='epoch', interval=1):
-        super(SaveNetwork, self).__init__(name, timescale, interval)
+    def __init__(self, filename, name=None, timescale='epoch', interval=1, 
+                 logging_function=print):
+        super(SaveNetwork, self).__init__(name, timescale, interval, 
+                                          logging_function)
         self.filename = filename
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
@@ -79,9 +83,10 @@ class SaveBestNetwork(Hook):
     __default_values__ = {'filename': None}
 
     def __init__(self, log_name, filename=None, name=None,
-                 criterion='max', timescale='epoch', interval=1, verbose=None):
-        super(SaveBestNetwork, self).__init__(name, timescale,
-                                              interval, verbose)
+                 criterion='max', timescale='epoch', interval=1, verbose=None, 
+                 logging_function=print):
+        super(SaveBestNetwork, self).__init__(name, timescale, interval, 
+                                              verbose, logging_function)
         self.log_name = log_name
         self.filename = filename
         self.parameters = None
@@ -121,8 +126,10 @@ class SaveBestNetwork(Hook):
 
 
 class SaveLogs(Hook):
-    def __init__(self, filename, name=None, timescale='epoch', interval=1):
-        super(SaveLogs, self).__init__(name, timescale, interval)
+    def __init__(self, filename, name=None, timescale='epoch', interval=1, 
+                 logging_function=print):
+        super(SaveLogs, self).__init__(name, timescale, interval,
+                                       logging_function=logging_function)
         self.filename = filename
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
@@ -144,9 +151,11 @@ class SaveLogs(Hook):
 class ModifyStepperAttribute(Hook):
     """Modify an attribute of the training stepper."""
     def __init__(self, schedule, attr_name='learning_rate',
-                 timescale='epoch', interval=1, name=None, verbose=None):
+                 timescale='epoch', interval=1, name=None, verbose=None, 
+                 logging_function=print):
         super(ModifyStepperAttribute, self).__init__(name, timescale,
-                                                     interval, verbose)
+                                                     interval, verbose, 
+                                                     logging_function)
         self.schedule = schedule
         self.attr_name = attr_name
 
@@ -168,11 +177,12 @@ class MonitorLayerParameters(Hook):
     Monitor some properties of a layer.
     """
     def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+                 interval=1, name=None, verbose=None, logging_function=print):
         if name is None:
             name = "MonitorParameters_{}".format(layer_name)
         super(MonitorLayerParameters, self).__init__(name, timescale,
-                                                     interval, verbose)
+                                                     interval, verbose,
+                                                     logging_function)
         self.layer_name = layer_name
 
     def start(self, net, stepper, verbose, named_data_iters):
@@ -202,11 +212,12 @@ class MonitorLayerGradients(Hook):
     Monitor some statistics about all the gradients of a layer.
     """
     def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+                 interval=1, name=None, verbose=None, logging_function=print):
         if name is None:
             name = "MonitorGradients_{}".format(layer_name)
         super(MonitorLayerGradients, self).__init__(name, timescale,
-                                                    interval, verbose)
+                                                    interval, verbose,
+                                                    logging_function)
         self.layer_name = layer_name
 
     def start(self, net, stepper, verbose, named_data_iters):
@@ -230,7 +241,7 @@ class MonitorLayerDeltas(Hook):
     Monitor some statistics about all the deltas of a layer.
     """
     def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+                 interval=1, name=None, verbose=None, logging_function=print):
         if name is None:
             name = "MonitorDeltas_{}".format(layer_name)
         super(MonitorLayerDeltas, self).__init__(name, timescale,
@@ -275,11 +286,12 @@ class MonitorLayerInOuts(Hook):
     Monitor some statistics about all the inputs and outputs of a layer.
     """
     def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+                 interval=1, name=None, verbose=None, logging_function=print):
         if name is None:
             name = "MonitorInOuts_{}".format(layer_name)
         super(MonitorLayerInOuts, self).__init__(name, timescale,
-                                                 interval, verbose)
+                                                 interval, verbose,
+                                                 logging_function)
         self.layer_name = layer_name
 
     def start(self, net, stepper, verbose, named_data_iters):
@@ -310,9 +322,10 @@ class MonitorLayerInOuts(Hook):
 
 class StopAfterEpoch(Hook):
     def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
-                 verbose=None):
+                 verbose=None, logging_function=print):
         super(StopAfterEpoch, self).__init__(name, timescale,
-                                             interval, verbose)
+                                             interval, verbose,
+                                             logging_function)
         self.max_epochs = max_epochs
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
@@ -325,8 +338,9 @@ class StopAfterEpoch(Hook):
 class EarlyStopper(Hook):
     __default_values__ = {'patience': 1}
 
-    def __init__(self, log_name, patience=1, name=None):
-        super(EarlyStopper, self).__init__(name, 'epoch', 1)
+    def __init__(self, log_name, patience=1, name=None, logging_function=print):
+        super(EarlyStopper, self).__init__(name, 'epoch', 1,
+                                           logging_function=logging_function)
         self.log_name = log_name
         self.patience = patience
 
@@ -346,8 +360,9 @@ class StopOnNan(Hook):
     """
     def __init__(self, logs_to_check=(), check_parameters=True,
                  check_training_loss=True, name=None, timescale='epoch',
-                 interval=1):
-        super(StopOnNan, self).__init__(name, timescale, interval)
+                 interval=1, logging_function=print):
+        super(StopOnNan, self).__init__(name, timescale, interval,
+                                        logging_function=logging_function)
         self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check,
                                                             string_types)
                               else logs_to_check)
@@ -378,8 +393,10 @@ class StopOnNan(Hook):
 
 class InfoUpdater(Hook):
     """ Save the information from logs to the Sacred custom info dict"""
-    def __init__(self, run, name=None, timescale='epoch', interval=1):
-        super(InfoUpdater, self).__init__(name, timescale, interval)
+    def __init__(self, run, name=None, timescale='epoch', interval=1, 
+                 logging_function=print):
+        super(InfoUpdater, self).__init__(name, timescale, interval,
+                                          logging_function=logging_function)
         self.run = run
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
@@ -393,8 +410,9 @@ class InfoUpdater(Hook):
 
 class MonitorLoss(Hook):
     def __init__(self, iter_name, timescale='epoch', interval=1, name=None,
-                 verbose=None):
-        super(MonitorLoss, self).__init__(name, timescale, interval, verbose)
+                 verbose=None, logging_function=print):
+        super(MonitorLoss, self).__init__(name, timescale, interval, verbose,
+                                          logging_function=logging_function)
         self.iter_name = iter_name
         self.iter = None
 
@@ -439,10 +457,10 @@ class MonitorScores(Hook):
 
     """
     def __init__(self, iter_name, scorers, timescale='epoch', interval=1,
-                 name=None, verbose=None):
+                 name=None, verbose=None, logging_function=print):
 
         super(MonitorScores, self).__init__(name, timescale, interval,
-                                            verbose)
+                                            verbose, logging_function)
         self.iter_name = iter_name
         self.iter = None
         self.scorers = scorers
@@ -466,7 +484,8 @@ class StopOnSigQuit(Hook):
     """
     __undescribed__ = {'quit': False}
 
-    def __init__(self, name=None, timescale='epoch', interval=1, verbose=None):
+    def __init__(self, name=None, timescale='epoch', interval=1, verbose=None,
+                 logging_function=print):
         super(StopOnSigQuit, self).__init__(name, timescale, interval,
                                             verbose=verbose)
         self.quit = False
@@ -527,10 +546,11 @@ else:
                 and acts as a fallback verbosity for the used data iterator.
                 If not set it defaults to the verbosity setting of the trainer.
         """
-        def __init__(self, log_names, filename=None, timescale='epoch', interval=1,
-                     name=None, verbose=None):
+        def __init__(self, log_names, filename=None, timescale='epoch', 
+                     interval=1, name=None, verbose=None, 
+                     logging_function=print):
             super(BokehVisualizer, self).__init__(name, timescale, interval,
-                                                  verbose)
+                                                  verbose, logging_function)
 
             if isinstance(log_names, basestring):
                 self.log_names = [log_names]

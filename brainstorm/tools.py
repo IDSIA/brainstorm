@@ -289,6 +289,37 @@ def print_network_info(network):
         print()
         print('-' * 80)
 
+def network_info_string(network):
+    """Returns detailed information about the network as a string
+
+    Args:
+        network (brainstorm.structure.Network):
+            A network for which the details are printed.
+    """
+    network_string = ""
+    
+    network_string += 'total number of parameters: '
+    network_string += str(network.buffer.parameters.size) + "\n"
+    for layer in network.layers.values():
+        network_string += layer.name + "\n"
+        num_params = 0
+        for view in network.buffer[layer.name].parameters.keys():
+            view_size = network.buffer[layer.name].parameters[view].size
+            view_shape = network.buffer[layer.name].parameters[view].shape
+            network_string += '\t' + str(view) + str(view_shape) + "\n"
+            num_params += view_size
+        network_string += 'number of parameters:' + str(num_params) + "\n"
+        network_string += 'input shapes:' + "\n"
+        for view in layer.in_shapes.keys():
+            network_string += '\t' + str(view)
+            network_string += str(layer.in_shapes[view].feature_shape) + "\n"
+        network_string += "\n"
+        network_string += 'output shapes:' + "\n"
+        for view in layer.out_shapes.keys():
+            network_string += '\t' + str(view)
+            network_string += str(layer.out_shapes[view].feature_shape) + "\n"
+            
+    return network_string
 
 # ############################# Net from Spec #################################
 
