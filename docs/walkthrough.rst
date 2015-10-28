@@ -33,7 +33,7 @@ sure that our experiment is reproducible.
     bs.global_rnd.set_seed(42)
 
 Let's now load the CIFAR-10 dataset from the HDF5 file, which we prepared earlier. Next we create a
-Minibatches iterator for the training set and validation set. Here we specify
+``Minibatches`` iterator for the training set and validation set. Here we specify
 that we want to use a batch size of 100, and that the image data and targets
 should be named 'default' and 'targets' respectively.
 
@@ -94,6 +94,7 @@ the names that were assigned to the layers before. Note that we can use wildcard
 here!
 
 We specify that:
+
 - For each layer name beginning with 'Conv', the 'W' parameter should be
 initialized using a Gaussian distribution with std. dev. 0.01, and the 'bias'
 parameter should be set to zero.
