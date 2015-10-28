@@ -133,6 +133,27 @@ def extract_and_save(network, iter, buffer_names, file_name):
                     ds[num].resize(size=num_items, axis=1)
                     ds[num][:, num_items - data.shape[1]:num_items, ...] = data
 
+def extract(network, iter, buffer_names):
+    """Apply the network to some data and return the requested buffers.
+       Batches are returned as a list and as they are provided by the data 
+       iterator, i.e. if you want results per-batch (per sequence), use an 
+       online iterator / minibatch iterator with a minibatch size of 1."""
+    iterator = iter(handler=network.handler)
+    if isinstance(buffer_names, six.string_types):
+        buffer_names = [buffer_names]
+    num_items = 0
+    ds = []
+    
+    returnData = []
+    for _ in run_network(network, iterator, all_inputs=False):
+        network.forward_pass()
+        returnBuffers = []
+        for buffer_name in buffer_names:
+            data = network.get(buffer_name)
+            returnBuffers.append(data)
+        returnData.append(returnBuffers)
+    
+    return returnData
 
 def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
                       targets_name='targets', projection_name=None,
