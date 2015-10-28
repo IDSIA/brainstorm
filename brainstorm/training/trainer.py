@@ -26,7 +26,7 @@ class Trainer(Describable):
     }
     __default_values__ = {'verbose': True}
 
-    def __init__(self, stepper, verbose=True):
+    def __init__(self, stepper, verbose=True, logging_function=print):
         """Create a new Trainer.
 
         Args:
@@ -41,6 +41,7 @@ class Trainer(Describable):
         self.current_update_nr = 0
         self.logs = {}
         self.results = {}
+        self.logging_function = logging_function
 
     def add_hook(self, hook):
         """Add a hook to this trainer.
@@ -70,7 +71,11 @@ class Trainer(Describable):
         iterators.
         """
         if self.verbose:
-            print('\n\n', 10 * '- ', "Before Training", 10 * ' -')
+            if self.logging_function == print:
+                self.logging_function('\n\n' + 10 * '- ' + "Before Training" + 
+                                    10 * ' -')
+            else:
+                self.logging_function(10 * '- ' + "Before Training" + 10 * ' -')
         assert set(training_data_iter.data_shapes.keys()) == set(
             net.buffer.Input.outputs.keys()), \
             "The data names provided by the training data iterator {} do not "\
@@ -91,8 +96,12 @@ class Trainer(Describable):
             train_scores.update({n: [] for n in net.get_loss_values()})
 
             if self.verbose:
-                print('\n\n', 12 * '- ', "Epoch", self.current_epoch_nr,
-                      12 * ' -')
+                if self.logging_function == print:
+                    self.logging_function('\n\n' + 12 * '- ' + "Epoch" +
+                                        str(self.current_epoch_nr) + 12 * ' -')
+                else:
+                    self.logging_function(12 * '- ' + "Epoch" +
+                                        str(self.current_epoch_nr) + 12 * ' -')
             iterator = training_data_iter(handler=net.handler)
             for _ in run_network(net, iterator):
                 self.current_update_nr += 1
@@ -133,8 +142,9 @@ class Trainer(Describable):
                     hook.start(net, self.stepper, self.verbose,
                                named_data_iters)
             except Exception:
-                print('An error occurred while starting the "{}" hook:'
-                      .format(name), file=sys.stderr)
+                self.logging_function(
+                    'An error occurred while starting the "{}" hook:'
+                    .format(name), file=sys.stderr)
                 raise
 
     def _emit_hooks(self, net, timescale, logs=None):
@@ -163,9 +173,10 @@ class Trainer(Describable):
         except StopIteration as err:
             return getattr(err, 'value', None), True
         except Exception as e:
-            print('An error occurred while calling the "{}" hook:'
-                  .format(hook.__name__), file=sys.stderr)
-            print(traceback.format_exc())
+            self.logging_function(
+                'An error occurred while calling the "{}" hook:'
+                .format(hook.__name__), file=sys.stderr)
+            self.logging_function(traceback.format_exc())
             raise e
 
     def _add_log(self, name, val, verbose=None, logs=None, indent=0):
@@ -178,14 +189,14 @@ class Trainer(Describable):
 
         if isinstance(val, dict):
             if verbose:
-                print(" " * indent + name)
+                self.logging_function(" " * indent + name)
             logs[name] = dict() if name not in logs else logs[name]
 
             for k, v in val.items():
                 self._add_log(k, v, verbose, logs[name], indent + 2)
         else:
             if verbose:
-                print(" " * indent + ("{0:%d}: {1}" % (40 - indent))
-                      .format(name, val))
+                self.logging_function(" " * indent + ("{0:%d}: {1}" % 
+                                    (40 - indent)).format(name, val))
             logs[name] = [] if name not in logs else logs[name]
             logs[name].append(val)
