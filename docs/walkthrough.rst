@@ -96,11 +96,11 @@ here!
 We specify that:
 
 - For each layer name beginning with 'Conv', the 'W' parameter should be
-initialized using a Gaussian distribution with std. dev. 0.01, and the 'bias'
-parameter should be set to zero.
+  initialized using a Gaussian distribution with std. dev. 0.01, and the 'bias'
+  parameter should be set to zero.
 - The parameter 'W' of the layers named 'FC' and 'Output_projection' should be
-initialized using a Gaussian distribution with std. dev. 0.1. The 'bias' parameter
-of these layers should be set to zero.
+  initialized using a Gaussian distribution with std. dev. 0.1. The 'bias' parameter
+  of these layers should be set to zero.
 
 Note that 'Output_projection' is the default name of the final layer created by
 the helper over which the softmax is computed.
