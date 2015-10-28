@@ -158,7 +158,7 @@ Finally, we add a hook to stop training after 20 epochs.
 
     trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 
-Now we're ready to train! We provide the trainer with the network to train,
+We are now ready to train! We provide the trainer with the network to train,
 the training data iterator, and the validation data iterator (to be used by the
 hook for monitoring the validation accuracy).
 
@@ -166,8 +166,8 @@ hook for monitoring the validation accuracy).
 
     trainer.train(network, getter_tr, valid_getter=getter_va)
 
-All quantities logged by the hooks are collected by the trainer, so
-post-training we may examine them.
+All quantities logged by the hooks are collected by the trainer, which we can examine
+post training.
 
 .. code-block:: python
 
