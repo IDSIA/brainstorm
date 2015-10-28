@@ -143,7 +143,7 @@ scorers which will make use of this data.
 Additionally we would like to save the network every time the validation accuracy improves, so
 we add a hook for this too. We tell the hook that another hook named 'validation'
 is logging something called 'Accuracy' and that the network should be
-saved at any time that its value is at its maximum.
+saved whenever this value is at its maximum.
 
 .. code-block:: python
 
