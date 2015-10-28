@@ -1,7 +1,7 @@
 #######
 Network
 #######
-Networks are the central structure in brainstorm. They contain an manage a
+Networks are the central structure in brainstorm. They contain and manage a
 directed acyclic graph of layers, manage the memory and provide access to all
 the internal states.
 
