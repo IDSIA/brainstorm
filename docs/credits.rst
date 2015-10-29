@@ -13,4 +13,4 @@ Contributors
 
 * Thomas Unterthiner
 * Julian Zilly
-* Sjoerd Van Steenkiste
+* Sjoerd van Steenkiste
