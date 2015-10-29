@@ -1,13 +1,20 @@
-==========
 Brainstorm
 ==========
 
+[![Documentation Status](https://readthedocs.org/projects/brainstorm/badge/?version=latest)](http://brainstorm.readthedocs.org/en/latest/?badge=latest)
+[![PyPi Version](https://img.shields.io/pypi/v/brainstorm.svg?style=flat-square)](https://pypi.python.org/pypi/brainstorm)
+[![MIT license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)](http://choosealicense.com/licenses/mit/)
+![Python Versions](https://img.shields.io/pypi/pyversions/brainstorm.svg?style=flat-square)
 Brainstorm makes working with neural networks fast, flexible and fun.
 
 Combining lessons from previous projects with new design elements, and written entirely in Python, Brainstorm has been designed to work on multiple platforms with multiple computing backends.
 
-If you wish, you can dive into data preparation (``data`` directory) and look at some basic examples (``examples`` directory).
-Documentation is in progress, and is available [here](https://brainstorm.readthedocs.org/en/latest/).
+
+Getting Started
+---------------
+A good point to start is the brief [walkthrough](https://brainstorm.readthedocs.org/en/latest/walkthrough.html) of the ``cifar10_cnn.py`` example.  
+More documentation is in progress, and hosted on [ReadTheDocs](https://brainstorm.readthedocs.org/en/latest/).
+If you wish, you can also run the data preparation scripts (``data`` directory) and look at some basic examples (``examples`` directory).
 
 Status
 ------
