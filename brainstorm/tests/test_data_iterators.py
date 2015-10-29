@@ -83,8 +83,8 @@ def test_random_crop():
     c = np.random.randn(1, 3, 1)
     iterator = Undivided(default=a, secondary=b, targets=c)
     crop = RandomCrop(iterator, shape_dict={'default': (3, 3),
-                                           'secondary': (2, 2)
-                                           })(default_handler)
+                                            'secondary': (2, 2)
+                                            })(default_handler)
     x = next(crop)
     assert set(x.keys()) == set(iterator.data.keys())
     assert x['default'].shape == (1, 3, 3, 3, 4)

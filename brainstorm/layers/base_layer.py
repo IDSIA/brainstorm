@@ -206,7 +206,8 @@ class Layer(object):
                         raise LayerValidationError(
                             "{}: Invalid outgoing connection ({}). Parameter"
                             " '{}' does not exist. Choices are {}".format(
-                                self.name, out_c, list(parameters.keys())))
+                                self.name, out_c, substruct,
+                                list(parameters.keys())))
 
                 if category == 'internals':
                     internals = self.internal_shapes
@@ -214,7 +215,8 @@ class Layer(object):
                         raise LayerValidationError(
                             "{}: Invalid outgoing connection ({}). Internal"
                             " '{}' does not exist. Choices are {}".format(
-                                self.name, out_c, list(internals.keys())))
+                                self.name, out_c, substruct,
+                                list(internals.keys())))
 
             elif out_c.output_name not in self.out_shapes:
                 raise LayerValidationError(

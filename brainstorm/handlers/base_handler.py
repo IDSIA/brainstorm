@@ -57,7 +57,7 @@ class Handler(Describable):
             'sigmoid': self.sigmoid,
             'rel': self.rel,
             'tanh': self.tanh,
-            'linear': lambda x, y: self.copy_to(x, y)
+            'linear': self.copy_to
         }
 
         self.act_func_deriv = {

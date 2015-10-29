@@ -1,9 +1,9 @@
 Brainstorm
 ==========
 
-[![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat-square)](http://brainstorm.readthedocs.org/en/latest/?badge=latest)
+[![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat-square)](http://brainstorm.readthedocs.org/en/latest)
 [![PyPi Version](https://img.shields.io/pypi/v/brainstorm.svg?style=flat-square)](https://pypi.python.org/pypi/brainstorm)
-[![MIT license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)](http://choosealicense.com/licenses/mit/)
+[![MIT license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)](http://choosealicense.com/licenses/mit)
 ![Python Versions](https://img.shields.io/pypi/pyversions/brainstorm.svg?style=flat-square)
 
 Brainstorm makes working with neural networks fast, flexible and fun.

@@ -414,10 +414,10 @@ class Minibatches(DataIterator):
         indices = np.arange(self.length)
         if self.shuffle:
             self.rnd.shuffle(indices)
-        for i, idx in enumerate(indices):
+        for idx in indices:
             batch_slice = slice(idx * self.batch_size,
                                 (idx + 1) * self.batch_size)
-            time_slice = slice(None, np.max(self.seq_lens[batch_slice]) )
+            time_slice = slice(None, np.max(self.seq_lens[batch_slice]))
             data = {k: v[time_slice, batch_slice]
                     for k, v in self.data.items()}
             yield data
