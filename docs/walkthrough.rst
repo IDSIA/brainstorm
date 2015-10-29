@@ -33,7 +33,7 @@ sure that our experiment is reproducible.
     bs.global_rnd.set_seed(42)
 
 Let's now load the CIFAR-10 dataset from the HDF5 file, which we prepared earlier. Next we create a
-Minibatches iterator for the training set and validation set. Here we specify
+``Minibatches`` iterator for the training set and validation set. Here we specify
 that we want to use a batch size of 100, and that the image data and targets
 should be named 'default' and 'targets' respectively.
 
@@ -94,12 +94,13 @@ the names that were assigned to the layers before. Note that we can use wildcard
 here!
 
 We specify that:
+
 - For each layer name beginning with 'Conv', the 'W' parameter should be
-initialized using a Gaussian distribution with std. dev. 0.01, and the 'bias'
-parameter should be set to zero.
+  initialized using a Gaussian distribution with std. dev. 0.01, and the 'bias'
+  parameter should be set to zero.
 - The parameter 'W' of the layers named 'FC' and 'Output_projection' should be
-initialized using a Gaussian distribution with std. dev. 0.1. The 'bias' parameter
-of these layers should be set to zero.
+  initialized using a Gaussian distribution with std. dev. 0.1. The 'bias' parameter
+  of these layers should be set to zero.
 
 Note that 'Output_projection' is the default name of the final layer created by
 the helper over which the softmax is computed.
@@ -142,7 +143,7 @@ scorers which will make use of this data.
 Additionally we would like to save the network every time the validation accuracy improves, so
 we add a hook for this too. We tell the hook that another hook named 'validation'
 is logging something called 'Accuracy' and that the network should be
-saved at any time that its value is at its maximum.
+saved whenever this value is at its maximum.
 
 .. code-block:: python
 
@@ -157,7 +158,7 @@ Finally, we add a hook to stop training after 20 epochs.
 
     trainer.add_hook(bs.hooks.StopAfterEpoch(20))
 
-Now we're ready to train! We provide the trainer with the network to train,
+We are now ready to train! We provide the trainer with the network to train,
 the training data iterator, and the validation data iterator (to be used by the
 hook for monitoring the validation accuracy).
 
@@ -165,8 +166,8 @@ hook for monitoring the validation accuracy).
 
     trainer.train(network, getter_tr, valid_getter=getter_va)
 
-All quantities logged by the hooks are collected by the trainer, so
-post-training we may examine them.
+All quantities logged by the hooks are collected by the trainer, which we can examine
+post training.
 
 .. code-block:: python
 
