@@ -11,7 +11,7 @@ from brainstorm.scorers import (aggregate_losses_and_scores,
 from brainstorm.training.trainer import run_network
 from brainstorm.utils import get_by_path, get_brainstorm_info
 
-__all__ = ['draw_network', 'evaluate', 'extract_and_save',
+__all__ = ['draw_network', 'evaluate', 'extract_and_save', 'extract',
            'print_network_info', 'get_in_out_layers', 'create_net_from_spec']
 
 
@@ -133,6 +133,50 @@ def extract_and_save(network, iter, buffer_names, file_name):
                     ds[num].resize(size=num_items, axis=1)
                     ds[num][:, num_items - data.shape[1]:num_items, ...] = data
 
+
+def extract(network, iter, buffer_names):
+    """Apply the network to some data and return the requested buffers.
+    
+    Batches are returned as a dictionary, with one entry for each
+    requested buffer, with the data in (T, B, ...) order.
+       
+    Args:
+        network (brainstorm.structure.Network): Network using which the features
+                                            should be generated.
+        iter (brainstorm.DataIterator): A data iterator which produces the
+                                        data on which the features are
+                                        computed.
+        buffer_names (list[unicode]): Name of the buffer views to be saved (in
+                                      dotted notation).
+    """
+    iterator = iter(handler=network.handler)
+    if isinstance(buffer_names, six.string_types):
+        buffer_names = [buffer_names]
+    
+    max_time_len = iter.data_shapes.values()[0][0]
+    batch_count = iter.data_shapes.values()[0][1]
+    
+    return_data = {}
+    batch_counter = 0
+    for _ in run_network(network, iterator, all_inputs=False):
+        network.forward_pass()
+        
+        for buffer_name in buffer_names:
+            data = network.get(buffer_name)
+            
+            if batch_counter == 0:
+                data_shape = (max_time_len, batch_count) + data.shape[2:]
+                return_data[buffer_name] = np.zeros(data_shape, data.dtype)
+            
+            for (time_step, batch_data) in enumerate(data):
+                processed_batches = 0
+                for batch in batch_data:
+                    batch_index = batch_counter + processed_batches
+                    return_data[buffer_name][time_step, batch_index] = \
+                        data[time_step, processed_batches]
+                    processed_batches += 1
+        batch_counter += processed_batches
+    return return_data
 
 def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
                       targets_name='targets', projection_name=None,
