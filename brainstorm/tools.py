@@ -257,6 +257,40 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     return inp_layer, proj_layer
 
 
+def get_network_info(network):
+    """Returns detailed information about the network as a string.
+
+    Args:
+        network (brainstorm.structure.Network):
+            A network for which the details are printed.
+    """
+    network_string = ""
+    
+    network_string += 'total number of parameters: '
+    network_string += str(network.buffer.parameters.size) + "\n"
+    for layer in network.layers.values():
+        network_string += layer.name + "\n"
+        num_params = 0
+        for view in network.buffer[layer.name].parameters.keys():
+            view_size = network.buffer[layer.name].parameters[view].size
+            view_shape = network.buffer[layer.name].parameters[view].shape
+            network_string += '\t' + str(view) + str(view_shape) + "\n"
+            num_params += view_size
+        network_string += 'number of parameters:' + str(num_params) + "\n"
+        network_string += 'input shapes:' + "\n"
+        for view in layer.in_shapes.keys():
+            network_string += '\t' + str(view)
+            network_string += str(layer.in_shapes[view].feature_shape) + "\t"
+        network_string += "\n"
+        network_string += 'output shapes:' + "\n"
+        for view in layer.out_shapes.keys():
+            network_string += '\t' + str(view)
+            network_string += str(layer.out_shapes[view].feature_shape) + "\t"
+        network_string += "\n"
+        network_string += '-' * 80 + "\n"
+        
+    return network_string
+
 def print_network_info(network):
     """Print detailed information about the network.
 
@@ -269,25 +303,7 @@ def print_network_info(network):
             A network for which the details are printed.
     """
     print('=' * 30, "Network information", '=' * 30)
-    print('total number of parameters: ', network.buffer.parameters.size)
-    for layer in network.layers.values():
-        print(layer.name)
-        num_params = 0
-        for view in network.buffer[layer.name].parameters.keys():
-            view_size = network.buffer[layer.name].parameters[view].size
-            view_shape = network.buffer[layer.name].parameters[view].shape
-            print('\t', view, view_shape)
-            num_params += view_size
-        print('number of parameters:', num_params)
-        print('input shapes:')
-        for view in layer.in_shapes.keys():
-            print('\t', view, layer.in_shapes[view].feature_shape, end='\t')
-        print()
-        print('output shapes:')
-        for view in layer.out_shapes.keys():
-            print('\t', view, layer.out_shapes[view].feature_shape, end='\t')
-        print()
-        print('-' * 80)
+    print(get_network_info(network))
 
 
 # ############################# Net from Spec #################################
