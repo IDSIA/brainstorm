@@ -43,7 +43,6 @@ class PyCudaHandler(Handler):
     def __init_from_description__(self, description):
         self.__init__()
 
-
     def _get_gridsize(self, n):
         min_threads = 32
         max_threads = 256
