@@ -19,11 +19,9 @@ data_file = os.path.join(data_dir, 'MNIST.hdf5')
 ds = h5py.File(data_file, 'r')['normalized_split']
 x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
 x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
-x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
 getter_tr = Minibatches(100, default=x_tr, targets=y_tr)
 getter_va = Minibatches(100, default=x_va, targets=y_va)
-getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 

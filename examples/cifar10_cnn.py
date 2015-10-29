@@ -39,7 +39,8 @@ inp, fc = bs.tools.get_in_out_layers('classification', (32, 32, 3), 10)
     fc)
 
 network = bs.Network.from_layer(fc)
-network.set_handler(PyCudaHandler())
+# Uncomment next line to use GPU
+# network.set_handler(PyCudaHandler())
 network.initialize({'Conv*': {'W': Gaussian(0.01), 'bias': 0},
                     'FC': {'W': Gaussian(0.1), 'bias': 0},
                     'Output_projection': {'W': Gaussian(0.1), 'bias': 0}})

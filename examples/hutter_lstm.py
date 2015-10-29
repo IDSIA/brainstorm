@@ -20,27 +20,25 @@ data_file = os.path.join(data_dir, 'HutterPrize.hdf5')
 ds = h5py.File(data_file, 'r')['split']
 x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
 x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
-x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
 getter_tr = OneHot(Minibatches(100, default=x_tr, targets=y_tr, shuffle=False),
                    {'default': 205})
 getter_va = OneHot(Minibatches(100, default=x_va, targets=y_va, shuffle=False),
-                   {'default': 205})
-getter_te = OneHot(Minibatches(100, default=x_te, targets=y_te, shuffle=False),
                    {'default': 205})
 
 # ----------------------------- Set up Network ------------------------------ #
 
 network = bs.tools.create_net_from_spec('classification', 205, 205,
                                         'L1000')
-network.set_handler(PyCudaHandler())
+
+# Uncomment next line to use the GPU
+# network.set_handler(PyCudaHandler())
 network.initialize(bs.initializers.Gaussian(0.01))
 
 # ----------------------------- Set up Trainer ------------------------------ #
 
 trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01,
-                                                 momentum=0.9),
-                     verbose=True)
+                                                 momentum=0.9))
 trainer.add_hook(bs.hooks.ProgressBar())
 scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,

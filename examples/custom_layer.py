@@ -20,7 +20,7 @@ bs.global_rnd.set_seed(42)
 
 # ------------------------------ Custom Layer ------------------------------- #
 
-# This is used for wiring the layers in python notation
+# This function will be used for wiring the layers
 def Square(name=None):
     """Create a layer that squares its inputs elementwise"""
     return ConstructionWrapper.create(SquareLayerImpl, name=name)
@@ -37,7 +37,7 @@ class SquareLayerImpl(Layer):
     # For a custom layer we need to implement the following 3 methods:
 
     def setup(self, kwargs, in_shapes):
-        # in this method we set up the buffer structure of the layer
+        # In this method we set up the buffer structure of the layer
         # we can use the kwargs passed to this layer (here we don't)
         # and the shapes of the inputs (an OrderedDict[str, BufferStructure])
 
@@ -61,8 +61,9 @@ class SquareLayerImpl(Layer):
         self.handler.mult_add_tt(inputs, output_deltas, input_deltas)
 
 # --------------------------- Testing the Layer ----------------------------- #
-# This obviously doesn't have to happen before every run. So we recommend
+# Testing doesn't need to happen before every run. We recommend
 # having a layer implementation + the tests in a separate file.
+
 from brainstorm.tests.tools import get_test_configurations, run_layer_tests
 
 for cfg in get_test_configurations():
@@ -72,6 +73,8 @@ for cfg in get_test_configurations():
     run_layer_tests(layer, cfg)
 
 
+# ------------------------------ Demo Example ------------------------------- #
+
 # ---------------------------- Set up Iterators ----------------------------- #
 
 data_dir = os.environ.get('BRAINSTORM_DATA_DIR', '../data')
@@ -79,15 +82,13 @@ data_file = os.path.join(data_dir, 'MNIST.hdf5')
 ds = h5py.File(data_file, 'r')['normalized_split']
 x_tr, y_tr = ds['training']['default'][:], ds['training']['targets'][:]
 x_va, y_va = ds['validation']['default'][:], ds['validation']['targets'][:]
-x_te, y_te = ds['test']['default'][:], ds['test']['targets'][:]
 
 getter_tr = Minibatches(100, default=x_tr, targets=y_tr)
 getter_va = Minibatches(100, default=x_va, targets=y_va)
-getter_te = Minibatches(100, default=x_te, targets=y_te)
 
 # ----------------------------- Set up Network ------------------------------ #
 
-inp, out = bs.tools.get_in_out_layers_for_classification((1, 28, 28), 10)
+inp, out = bs.tools.get_in_out_layers('classification', (28, 28, 1), 10)
 network = bs.Network.from_layer(
     inp >>
     FullyConnected(500, name='Hid1', activation='linear') >>
@@ -102,14 +103,13 @@ network.initialize(bs.initializers.Gaussian(0.01))
 trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01,
                                                  momentum=0.9))
 trainer.add_hook(bs.hooks.ProgressBar())
-scorers = [bs.scorers.Accuracy(out_name='Output.probabilities')]
+scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
-trainer.add_hook(bs.hooks.EarlyStopper('validation.Loss', patience=10))
+trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy', patience=10))
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 
 # -------------------------------- Train ------------------------------------ #
 
 trainer.train(network, getter_tr, valid_getter=getter_va)
-print("Best validation set accuracy:",
-      max(trainer.logs["validation"]["Accuracy"]))
+print("Best validation set accuracy:", max(trainer.logs["validation"]["Accuracy"]))
