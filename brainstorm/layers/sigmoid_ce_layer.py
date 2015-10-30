@@ -48,10 +48,9 @@ class SigmoidCELayerImpl(Layer):
 
         outputs = OrderedDict()
         outputs['probabilities'] = BufferStructure('T', 'B', *in_shape)
-        outputs['loss'] = BufferStructure('T', 'B', 1)
+        outputs['loss'] = BufferStructure('T', 'B', *in_shape)
 
         internals = OrderedDict()
-        internals['cee'] = BufferStructure('T', 'B', *in_shape)
         internals['dcee'] = BufferStructure('T', 'B', *in_shape,
                                             is_backward_only=True)
         return outputs, OrderedDict(), internals
@@ -62,7 +61,6 @@ class SigmoidCELayerImpl(Layer):
 
         inputs = flatten_time_and_features(buffers.inputs.default)
         targets = flatten_time_and_features(buffers.inputs.targets)
-        cee = flatten_time_and_features(buffers.internals.cee)
         loss = flatten_time_and_features(buffers.outputs.loss)
         prob = flatten_time_and_features(buffers.outputs.probabilities)
 
@@ -72,20 +70,18 @@ class SigmoidCELayerImpl(Layer):
         # the binomial cross entropy error is given by
         # - (t * ln(y) + (1-t) * ln(1-y))
         tmp = _h.ones(prob.shape)
-        _h.subtract_tt(tmp, prob, cee)     # cee = 1-y
+        _h.subtract_tt(tmp, prob, loss)     # loss = 1-y
         _h.subtract_tt(tmp, targets, tmp)     # tmp  = 1-t
-        _h.clip_t(cee, 1e-6, 1.0, cee)
-        _h.log_t(cee, cee)              # cee = ln(1-y)
-        _h.mult_tt(tmp, cee, tmp)  # tmp = (1-t) * ln(1-y)
+        _h.clip_t(loss, 1e-6, 1.0, loss)
+        _h.log_t(loss, loss)              # loss = ln(1-y)
+        _h.mult_tt(tmp, loss, tmp)  # tmp = (1-t) * ln(1-y)
 
-        _h.clip_t(prob, 1e-6, 1.0, cee)
-        _h.log_t(cee, cee)              # cee = ln(y)
-        _h.mult_tt(targets, cee, cee)    # cee = t * ln(y)
+        _h.clip_t(prob, 1e-6, 1.0, loss)
+        _h.log_t(loss, loss)              # loss = ln(y)
+        _h.mult_tt(targets, loss, loss)    # loss = t * ln(y)
 
-        _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
+        _h.add_tt(tmp, loss, loss)        # loss = (1-t) * ln(1-y) + t * ln(y)
 
-        # reshape for summation
-        _h.sum_t(cee, axis=1, out=loss)
         _h.mult_st(-1, loss, loss)  # * -1
 
     def backward_pass(self, buffers):
@@ -94,8 +90,8 @@ class SigmoidCELayerImpl(Layer):
         assert isinstance(_h, Handler)
 
         dinputs = flatten_time_and_features(buffers.input_deltas.default)
-        dloss = flatten_time(buffers.output_deltas.loss)
-        dcee = flatten_time_and_features(buffers.internals.cee)
+        dloss = flatten_time_and_features(buffers.output_deltas.loss)
+        dcee = flatten_time_and_features(buffers.internals.dcee)
         targets = flatten_time_and_features(buffers.inputs.targets)
         prob = flatten_time_and_features(buffers.outputs.probabilities)
 
