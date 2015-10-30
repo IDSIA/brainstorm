@@ -91,6 +91,12 @@ class SaveBestNetwork(Hook):
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if epoch_nr == 0:
+            try:
+                e = get_by_path(logs, self.log_name)
+            except KeyError:
+                return
+
         e = get_by_path(logs, self.log_name)
         last = e[-1]
         if self.criterion == 'min':
