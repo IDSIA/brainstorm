@@ -88,17 +88,17 @@ class NumpyHandler(Handler):
 
     def avgpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, in_deltas, out_deltas):
-        brainstorm.handlers._cpuop.avgpool_backward(inputs, window, outputs, padding, stride,
-                                in_deltas, out_deltas)
+        brainstorm.handlers._cpuop.avgpool_backward(
+            inputs, window, outputs, padding, stride, in_deltas, out_deltas)
 
     def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride):
-        brainstorm.handlers._cpuop.avgpool_forward(inputs, window, outputs, padding, stride)
+        brainstorm.handlers._cpuop.avgpool_forward(inputs, window, outputs,
+                                                   padding, stride)
 
     def binarize_v(self, v, out):
-        out[:] = 0.
-        for i in range(v.shape[0]):
-            out[i, int(v[i])] = 1.0
+        eye = np.eye(out.shape[1], dtype=self.dtype)
+        out[:] = eye[v.astype(np.int32)].reshape(out.shape)
 
     def broadcast_t(self, a, axis, out):
         assert (out.shape[:axis] + (1,) + out.shape[axis+1:]) == a.shape
@@ -121,11 +121,12 @@ class NumpyHandler(Handler):
                        dtype=self.dtype)
 
         for i in range(num_images):
-            brainstorm.handlers._cpuop.im2col(inputs[i].reshape(inputs[i].size),
-                          input_rows, input_cols, num_input_maps,
-                          kernel_shape[0], kernel_shape[1],
-                          padding, padding, padding, padding,
-                          stride[0], stride[1], col.reshape(col.size))
+            brainstorm.handlers._cpuop.im2col(
+                inputs[i].reshape(inputs[i].size),
+                input_rows, input_cols, num_input_maps,
+                kernel_shape[0], kernel_shape[1],
+                padding, padding, padding, padding,
+                stride[0], stride[1], col.reshape(col.size))
 
             # Compute gradients
             reshaped_dparams = dparams.reshape(num_filters, num_kernel_params)
@@ -138,12 +139,12 @@ class NumpyHandler(Handler):
             # Compute in_deltas
             reshaped_params = params.reshape((num_filters, num_kernel_params))
             np.dot(reshaped_out_deltas, reshaped_params, out=col)
-            brainstorm.handlers._cpuop.col2im(col.reshape(col.size),
-                          input_rows, input_cols, num_input_maps,
-                          kernel_shape[0], kernel_shape[1],
-                          padding, padding, padding, padding,
-                          stride[0], stride[1],
-                          in_deltas[i].reshape(in_deltas[i].size))
+            brainstorm.handlers._cpuop.col2im(
+                col.reshape(col.size),
+                input_rows, input_cols, num_input_maps,
+                kernel_shape[0], kernel_shape[1],
+                padding, padding, padding, padding,
+                stride[0], stride[1], in_deltas[i].reshape(in_deltas[i].size))
 
     def conv2d_forward_batch(self, inputs, weights, bias, outputs,
                              padding, stride):
@@ -157,11 +158,12 @@ class NumpyHandler(Handler):
         for i in range(num_images):
             col = np.zeros((num_output_pixels, num_kernel_params),
                            dtype=self.dtype)
-            brainstorm.handlers._cpuop.im2col(inputs[i].reshape(inputs[i].size),
-                          input_rows, input_cols, num_input_maps,
-                          kernel_shape[0], kernel_shape[1],
-                          padding, padding, padding, padding, stride[0],
-                          stride[1], col.reshape(col.size))
+            brainstorm.handlers._cpuop.im2col(
+                inputs[i].reshape(inputs[i].size),
+                input_rows, input_cols, num_input_maps,
+                kernel_shape[0], kernel_shape[1],
+                padding, padding, padding, padding, stride[0],
+                stride[1], col.reshape(col.size))
 
             reshaped_params = weights.reshape(num_filters, num_kernel_params)
             np.dot(col, reshaped_params.T, out=outputs[i].reshape(out_shape))
@@ -198,21 +200,23 @@ class NumpyHandler(Handler):
         mask[:] = self.rnd.uniform(size=mask.shape) < probability
 
     def index_m_by_v(self, m, v, out):
-        for i in range(m.shape[0]):
-            out[i] = m[i, int(v[i])]
+        out[:, 0] = m[np.arange(m.shape[0]), v.squeeze().astype(np.int32)]
+        # for i in range(m.shape[0]):
+        #     out[i] = m[i, int(v[i])]
 
     def log_t(self, a, out):
         np.log(a, out)
 
     def maxpool2d_backward_batch(self, inputs, window, outputs, padding,
                                  stride, argmax, in_deltas, out_deltas):
-        brainstorm.handlers._cpuop.maxpool_backward(inputs, window, outputs, padding, stride,
-                                argmax, in_deltas, out_deltas)
+        brainstorm.handlers._cpuop.maxpool_backward(inputs, window, outputs,
+                                                    padding, stride, argmax,
+                                                    in_deltas, out_deltas)
 
     def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride, argmax):
-        brainstorm.handlers._cpuop.maxpool_forward(inputs, window, outputs, padding,
-                               stride, argmax)
+        brainstorm.handlers._cpuop.maxpool_forward(inputs, window, outputs,
+                                                   padding, stride, argmax)
 
     def merge_tt(self, a, b, out):
         out_flat = out.reshape(-1, out.shape[-1])
