@@ -406,8 +406,8 @@ class DebugHandler(Handler):
         assert_debug_arrays(m, v, out)
         assert_shapes_equal(m, out)
         assert len(m.shape) == 2, "len({}) != 2".format(m.shape)
-        assert v.shape == (m.shape[0], 1) or v.shape == (1, m.shape[1]), \
-            "invalid shape {}".format(v.shape)
+        assert v.shape in [(m.shape[0], 1), (1, m.shape[1]), m.shape],\
+            "invalid shape {} (m.shape = {})".format(v.shape, m.shape)
         self.handler.mult_mv(m.array, v.array, out.array)
 
     @check_for_inf_or_nan

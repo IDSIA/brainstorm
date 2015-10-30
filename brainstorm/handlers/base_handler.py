@@ -646,7 +646,9 @@ class Handler(Describable):
         """Multiply a matrix with a vector.
 
         Multiply an (M, N) matrix with a (1, N) or (M, 1) vector using
-        broadcasting such that the output is (M, N).
+        broadcasting such that the output is (M, N). Also allows the "vector"
+        to have the same dimension as the matrix in which case it behaves the
+        same as :meth:`.mult_tt`.
 
         Args:
             m (array_type): The first array. Must be 2D.
