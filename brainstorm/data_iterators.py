@@ -327,7 +327,6 @@ class RandomCrop(DataIterator):
                 row_indices = self.rnd.random_integers(0, max_r, n)
                 col_indices = self.rnd.random_integers(0, max_c, n)
                 cropped = np.zeros((t, n, crop_h, crop_w, c))
-                print(cropped.shape)
                 _crop_images(data[name], crop_h, crop_w, row_indices,
                              col_indices, cropped)
                 data[name] = cropped
