@@ -52,23 +52,7 @@ class Hook(Describable):
         pass
 
 
-class SaveNetwork(Hook):
-    """
-    Save the weights of the network to the given file on every call.
-    Default is to save them once per epoch, but this can be configured using
-    the timescale and interval parameters.
-    """
-
-    def __init__(self, filename, name=None, timescale='epoch', interval=1):
-        super(SaveNetwork, self).__init__(name, timescale, interval)
-        self.filename = filename
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        net.save_as_hdf5(self.filename)
-
-    def load_network(self):
-        return Network.from_hdf5(self.filename)
-
+# -------------------------------- Saviors ---------------------------------- #
 
 class SaveBestNetwork(Hook):
     """
@@ -147,89 +131,25 @@ class SaveLogs(Hook):
                 group.create_dataset(name, data=np.array(log))
 
 
-class ModifyStepperAttribute(Hook):
-    """Modify an attribute of the training stepper."""
-    def __init__(self, schedule, attr_name='learning_rate',
-                 timescale='epoch', interval=1, name=None, verbose=None):
-        super(ModifyStepperAttribute, self).__init__(name, timescale,
-                                                     interval, verbose)
-        self.schedule = schedule
-        self.attr_name = attr_name
+class SaveNetwork(Hook):
+    """
+    Save the weights of the network to the given file on every call.
+    Default is to save them once per epoch, but this can be configured using
+    the timescale and interval parameters.
+    """
 
-    def start(self, net, stepper, verbose, monitor_kwargs):
-        super(ModifyStepperAttribute, self).start(net, stepper, verbose,
-                                                  monitor_kwargs)
-        assert hasattr(stepper, self.attr_name), \
-            "The stepper {} does not have the attribute {}".format(
-                stepper.__class__.__name__, self.attr_name)
+    def __init__(self, filename, name=None, timescale='epoch', interval=1):
+        super(SaveNetwork, self).__init__(name, timescale, interval)
+        self.filename = filename
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        setattr(stepper, self.attr_name,
-                self.schedule(epoch_nr, update_nr, self.timescale,
-                              self.interval, net, stepper, logs))
+        net.save_as_hdf5(self.filename)
+
+    def load_network(self):
+        return Network.from_hdf5(self.filename)
 
 
-class MonitorLayerParameters(Hook):
-    """
-    Monitor some properties of a layer.
-    """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
-        if name is None:
-            name = "MonitorParameters_{}".format(layer_name)
-        super(MonitorLayerParameters, self).__init__(name, timescale,
-                                                     interval, verbose)
-        self.layer_name = layer_name
-
-    def start(self, net, stepper, verbose, named_data_iters):
-        assert self.layer_name in net.layers.keys(), \
-            "{} >> No layer named {} present in network. Available layers " \
-            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        log = OrderedDict()
-        for key, v in net.buffer[self.layer_name].parameters.items():
-            v = net.handler.get_numpy_copy(v)
-            log[key] = OrderedDict()
-            log[key]['min'] = v.min()
-            log[key]['avg'] = v.mean()
-            log[key]['max'] = v.max()
-            if len(v.shape) > 1:
-                log[key]['min_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).min()
-                log[key]['avg_L2_norm'] = np.sqrt(np.sum(v ** 2,
-                                                         axis=1)).mean()
-                log[key]['max_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).max()
-
-        return log
-
-
-class MonitorLayerGradients(Hook):
-    """
-    Monitor some statistics about all the gradients of a layer.
-    """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
-        if name is None:
-            name = "MonitorGradients_{}".format(layer_name)
-        super(MonitorLayerGradients, self).__init__(name, timescale,
-                                                    interval, verbose)
-        self.layer_name = layer_name
-
-    def start(self, net, stepper, verbose, named_data_iters):
-        assert self.layer_name in net.layers.keys(), \
-            "{} >> No layer named {} present in network. Available layers " \
-            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        log = OrderedDict()
-        for key, v in net.buffer[self.layer_name].gradients.items():
-            v = net.handler.get_numpy_copy(v)
-            log[key] = OrderedDict()
-            log[key]['min'] = v.min()
-            log[key]['avg'] = v.mean()
-            log[key]['max'] = v.max()
-        return log
-
+# -------------------------------- Monitors --------------------------------- #
 
 class MonitorLayerDeltas(Hook):
     """
@@ -276,6 +196,34 @@ class MonitorLayerDeltas(Hook):
         return log
 
 
+class MonitorLayerGradients(Hook):
+    """
+    Monitor some statistics about all the gradients of a layer.
+    """
+    def __init__(self, layer_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        if name is None:
+            name = "MonitorGradients_{}".format(layer_name)
+        super(MonitorLayerGradients, self).__init__(name, timescale,
+                                                    interval, verbose)
+        self.layer_name = layer_name
+
+    def start(self, net, stepper, verbose, named_data_iters):
+        assert self.layer_name in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        log = OrderedDict()
+        for key, v in net.buffer[self.layer_name].gradients.items():
+            v = net.handler.get_numpy_copy(v)
+            log[key] = OrderedDict()
+            log[key]['min'] = v.min()
+            log[key]['avg'] = v.mean()
+            log[key]['max'] = v.max()
+        return log
+
+
 class MonitorLayerInOuts(Hook):
     """
     Monitor some statistics about all the inputs and outputs of a layer.
@@ -314,94 +262,38 @@ class MonitorLayerInOuts(Hook):
         return log
 
 
-class StopAfterEpoch(Hook):
-    def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
-                 verbose=None):
-        super(StopAfterEpoch, self).__init__(name, timescale,
-                                             interval, verbose)
-        self.max_epochs = max_epochs
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        if epoch_nr >= self.max_epochs:
-            self.message("Stopping because the maximum number of epochs ({}) "
-                         "was reached.".format(self.max_epochs))
-            raise StopIteration()
-
-
-class EarlyStopper(Hook):
-    __default_values__ = {'patience': 1}
-
-    def __init__(self, log_name, patience=1, criterion='min', name=None):
-        super(EarlyStopper, self).__init__(name, 'epoch', 1)
-        self.log_name = log_name
-        self.patience = patience
-        if criterion not in ['min', 'max']:
-            raise ValueError("Unknown criterion: '{}'"
-                             "(Should be 'min' or 'max')".format(criterion))
-        self.criterion = criterion
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        e = get_by_path(logs, self.log_name)
-        if self.criterion == 'min':
-            best_error_idx = np.argmin(e)
-        else:  # self.criterion == 'max'
-            best_error_idx = np.argmax(e)
-        if len(e) > best_error_idx + self.patience:
-            self.message("Stopping because {} did not improve for {} epochs.".
-                         format(self.log_name, self.patience))
-            raise StopIteration()
-
-
-class StopOnNan(Hook):
-    """ Stop the training if infinite or NaN values are found in parameters.
-
-    Can also check logs for invalid values.
+class MonitorLayerParameters(Hook):
     """
-    def __init__(self, logs_to_check=(), check_parameters=True,
-                 check_training_loss=True, name=None, timescale='epoch',
-                 interval=1):
-        super(StopOnNan, self).__init__(name, timescale, interval)
-        self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check,
-                                                            string_types)
-                              else logs_to_check)
-        self.check_parameters = check_parameters
-        self.check_training_loss = check_training_loss
+    Monitor some properties of a layer.
+    """
+    def __init__(self, layer_name, timescale='epoch',
+                 interval=1, name=None, verbose=None):
+        if name is None:
+            name = "MonitorParameters_{}".format(layer_name)
+        super(MonitorLayerParameters, self).__init__(name, timescale,
+                                                     interval, verbose)
+        self.layer_name = layer_name
+
+    def start(self, net, stepper, verbose, named_data_iters):
+        assert self.layer_name in net.layers.keys(), \
+            "{} >> No layer named {} present in network. Available layers " \
+            "are {}.".format(self.__name__, self.layer_name, net.layers.keys())
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        for log_name in self.logs_to_check:
-            log = get_by_path(logs, log_name)
-            if not np.all(np.isfinite(log)):
-                self.message("NaN or inf detected in {}!".format(log_name))
-                raise StopIteration()
-        if self.check_parameters:
-            if not net.handler.is_fully_finite(net.buffer.parameters):
-                self.message("NaN or inf detected in parameters!")
-                raise StopIteration()
+        log = OrderedDict()
+        for key, v in net.buffer[self.layer_name].parameters.items():
+            v = net.handler.get_numpy_copy(v)
+            log[key] = OrderedDict()
+            log[key]['min'] = v.min()
+            log[key]['avg'] = v.mean()
+            log[key]['max'] = v.max()
+            if len(v.shape) > 1:
+                log[key]['min_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).min()
+                log[key]['avg_L2_norm'] = np.sqrt(np.sum(v ** 2,
+                                                         axis=1)).mean()
+                log[key]['max_L2_norm'] = np.sqrt(np.sum(v ** 2, axis=1)).max()
 
-        if self.check_training_loss and 'rolling_training' in logs:
-            rtrain = logs['rolling_training']
-            if 'total_loss' in rtrain:
-                loss = rtrain['total_loss']
-            else:
-                loss = rtrain['Loss']
-            if not np.all(np.isfinite(loss)):
-                self.message("NaN or inf detected in rolling training loss!")
-                raise StopIteration()
-
-
-class InfoUpdater(Hook):
-    """ Save the information from logs to the Sacred custom info dict"""
-    def __init__(self, run, name=None, timescale='epoch', interval=1):
-        super(InfoUpdater, self).__init__(name, timescale, interval)
-        self.run = run
-
-    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        info = self.run.info
-        info['epoch_nr'] = epoch_nr
-        info['update_nr'] = update_nr
-        info['logs'] = logs
-        if 'nr_parameters' not in info:
-            info['nr_parameters'] = net.buffer.parameters.size
+        return log
 
 
 class MonitorLoss(Hook):
@@ -420,7 +312,7 @@ class MonitorLoss(Hook):
         self.iter = named_data_iters[self.iter_name]
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-        return evaluate(net, self.iter, scorers=[])
+        return evaluate(net, self.iter, scorers=())
 
 
 class MonitorScores(Hook):
@@ -473,6 +365,83 @@ class MonitorScores(Hook):
         return evaluate(net, self.iter, self.scorers)
 
 
+# -------------------------------- Stoppers --------------------------------- #
+
+class EarlyStopper(Hook):
+    __default_values__ = {'patience': 1}
+
+    def __init__(self, log_name, patience=1, criterion='min', name=None):
+        super(EarlyStopper, self).__init__(name, 'epoch', 1)
+        self.log_name = log_name
+        self.patience = patience
+        if criterion not in ['min', 'max']:
+            raise ValueError("Unknown criterion: '{}'"
+                             "(Should be 'min' or 'max')".format(criterion))
+        self.criterion = criterion
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        e = get_by_path(logs, self.log_name)
+        if self.criterion == 'min':
+            best_error_idx = np.argmin(e)
+        else:  # self.criterion == 'max'
+            best_error_idx = np.argmax(e)
+        if len(e) > best_error_idx + self.patience:
+            self.message("Stopping because {} did not improve for {} epochs.".
+                         format(self.log_name, self.patience))
+            raise StopIteration()
+
+
+class StopAfterEpoch(Hook):
+    def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
+                 verbose=None):
+        super(StopAfterEpoch, self).__init__(name, timescale,
+                                             interval, verbose)
+        self.max_epochs = max_epochs
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if epoch_nr >= self.max_epochs:
+            self.message("Stopping because the maximum number of epochs ({}) "
+                         "was reached.".format(self.max_epochs))
+            raise StopIteration()
+
+
+class StopOnNan(Hook):
+    """ Stop the training if infinite or NaN values are found in parameters.
+
+    Can also check logs for invalid values.
+    """
+    def __init__(self, logs_to_check=(), check_parameters=True,
+                 check_training_loss=True, name=None, timescale='epoch',
+                 interval=1):
+        super(StopOnNan, self).__init__(name, timescale, interval)
+        self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check,
+                                                            string_types)
+                              else logs_to_check)
+        self.check_parameters = check_parameters
+        self.check_training_loss = check_training_loss
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        for log_name in self.logs_to_check:
+            log = get_by_path(logs, log_name)
+            if not np.all(np.isfinite(log)):
+                self.message("NaN or inf detected in {}!".format(log_name))
+                raise StopIteration()
+        if self.check_parameters:
+            if not net.handler.is_fully_finite(net.buffer.parameters):
+                self.message("NaN or inf detected in parameters!")
+                raise StopIteration()
+
+        if self.check_training_loss and 'rolling_training' in logs:
+            rtrain = logs['rolling_training']
+            if 'total_loss' in rtrain:
+                loss = rtrain['total_loss']
+            else:
+                loss = rtrain['Loss']
+            if not np.all(np.isfinite(loss)):
+                self.message("NaN or inf detected in rolling training loss!")
+                raise StopIteration()
+
+
 class StopOnSigQuit(Hook):
     """
     Stops training the next possible moment if it received a SIGQUIT (Ctrl + \)
@@ -499,6 +468,8 @@ class StopOnSigQuit(Hook):
             raise StopIteration('Received SIGQUIT signal.')
 
 
+# ------------------------------ Visualizers -------------------------------- #
+
 if not optional.has_bokeh:
     BokehVisualizer = optional.bokeh_mock
 else:
@@ -510,19 +481,19 @@ else:
         Visualizes log values in your browser during training time using the
         Bokeh plotting library.
 
-        Before running the trainer the user is required to have the Bokeh Server
-        running.
+        Before running the trainer the user is required to have the Bokeh
+        Server running.
 
         By default the visualization is discarded upon closing the webbrowser.
-        However if an output file is specified then the .html file will be saved
-        after each iteration at the specified location.
+        However if an output file is specified then the .html file will be
+        saved after each iteration at the specified location.
 
         Args:
-            log_names (list, array, or dict):
+            log_names (list, array):
                 Contains the name of the logs that are being recorded to be
-                visualized. log_names should be of the form <monitorname>.<log_name>
-                where log_name itself may be a nested dictionary key in dot
-                notation.
+                visualized. log_names should be of the form
+                <monitorname>.<log_name> where log_name itself may be a nested
+                dictionary key in dotted notation.
             filename (Optional, str):
                 The location to which the .html file containing the accuracy
                 plot should be saved.
@@ -540,15 +511,18 @@ else:
                 and acts as a fallback verbosity for the used data iterator.
                 If not set it defaults to the verbosity setting of the trainer.
         """
-        def __init__(self, log_names, filename=None, timescale='epoch', interval=1,
-                     name=None, verbose=None):
+        def __init__(self, log_names, filename=None, timescale='epoch',
+                     interval=1, name=None, verbose=None):
             super(BokehVisualizer, self).__init__(name, timescale, interval,
                                                   verbose)
 
-            if isinstance(log_names, basestring):
+            if isinstance(log_names, string_types):
                 self.log_names = [log_names]
-            else:
+            elif isinstance(log_names, (tuple, list)):
                 self.log_names = log_names
+            else:
+                raise ValueError('log_names must be either str or list but'
+                                 ' was {}'.format(type(log_names)))
 
             self.filename = filename
 
@@ -580,7 +554,8 @@ else:
                 count += 1
 
             self.bk.show(self.fig)
-            self.bk.output_file('bokeh_visualisation.html', title=self.__name__, mode='cdn')
+            self.bk.output_file('bokeh_visualisation.html',
+                                title=self.__name__, mode='cdn')
 
         def __call__(self, epoch_nr, update_nr, net, stepper, logs):
 
@@ -624,3 +599,42 @@ class ProgressBar(Hook):
         else:
             print(self.bar.send(update_nr % self.length), end='')
             sys.stdout.flush()
+
+
+# ----------------------------- Miscellaneous ------------------------------- #
+
+class InfoUpdater(Hook):
+    """ Save the information from logs to the Sacred custom info dict"""
+    def __init__(self, run, name=None, timescale='epoch', interval=1):
+        super(InfoUpdater, self).__init__(name, timescale, interval)
+        self.run = run
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        info = self.run.info
+        info['epoch_nr'] = epoch_nr
+        info['update_nr'] = update_nr
+        info['logs'] = logs
+        if 'nr_parameters' not in info:
+            info['nr_parameters'] = net.buffer.parameters.size
+
+
+class ModifyStepperAttribute(Hook):
+    """Modify an attribute of the training stepper."""
+    def __init__(self, schedule, attr_name='learning_rate',
+                 timescale='epoch', interval=1, name=None, verbose=None):
+        super(ModifyStepperAttribute, self).__init__(name, timescale,
+                                                     interval, verbose)
+        self.schedule = schedule
+        self.attr_name = attr_name
+
+    def start(self, net, stepper, verbose, monitor_kwargs):
+        super(ModifyStepperAttribute, self).start(net, stepper, verbose,
+                                                  monitor_kwargs)
+        assert hasattr(stepper, self.attr_name), \
+            "The stepper {} does not have the attribute {}".format(
+                stepper.__class__.__name__, self.attr_name)
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        setattr(stepper, self.attr_name,
+                self.schedule(epoch_nr, update_nr, self.timescale,
+                              self.interval, net, stepper, logs))
