@@ -10,15 +10,14 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import LayerValidationError
 
 
-def Input(out_shapes, name=None):
+def Input(out_shapes):
     """Create an Input layer.
     Special input layer type, that provides access to external data.
 
     The 'out_shapes' keyword argument is required and specifies the names and
     shapes of all external inputs.
     """
-    return ConstructionWrapper.create(InputLayerImpl, name=name,
-                                      out_shapes=out_shapes)
+    return ConstructionWrapper.create(InputLayerImpl, out_shapes=out_shapes)
 
 
 class InputLayerImpl(Layer):
