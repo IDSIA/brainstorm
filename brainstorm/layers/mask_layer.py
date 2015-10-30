@@ -7,7 +7,7 @@ from collections import OrderedDict
 from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import StructureTemplate
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import flatten_time, flatten_time_and_features
+from brainstorm.utils import flatten_time_and_features, LayerValidationError
 
 
 def Mask(name=None):
@@ -18,11 +18,17 @@ def Mask(name=None):
 class MaskLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
-                       'mask': StructureTemplate('T', 'B', 1)}
+                       'mask': StructureTemplate('T', 'B', '...')}
 
     computes_no_input_deltas_for = ['mask']
 
     def setup(self, kwargs, in_shapes):
+        in_shape = in_shapes['default'].feature_shape
+        if in_shapes['mask'].feature_shape not in [(1,), in_shape]:
+            raise LayerValidationError(
+                "Shape of the mask did not match shape of the default inputs. "
+                "Should be either ('T', 'B', 1) or {}, but was {}".format(
+                    in_shapes['default'].shape), in_shapes['mask'].shape)
         outputs = OrderedDict()
         outputs['default'] = in_shapes['default']
         return outputs, OrderedDict(), OrderedDict()
@@ -31,7 +37,7 @@ class MaskLayerImpl(Layer):
         _h = self.handler
 
         flat_inp = flatten_time_and_features(buffers.inputs.default)
-        flat_mask = flatten_time(buffers.inputs.mask)
+        flat_mask = flatten_time_and_features(buffers.inputs.mask)
         flat_out = flatten_time_and_features(buffers.outputs.default)
 
         _h.mult_mv(flat_inp, flat_mask, out=flat_out)
@@ -42,7 +48,7 @@ class MaskLayerImpl(Layer):
         flat_out_deltas = flatten_time_and_features(
             buffers.output_deltas.default)
         tmp = self.handler.allocate(flat_out_deltas.shape)
-        flat_mask = flatten_time(buffers.inputs.mask)
+        flat_mask = flatten_time_and_features(buffers.inputs.mask)
         flat_in_deltas = flatten_time_and_features(
             buffers.input_deltas.default)
 
