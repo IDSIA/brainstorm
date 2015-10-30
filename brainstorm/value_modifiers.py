@@ -75,6 +75,7 @@ class ConstrainL2Norm(ValueModifier):
         sq_norm = handler.allocate((view.shape[0], 1))
         divisor = handler.allocate(sq_norm.shape)
 
+        # FIXME: use handler operations for this
         handler.sum_t(mat * mat, axis=1, out=sq_norm)
         handler.mult_st(1 / self.limit, sq_norm ** 0.5, out=divisor)
         handler.clip_t(divisor, a_min=1.0,
