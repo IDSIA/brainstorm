@@ -2,6 +2,81 @@
 Internals
 #########
 
+********
+Overview
+********
+
+Like many deep learning frameworks, a key philosophy behind Brainstorm is **modularity**.
+ * Key abstractions in brainstorm are **layers** that are connected to form a **network** and define which computations should be performed and what their parameters are.
+ * Layers are implemented in terms of operations provided by the **handler**, which makes independent from how and on which device the operations are actually implemented (CPU or GPU).
+ * The **trainer** coordinates applying an iterative optimization algorithm (**stepper**) with other concerns like monitoring and early stopping (done via so called **hooks**).
+ * an important design feature is that each of these parts can easily be changed by user-code.
+ * So custom layers for example can simply be shared as a single file and imported by others, so there is no need to change brainstorm to support them.
+
+Handler
+=======
+A :class:`~brainstorm.handlers.base_handler.Handler` implements basic mathematical operations on arrays of a certain type and can allocate memory.
+For example, the ``NumpyHandler`` allocates CPU memory and performs computations on the CPU mainly through Numpy.
+The ``PyCudaHandler`` on the other hand allocates GPU memory and implements its operations with ``pycuda``.
+This intermediate abstraction allows changing the low-level implementation of operations without breaking the layers.
+For the future we plan to provide also a handler that CuDNN4, one that builds upon NervanaGPU.
+
+Layers
+======
+A :class:`~brainstorm.layers.base_layer.Layer` defines how to compute a forward pass and a backward pass and which parameters it uses to do so.
+Layers don't own any of the memory they use themselves.
+The memory layout and managing is done by the network using the ``BufferManager``.
+But a layer needs to specify how it interacts with other layers and how much memory it needs.
+
+Note that the layers are different from the objects used during network creation.
+These objects are used only to define an architecture, which is then in turn used to instantiate the actual Layer objects and create the network.
+
+BufferManager
+=============
+The BufferManager is part of the Network and is responsible for allocating and structuring the memory needed by all the layers.
+It computes and allocates the required total amount of memory based on the current batch-size and sequence-length.
+This memory is then chunked-up, reshaped and structured distributed according to the  memory layout of the network.
+
+Network
+=======
+Coordinates the layers and the buffer manager, provides an interface for the user to inspect the internals
+
+ * Always one Input layer which
+
+Trainer
+=======
+
+Hooks
+=====
+
+Scorers
+=======
+
+ValueModifiers
+==============
+
+Initializers
+============
+
+
+
+Let's say we have some data (usually some *input* data and perhaps some *target* data), and we know what mathematical operations we'd like to do on it (compute the outputs, adjust the parameters etc.).
+We tell Brainstorm about these operations by building a directed acyclic graph of layers.
+Brainstorm then computes the memory that is needed for the required operations, and slices it up into parts needed by each layer creating a **memory layout**.
+This memory can now be allocated, and each layer gets access to the parts of the memory relevant for it (where its parameters, inputs, outputs etc. live).
+
+2. A **Buffer Manager** allocates the memory (using the handler), and decides how to prepare the memory layout for efficient processing.
+Again, this works independently from how the layers or handlers are implemented.
+
+This means that one can now easily write a new Handler which uses a different array type, and performs basic mathematical operations differently.
+The rest of Brainstorm simply works with it.
+Similarly, one may chose a different way of allocating memory given a description of layers, without affecting the rest of the components.
+
+Such a design implies that important components of the library can be improved individually and in principle *hot-swapped* as needed.
+If a new numerical computations library is available, one can easily integrate it into Brainstorm as long as it satisfies some basic requirement.
+If we realize that there is a better way to allocate memory for a certain network connectivity, this can be easily be incorporated.
+
+
 Here you can find some details about the internal design of brainstorm.
 This description is however very much work in progress and by no means
 complete.
@@ -14,9 +89,9 @@ When naming the extra properties of layers, a couple of conventions should be
 met. A property name should:
 
     * be a valid python identifier
-    * be lowercase with underscores
-    * be ``shape`` if it controls the size of the layer directly
-    * be ``activation_function`` if it controls the activation function
+    * be in snake_case (lowercase with underscores)
+    * be called ``size`` if it controls the size of the layer directly
+    * be ``activation`` if it controls the activation function
 
 
 ************
@@ -28,44 +103,57 @@ There are two special properties:
 
   1. ``@type``: a string that specifies the class of the layer
   2. ``@outgoing_connections``: a dictionary mapping the named outputs
-     (sources) of the layer to the lists of sinks it connects to.
-     A sink name is a layer-name followed by a ``.`` and the name of that
-     layers input. If the layer has only one input the second part can be omitted.
+     of the layer to a lists of named inputs of other layers it connects to.
+     For specifying the input we use dotted notation: ``LAYER_NAME.INPUT_NAME``.
+     If the name of the input is ``default`` it can be omitted.
 
 There can be more properties that will be passed on to the layer class when
 instantiating them.
 
-An example showcasing most features
+A basic example showcasing most features
 
 .. code-block:: python
 
     architecture = {
-        'InputLayer': {
-            '@type': 'InputLayer',
+        'Input': {
+            '@type': 'Input',
             '@outgoing_connections': {
-                'default': ['splitter.default', 'output.default']
+                'default': ['hidden_layer'],
+                'targets': ['output_layer.targets']
             },
-            'shape': 20},
-        'splitter': {
-            '@type': 'SplitLayer',
-            '@outgoing_connections': {
-                'foo': ['adder.A']
-                'bar': ['adder.B']},
-            'split_at': 10},
-        'adder': {
-            '@type': 'PointwiseAdditionLayer',
-            '@outgoing_connections': {
-                'default':['output.default']
+            'out_shapes': {
+                'default': ('T', 'B', 784),
+                'targets': ('T', 'B', 1)
             }
         },
-        'output': {
-            '@type': 'FullyConnectedLayer',
+        'hidden_layer': {
+            '@type': 'FullyConnected',
+            '@outgoing_connections': {
+                'default': ['output_projection']
+            },
+            'activation': 'rel',
+            'size': 100
+        },
+        'output_projection': {
+            '@type': 'FullyConnected',
+            '@outgoing_connections': {
+                'default': ['output_layer']
+            },
+            'activation': 'linear',
+            'size': (10,)
+        },
+        'output_layer': {
+            '@type': 'SoftmaxCE'
+            '@outgoing_connections': {
+                'loss': ['loss_layer']
+            },
+        },
+        'loss_layer': {
             '@outgoing_connections': {},
-            'shape': 10,
-            'activation_function': 'softmax'
+            '@type': 'Loss',
+            'importance': 1.0
         }
     }
-
 
 ******
 Layout
