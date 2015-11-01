@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import sys
-import numpy as np
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
