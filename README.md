@@ -32,11 +32,13 @@ Here are some quick instructions for installing the latest master branch on Ubun
 ```bash
 # Install pre-requisites
 sudo apt-get install python-dev libhdf5-dev
-# Get brainstorm
-git clone git@github.com:IDSIA/brainstorm.git
 # Install
+pip install brainstorm
+# Install from source
 pip install git+https://github.com/IDSIA/brainstorm.git
 # Build local documentation (optional)
+git clone git@github.com:IDSIA/brainstorm.git
+cd brainstorm
 make docs
 ```
 To use your CUDA installation with brainstorm:
