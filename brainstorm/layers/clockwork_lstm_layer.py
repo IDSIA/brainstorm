@@ -103,16 +103,8 @@ class ClockworkLstmLayerImpl(Layer):
          bz, bi, bf, bo,
          timing) = buffers.parameters
 
-        (Za, Zb,
-         Ia, Ib,
-         Fa, Fb,
-         Oa, Ob,
-         Ca, Cb,
-         dZa, dZb,
-         dIa, dIb,
-         dFa, dFb,
-         dOa, dOb,
-         dCa, dCb) = buffers.internals
+        (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
+         dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals
         x = buffers.inputs.default
         y = buffers.outputs.default
         time_size, batch_size = x.shape[0], x.shape[1]
@@ -232,7 +224,7 @@ class ClockworkLstmLayerImpl(Layer):
 
             # Cell
             _h.mult_tt(dy[t], Ob[t], dCb[t])
-            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])  # Important change to standard LSTM
+            _h.act_func_deriv[self.activation](Ca[t], Cb[t], dCb[t], dCb[t])
             _h.fill_if(dCb[t], 0, cond)
             _h.add_tt(dCa[t], dCb[t], dCa[t])
             _h.mult_add_tt(dCa[t + 1], Fb[t + 1], dCa[t])
