@@ -4,7 +4,7 @@ import sys
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
-from setuptools.command.test import test as TestCommand
+from setuptools.command.test import tests as TestCommand
 from distutils.errors import CompileError
 from warnings import warn
 
@@ -87,8 +87,12 @@ Documentation
 
 The full documentation is at http://brainstorm.rtfd.org."""
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
-
-tests_require = ['pytest', 'mock']
+live_viz = ['bokeh']
+draw_net = ['pygraphviz']
+tests = ['pytest', 'mock']
+pycuda = ['git+https://github.com/inducer/pycuda#egg=pycuda',
+          'git+https://github.com/lebedov/scikit-cuda#egg=scikit-cuda']
+all_deps = live_viz + draw_net + tests + pycuda
 
 setup(
     name='brainstorm',
@@ -106,11 +110,13 @@ setup(
     setup_requires=['cython', 'numpy'],
     install_requires=['cython', 'h5py', 'mock', 'numpy', 'six'],
     extras_require={
-        'live_viz':  ['bokeh'],
-        'draw_net': ['pygraphviz'],
-        'test': tests_require
+        'live_viz':  live_viz,
+        'draw_net': draw_net,
+        'test': tests,
+        'pycuda': pycuda,
+        'all': all_deps
     },
-    tests_require=tests_require,
+    tests_require=tests,
     cmdclass={'test': PyTest, 'build_ext': build_ext},
     license=about['__license__'],
     classifiers=[
