@@ -167,6 +167,15 @@ def lstm_layer(spec):
     return layer, spec
 
 
+def lstm_layer_2d(spec):
+    layer = LstmLayerImpl('LstmLayer',
+                          {'default': BufferStructure('T', 'B', 2, 2, 1)},
+                          NO_CON, NO_CON,
+                          size=4,
+                          activation=spec['activation'])
+    return layer, spec
+
+
 def mask_layer(spec):
     layer = MaskLayerImpl('MaskLayer',
                           {'default': BufferStructure('T', 'B', 3, 2),
@@ -306,6 +315,7 @@ layers_to_test = [
     rnn_layer_2d,
     squared_difference_layer,
     lstm_layer,
+    lstm_layer_2d,
     mask_layer,
     convolution_layer_2d_a,
     convolution_layer_2d_b,

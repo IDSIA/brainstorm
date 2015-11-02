@@ -8,7 +8,8 @@ from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import LayerValidationError, flatten_time
+from brainstorm.utils import LayerValidationError, flatten_time, \
+    flatten_time_and_features
 
 
 def Lstm(size, activation='tanh', name=None):
@@ -19,7 +20,7 @@ def Lstm(size, activation='tanh', name=None):
 
 class LstmLayerImpl(Layer):
 
-    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation'}
 
     def setup(self, kwargs, in_shapes):
@@ -99,9 +100,9 @@ class LstmLayerImpl(Layer):
         x = buffers.inputs.default
         y = buffers.outputs.default
 
-        time_size, batch_size, in_size = x.shape
+        time_size, batch_size = x.shape[0], x.shape[1]
 
-        flat_x = flatten_time(x)
+        flat_x = flatten_time_and_features(x)
         flat_Za = flatten_time(Za[:-1])
         flat_Ia = flatten_time(Ia[:-1])
         flat_Fa = flatten_time(Fa[:-1])
@@ -166,7 +167,7 @@ class LstmLayerImpl(Layer):
         dy = _h.allocate(y.shape)
         _h.fill(dCa, 0.0)
 
-        time_size, batch_size, in_size = x.shape
+        time_size, batch_size = x.shape[0], x.shape[1]
         for t in range(time_size - 1, -1, - 1):
             # Accumulate recurrent deltas
             _h.copy_to(deltas[t], dy[t])
@@ -203,8 +204,8 @@ class LstmLayerImpl(Layer):
             _h.mult_tt(dCa[t], Ib[t], dZb[t])
             _h.act_func_deriv[self.activation](Za[t], Zb[t], dZb[t], dZa[t])
 
-        flat_inputs = flatten_time(x)
-        flat_dinputs = flatten_time(dx)
+        flat_inputs = flatten_time_and_features(x)
+        flat_dinputs = flatten_time_and_features(dx)
 
         flat_dIa = flatten_time(dIa[:-1])
         flat_dFa = flatten_time(dFa[:-1])
