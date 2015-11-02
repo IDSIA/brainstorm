@@ -3,9 +3,11 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import LayerValidationError, flatten_time
+from brainstorm.utils import LayerValidationError, flatten_time, \
+    flatten_time_and_features
 from brainstorm.layers.base_layer import Layer
-from brainstorm.structure.buffer_structure import BufferStructure, StructureTemplate
+from brainstorm.structure.buffer_structure import BufferStructure, \
+    StructureTemplate
 
 
 def ClockworkLstm(size, timing, activation='tanh', name=None):
@@ -18,7 +20,7 @@ def ClockworkLstm(size, timing, activation='tanh', name=None):
 
 class ClockworkLstmLayerImpl(Layer):
     expected_kwargs = {'size', 'timing', 'activation'}
-    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
 
     computes_no_gradients_for = ['timing']
 
@@ -113,13 +115,13 @@ class ClockworkLstmLayerImpl(Layer):
          dCa, dCb) = buffers.internals
         x = buffers.inputs.default
         y = buffers.outputs.default
-        time_size, batch_size, in_size = x.shape
+        time_size, batch_size = x.shape[0], x.shape[1]
 
         # Temporary variable to be filled with the current value of time t
         tmp = _h.zeros(timing.shape)
         cond = _h.zeros(y[0].shape)
 
-        flat_x = flatten_time(x)
+        flat_x = flatten_time_and_features(x)
         flat_Za = flatten_time(Za[:-1])
         flat_Ia = flatten_time(Ia[:-1])
         flat_Fa = flatten_time(Fa[:-1])
@@ -198,7 +200,7 @@ class ClockworkLstmLayerImpl(Layer):
 
         dy = _h.allocate(y.shape)
 
-        time_size, batch_size, in_size = x.shape
+        time_size, batch_size = x.shape[0], x.shape[1]
 
         # Temporary variable to be filled with the current value of time t
         tmp = _h.zeros(timing.shape)
@@ -258,8 +260,8 @@ class ClockworkLstmLayerImpl(Layer):
             _h.fill_if(Fb[t], 0, cond)
 
         # Same as for standard RNN:
-        flat_inputs = flatten_time(x)
-        flat_dinputs = flatten_time(dx)
+        flat_inputs = flatten_time_and_features(x)
+        flat_dinputs = flatten_time_and_features(dx)
 
         flat_dIa = flatten_time(dIa[:-1])
         flat_dFa = flatten_time(dFa[:-1])

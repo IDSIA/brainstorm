@@ -294,6 +294,17 @@ def clockwork_lstm_layer(spec):
     return layer, spec
 
 
+def clockwork_lstm_layer_2d(spec):
+    layer = ClockworkLstmLayerImpl('ClockworkLstm',
+                                   {'default': BufferStructure('T', 'B', 1, 2, 2)},
+                                   NO_CON, NO_CON,
+                                   size=7,
+                                   activation=spec['activation'])
+
+    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 3, 5])}
+    return layer, spec
+
+
 def merge(spec):
     in_shapes = {'inputs_1': BufferStructure('T', 'B', 3, 2),
                  'inputs_2': BufferStructure('T', 'B', 3, 4)}
@@ -331,6 +342,7 @@ layers_to_test = [
     clockwork_layer,
     clockwork_layer_2d,
     clockwork_lstm_layer,
+    clockwork_lstm_layer_2d,
     merge
 ]
 
