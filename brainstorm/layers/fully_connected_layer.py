@@ -30,12 +30,12 @@ class FullyConnectedLayerImpl(Layer):
     def setup(self, kwargs, in_shapes):
         self.activation = kwargs.get('activation', 'rel')
         self.size = kwargs.get('size', self.in_shapes['default'].feature_shape)
-        if isinstance(self.size, int):
-            self.size = (self.size,)
+        self.size = (self.size,) if isinstance(self.size, int) else self.size
 
-        if not isinstance(self.size, (tuple, list)):
-            raise LayerValidationError('size must be int but was {}'.
-                                       format(self.size))
+        if not isinstance(self.size, (tuple, list)) or \
+                not all(isinstance(item, int) for item in self.size):
+            raise LayerValidationError('size must be int or tuple[int] but '
+                                       'was {}'.format(self.size))
         in_size = in_shapes['default'].feature_size
 
         outputs = OrderedDict()
