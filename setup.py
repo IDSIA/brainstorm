@@ -4,7 +4,7 @@ import sys
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
-from setuptools.command.test import tests as TestCommand
+from setuptools.command.test import test as TestCommand
 from distutils.errors import CompileError
 from warnings import warn
 
@@ -50,8 +50,8 @@ class build_ext(_build_ext):
 # Cythonize pyx if possible, else compile C
 if use_cython:
     from Cython.Build import cythonize
-    extensions = cythonize([Extension("brainstorm.handlers._cpuop",
-                                     ["brainstorm/handlers/_cpuop.pyx"])])
+    extensions = cythonize([Extension('brainstorm.handlers._cpuop',
+                                      ['brainstorm/handlers/_cpuop.pyx'])])
 
 else:
     extensions = [
@@ -90,8 +90,7 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 live_viz = ['bokeh']
 draw_net = ['pygraphviz']
 tests = ['pytest', 'mock']
-pycuda = ['git+https://github.com/inducer/pycuda#egg=pycuda',
-          'git+https://github.com/lebedov/scikit-cuda#egg=scikit-cuda']
+pycuda = ['pycuda>=2015.1.3', 'scikit-cuda>=0.5.1']
 all_deps = live_viz + draw_net + tests + pycuda
 
 setup(
@@ -107,8 +106,8 @@ setup(
               'brainstorm.layers',
               'brainstorm.training',
               'brainstorm.handlers'],
-    setup_requires=['cython', 'numpy'],
-    install_requires=['cython', 'h5py', 'mock', 'numpy', 'six'],
+    setup_requires=['cython', 'numpy>=1.8'],
+    install_requires=['cython', 'h5py', 'mock', 'numpy>=1.8', 'six'],
     extras_require={
         'live_viz':  live_viz,
         'draw_net': draw_net,
@@ -122,6 +121,8 @@ setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: Education',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 2.7',
