@@ -350,9 +350,9 @@ ids = [f.__name__ for f in layers_to_test]
 
 spec_list = [
     (1, 1, 'tanh'),
-    (5, 1, 'sigmoid'),
+    (4, 1, 'sigmoid'),
     (2, 3, 'rel'),
-    (1, 4, 'linear'),
+    (1, 3, 'linear'),
 ]
 spec_ids = ['{}{}{}'.format(*p) for p in spec_list]
 
