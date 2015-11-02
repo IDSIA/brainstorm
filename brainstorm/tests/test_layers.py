@@ -149,6 +149,15 @@ def rnn_layer(spec):
     return layer, spec
 
 
+def rnn_layer_2d(spec):
+    layer = RecurrentLayerImpl('RnnLayer',
+                         {'default': BufferStructure('T', 'B', 2, 1, 2)},
+                         NO_CON, NO_CON,
+                         size=3,
+                         activation=spec['activation'])
+    return layer, spec
+
+
 def lstm_layer(spec):
     layer = LstmLayerImpl('LstmLayer',
                           {'default': BufferStructure('T', 'B', 5)},
@@ -284,6 +293,7 @@ layers_to_test = [
     softmax_ce_layer,
     sigmoid_ce_layer,
     rnn_layer,
+    rnn_layer_2d,
     squared_difference_layer,
     lstm_layer,
     mask_layer,

@@ -8,7 +8,8 @@ from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import (BufferStructure,
                                                    StructureTemplate)
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import LayerValidationError, flatten_time
+from brainstorm.utils import LayerValidationError, flatten_time, \
+    flatten_time_and_features
 
 
 def Recurrent(size, activation='tanh', name=None):
@@ -19,7 +20,7 @@ def Recurrent(size, activation='tanh', name=None):
 
 class RecurrentLayerImpl(Layer):
 
-    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'activation'}
 
     def setup(self, kwargs, in_shapes):
@@ -55,7 +56,7 @@ class RecurrentLayerImpl(Layer):
         outputs = buffers.outputs.default
         Ha = buffers.internals.Ha
 
-        flat_inputs = flatten_time(inputs)
+        flat_inputs = flatten_time_and_features(inputs)
         flat_H = flatten_time(Ha[:-1])
 
         _h.dot_mm(flat_inputs, W, flat_H, transb=True)
@@ -84,8 +85,8 @@ class RecurrentLayerImpl(Layer):
             _h.act_func_deriv[self.activation](Ha[t], outputs[t],
                                                dHb[t], dHa[t])
 
-        flat_inputs = flatten_time(inputs)
-        flat_dinputs = flatten_time(dinputs)
+        flat_inputs = flatten_time_and_features(inputs)
+        flat_dinputs = flatten_time_and_features(dinputs)
         flat_dHa = flatten_time(dHa[:-1])
 
         # calculate in_deltas and gradients
