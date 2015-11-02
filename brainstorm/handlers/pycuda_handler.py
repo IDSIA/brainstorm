@@ -373,9 +373,9 @@ class PyCudaHandler(Handler):
 
     def sum_t(self, a, axis, out):
         if len(a.shape) < 3 and (axis == 0 or axis == 1):
-            cumisc.sum(a, axis, out)
+            cumisc.sum(a, axis=axis, out=out)
         elif axis is None:
-            self.copy_to(cumisc.sum(a), out)
+            cumisc.sum(a.reshape((a.size, 1)), axis=0, out=out)
         else:
             raise NotImplementedError
 
