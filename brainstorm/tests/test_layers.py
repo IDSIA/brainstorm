@@ -142,9 +142,9 @@ def sigmoid_ce_layer(spec):
 
 def rnn_layer(spec):
     layer = RecurrentLayerImpl('RnnLayer',
-                         {'default': BufferStructure('T', 'B', 5)},
+                         {'default': BufferStructure('T', 'B', 3)},
                          NO_CON, NO_CON,
-                         size=7,
+                         size=4,
                          activation=spec['activation'])
     return layer, spec
 
@@ -160,9 +160,9 @@ def rnn_layer_2d(spec):
 
 def lstm_layer(spec):
     layer = LstmLayerImpl('LstmLayer',
-                          {'default': BufferStructure('T', 'B', 5)},
+                          {'default': BufferStructure('T', 'B', 3)},
                           NO_CON, NO_CON,
-                          size=7,
+                          size=4,
                           activation=spec['activation'])
     return layer, spec
 
@@ -171,7 +171,7 @@ def lstm_layer_2d(spec):
     layer = LstmLayerImpl('LstmLayer',
                           {'default': BufferStructure('T', 'B', 2, 2, 1)},
                           NO_CON, NO_CON,
-                          size=4,
+                          size=3,
                           activation=spec['activation'])
     return layer, spec
 
@@ -265,7 +265,7 @@ def l2_decay_layer(spec):
 
 def clockwork_layer(spec):
     layer = ClockworkLayerImpl('ClockworkRnn',
-                               {'default': BufferStructure('T', 'B', 5)},
+                               {'default': BufferStructure('T', 'B', 3)},
                                NO_CON, NO_CON,
                                size=7,
                                activation=spec['activation'])
@@ -285,12 +285,12 @@ def clockwork_layer_2d(spec):
 
 def clockwork_lstm_layer(spec):
     layer = ClockworkLstmLayerImpl('ClockworkLstm',
-                                   {'default': BufferStructure('T', 'B', 5)},
+                                   {'default': BufferStructure('T', 'B', 3)},
                                    NO_CON, NO_CON,
-                                   size=7,
+                                   size=4,
                                    activation=spec['activation'])
 
-    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 3, 5])}
+    spec['inits'] = {'timing': np.array([1, 2, 2, 3])}
     return layer, spec
 
 
@@ -298,10 +298,10 @@ def clockwork_lstm_layer_2d(spec):
     layer = ClockworkLstmLayerImpl('ClockworkLstm',
                                    {'default': BufferStructure('T', 'B', 1, 2, 2)},
                                    NO_CON, NO_CON,
-                                   size=7,
+                                   size=3,
                                    activation=spec['activation'])
 
-    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 3, 5])}
+    spec['inits'] = {'timing': np.array([1, 2, 3])}
     return layer, spec
 
 
