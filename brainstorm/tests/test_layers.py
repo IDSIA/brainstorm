@@ -264,6 +264,16 @@ def clockwork_layer(spec):
     return layer, spec
 
 
+def clockwork_layer_2d(spec):
+    layer = ClockworkLayerImpl('ClockworkRnn',
+                               {'default': BufferStructure('T', 'B', 2, 1, 2)},
+                               NO_CON, NO_CON,
+                               size=7,
+                               activation=spec['activation'])
+    spec['inits'] = {'timing': np.array([1, 1, 2, 2, 3, 3, 5])}
+    return layer, spec
+
+
 def clockwork_lstm_layer(spec):
     layer = ClockworkLstmLayerImpl('ClockworkLstm',
                                    {'default': BufferStructure('T', 'B', 5)},
@@ -309,6 +319,7 @@ layers_to_test = [
     l1_decay_layer,
     l2_decay_layer,
     clockwork_layer,
+    clockwork_layer_2d,
     clockwork_lstm_layer,
     merge
 ]

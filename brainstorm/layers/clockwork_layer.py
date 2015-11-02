@@ -3,7 +3,8 @@
 from __future__ import division, print_function, unicode_literals
 from collections import OrderedDict
 from brainstorm.structure.construction import ConstructionWrapper
-from brainstorm.utils import LayerValidationError, flatten_time
+from brainstorm.utils import LayerValidationError, flatten_time, \
+    flatten_time_and_features
 from brainstorm.layers.base_layer import Layer
 from brainstorm.structure.buffer_structure import BufferStructure, \
     StructureTemplate
@@ -18,7 +19,7 @@ def Clockwork(size, timing, activation='tanh', name=None):
 
 
 class ClockworkLayerImpl(Layer):
-    expected_inputs = {'default': StructureTemplate('T', 'B', 'F')}
+    expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
     expected_kwargs = {'size', 'timing', 'activation'}
 
     computes_no_gradients_for = ['timing']
@@ -59,7 +60,7 @@ class ClockworkLayerImpl(Layer):
         outputs = buffers.outputs.default
         Ha = buffers.internals.Ha
 
-        flat_inputs = flatten_time(inputs)
+        flat_inputs = flatten_time_and_features(inputs)
         flat_H = flatten_time(Ha[:-1])
 
         _h.dot_mm(flat_inputs, W, flat_H, transb=True)
@@ -104,8 +105,8 @@ class ClockworkLayerImpl(Layer):
             _h.act_func_deriv[self.activation](Ha[t], outputs[t], dHb[t],
                                                dHa[t])
 
-        flat_inputs = flatten_time(inputs)
-        flat_dinputs = flatten_time(dinputs)
+        flat_inputs = flatten_time_and_features(inputs)
+        flat_dinputs = flatten_time_and_features(dinputs)
         flat_dHa = flatten_time(dHa[:-1])
 
         # Calculate in_deltas and gradients
