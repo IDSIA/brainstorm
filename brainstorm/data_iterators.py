@@ -78,7 +78,7 @@ class AddGaussianNoise(DataIterator):
         self.std_dict = std_dict
         self.iter = iter
 
-    def __call__(self, handler):
+    def __call__(self, handler=None):
         for data in self.iter(handler):
             for key, std in self.std_dict.items():
                 mean = self.mean_dict.get(key, 0.0)
@@ -128,7 +128,7 @@ class AddSaltNPepper(DataIterator):
         self.prob_dict = prob_dict
         self.iter = iter
 
-    def __call__(self, handler):
+    def __call__(self, handler=None):
         for data in self.iter(handler):
             for key, pr in self.prob_dict.items():
                 ratio = self.ratio_dict.get(key, 0.5)
@@ -175,7 +175,7 @@ class Flip(DataIterator):
         self.prob_dict = prob_dict
         self.iter = iter
 
-    def __call__(self, handler):
+    def __call__(self, handler=None):
         for data in self.iter(handler):
             for name in self.prob_dict.keys():
                 assert isinstance(data[name], np.ndarray)
@@ -218,7 +218,7 @@ class OneHot(DataIterator):
         self.vocab_size_dict = vocab_size_dict
         self.iter = iter
 
-    def __call__(self, handler, verbose=False):
+    def __call__(self, handler=None):
         for data in self.iter(handler):
             for name in self.vocab_size_dict.keys():
                 vocab_size = self.vocab_size_dict[name]
@@ -267,7 +267,7 @@ class Pad(DataIterator):
         self.size_dict = size_dict
         self.iter = iter
 
-    def __call__(self, handler):
+    def __call__(self, handler=None):
         for data in self.iter(handler):
             for name in self.size_dict.keys():
                 assert isinstance(data[name], np.ndarray)
@@ -316,7 +316,7 @@ class RandomCrop(DataIterator):
         self.shape_dict = shape_dict
         self.iter = iter
 
-    def __call__(self, handler):
+    def __call__(self, handler=None):
         for data in self.iter(handler):
             for name in self.shape_dict.keys():
                 assert isinstance(data[name], np.ndarray)
@@ -351,7 +351,7 @@ class Undivided(DataIterator):
         self.data = named_data
         self.total_size = int(sum(d.size for d in self.data.values()))
 
-    def __call__(self, handler):
+    def __call__(self, handler=None):
         yield self.data
 
 
@@ -410,7 +410,7 @@ class Minibatches(DataIterator):
             sum(d.shape[0] * np.prod(d.shape[2:]) * batch_size
                 for d in self.data.values()))
 
-    def __call__(self, handler):
+    def __call__(self, handler=None):
         indices = np.arange(self.length)
         if self.shuffle:
             self.rnd.shuffle(indices)
