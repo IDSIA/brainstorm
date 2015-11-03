@@ -8,14 +8,15 @@ For each example, you can uncomment one line (indicated in the code) to make the
 mnist_pi
 --------
 
-This example trains a simple neural network with 2 fully connected hidden layers and dropout on the MNIST dataset.
+This example trains a simple neural network with 2 fully connected hidden layers, dropout and weight constraints on the MNIST dataset.
 
 
 cifar10_cnn
 -----------
 
 This example trains a simple convolutional neural network on the CIFAR-10 dataset. 
-Initialization is one of the most crucial aspects of training neural networks. This example shows how Brainstorm let us flexibly specify the initialization for different layers of the network.
+
+Initialization is one of the most crucial aspects of training neural networks. This example shows how Brainstorm lets us flexibly specify the initialization for different layers of the network.
 
 
 hutter_lstm
