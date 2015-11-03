@@ -10,6 +10,7 @@ Like many deep learning frameworks, a key philosophy behind Brainstorm is **modu
  * Key abstractions in brainstorm are **layers** that are connected to form a **network** and define which computations should be performed and what their parameters are.
  * Layers are implemented in terms of operations provided by the **handler**, which makes independent from how and on which device the operations are actually implemented (CPU or GPU).
  * The **trainer** coordinates applying an iterative optimization algorithm (**stepper**) with other concerns like monitoring and early stopping (done via so called **hooks**).
+ * **data iterators** control the way the data is loaded, augmented, and chunked up.
  * an important design feature is that each of these parts can easily be changed by user-code.
  * So custom layers for example can simply be shared as a single file and imported by others, so there is no need to change brainstorm to support them.
 
@@ -18,36 +19,79 @@ Handler
 A :class:`~brainstorm.handlers.base_handler.Handler` implements basic mathematical operations on arrays of a certain type and can allocate memory.
 For example, the ``NumpyHandler`` allocates CPU memory and performs computations on the CPU mainly through Numpy.
 The ``PyCudaHandler`` on the other hand allocates GPU memory and implements its operations with ``pycuda``.
-This intermediate abstraction allows changing the low-level implementation of operations without breaking the layers.
-For the future we plan to provide also a handler that CuDNN4, one that builds upon NervanaGPU.
+This intermediate abstraction allows changing the low-level implementation of operations without breaking the layers or any other part of brainstorm.
+Our Handler operations have a more restricted feature set than numpy, which makes it easier to implement new handlers, but of course this comes at the price of less convenience in implementing layers.
+For the future we plan to provide also a handler that CuDNN4, and one that builds upon NervanaGPU.
 
 Layers
 ======
 A :class:`~brainstorm.layers.base_layer.Layer` defines how to compute a forward pass and a backward pass and which parameters it uses to do so.
 Layers don't own any of the memory they use themselves.
 The memory layout and managing is done by the network using the ``BufferManager``.
-But a layer needs to specify how it interacts with other layers and how much memory it needs.
+So a layer only needs to specify how it interacts with other layers and how much memory it needs.
+This design makes implementing a new layer rather simple, and allows for automated testing of layers.
 
-Note that the layers are different from the objects used during network creation.
-These objects are used only to define an architecture, which is then in turn used to instantiate the actual Layer objects and create the network.
+Note that the ``...LayerImpl`` objects are different from the objects used during network creation with the ``>>`` operator.
+The latter are used only to define an architecture, which is then in turn used to instantiate the actual layer objects and create the network.
 
 BufferManager
 =============
 The BufferManager is part of the Network and is responsible for allocating and structuring the memory needed by all the layers.
 It computes and allocates the required total amount of memory based on the current batch-size and sequence-length.
-This memory is then chunked-up, reshaped and structured distributed according to the  memory layout of the network.
+This memory is then chunked-up, reshaped and structured distributed according to the  memory :ref:`_layout` of the network.
 
 Network
 =======
-Coordinates the layers and the buffer manager, provides an interface for the user to inspect the internals
+The network is a central abstraction that coordinates the layers and the buffer manager, provides an interface for the user to inspect the internals.
+It is designed to allow for comprehensive inspection and ease of use.
+Each network holds an ordered dictionary of layers (``net.layers``) sorted topologically.
+There has to be always exactly one Input layer which is also called ``Input``, and the connections between layers have to form a connected acyclic graph.
 
- * Always one Input layer which
+The network gives access to the internal memory layout created by the BufferManager through ``net.buffer``.
+This interface can be used to inspect(and influence) exactly what is happening inside the network.
+Note that if using a GPU handler the returned memory views will be on the device.
+If you want to get a copy of any buffer, use the ``net.get(BUFFER_PATH)`` method.
+
+The network provides a powerful initialize method that allows to control precisely how all the parameters are initialized.
+Furthermore it keeps track of so called weight modifiers and gradient modifiers.
+These simple modifications that will regularly be applied to the weights (e.g. constrain their L2 norm) or the gradient (e.g. clip their values).
+Similar to initializers these can be added to individually to individual parameters via the ``net.set_weight_modifiers`` and ``net.set_gradint_modifiers`` methods.
+
+The Network usually operates in three steps:
+  1. ``net.provide_external_data()`` is called first to populate the buffers of the Input layer with values for the input data and the targets (and possibly others)
+  2. ``net.forward_pass()`` runs the forward pass of all layers populating all the output buffers
+  3. ``net.backward_pass()`` performs a backward pass, thus calculating all the deltas and gradients
+
 
 Trainer
 =======
+The Trainer is the second central abstraction in Brainstorm which coordinates the training and collects logs.
+It provides the Network with data from DataIterators and has its parameters updated by an optimization Stepper.
+Furthermore it calls the Hooks, collects their logs and prints them if appropriate.
+
+When ``trainer.train`` is called, the trainer will iterate over the data it gets from the training data iterator and provide it to the network.
+It will then call the Stepper which is responsible for updating the parameters based on the gradients.
+The trainer also keeps list of Hooks which will be called regularly (on a timescale they can specify) and which can interact with the training.
+Some by monitoring certain quantities, some by saving the network or stopping the training if some condition occurs.
+Hooks that monitor something report their logs back to the trainer, which prints, collects, and stores them.
+
+
+Stepper
+=======
+Is responsible for updating the parameters of a Network.
+Can be Stochastic Gradient Descent or RMSProp.
 
 Hooks
 =====
+ * Interact with the training.
+ * Will be called by the trainer based on their timescale and interval.
+   ("epoch" or "update", and arbitrary interval)
+ * Different stereotypical kinds of Hooks:
+   1. Monitors
+   2. Savers
+   3. Stoppers
+   4. Visualizers
+
 
 Scorers
 =======
@@ -154,6 +198,9 @@ A basic example showcasing most features
             'importance': 1.0
         }
     }
+
+
+.. _layout:
 
 ******
 Layout
