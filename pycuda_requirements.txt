@@ -1,2 +1,2 @@
-git+https://github.com/inducer/pycuda#egg=pycuda
-git+https://github.com/lebedov/scikit-cuda#egg=scikit-cuda
+pycuda>=2015.1.3
+scikit-cuda>=0.5.1

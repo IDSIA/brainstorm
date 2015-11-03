@@ -10,45 +10,19 @@ Brainstorm makes working with neural networks fast, flexible and fun.
 
 Combining lessons from previous projects with new design elements, and written entirely in Python, Brainstorm has been designed to work on multiple platforms with multiple computing backends.
 
-
 Getting Started
 ---------------
-A good point to start is the brief [walkthrough](https://brainstorm.readthedocs.org/en/latest/walkthrough.html) of the ``cifar10_cnn.py`` example.  
-More documentation is in progress, and hosted on [ReadTheDocs](https://brainstorm.readthedocs.org/en/latest/).
-If you wish, you can also run the data preparation scripts (``data`` directory) and look at some basic examples (``examples`` directory).
 
-Status
-------
+If you have the pre-requisite packages `python-dev libhdf5-dev libopenblas-dev`, quick installation is simply: `pip install brainstorm`.
+If you have CUDA set up already, `pip install brainstorm[all]` will install all optional dependencies.
+See [Installation](https://brainstorm.readthedocs.org/en/latest/installation.html) instructions in the documentation for information about pre-requisites, GPU support, and various platforms.
+
 Brainstorm is under active development and is currently in beta. 
 
-The currently available feature set includes recurrent (simple, LSTM, Clockwork), 2D convolution/pooling, Highway and batch normalization layers. API documentation is fairly complete and we are currently working on tutorials and usage guides.
+Documentation is in progress, and hosted on [ReadTheDocs](https://brainstorm.readthedocs.org/en/latest/).
+A good point to start is the brief [walkthrough](https://brainstorm.readthedocs.org/en/latest/walkthrough.html) of the ``cifar10_cnn.py`` example.
 
-Brainstorm abstracts computations via *handlers* with a consistent API. Currently, two handlers are provided: `NumpyHandler` for computations on the CPU (through Numpy/Cython) and `PyCudaHandler` for the GPU (through PyCUDA and scikit-cuda).
-
-Installation
-------------
-Here are some quick instructions for installing the latest master branch on Ubuntu.
-
-```bash
-# Install pre-requisites
-sudo apt-get install python-dev libhdf5-dev
-# Get brainstorm
-git clone git@github.com:IDSIA/brainstorm.git
-# Install
-cd brainstorm
-pip install -r requirements.txt
-python setup.py install
-# Build local documentation (optional)
-make docs
-```
-To use your CUDA installation with brainstorm:
-```bash
-$ pip install -r pycuda_requirements.txt
-```
-Set location for storing datasets:
-```bash
-echo "export BRAINSTORM_DATA_DIR=/home/my_data_dir/" >> ~/.bashrc
-```
+If you wish, you can also run the data preparation scripts (``data`` directory) and look at some basic examples (``examples`` directory).
 
 Help and Support
 ----------------
@@ -65,6 +39,6 @@ MIT License. Please see the LICENSE file.
 Acknowledgements
 ----------------
 
-Klaus Greff and Rupesh Srivastava would like to thank Jürgen Schmidhuber for his continuous supervision and encouragement.
+[Klaus Greff](http://people.idsia.ch/~greff/) and [Rupesh Srivastava](http://people.idsia.ch/~rupesh/) would like to thank [Jürgen Schmidhuber](http://people.idsia.ch/~juergen/) for his continuous supervision and encouragement.
 Funding from EU projects NASCENCE (FP7-ICT-317662) and WAY (FP7-ICT-288551) was instrumental during the development of this project.
 We also thank Nvidia Corporation for their donation of GPUs.
