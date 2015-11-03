@@ -606,7 +606,7 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
 
 # ------------------------ Data Tools --------------------------------------- #
 
-def shuffle_data(*args, seed=None):
+def shuffle_data(*args, **kwargs):
     """
     Shuffle numpy arrays along the second dimension.
 
@@ -620,13 +620,13 @@ def shuffle_data(*args, seed=None):
             list of shuffled arrays
 
     """
-    rnd = np.random.RandomState(seed)
+    rnd = np.random.RandomState(kwargs.get('seed', None))
     idxs = np.arange(args[0].shape[1])
     rnd.shuffle(idxs)
     return [A[:, idxs] for A in args]
 
 
-def split(*args, ratios=(9, 1)):
+def split(*args, **kwargs):
     """
     Split numpy arrays into several parts according to a ratio.
 
@@ -634,7 +634,7 @@ def split(*args, ratios=(9, 1)):
         *args (numpy.ndarray):
             arrays to be split.
         ratios (iterable[float]):
-            ratios of sizes for the splits
+            ratios of sizes for the splits. Defaults to (9, 1)
 
     Returns:
         list of list of arrays. Eg for 2 splits of 3 arrays A, B, and C you'd
@@ -642,6 +642,7 @@ def split(*args, ratios=(9, 1)):
 
     """
     N = args[0].shape[1]
+    ratios = kwargs.get('ratios', (9, 1))
     normalized_ratios = np.array(ratios) / np.sum(ratios)
     split_idxs = np.round(np.cumsum(normalized_ratios) * N).astype(np.int)
     split_idxs = np.hstack([[0], split_idxs])
