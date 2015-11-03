@@ -574,13 +574,13 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
         raise ValueError('Unknown task type {}'.format(task_type))
 
     import re
-    LAYER_TYPE = r'(?P<layer_type>[A-Z])'
-    FLOAT = r'[-+]?[0-9]*\.?[0-9]+'
-    ARG = r'([a-z]|{float})[:/|]?'.format(float=FLOAT)
+    LAYER_TYPE = r'\s*(?P<layer_type>[A-Z]+)\s*'
+    FLOAT = r'\s*[-+]?[0-9]*\.?[0-9]+\s*'
+    ARG = r'\s*([a-z]|{float})\s*[:/|]?\s*'.format(float=FLOAT)
     ARG_LIST = r'(?P<args>({arg})*)'.format(arg=ARG)
     ARCH_SPEC = r'({type}{args})'.format(type=LAYER_TYPE, args=ARG_LIST)
 
-    spec = re.sub(r'\s', '', spec)  # remove whitespace
+    # spec = re.sub(r'\s', '', spec)  # remove whitespace
 
     current_layer = inp
     for m in re.finditer(ARCH_SPEC, spec):
@@ -602,3 +602,50 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
     net.initialize(init_dict)
 
     return net
+
+
+# ------------------------ Data Tools --------------------------------------- #
+
+def shuffle_data(*args, seed=None):
+    """
+    Shuffle numpy arrays along the second dimension.
+
+    Args:
+        *args (numpy.ndarray):
+            arrays to be shuffled.
+        seed (Optional[int]):
+            seed to make the shuffle reproducible
+    Returns:
+        list[numpy.ndarray]:
+            list of shuffled arrays
+
+    """
+    rnd = np.random.RandomState(seed)
+    idxs = np.arange(args[0].shape[1])
+    rnd.shuffle(idxs)
+    return [A[:, idxs] for A in args]
+
+
+def split(*args, ratios=(9, 1)):
+    """
+    Split numpy arrays into several parts according to a ratio.
+
+    Args:
+        *args (numpy.ndarray):
+            arrays to be split.
+        ratios (iterable[float]):
+            ratios of sizes for the splits
+
+    Returns:
+        list of list of arrays. Eg for 2 splits of 3 arrays A, B, and C you'd
+        get [(A1, B1, C1), (A2, B2, C2)].
+
+    """
+    N = args[0].shape[1]
+    normalized_ratios = np.array(ratios) / np.sum(ratios)
+    split_idxs = np.round(np.cumsum(normalized_ratios) * N).astype(np.int)
+    split_idxs = np.hstack([[0], split_idxs])
+    all_splits = []
+    for start, stop in zip(split_idxs[:-1], split_idxs[1:]):
+        all_splits.append([A[:, start:stop] for A in args])
+    return all_splits
