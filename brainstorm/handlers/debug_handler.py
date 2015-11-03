@@ -552,12 +552,13 @@ def assert_shapes_equal(ref_shape, *shapes):
     if isinstance(ref_shape, DebugArray):
         ref_shape = ref_shape.shape
     assert_is_shape(ref_shape)
-    for i, shape in enumerate(shapes):
+    for i, shape in enumerate(shapes, start=1):
         if isinstance(shape, DebugArray):
             shape = shape.shape
         assert_is_shape(shape)
         assert shape == ref_shape, \
-            "Shape mismatch: {}[{}.] != {}[1st]".format(shape, i, ref_shape)
+            "Shape mismatch: {}[arg_nr={}] != {}[arg_nr=0]".format(shape, i,
+                                                                   ref_shape)
 
 
 def assert_is_scalar(s):
