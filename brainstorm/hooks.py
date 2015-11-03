@@ -558,18 +558,15 @@ else:
                                 title=self.__name__, mode='cdn')
 
         def __call__(self, epoch_nr, update_nr, net, stepper, logs):
-
+            if epoch_nr == 0:
+                return
             for log_name in self.log_names:
                 renderer = self.fig.select(dict(name=log_name))
 
                 datasource = renderer[0].data_source
                 datasource.data["y"] = get_by_path(logs, log_name)
 
-                if self.timescale == 'epoch':
-                    datasource.data["x"] = range(epoch_nr)
-                elif self.timescale == 'update':
-                    datasource.data["x"] = range(update_nr)
-
+                datasource.data["x"] = range(len(datasource.data["y"]))
                 self.bk.cursession().store_objects(datasource)
 
             if self.filename is not None:
