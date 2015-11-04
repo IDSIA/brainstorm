@@ -40,7 +40,7 @@ network.initialize(bs.initializers.Gaussian(0.01))
 trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01,
                                                  momentum=0.9))
 trainer.add_hook(bs.hooks.ProgressBar())
-scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
+scorers = [bs.scorers.Accuracy(out_name='Output.outputs.predictions')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation', interval=3000,
                                         timescale='update'))
