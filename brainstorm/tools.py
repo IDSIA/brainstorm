@@ -198,7 +198,7 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     classification task.
 
     regression:
-    The projection layer is connected to a SquaredDifference layer, which
+    The projection layer is connected to a SquaredLoss layer, which
     receives targets from the input layer. This is suitable for least squares
     regression.
 
@@ -243,25 +243,8 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     """
     in_shape = (in_shape,) if isinstance(in_shape, int) else in_shape
     out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
-    out_inview = 'inputs_1' if task_type == 'regression' else 'default'
-    out_tview = 'inputs_2' if task_type == 'regression' else 'targets'
-    out_loss = 'default' if task_type == 'regression' else 'loss'
 
-    if task_type == 'regression':
-        projection_name = projection_name or 'Output_projection'
-        assert outlayer_name is None, 'outlayer_name should not be specified ' \
-                                      'for regression tasks.'
-        out_layer = layers.SquaredDifference()
-    else:
-        outlayer_name = outlayer_name or 'Output'
-        projection_name = projection_name or outlayer_name + '_projection'
-        if task_type == 'classification':
-            out_layer = layers.SoftmaxCE(name=outlayer_name)
-        elif task_type == 'multi-label':
-            out_layer = layers.SigmoidCE(name=outlayer_name)
-        else:
-            raise ValueError('Unknown task type {}'.format(task_type))
-
+    projection_name = projection_name or outlayer_name + '_projection'
     if len(out_shape) == 1 or use_conv is False:
         proj_layer = layers.FullyConnected(out_shape, activation='linear',
                                            name=projection_name)
@@ -271,7 +254,18 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
                                           name=projection_name)
     else:
         raise ValueError('Unsupported output length {}'.format(len(out_shape)))
-    proj_layer >> out_inview - out_layer
+
+    outlayer_name = outlayer_name or 'Output'
+    if task_type == 'classification':
+        out_layer = layers.SoftmaxCE(name=outlayer_name)
+    elif task_type == 'multi-label':
+        out_layer = layers.SigmoidCE(name=outlayer_name)
+    elif task_type == 'regression':
+        out_layer = layers.SquaredLoss(name=outlayer_name)
+    else:
+        raise ValueError('Unknown task type {}'.format(task_type))
+
+    proj_layer >> 'default' - out_layer
 
     if task_type == 'classification':
         t_shape = out_shape[:-1] + (1,)
@@ -281,16 +275,16 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
         inp_layer = layers.Input(
             out_shapes={data_name: ('T', 'B') + in_shape,
                         targets_name: ('T', 'B') + t_shape})
-        inp_layer - targets_name >> out_tview - out_layer
-        out_layer - out_loss >> layers.Loss()
+        inp_layer - targets_name >> 'targets' - out_layer
+        out_layer - 'loss' >> layers.Loss()
     else:
         inp_layer = layers.Input(
             out_shapes={data_name: ('T', 'B') + in_shape,
                         targets_name: ('T', 'B') + t_shape,
                         mask_name: ('T', 'B', 1)})
         mask_layer = layers.Mask()
-        inp_layer - targets_name >> out_tview - out_layer
-        out_layer - out_loss >> mask_layer >> layers.Loss()
+        inp_layer - targets_name >> 'targets' - out_layer
+        out_layer - 'loss' >> mask_layer >> layers.Loss()
         inp_layer - mask_name >> 'mask' - mask_layer
 
     return inp_layer, proj_layer
@@ -566,12 +560,9 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
     inp, outp = get_in_out_layers(task_type, in_shape, out_shape,
                                   data_name=data_name, mask_name=mask_name,
                                   targets_name=targets_name, use_conv=use_conv)
-    if task_type in ['classification', 'multi-label']:
-        output_name = 'Output.outputs.probabilities'
-    elif task_type == 'regression':
-        output_name = 'Output_projection.outputs.default'
-    else:
+    if task_type not in ['classification', 'multi-label']:
         raise ValueError('Unknown task type {}'.format(task_type))
+    output_name = 'Output.outputs.predictions'
 
     import re
     LAYER_TYPE = r'\s*(?P<layer_type>[A-Z]+)\s*'
