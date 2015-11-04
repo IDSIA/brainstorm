@@ -243,8 +243,9 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     """
     in_shape = (in_shape,) if isinstance(in_shape, int) else in_shape
     out_shape = (out_shape,) if isinstance(out_shape, int) else out_shape
-
+    outlayer_name = outlayer_name or 'Output'
     projection_name = projection_name or outlayer_name + '_projection'
+
     if len(out_shape) == 1 or use_conv is False:
         proj_layer = layers.FullyConnected(out_shape, activation='linear',
                                            name=projection_name)
@@ -255,7 +256,6 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     else:
         raise ValueError('Unsupported output length {}'.format(len(out_shape)))
 
-    outlayer_name = outlayer_name or 'Output'
     if task_type == 'classification':
         out_layer = layers.SoftmaxCE(name=outlayer_name)
     elif task_type == 'multi-label':
