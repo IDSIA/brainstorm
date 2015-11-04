@@ -17,14 +17,14 @@ def SigmoidCE(name=None):
     """Create a sigmoid layer with integrated Binomial Cross Entropy loss.
 
     Applies the sigmoid activation function on 'default' input and puts the
-    results (per-label probabilities) in 'probabilities'.
+    results (per-label predictions) in 'predictions'.
 
     It also takes as 'targets' a binary vector and computes the binomial
     cross-entropy loss. The resulting losses are stored in the 'loss' output.
 
     WARNING:
         This layer does not compute derivatives wrt the 'targets' input.
-        It also does not use the deltas coming in from the 'probabilities'.
+        It also does not use the deltas coming in from the 'predictions'.
     """
     return ConstructionWrapper.create(SigmoidCELayerImpl, name=name)
 
@@ -35,7 +35,7 @@ class SigmoidCELayerImpl(Layer):
                        'targets': StructureTemplate('T', 'B', '...')}
 
     computes_no_input_deltas_for = ['targets']
-    takes_no_output_deltas_from = ['probabilities']
+    takes_no_output_deltas_from = ['predictions']
 
     def setup(self, kwargs, in_shapes):
         in_shape = in_shapes['default'].feature_shape
@@ -47,7 +47,7 @@ class SigmoidCELayerImpl(Layer):
                                        .format(in_shape, tar_shape))
 
         outputs = OrderedDict()
-        outputs['probabilities'] = BufferStructure('T', 'B', *in_shape)
+        outputs['predictions'] = BufferStructure('T', 'B', *in_shape)
         outputs['loss'] = BufferStructure('T', 'B', *in_shape)
 
         internals = OrderedDict()
@@ -62,7 +62,7 @@ class SigmoidCELayerImpl(Layer):
         inputs = flatten_time_and_features(buffers.inputs.default)
         targets = flatten_time_and_features(buffers.inputs.targets)
         loss = flatten_time_and_features(buffers.outputs.loss)
-        prob = flatten_time_and_features(buffers.outputs.probabilities)
+        prob = flatten_time_and_features(buffers.outputs.predictions)
 
         # Apply sigmoid
         _h.sigmoid(inputs, prob)
@@ -93,7 +93,7 @@ class SigmoidCELayerImpl(Layer):
         dloss = flatten_time_and_features(buffers.output_deltas.loss)
         dcee = flatten_time_and_features(buffers.internals.dcee)
         targets = flatten_time_and_features(buffers.inputs.targets)
-        prob = flatten_time_and_features(buffers.outputs.probabilities)
+        prob = flatten_time_and_features(buffers.outputs.predictions)
 
         _h.subtract_tt(prob, targets, dcee)  # y - t
         _h.mult_mv(dcee, dloss, dcee)        # out_delta * (y - t)
