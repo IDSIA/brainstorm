@@ -15,7 +15,7 @@ def SoftmaxCE(name=None):
     """Create a softmax layer with integrated Multinomial Cross Entropy loss.
 
     Applies the softmax activation function on 'default' input and puts
-    results (per-class probabilities) in 'probabilities'.
+    results (per-class probabilities) in 'predictions'.
 
     It also takes class indices (0-based) as the 'targets' input,
     and computes the multinomial cross-entropy loss. The resulting losses are
@@ -26,7 +26,7 @@ def SoftmaxCE(name=None):
 
     WARNING:
         This layer does not compute derivatives wrt the 'targets' input.
-        It also does not use the deltas coming in from the 'probabilities'.
+        It also does not use the deltas coming in from the 'predictions'.
     """
     return ConstructionWrapper.create(SoftmaxCELayerImpl, name=name)
 
@@ -37,7 +37,7 @@ class SoftmaxCELayerImpl(Layer):
                        'targets': StructureTemplate('T', 'B', '...')}
 
     computes_no_input_deltas_for = ['targets']
-    takes_no_output_deltas_from = ['probabilities']
+    takes_no_output_deltas_from = ['predictions']
 
     def setup(self, kwargs, in_shapes):
         in_shape = in_shapes['default'].feature_shape
@@ -54,7 +54,7 @@ class SoftmaxCELayerImpl(Layer):
                                        'size 1.')
 
         outputs = OrderedDict()
-        outputs['probabilities'] = BufferStructure('T', 'B', *in_shape)
+        outputs['predictions'] = BufferStructure('T', 'B', *in_shape)
         outputs['loss'] = BufferStructure('T', 'B', *tar_shape)
 
         internals = OrderedDict()
@@ -67,12 +67,12 @@ class SoftmaxCELayerImpl(Layer):
         _h = self.handler
         inputs = buffers.inputs.default
         targets = buffers.inputs.targets
-        probabilities = buffers.outputs.probabilities
+        predictions = buffers.outputs.predictions
         loss = buffers.outputs.loss
 
         # reshape
         flat_inputs = flatten_all_but_last(inputs)
-        flat_probs = flatten_all_but_last(probabilities)
+        flat_probs = flatten_all_but_last(predictions)
         flat_loss = flatten_all_but_last(loss)
         flat_targets = flatten_all_but_last(targets)
 
@@ -92,7 +92,7 @@ class SoftmaxCELayerImpl(Layer):
         # prepare
         _h = self.handler
         targets = buffers.inputs.targets
-        probs = buffers.outputs.probabilities
+        probs = buffers.outputs.predictions
 
         dinputs = buffers.input_deltas.default
         dloss = buffers.output_deltas.loss

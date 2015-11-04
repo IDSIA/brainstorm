@@ -17,7 +17,7 @@ def SigmoidCE(name=None):
     """Create a sigmoid layer with integrated Binomial Cross Entropy loss.
 
     Applies the sigmoid activation function on 'default' input and puts the
-    results (per-label predictions) in 'predictions'.
+    results (per-label probabilities) in 'predictions'.
 
     It also takes as 'targets' a binary vector and computes the binomial
     cross-entropy loss. The resulting losses are stored in the 'loss' output.
