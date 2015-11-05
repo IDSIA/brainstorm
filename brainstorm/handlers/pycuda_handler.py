@@ -141,8 +141,8 @@ class PyCudaHandler(Handler):
                                np.int32(stride[0]), np.int32(stride[1]),
                                np.int32(padding), np.int32(padding),
                                in_deltas,
-                               block=(get_blocks(inputs.size), 1, 1),
-                               grid=(NUM_CUDA_THREADS, 1, 1))
+                               block=(NUM_CUDA_THREADS, 1, 1),
+                               grid=(get_blocks(inputs.size), 1))
 
     def avgpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride):
@@ -156,8 +156,8 @@ class PyCudaHandler(Handler):
                                np.int32(stride[0]), np.int32(stride[1]),
                                np.int32(padding), np.int32(padding),
                                outputs,
-                               block=(get_blocks(outputs.size), 1, 1),
-                               grid=(NUM_CUDA_THREADS, 1, 1))
+                               block=(NUM_CUDA_THREADS, 1, 1),
+                               grid=(get_blocks(outputs.size), 1))
 
     def binarize_v(self, v, out):
         binarize_v_kernel(out, v, out.shape[0], out.shape[1])
@@ -195,8 +195,8 @@ class PyCudaHandler(Handler):
                               np.int32(out_deltas.shape[2]),
                               np.int32(num_input_maps),
                               col.gpudata,
-                              block=(get_blocks(num_cuda_kernels), 1, 1),
-                              grid=(NUM_CUDA_THREADS, 1, 1))
+                              block=(NUM_CUDA_THREADS, 1, 1),
+                              grid=(get_blocks(num_cuda_kernels), 1))
 
             # Compute gradients
             reshaped_dparams = dparams.reshape(num_filters, num_kernel_params)
@@ -221,8 +221,8 @@ class PyCudaHandler(Handler):
                               np.int32(out_deltas.shape[1]),
                               np.int32(out_deltas.shape[2]),
                               in_deltas[i],
-                              block=(get_blocks(num_cuda_kernels), 1, 1),
-                              grid=(NUM_CUDA_THREADS, 1, 1))
+                              block=(NUM_CUDA_THREADS, 1, 1),
+                              grid=(get_blocks(num_cuda_kernels), 1))
 
     def conv2d_forward_batch(self, inputs, params, bias, outputs,
                              padding, stride):
@@ -245,8 +245,8 @@ class PyCudaHandler(Handler):
                               np.int32(outputs.shape[2]),
                               np.int32(num_input_maps),
                               col.gpudata,
-                              block=(get_blocks(num_cuda_kernels), 1, 1),
-                              grid=(NUM_CUDA_THREADS, 1, 1))
+                              block=(NUM_CUDA_THREADS, 1, 1),
+                              grid=(get_blocks(num_cuda_kernels), 1))
 
             reshaped_params = params.reshape(num_filters, num_kernel_params)
             culinalg.dot(col, reshaped_params, transb='T',
@@ -295,8 +295,8 @@ class PyCudaHandler(Handler):
                                np.int32(out_image_size),
                                np.int32(in_image_size),
                                in_deltas,
-                               block=(get_blocks(outputs.size), 1, 1),
-                               grid=(NUM_CUDA_THREADS, 1, 1))
+                               block=(NUM_CUDA_THREADS, 1, 1),
+                               grid=(get_blocks(outputs.size), 1))
 
     def maxpool2d_forward_batch(self, inputs, window, outputs, padding,
                                 stride, argmax):
@@ -310,8 +310,8 @@ class PyCudaHandler(Handler):
                                np.int32(padding), np.int32(padding),
                                outputs,
                                argmax,
-                               block=(get_blocks(outputs.size), 1, 1),
-                               grid=(NUM_CUDA_THREADS, 1, 1))
+                               block=(NUM_CUDA_THREADS, 1, 1),
+                               grid=(get_blocks(outputs.size), 1))
 
     def merge_tt(self, a, b, out):
         assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
