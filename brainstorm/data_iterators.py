@@ -199,7 +199,8 @@ class OneHot(DataIterator):
         """
         Args:
             iter (DataIterator):
-                DataIterator which iterates over the images to be padded.
+                DataIterator which iterates over the indices to be converted to
+                one hot.
             vocab_size_dict (dict[str, int]):
                 Specifies the size of one hot vectors (the vocabulary size)
                 for some named data items.
@@ -218,7 +219,7 @@ class OneHot(DataIterator):
         self.vocab_size_dict = vocab_size_dict
         self.iter = iter
 
-    def __call__(self, handler, verbose=False):
+    def __call__(self, handler):
         for data in self.iter(handler):
             for name in self.vocab_size_dict.keys():
                 vocab_size = self.vocab_size_dict[name]
@@ -226,6 +227,48 @@ class OneHot(DataIterator):
                 new_data = new_data.reshape((new_data.shape[0],
                                              new_data.shape[1],
                                              new_data.shape[3]))
+                data[name] = new_data
+                yield data
+
+
+class MultiHot(DataIterator):
+
+    """
+    Convert data to multi hot vectors, according to provided vocabulary sizes.
+    If vocabulary size is not provided for some data item, it is yielded as is.
+
+    Currently this iterator only supports 3D data.
+    """
+
+    def __init__(self, iter, vocab_size_dict):
+        """
+        Args:
+            iter (DataIterator):
+                DataIterator which iterates over the indices to be converted to
+                multi hot.
+            vocab_size_dict (dict[str, int]):
+                Specifies the size of multi hot vectors (the vocabulary size)
+                for some named data items.
+        """
+        DataIterator.__init__(self, iter.data_shapes, iter.length)
+        for key in vocab_size_dict.keys():
+            if key not in iter.data_shapes:
+                raise IteratorValidationError(
+                    "key {} is not present in iterator. Available keys: {"
+                    "}".format(key, iter.data_shapes.keys()))
+            if not isinstance(vocab_size_dict[key], int):
+                raise IteratorValidationError("Vocabulary size must be int")
+            shape = iter.data_shapes[key]
+            if not len(shape) == 3:
+                raise IteratorValidationError("Only 3D data is supported")
+        self.vocab_size_dict = vocab_size_dict
+        self.iter = iter
+
+    def __call__(self, handler):
+        for data in self.iter(handler):
+            for name in self.vocab_size_dict.keys():
+                vocab_size = self.vocab_size_dict[name]
+                new_data = np.eye(vocab_size, dtype=np.bool)[data[name]].max(2)
                 data[name] = new_data
                 yield data
 
