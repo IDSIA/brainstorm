@@ -614,7 +614,7 @@ def shuffle_data(*args, **kwargs):
     rnd = np.random.RandomState(kwargs.get('seed', None))
     idxs = np.arange(args[0].shape[1])
     rnd.shuffle(idxs)
-    return [A[:, idxs] for A in args]
+    return [None if A is None else A[:, idxs] for A in args]
 
 
 def split(*args, **kwargs):
@@ -639,5 +639,5 @@ def split(*args, **kwargs):
     split_idxs = np.hstack([[0], split_idxs])
     all_splits = []
     for start, stop in zip(split_idxs[:-1], split_idxs[1:]):
-        all_splits.append([A[:, start:stop] for A in args])
+        all_splits.append([None if A is None else A[:, start:stop] for A in args])
     return all_splits
