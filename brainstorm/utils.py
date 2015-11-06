@@ -2,14 +2,17 @@
 # coding=utf-8
 
 from __future__ import division, print_function, unicode_literals
-
-import math
-import re
 from datetime import datetime
-
-import numpy as np
+from functools import reduce  # Valid in Python 2.6+, required in Python 3
+import math
+import operator
+import re
 
 from brainstorm.__about__ import __version__
+
+
+product = lambda arr: reduce(operator.mul, arr, 1)
+
 
 PYTHON_IDENTIFIER = re.compile("^[_a-zA-Z][_a-zA-Z0-9]*$")
 
@@ -154,16 +157,16 @@ def flatten_time_and_features(array):
     assert len(array.shape) >= 3, "Time & features can be flattened only "\
                                   "for arrays with at least 3 dimensions."
     t, b, f = array.shape[0], array.shape[1], array.shape[2:]
-    return array.reshape((t * b, int(np.product(f))))
+    return array.reshape((t * b, int(product(f))))
 
 
 def flatten_features(array, start_idx=2):
     return array.reshape(array.shape[:start_idx] +
-                         (int(np.product(array.shape[start_idx:])),))
+                         (int(product(array.shape[start_idx:])),))
 
 
 def flatten_all_but_last(array):
-    return array.reshape((int(np.product(array.shape[:-1])), array.shape[-1]))
+    return array.reshape((int(product(array.shape[:-1])), array.shape[-1]))
 
 
 def flatten_keys(dictionary):
