@@ -92,6 +92,8 @@ draw_net = ['pygraphviz']
 tests = ['pytest', 'mock']
 pycuda = ['pycuda>=2015.1.3', 'scikit-cuda>=0.5.1']
 all_deps = live_viz + draw_net + tests + pycuda
+setup_requires = ['cython', 'numpy>=1.8']
+install_requires = setup_requires + ['h5py', 'mock', 'six>=1.10.0']
 
 setup(
     name='brainstorm',
@@ -106,8 +108,8 @@ setup(
               'brainstorm.layers',
               'brainstorm.training',
               'brainstorm.handlers'],
-    setup_requires=['cython', 'numpy>=1.8'],
-    install_requires=['cython', 'h5py', 'mock', 'numpy>=1.8', 'six'],
+    setup_requires=setup_requires,
+    install_requires=install_requires,
     extras_require={
         'live_viz':  live_viz,
         'draw_net': draw_net,

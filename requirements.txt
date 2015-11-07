@@ -1,6 +1,6 @@
 numpy>=1.8
 cython
-six
+six>=1.10.0
 wheel>=0.22
 mock
 h5py
