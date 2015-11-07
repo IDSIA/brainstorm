@@ -113,6 +113,51 @@ class MomentumStepper(TrainingStepper):
                                 self.net.buffer.parameters,
                                 out=self.net.buffer.parameters)
 
+class RMSpropStepper(TrainingStepper):
+    def __init__(self, learning_rate=0.001, alpha=0.9, eps=1e-6):
+        super(RMSpropStepper, self).__init__()
+        self.learning_rate = learning_rate
+        self.alpha = alpha
+        self.eps = eps
+        self.update = None
+        self.scratch = None
+
+    def start(self, net):
+        super(RMSpropStepper, self).start(net)
+        self.update = net.handler.zeros(net.buffer.parameters.shape)
+        self.scratch = net.handler.zeros(net.buffer.parameters.shape)
+
+    def run(self):
+        self.net.forward_pass(training_pass=True)
+        self.net.backward_pass()
+
+        #self.update *= self.alpha
+        self.net.handler.mult_st(self.alpha,
+                                 self.update,
+                                 out=self.update)
+
+        # #self.update += (1 - self.alpha) * grad * grad
+        self.net.handler.mult_tt(self.net.buffer.gradients,
+                                 self.net.buffer.gradients,
+                                 out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.alpha,
+                                     self.scratch,
+                                     out=self.update)
+
+        # # grad / sqrt(update + self.eps)
+        self.net.handler.add_st(self.eps,
+                                self.update,
+                                out=self.scratch)
+        self.net.handler.sqrt_t(self.scratch,
+                                out=self.scratch)
+        self.net.handler.divide_tt(self.net.buffer.gradients,
+                                   self.scratch,
+                                   out=self.scratch)
+
+        # param -= learning_rate * grad / sqrt(update + self.eps)
+        self.net.handler.mult_add_st(-self.learning_rate,
+                                     self.scratch,
+                                     self.net.buffer.parameters)
 
 class NesterovStepper(MomentumStepper):
     """
