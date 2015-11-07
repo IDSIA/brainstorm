@@ -37,15 +37,15 @@ sudo apt-get install python-dev libhdf5-dev git python-pip
 git clone https://github.com/IDSIA/brainstorm
 # Install
 cd brainstorm
-sudo pip install -r requirements.txt
-sudo python setup.py install
+[sudo] pip install -r requirements.txt
+[sudo] python setup.py install
 # Build local documentation (optional)
 sudo apt-get install python-sphinx
 make docs
 ```
 To use your CUDA installation with brainstorm:
 ```bash
-$ pip install -r pycuda_requirements.txt
+$ [sudo] pip install -r pycuda_requirements.txt
 ```
 Set location for storing datasets:
 ```bash
