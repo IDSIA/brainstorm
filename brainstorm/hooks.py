@@ -370,8 +370,9 @@ class MonitorScores(Hook):
 class EarlyStopper(Hook):
     __default_values__ = {'patience': 1}
 
-    def __init__(self, log_name, patience=1, criterion='min', name=None):
-        super(EarlyStopper, self).__init__(name, 'epoch', 1)
+    def __init__(self, log_name, patience=1, criterion='min',
+                 timescale='epoch', interval=1, name=None):
+        super(EarlyStopper, self).__init__(name, timescale, interval)
         self.log_name = log_name
         self.patience = patience
         if criterion not in ['min', 'max']:
@@ -380,13 +381,15 @@ class EarlyStopper(Hook):
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if epoch_nr == 0:
+            try:
+                e = get_by_path(logs, self.log_name)
+            except KeyError:
+                return
         e = get_by_path(logs, self.log_name)
-        if self.criterion == 'min':
-            best_error_idx = np.argmin(e)
-        else:  # self.criterion == 'max'
-            best_error_idx = np.argmax(e)
-        if len(e) > best_error_idx + self.patience:
-            self.message("Stopping because {} did not improve for {} epochs.".
+        best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
+        if len(e) > best_idx + self.patience:
+            self.message("Stopping because {} did not improve for {} checks.".
                          format(self.log_name, self.patience))
             raise StopIteration()
 
