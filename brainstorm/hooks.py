@@ -56,8 +56,58 @@ class Hook(Describable):
 
 class SaveBestNetwork(Hook):
     """
-    Checks to see if the specified log entry is at it's best value
-    and if so, saves the network to a specified file.
+    Check to see if the specified log entry is at it's best value and if so,
+    save the network to a specified file.
+
+    Can save the network when the log entry is at its minimum (such as an
+    error) or maximum (such as accuracy) according to the ``criterion``
+    argument.
+
+    The ``timescale`` and ``interval`` should be the same as those for the
+    monitoring hook which logs the quantity of interest.
+
+    Args:
+        log_name:
+            Name of the log entry to be checked for improvement.
+            It should be in the form <monitorname>.<log_name> where log_name
+            itself may be a nested dictionary key in dotted notation.
+        filename:
+            Name of the HDF5 file to which the network should be saved.
+        criterion:
+            Indicates whether training should be stopped when the log entry is
+            at its minimum or maximum value. Must be either 'min' or 'max'.
+            Defaults to 'min'.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'SaveBestNetwork'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    Examples:
+        Add a hook to monitor a quantity of interest:
+
+        >>> scorer = bs.scorers.Accuracy()
+        >>> trainer.add_hook(bs.hooks.MonitorScores('valid_getter', [scorer],
+        ...                                         name='validation'))
+
+        Check every epoch and save the network if validation accuracy rises:
+
+        >>> trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
+        ...                                           filename='best_acc.h5',
+        ...                                           criterion='max'))
+
+        Check every epoch and save the network if validation loss drops:
+
+        >>> trainer.add_hook(bs.hooks.SaveBestNetwork('validation.total_loss',
+            ...                                       filename='best_loss.h5',
+        ...                                           criterion='min'))
     """
     __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
@@ -111,6 +161,10 @@ class SaveBestNetwork(Hook):
 
 
 class SaveLogs(Hook):
+    """
+    Periodically Save the trainer logs dictionary to an HDF5 file.
+    Default behavior is to save every epoch.
+    """
     def __init__(self, filename, name=None, timescale='epoch', interval=1):
         super(SaveLogs, self).__init__(name, timescale, interval)
         self.filename = filename
@@ -133,9 +187,8 @@ class SaveLogs(Hook):
 
 class SaveNetwork(Hook):
     """
-    Save the weights of the network to the given file on every call.
-    Default is to save them once per epoch, but this can be configured using
-    the timescale and interval parameters.
+    Periodically save the weights of the network to the given file.
+    Default behavior is to save the network after every training epoch.
     """
 
     def __init__(self, filename, name=None, timescale='epoch', interval=1):
@@ -264,7 +317,7 @@ class MonitorLayerInOuts(Hook):
 
 class MonitorLayerParameters(Hook):
     """
-    Monitor some properties of a layer.
+    Monitor some statistics about all the parameters of a layer.
     """
     def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
                  verbose=None):
@@ -297,6 +350,10 @@ class MonitorLayerParameters(Hook):
 
 
 class MonitorLoss(Hook):
+    """
+    Monitor the losses computed by the network on a dataset using a given data
+    iterator.
+    """
     def __init__(self, iter_name, name=None, timescale='epoch', interval=1,
                  verbose=None):
         super(MonitorLoss, self).__init__(name, timescale, interval, verbose)
