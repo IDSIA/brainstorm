@@ -327,10 +327,10 @@ class MonitorScores(Hook):
             List of Scorers to evaluate.
         timescale (Optional[str]):
             Specifies whether the Monitor should be called after each epoch or
-            after each update. Default is 'epoch'
+            after each update. Default is 'epoch'.
         interval (Optional[int]):
             This monitor should be called every ``interval`` epochs/updates.
-            Default is 1
+            Default is 1.
         name (Optional[str]):
             Name of this monitor. This name is used as a key in the trainer
             logs. Default is 'MonitorScores'
@@ -368,11 +368,60 @@ class MonitorScores(Hook):
 # -------------------------------- Stoppers --------------------------------- #
 
 class EarlyStopper(Hook):
+    """
+    Stop the training if a log entry does not improve for some time.
+
+    Can stop training when the log entry is at its minimum (such as an error)
+    or maximum (such as accuracy) according to the ``criterion`` argument.
+
+    The ``timescale`` and ``interval`` should be the same as those for the
+    monitoring hook which logs the quantity of interest.
+
+    Args:
+        log_name:
+            Name of the log entry to be checked for improvement.
+            It should be in the form <monitorname>.<log_name> where log_name
+            itself may be a nested dictionary key in dotted notation.
+        patience:
+            Number of log updates to wait before stopping training.
+            Default is 1.
+        criterion:
+            Indicates whether training should be stopped when the log entry is
+            at its minimum or maximum value. Must be either 'min' or 'max'.
+            Defaults to 'min'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'MonitorScores'
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    Examples:
+        Add a hook to monitor a quantity of interest:
+
+        >>> scorer = bs.scorers.Accuracy()
+        >>> trainer.add_hook(bs.hooks.MonitorScores('valid_getter', [scorer], name='validation'))
+
+        Stop training if accuracy on validation set does not increase for 10 epochs:
+
+        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy', patience=10, criterion='max'))
+
+        Stop training if loss on validation set does not drop for 5 epochs:
+
+        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.total_loss', patience=5, criterion='min'))
+
+    """
     __default_values__ = {'patience': 1}
 
     def __init__(self, log_name, patience=1, criterion='min',
-                 timescale='epoch', interval=1, name=None):
-        super(EarlyStopper, self).__init__(name, timescale, interval)
+                 timescale='epoch', interval=1, name=None, verbose=None):
+        super(EarlyStopper, self).__init__(name, timescale, interval, verbose)
         self.log_name = log_name
         self.patience = patience
         if criterion not in ['min', 'max']:
