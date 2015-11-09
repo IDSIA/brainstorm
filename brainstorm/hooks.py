@@ -62,8 +62,8 @@ class SaveBestNetwork(Hook):
     __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
 
-    def __init__(self, log_name, filename=None, name=None,
-                 criterion='max', timescale='epoch', interval=1, verbose=None):
+    def __init__(self, log_name, filename=None, criterion='max', name=None,
+                 timescale='epoch', interval=1, verbose=None):
         super(SaveBestNetwork, self).__init__(name, timescale,
                                               interval, verbose)
         self.log_name = log_name
@@ -155,8 +155,8 @@ class MonitorLayerDeltas(Hook):
     """
     Monitor some statistics about all the deltas of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorDeltas_{}".format(layer_name)
         super(MonitorLayerDeltas, self).__init__(name, timescale,
@@ -200,8 +200,8 @@ class MonitorLayerGradients(Hook):
     """
     Monitor some statistics about all the gradients of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorGradients_{}".format(layer_name)
         super(MonitorLayerGradients, self).__init__(name, timescale,
@@ -228,8 +228,8 @@ class MonitorLayerInOuts(Hook):
     """
     Monitor some statistics about all the inputs and outputs of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorInOuts_{}".format(layer_name)
         super(MonitorLayerInOuts, self).__init__(name, timescale,
@@ -266,8 +266,8 @@ class MonitorLayerParameters(Hook):
     """
     Monitor some properties of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorParameters_{}".format(layer_name)
         super(MonitorLayerParameters, self).__init__(name, timescale,
@@ -297,7 +297,7 @@ class MonitorLayerParameters(Hook):
 
 
 class MonitorLoss(Hook):
-    def __init__(self, iter_name, timescale='epoch', interval=1, name=None,
+    def __init__(self, iter_name, name=None, timescale='epoch', interval=1,
                  verbose=None):
         super(MonitorLoss, self).__init__(name, timescale, interval, verbose)
         self.iter_name = iter_name
@@ -325,15 +325,15 @@ class MonitorScores(Hook):
             name of the data iterator to use (as specified in the train() call)
         scorers (List[brainstorm.scorers.Scorer]):
             List of Scorers to evaluate.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'MonitorScores'
         timescale (Optional[str]):
             Specifies whether the Monitor should be called after each epoch or
             after each update. Default is 'epoch'.
         interval (Optional[int]):
             This monitor should be called every ``interval`` epochs/updates.
             Default is 1.
-        name (Optional[str]):
-            Name of this monitor. This name is used as a key in the trainer
-            logs. Default is 'MonitorScores'
         verbose: bool, optional
             Specifies whether the logs of this monitor should be printed, and
             acts as a fallback verbosity for the used data iterator.
@@ -343,11 +343,10 @@ class MonitorScores(Hook):
         MonitorLoss: monitor the overall loss of the network.
 
     """
-    def __init__(self, iter_name, scorers, timescale='epoch', interval=1,
-                 name=None, verbose=None):
+    def __init__(self, iter_name, scorers, name=None, timescale='epoch',
+                 interval=1, verbose=None):
 
-        super(MonitorScores, self).__init__(name, timescale, interval,
-                                            verbose)
+        super(MonitorScores, self).__init__(name, timescale, interval, verbose)
         self.iter_name = iter_name
         self.iter = None
         self.scorers = scorers
@@ -389,15 +388,15 @@ class EarlyStopper(Hook):
             Indicates whether training should be stopped when the log entry is
             at its minimum or maximum value. Must be either 'min' or 'max'.
             Defaults to 'min'.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'EarlyStopper'.
         timescale (Optional[str]):
             Specifies whether the Monitor should be called after each epoch or
             after each update. Default is 'epoch'.
         interval (Optional[int]):
             This monitor should be called every ``interval`` epochs/updates.
             Default is 1.
-        name (Optional[str]):
-            Name of this monitor. This name is used as a key in the trainer
-            logs. Default is 'EarlyStopper'.
         verbose: bool, optional
             Specifies whether the logs of this monitor should be printed, and
             acts as a fallback verbosity for the used data iterator.
@@ -425,7 +424,7 @@ class EarlyStopper(Hook):
     __default_values__ = {'patience': 1}
 
     def __init__(self, log_name, patience=1, criterion='min',
-                 timescale='epoch', interval=1, name=None, verbose=None):
+                 name=None, timescale='epoch', interval=1, verbose=None):
         super(EarlyStopper, self).__init__(name, timescale, interval, verbose)
         self.log_name = log_name
         self.patience = patience
@@ -469,7 +468,7 @@ class StopAfterEpoch(Hook):
             acts as a fallback verbosity for the used data iterator.
             If not set it defaults to the verbosity setting of the trainer.
     """
-    def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
+    def __init__(self, max_epochs, name=None, timescale='epoch', interval=1,
                  verbose=None):
         super(StopAfterEpoch, self).__init__(name, timescale,
                                              interval, verbose)
