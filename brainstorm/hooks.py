@@ -397,7 +397,7 @@ class EarlyStopper(Hook):
             Default is 1.
         name (Optional[str]):
             Name of this monitor. This name is used as a key in the trainer
-            logs. Default is 'MonitorScores'
+            logs. Default is 'EarlyStopper'.
         verbose: bool, optional
             Specifies whether the logs of this monitor should be printed, and
             acts as a fallback verbosity for the used data iterator.
@@ -406,15 +406,20 @@ class EarlyStopper(Hook):
         Add a hook to monitor a quantity of interest:
 
         >>> scorer = bs.scorers.Accuracy()
-        >>> trainer.add_hook(bs.hooks.MonitorScores('valid_getter', [scorer], name='validation'))
+        >>> trainer.add_hook(bs.hooks.MonitorScores('valid_getter', [scorer],
+        ...                                         name='validation'))
 
-        Stop training if accuracy on validation set does not increase for 10 epochs:
+        Stop training if validation set accuracy does not rise for 10 epochs:
 
-        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy', patience=10, criterion='max'))
+        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy',
+        ...                                        patience=10,
+        ...                                        criterion='max'))
 
         Stop training if loss on validation set does not drop for 5 epochs:
 
-        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.total_loss', patience=5, criterion='min'))
+        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.total_loss',
+        ...                                        patience=5,
+        ...                                        criterion='min'))
 
     """
     __default_values__ = {'patience': 1}
@@ -444,6 +449,26 @@ class EarlyStopper(Hook):
 
 
 class StopAfterEpoch(Hook):
+    """
+    Stop the training after a specified number of epochs.
+
+    Args:
+        max_epochs (int):
+            The number of epochs to train.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopAfterEpoch'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    """
     def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
                  verbose=None):
         super(StopAfterEpoch, self).__init__(name, timescale,
@@ -458,14 +483,35 @@ class StopAfterEpoch(Hook):
 
 
 class StopOnNan(Hook):
-    """ Stop the training if infinite or NaN values are found in parameters.
+    """
+    Stop the training if infinite or NaN values are found in parameters.
 
-    Can also check logs for invalid values.
+    This hook can also check a list of logs for invalid values.
+
+    Args:
+        logs_to_check (Optional[list, tuple]):
+            A list of trainer logs to check in dotted notation. Defaults to ().
+        check_parameters (Optional[bool]):
+            Indicates whether the parameters should be checked for NaN.
+            Defaults to True.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopOnNan'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
     """
     def __init__(self, logs_to_check=(), check_parameters=True,
                  check_training_loss=True, name=None, timescale='epoch',
-                 interval=1):
-        super(StopOnNan, self).__init__(name, timescale, interval)
+                 interval=1, verbose=None):
+        super(StopOnNan, self).__init__(name, timescale, interval, verbose)
         self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check,
                                                             string_types)
                               else logs_to_check)
@@ -496,7 +542,25 @@ class StopOnNan(Hook):
 
 class StopOnSigQuit(Hook):
     """
-    Stops training the next possible moment if it received a SIGQUIT (Ctrl + \)
+    Stop training after the next call if it received a SIGQUIT (Ctrl + \).
+
+    This hook makes it possible to exit the training loop and continue with
+    the rest of the program execution.
+
+    Args:
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopOnSigQuit'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
     """
     __undescribed__ = {'quit': False}
 
@@ -512,7 +576,7 @@ class StopOnSigQuit(Hook):
         signal.signal(signal.SIGQUIT, self.receive_signal)
 
     def receive_signal(self, signum, stack):
-        print('Interrupting')
+        self.message('Interrupting')
         self.quit = True
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
