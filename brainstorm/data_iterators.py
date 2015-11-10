@@ -439,7 +439,7 @@ class Minibatches(DataIterator):
         self.data = named_data
         self.shuffle = shuffle
         self.batch_size = batch_size
-        if isinstance(cut_according_to, [six.string_types, type(None)]):
+        if isinstance(cut_according_to, (six.string_types, type(None))):
             if cut_according_to in named_data:
                 self.seq_lens = _calculate_lengths_from_mask(
                     named_data[cut_according_to])
