@@ -132,7 +132,7 @@ def extract_and_save(network, iter, buffer_names, file_name):
         >>> getter = Minibatches(100, default=x_test)
         >>> extract_and_save(network,
         ...                  getter,
-        ...                  ['Output.outputs.probabilities',
+        ...                  ['Output.outputs.predictions',
         ...                   'Hid1.internals.H'],
         ...                  'network_features.hdf5')
     Args:
