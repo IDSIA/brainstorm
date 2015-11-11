@@ -143,12 +143,13 @@ class SaveBestNetwork(Hook):
             self.best_t = epoch_nr if self.timescale == 'epoch' else update_nr
             params = net.get('parameters')
             if self.filename is not None:
-                self.message("{} improved. Saving network to {} ...".
-                             format(self.log_name, self.filename))
+                self.message("{} improved (criterion: {}). Saving network to "
+                             "{}".format(self.log_name, self.criterion,
+                                         self.filename))
                 net.save_as_hdf5(self.filename)
             else:
-                self.message("{} improved. Caching parameters ...".
-                             format(self.log_name))
+                self.message("{} improved (criterion: {}). Caching parameters".
+                             format(self.log_name, self.criterion))
                 self.parameters = params
         else:
             self.message("Last saved parameters at {} {} when {} was {}".
@@ -499,8 +500,10 @@ class EarlyStopper(Hook):
         e = get_by_path(logs, self.log_name)
         best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
         if len(e) > best_idx + self.patience:
-            self.message("Stopping because {} did not improve for {} checks.".
-                         format(self.log_name, self.patience))
+            self.message("Stopping because {} did not improve for {} checks "
+                         "(criterion used : {}).".format(self.log_name,
+                                                         self.patience,
+                                                         self.criterion))
             raise StopIteration()
 
 
