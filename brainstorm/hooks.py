@@ -541,6 +541,76 @@ class StopAfterEpoch(Hook):
             raise StopIteration()
 
 
+class StopAfterThresholdReached(Hook):
+    """
+    Stop the training if a log entry reaches the given threshold
+
+    Can stop training when the log entry becomes sufficiently small (such as an error)
+    or sufficiently large (such as accuracy) according to the threshold.
+
+    Args:
+        log_name:
+            Name of the log entry to be checked for improvement.
+            It should be in the form <monitorname>.<log_name> where log_name
+            itself may be a nested dictionary key in dotted notation.
+        threshold:
+            The threshold value to reach
+        criterion:
+            Indicates whether training should be stopped when the log entry is
+            at its minimum or maximum value. Must be either 'min' or 'max'.
+            Defaults to 'min'.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopAfterThresholdReached'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    Examples:
+        Stop training if validation set accuracy is at least 97 %:
+
+        >>> trainer.add_hook(bs.hooks.StopAfterThresholdReached('validation.Accuracy',
+        ...                                                     threshold=0.97,
+        ...                                                     criterion='max'))
+
+        Stop training if loss on validation set goes below 0.2:
+
+        >>> trainer.add_hook(bs.hooks.StopAfterThresholdReached('validation.total_loss',
+        ...                                                     threshold=0.2,
+        ...                                                     criterion='min'))
+
+    """
+
+    def __init__(self, log_name, threshold, criterion='min',
+                 name=None, timescale='epoch', interval=1, verbose=None):
+        super(StopAfterThresholdReached, self).__init__(name, timescale, interval, verbose)
+        self.log_name = log_name
+        self.threshold = threshold
+        if criterion not in ['min', 'max']:
+            raise ValueError("Unknown criterion: '{}'"
+                             "(Must be 'min' or 'max')".format(criterion))
+        self.criterion = criterion
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        e = get_by_path(logs, self.log_name)
+        is_threshold_reached = False
+        if self.criterion == 'max' and max(e) >= self.threshold:
+            is_threshold_reached = True
+        elif self.criterion == 'min' and min(e) <= self.threshold:
+            is_threshold_reached = True
+        if is_threshold_reached:
+            self.message("Stopping because {} has reached the threshold {} "
+                         "(criterion used : {})"
+                         .format(self.log_name, self.threshold, self.criterion))
+            raise StopIteration()
+
+
 class StopOnNan(Hook):
     """
     Stop the training if infinite or NaN values are found in parameters.
