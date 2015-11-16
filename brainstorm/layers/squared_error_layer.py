@@ -13,8 +13,9 @@ from brainstorm.utils import (LayerValidationError, flatten_time_and_features)
 
 def SquaredError(name=None):
     """
-    Create a SquaredLoss layer which computes half of the squared difference
-    between the inputs `default` and `targets` element-wise.
+    Create a SquaredError layer which computes half of the squared difference
+    between the inputs `default` and `targets` element-wise. The factor of half
+    is used to be consistent with common machine learning texts and resources.
 
     Produces outputs named `predictions` and `loss`. The `loss` output can be
     connected to a ``Loss`` layer for typical network training for a
