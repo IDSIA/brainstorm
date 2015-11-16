@@ -198,7 +198,7 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     classification task.
 
     regression:
-    The projection layer is connected to a SquaredLoss layer, which
+    The projection layer is connected to a SquaredError layer, which
     receives targets from the input layer. This is suitable for least squares
     regression.
 
@@ -261,7 +261,7 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
     elif task_type == 'multi-label':
         out_layer = layers.SigmoidCE(name=outlayer_name)
     elif task_type == 'regression':
-        out_layer = layers.SquaredLoss(name=outlayer_name)
+        out_layer = layers.SquaredError(name=outlayer_name)
     else:
         raise ValueError('Unknown task type {}'.format(task_type))
 

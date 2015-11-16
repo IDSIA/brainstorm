@@ -25,7 +25,7 @@ from brainstorm.layers.mask_layer import MaskLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
 from brainstorm.layers.pooling_layer_2d import Pooling2DLayerImpl
 from brainstorm.layers.recurrent_layer import RecurrentLayerImpl
-from brainstorm.layers.squared_loss_layer import SquaredLossLayerImpl
+from brainstorm.layers.squared_error_layer import SquaredErrorLayerImpl
 from brainstorm.layers.squared_difference_layer import \
     SquaredDifferenceLayerImpl
 from brainstorm.structure.architecture import Connection
@@ -91,13 +91,13 @@ def squared_difference_layer(spec):
     return layer, spec
 
 
-def squared_loss_layer(spec):
+def squared_error_layer(spec):
     in_shapes = {'default': BufferStructure('T', 'B', 3, 2),
                  'targets': BufferStructure('T', 'B', 3, 2)
                  }
 
-    layer = SquaredLossLayerImpl('SquaredLossLayer',
-                                 in_shapes, NO_CON, NO_CON)
+    layer = SquaredErrorLayerImpl('SquaredErrorLayer',
+                                  in_shapes, NO_CON, NO_CON)
     return layer, spec
 
 
@@ -336,7 +336,7 @@ layers_to_test = [
     rnn_layer,
     rnn_layer_2d,
     squared_difference_layer,
-    squared_loss_layer,
+    squared_error_layer,
     lstm_layer,
     lstm_layer_2d,
     mask_layer,

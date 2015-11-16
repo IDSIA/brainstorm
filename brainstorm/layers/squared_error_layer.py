@@ -11,12 +11,23 @@ from brainstorm.structure.construction import ConstructionWrapper
 from brainstorm.utils import (LayerValidationError, flatten_time_and_features)
 
 
-def SquaredLoss(name=None):
-    """Create a SquaredLoss layer which computes half of squared difference."""
-    return ConstructionWrapper.create(SquaredLossLayerImpl, name=name)
+def SquaredError(name=None):
+    """
+    Create a SquaredLoss layer which computes half of the squared difference
+    between the inputs `default` and `targets` element-wise.
+
+    Produces outputs named `predictions` and `loss`. The `loss` output can be
+    connected to a ``Loss`` layer for typical network training for a
+    regression task.
+
+    This layer acts similar to ``SigmoidCE`` and ``SoftmaxCE`` layers. Like
+    the above layers, it does not compute the gradients w.r.t. the `targets`
+    input and ignores incoming deltas w.r.t. the `predictions` output.
+    """
+    return ConstructionWrapper.create(SquaredErrorLayerImpl, name=name)
 
 
-class SquaredLossLayerImpl(Layer):
+class SquaredErrorLayerImpl(Layer):
 
     expected_inputs = {'default': StructureTemplate('T', 'B', '...'),
                        'targets': StructureTemplate('T', 'B', '...')}
