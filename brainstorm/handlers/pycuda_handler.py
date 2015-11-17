@@ -363,7 +363,7 @@ class PyCudaHandler(Handler):
                         block=block, grid=grid)
 
     def sqrt_t(self, a, out):
-        cumath.sqrt(a, out)
+        cumath.sqrt(a, out=out)
 
     def subtract_mv(self, m, v, out):
         cumisc.binaryop_matvec('-', m, v, None, out, None)
