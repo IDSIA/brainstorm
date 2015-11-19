@@ -55,22 +55,20 @@ echo "export BRAINSTORM_DATA_DIR=/home/my_data_dir/" >> ~/.bashrc
 
 ### Windows (7, 8.x, 10): 
 
-**Before installing:**
+**Before installation:**
 
 - You will need a copy of MinGW (version 4.7.x or later) installed and properly configured on your machine. To learn about installing MinGW, see [MinGW - Getting Started](http://www.mingw.org/wiki/Getting_Started).
-- If you have a 64-bit machine, you will need to install the 64-bit Windows binary package for H5PY that matches your version of Python from Christop Gohlke's [Collection of Windows Binaries](http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py).
+- If you have a 64-bit machine, you will need to install the 64-bit Windows binary package for H5PY that matches your version of Python from Christoph Gohlke's [Collection of Windows Binaries](http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py).
 
 **To install:**
 
-`git clone  https://github.com/IDSIA/brainstorm`
-
-`cd brainstorm`
-
-`pip install -r requirements.txt`
-
-`pip install -r pycuda_requirements.txt` [Only if you have PyCUDA installed!]
-
-`python setup.py install`
+```bash
+git clone  https://github.com/IDSIA/brainstorm
+cd brainstorm
+pip install -r requirements.txt
+pip install -r pycuda_requirements.txt [Only if you have PyCUDA installed!]
+python setup.py install
+```
 
 **Post-Installation:**
 
