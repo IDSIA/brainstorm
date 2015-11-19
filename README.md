@@ -28,7 +28,7 @@ Brainstorm abstracts computations via *handlers* with a consistent API. Currentl
 Installation
 ------------
 
-## Ubuntu:
+### Ubuntu:
 
 ```bash
 # Install pre-requisites
@@ -53,27 +53,30 @@ Set location for storing datasets:
 echo "export BRAINSTORM_DATA_DIR=/home/my_data_dir/" >> ~/.bashrc
 ```
 
-## Windows
+### Windows (7, 8.x, 10): 
 
-Before installing:
+**Before installing:**
 
-- You will need a copy of MinGW (version 4.7.x or later) installed and properly configured on your machine. To learn about installing MinGW, see http://www.mingw.org/wiki/Getting_Started.
-- If you have a 64-bit machine, you will need to install the 64-bit Windows binary package for H5PY that matches your version of Python from http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py
+- You will need a copy of MinGW (version 4.7.x or later) installed and properly configured on your machine. To learn about installing MinGW, see [MinGW - Getting Started](http://www.mingw.org/wiki/Getting_Started).
+- If you have a 64-bit machine, you will need to install the 64-bit Windows binary package for H5PY that matches your version of Python from Christop Gohlke's [Collection of Windows Binaries](http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py).
 
-To install:
-```
-git clone  https://github.com/IDSIA/brainstorm
-cd brainstorm
-pip install -r requirements.txt
-pip install -r pycuda_requirements.txt [only if you have PyCUDA installed!]
-python setup.py install
-```
+**To install:**
 
-Post-Installation:
+`git clone  https://github.com/IDSIA/brainstorm`
+
+`cd brainstorm`
+
+`pip install -r requirements.txt`
+
+`pip install -r pycuda_requirements.txt` [Only if you have PyCUDA installed!]
+
+`python setup.py install`
+
+**Post-Installation:**
 
 Add `BRAINSTORM_DATA_DIR` to your System Variables, pointing to a location of your choice.
 
-CUDA Requirements:
+**CUDA Requirements:**
 
 [TO DO: WHEN I get this up and running on ASUS laptop, also make separate following paragraph of what’s needed for that, which will hopefully be:]
 
