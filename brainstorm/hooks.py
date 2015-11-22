@@ -56,14 +56,64 @@ class Hook(Describable):
 
 class SaveBestNetwork(Hook):
     """
-    Checks to see if the specified log entry is at it's best value
-    and if so, saves the network to a specified file.
+    Check to see if the specified log entry is at it's best value and if so,
+    save the network to a specified file.
+
+    Can save the network when the log entry is at its minimum (such as an
+    error) or maximum (such as accuracy) according to the ``criterion``
+    argument.
+
+    The ``timescale`` and ``interval`` should be the same as those for the
+    monitoring hook which logs the quantity of interest.
+
+    Args:
+        log_name:
+            Name of the log entry to be checked for improvement.
+            It should be in the form <monitorname>.<log_name> where log_name
+            itself may be a nested dictionary key in dotted notation.
+        filename:
+            Name of the HDF5 file to which the network should be saved.
+        criterion:
+            Indicates whether training should be stopped when the log entry is
+            at its minimum or maximum value. Must be either 'min' or 'max'.
+            Defaults to 'min'.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'SaveBestNetwork'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    Examples:
+        Add a hook to monitor a quantity of interest:
+
+        >>> scorer = bs.scorers.Accuracy()
+        >>> trainer.add_hook(bs.hooks.MonitorScores('valid_getter', [scorer],
+        ...                                         name='validation'))
+
+        Check every epoch and save the network if validation accuracy rises:
+
+        >>> trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',
+        ...                                           filename='best_acc.h5',
+        ...                                           criterion='max'))
+
+        Check every epoch and save the network if validation loss drops:
+
+        >>> trainer.add_hook(bs.hooks.SaveBestNetwork('validation.total_loss',
+            ...                                       filename='best_loss.h5',
+        ...                                           criterion='min'))
     """
     __undescribed__ = {'parameters': None}
     __default_values__ = {'filename': None}
 
-    def __init__(self, log_name, filename=None, name=None,
-                 criterion='max', timescale='epoch', interval=1, verbose=None):
+    def __init__(self, log_name, filename=None, criterion='max', name=None,
+                 timescale='epoch', interval=1, verbose=None):
         super(SaveBestNetwork, self).__init__(name, timescale,
                                               interval, verbose)
         self.log_name = log_name
@@ -93,12 +143,13 @@ class SaveBestNetwork(Hook):
             self.best_t = epoch_nr if self.timescale == 'epoch' else update_nr
             params = net.get('parameters')
             if self.filename is not None:
-                self.message("{} improved. Saving network to {} ...".
-                             format(self.log_name, self.filename))
+                self.message("{} improved (criterion: {}). Saving network to "
+                             "{}".format(self.log_name, self.criterion,
+                                         self.filename))
                 net.save_as_hdf5(self.filename)
             else:
-                self.message("{} improved. Caching parameters ...".
-                             format(self.log_name))
+                self.message("{} improved (criterion: {}). Caching parameters".
+                             format(self.log_name, self.criterion))
                 self.parameters = params
         else:
             self.message("Last saved parameters at {} {} when {} was {}".
@@ -111,6 +162,10 @@ class SaveBestNetwork(Hook):
 
 
 class SaveLogs(Hook):
+    """
+    Periodically Save the trainer logs dictionary to an HDF5 file.
+    Default behavior is to save every epoch.
+    """
     def __init__(self, filename, name=None, timescale='epoch', interval=1):
         super(SaveLogs, self).__init__(name, timescale, interval)
         self.filename = filename
@@ -133,9 +188,8 @@ class SaveLogs(Hook):
 
 class SaveNetwork(Hook):
     """
-    Save the weights of the network to the given file on every call.
-    Default is to save them once per epoch, but this can be configured using
-    the timescale and interval parameters.
+    Periodically save the weights of the network to the given file.
+    Default behavior is to save the network after every training epoch.
     """
 
     def __init__(self, filename, name=None, timescale='epoch', interval=1):
@@ -155,8 +209,8 @@ class MonitorLayerDeltas(Hook):
     """
     Monitor some statistics about all the deltas of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorDeltas_{}".format(layer_name)
         super(MonitorLayerDeltas, self).__init__(name, timescale,
@@ -200,8 +254,8 @@ class MonitorLayerGradients(Hook):
     """
     Monitor some statistics about all the gradients of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorGradients_{}".format(layer_name)
         super(MonitorLayerGradients, self).__init__(name, timescale,
@@ -228,8 +282,8 @@ class MonitorLayerInOuts(Hook):
     """
     Monitor some statistics about all the inputs and outputs of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorInOuts_{}".format(layer_name)
         super(MonitorLayerInOuts, self).__init__(name, timescale,
@@ -264,10 +318,10 @@ class MonitorLayerInOuts(Hook):
 
 class MonitorLayerParameters(Hook):
     """
-    Monitor some properties of a layer.
+    Monitor some statistics about all the parameters of a layer.
     """
-    def __init__(self, layer_name, timescale='epoch',
-                 interval=1, name=None, verbose=None):
+    def __init__(self, layer_name, name=None, timescale='epoch', interval=1,
+                 verbose=None):
         if name is None:
             name = "MonitorParameters_{}".format(layer_name)
         super(MonitorLayerParameters, self).__init__(name, timescale,
@@ -297,7 +351,11 @@ class MonitorLayerParameters(Hook):
 
 
 class MonitorLoss(Hook):
-    def __init__(self, iter_name, timescale='epoch', interval=1, name=None,
+    """
+    Monitor the losses computed by the network on a dataset using a given data
+    iterator.
+    """
+    def __init__(self, iter_name, name=None, timescale='epoch', interval=1,
                  verbose=None):
         super(MonitorLoss, self).__init__(name, timescale, interval, verbose)
         self.iter_name = iter_name
@@ -325,15 +383,15 @@ class MonitorScores(Hook):
             name of the data iterator to use (as specified in the train() call)
         scorers (List[brainstorm.scorers.Scorer]):
             List of Scorers to evaluate.
-        timescale (Optional[str]):
-            Specifies whether the Monitor should be called after each epoch or
-            after each update. Default is 'epoch'
-        interval (Optional[int]):
-            This monitor should be called every ``interval`` epochs/updates.
-            Default is 1
         name (Optional[str]):
             Name of this monitor. This name is used as a key in the trainer
             logs. Default is 'MonitorScores'
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
         verbose: bool, optional
             Specifies whether the logs of this monitor should be printed, and
             acts as a fallback verbosity for the used data iterator.
@@ -343,11 +401,10 @@ class MonitorScores(Hook):
         MonitorLoss: monitor the overall loss of the network.
 
     """
-    def __init__(self, iter_name, scorers, timescale='epoch', interval=1,
-                 name=None, verbose=None):
+    def __init__(self, iter_name, scorers, name=None, timescale='epoch',
+                 interval=1, verbose=None):
 
-        super(MonitorScores, self).__init__(name, timescale, interval,
-                                            verbose)
+        super(MonitorScores, self).__init__(name, timescale, interval, verbose)
         self.iter_name = iter_name
         self.iter = None
         self.scorers = scorers
@@ -368,10 +425,65 @@ class MonitorScores(Hook):
 # -------------------------------- Stoppers --------------------------------- #
 
 class EarlyStopper(Hook):
+    """
+    Stop the training if a log entry does not improve for some time.
+
+    Can stop training when the log entry is at its minimum (such as an error)
+    or maximum (such as accuracy) according to the ``criterion`` argument.
+
+    The ``timescale`` and ``interval`` should be the same as those for the
+    monitoring hook which logs the quantity of interest.
+
+    Args:
+        log_name:
+            Name of the log entry to be checked for improvement.
+            It should be in the form <monitorname>.<log_name> where log_name
+            itself may be a nested dictionary key in dotted notation.
+        patience:
+            Number of log updates to wait before stopping training.
+            Default is 1.
+        criterion:
+            Indicates whether training should be stopped when the log entry is
+            at its minimum or maximum value. Must be either 'min' or 'max'.
+            Defaults to 'min'.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'EarlyStopper'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    Examples:
+        Add a hook to monitor a quantity of interest:
+
+        >>> scorer = bs.scorers.Accuracy()
+        >>> trainer.add_hook(bs.hooks.MonitorScores('valid_getter', [scorer],
+        ...                                         name='validation'))
+
+        Stop training if validation set accuracy does not rise for 10 epochs:
+
+        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy',
+        ...                                        patience=10,
+        ...                                        criterion='max'))
+
+        Stop training if loss on validation set does not drop for 5 epochs:
+
+        >>> trainer.add_hook(bs.hooks.EarlyStopper('validation.total_loss',
+        ...                                        patience=5,
+        ...                                        criterion='min'))
+
+    """
     __default_values__ = {'patience': 1}
 
-    def __init__(self, log_name, patience=1, criterion='min', name=None):
-        super(EarlyStopper, self).__init__(name, 'epoch', 1)
+    def __init__(self, log_name, patience=1, criterion='min',
+                 name=None, timescale='epoch', interval=1, verbose=None):
+        super(EarlyStopper, self).__init__(name, timescale, interval, verbose)
         self.log_name = log_name
         self.patience = patience
         if criterion not in ['min', 'max']:
@@ -380,19 +492,43 @@ class EarlyStopper(Hook):
         self.criterion = criterion
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        if epoch_nr == 0:
+            try:
+                e = get_by_path(logs, self.log_name)
+            except KeyError:
+                return
         e = get_by_path(logs, self.log_name)
-        if self.criterion == 'min':
-            best_error_idx = np.argmin(e)
-        else:  # self.criterion == 'max'
-            best_error_idx = np.argmax(e)
-        if len(e) > best_error_idx + self.patience:
-            self.message("Stopping because {} did not improve for {} epochs.".
-                         format(self.log_name, self.patience))
+        best_idx = np.argmin(e) if self.criterion == 'min' else np.argmax(e)
+        if len(e) > best_idx + self.patience:
+            self.message("Stopping because {} did not improve for {} checks "
+                         "(criterion used : {}).".format(self.log_name,
+                                                         self.patience,
+                                                         self.criterion))
             raise StopIteration()
 
 
 class StopAfterEpoch(Hook):
-    def __init__(self, max_epochs, timescale='epoch', interval=1, name=None,
+    """
+    Stop the training after a specified number of epochs.
+
+    Args:
+        max_epochs (int):
+            The number of epochs to train.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopAfterEpoch'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    """
+    def __init__(self, max_epochs, name=None, timescale='epoch', interval=1,
                  verbose=None):
         super(StopAfterEpoch, self).__init__(name, timescale,
                                              interval, verbose)
@@ -405,15 +541,106 @@ class StopAfterEpoch(Hook):
             raise StopIteration()
 
 
-class StopOnNan(Hook):
-    """ Stop the training if infinite or NaN values are found in parameters.
+class StopAfterThresholdReached(Hook):
+    """
+    Stop the training if a log entry reaches the given threshold
 
-    Can also check logs for invalid values.
+    Can stop training when the log entry becomes sufficiently small (such as an error)
+    or sufficiently large (such as accuracy) according to the threshold.
+
+    Args:
+        log_name:
+            Name of the log entry to be checked for improvement.
+            It should be in the form <monitorname>.<log_name> where log_name
+            itself may be a nested dictionary key in dotted notation.
+        threshold:
+            The threshold value to reach
+        criterion:
+            Indicates whether training should be stopped when the log entry is
+            at its minimum or maximum value. Must be either 'min' or 'max'.
+            Defaults to 'min'.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopAfterThresholdReached'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
+    Examples:
+        Stop training if validation set accuracy is at least 97 %:
+
+        >>> trainer.add_hook(bs.hooks.StopAfterThresholdReached('validation.Accuracy',
+        ...                                                     threshold=0.97,
+        ...                                                     criterion='max'))
+
+        Stop training if loss on validation set goes below 0.2:
+
+        >>> trainer.add_hook(bs.hooks.StopAfterThresholdReached('validation.total_loss',
+        ...                                                     threshold=0.2,
+        ...                                                     criterion='min'))
+
+    """
+
+    def __init__(self, log_name, threshold, criterion='min',
+                 name=None, timescale='epoch', interval=1, verbose=None):
+        super(StopAfterThresholdReached, self).__init__(name, timescale, interval, verbose)
+        self.log_name = log_name
+        self.threshold = threshold
+        if criterion not in ['min', 'max']:
+            raise ValueError("Unknown criterion: '{}'"
+                             "(Must be 'min' or 'max')".format(criterion))
+        self.criterion = criterion
+
+    def __call__(self, epoch_nr, update_nr, net, stepper, logs):
+        e = get_by_path(logs, self.log_name)
+        is_threshold_reached = False
+        if self.criterion == 'max' and max(e) >= self.threshold:
+            is_threshold_reached = True
+        elif self.criterion == 'min' and min(e) <= self.threshold:
+            is_threshold_reached = True
+        if is_threshold_reached:
+            self.message("Stopping because {} has reached the threshold {} "
+                         "(criterion used : {})"
+                         .format(self.log_name, self.threshold, self.criterion))
+            raise StopIteration()
+
+
+class StopOnNan(Hook):
+    """
+    Stop the training if infinite or NaN values are found in parameters.
+
+    This hook can also check a list of logs for invalid values.
+
+    Args:
+        logs_to_check (Optional[list, tuple]):
+            A list of trainer logs to check in dotted notation. Defaults to ().
+        check_parameters (Optional[bool]):
+            Indicates whether the parameters should be checked for NaN.
+            Defaults to True.
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopOnNan'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
     """
     def __init__(self, logs_to_check=(), check_parameters=True,
                  check_training_loss=True, name=None, timescale='epoch',
-                 interval=1):
-        super(StopOnNan, self).__init__(name, timescale, interval)
+                 interval=1, verbose=None):
+        super(StopOnNan, self).__init__(name, timescale, interval, verbose)
         self.logs_to_check = ([logs_to_check] if isinstance(logs_to_check,
                                                             string_types)
                               else logs_to_check)
@@ -444,7 +671,25 @@ class StopOnNan(Hook):
 
 class StopOnSigQuit(Hook):
     """
-    Stops training the next possible moment if it received a SIGQUIT (Ctrl + \)
+    Stop training after the next call if it received a SIGQUIT (Ctrl + \).
+
+    This hook makes it possible to exit the training loop and continue with
+    the rest of the program execution.
+
+    Args:
+        name (Optional[str]):
+            Name of this monitor. This name is used as a key in the trainer
+            logs. Default is 'StopOnSigQuit'.
+        timescale (Optional[str]):
+            Specifies whether the Monitor should be called after each epoch or
+            after each update. Default is 'epoch'.
+        interval (Optional[int]):
+            This monitor should be called every ``interval`` epochs/updates.
+            Default is 1.
+        verbose: bool, optional
+            Specifies whether the logs of this monitor should be printed, and
+            acts as a fallback verbosity for the used data iterator.
+            If not set it defaults to the verbosity setting of the trainer.
     """
     __undescribed__ = {'quit': False}
 
@@ -460,7 +705,7 @@ class StopOnSigQuit(Hook):
         signal.signal(signal.SIGQUIT, self.receive_signal)
 
     def receive_signal(self, signum, stack):
-        print('Interrupting')
+        self.message('Interrupting')
         self.quit = True
 
     def __call__(self, epoch_nr, update_nr, net, stepper, logs):

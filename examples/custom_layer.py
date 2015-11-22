@@ -106,7 +106,7 @@ trainer.add_hook(bs.hooks.ProgressBar())
 scorers = [bs.scorers.Accuracy(out_name='Output.outputs.predictions')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
-trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy', patience=10))
+trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy', patience=10, criterion='max'))
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 
 # -------------------------------- Train ------------------------------------ #

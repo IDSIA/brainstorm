@@ -8,7 +8,7 @@ from brainstorm.layers.binomial_cross_entropy_layer import BinomialCrossEntropy
 from brainstorm.layers.clockwork_lstm_layer import ClockworkLstm
 from brainstorm.layers.clockwork_layer import Clockwork
 from brainstorm.layers.convolution_layer_2d import Convolution2D
-from brainstorm.layers.deltas_scaling_layer import DeltasScalingLayerImpl
+from brainstorm.layers.deltas_scaling_layer import DeltasScaling
 from brainstorm.layers.dropout_layer import Dropout
 from brainstorm.layers.elementwise_layer import Elementwise
 from brainstorm.layers.fully_connected_layer import FullyConnected
@@ -26,4 +26,4 @@ from brainstorm.layers.recurrent_layer import Recurrent
 from brainstorm.layers.sigmoid_ce_layer import SigmoidCE
 from brainstorm.layers.softmax_ce_layer import SoftmaxCE
 from brainstorm.layers.squared_difference_layer import SquaredDifference
-from brainstorm.layers.squared_loss_layer import SquaredLoss
+from brainstorm.layers.squared_error_layer import SquaredError

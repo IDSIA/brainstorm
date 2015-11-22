@@ -284,6 +284,17 @@ def test_log_t(handler):
 
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_sqrt_t(handler):
+    list_a = get_random_arrays(some_nd_shapes)
+
+    for a in list_a:
+        a += 10  # to remove negatives
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, out)
+        assert operation_check(handler, 'sqrt_t', ref_args)
+
+
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_abs_t(handler):
     list_a = get_random_arrays(some_nd_shapes)
 
