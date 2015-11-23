@@ -136,7 +136,7 @@ class RMSpropStepper(TrainingStepper):
                                  self.update,
                                  out=self.update)
 
-        # #self.update += (1 - self.alpha) * grad * grad
+        #self.update += (1 - self.alpha) * grad * grad
         self.net.handler.mult_tt(self.net.buffer.gradients,
                                  self.net.buffer.gradients,
                                  out=self.scratch)
@@ -144,7 +144,7 @@ class RMSpropStepper(TrainingStepper):
                                      self.scratch,
                                      out=self.update)
 
-        # # grad / sqrt(update + self.eps)
+        # grad / sqrt(update + self.eps)
         self.net.handler.add_st(self.eps,
                                 self.update,
                                 out=self.scratch)
@@ -157,6 +157,75 @@ class RMSpropStepper(TrainingStepper):
         # param -= learning_rate * grad / sqrt(update + self.eps)
         self.net.handler.mult_add_st(-self.learning_rate,
                                      self.scratch,
+                                     self.net.buffer.parameters)
+
+class AdaDelta(TrainingStepper):
+    def __init__(self, learning_rate=1.0, alpha=0.95, epsilon=1e-6):
+        super(AdaDelta, self).__init__()
+        self.learning_rate = learning_rate
+        self.alpha = alpha
+        self.eps = eps
+        self.accumulator = None
+        self.delta_accumulator = None
+        self.scratch = None
+        self.scratch_2 = None
+
+    def start(self, net):
+        super(AdaDelta, self).start(net)
+        self.accumulator = net.handler.zeros(net.buffer.parameters.shape)
+        self.delta_accumulator = net.handler.zeros(net.buffer.parameters.shape)
+        self.scratch = net.handler.zeros(net.buffer.parameters.shape)
+        self.scratch_2 = net.handler.zeros(net.buffer.parameters.shape)
+
+    def run(self):
+        self.net.forward_pass(training_pass=True)
+        self.net.backward_pass()
+
+        # accumulator *= self.alpha
+        self.net.handler.mult_st(self.alpha,
+                                 self.accumulator,
+                                 out=self.accumulator)
+
+        # accumulator += (1 - self.alpha) * grad * grad
+        self.net.handler.mult_tt(self.net.buffer.gradients,
+                                 self.net.buffer.gradients,
+                                 out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.alpha,
+                                     self.scratch,
+                                     out=self.accumulator)
+
+        # dx = sqrt((delta_accumulator + eps) / (accumulator + eps)) * grad
+        self.net.handler.mult_st(self.eps,
+                                 self.delta_accumulator,
+                                 out=self.scratch)
+        self.net.handler.mult_st(self.eps,
+                                 self.accumulator,
+                                 out=self.scratch_2)
+        self.net.handler.divide_tt(self.scratch,
+                                   self.scratch_2,
+                                   out=self.scratch)
+        self.net.handler.sqrt_t(self.scratch,
+                                out=self.scratch)
+        self.net.handler.mult_tt(self.net.buffer.gradients,
+                                 self.scratch,
+                                 out=self.scratch_2)
+
+        # delta_accumulator *= self.alpha
+        self.net.handler.mult_st(self.alpha,
+                                 self.delta_accumulator,
+                                 out=self.delta_accumulator)
+
+        # delta_accumulator += (1 - self.alpha) * dx * dx
+        self.net.handler.mult_tt(self.scratch_2,
+                                 self.scratch_2,
+                                 out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.alpha,
+                                     self.scratch,
+                                     out=self.delta_accumulator)
+
+        # param -= dx
+        self.net.handler.mult_add_st(-1,
+                                     self.delta_accumulator,
                                      self.net.buffer.parameters)
 
 class NesterovStepper(MomentumStepper):
