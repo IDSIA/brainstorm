@@ -48,7 +48,7 @@ def gather_losses_and_scores(net, scorers, scores, out_name='',
         predicted = _flatten_all_but_last(predicted)
         true_labels = _flatten_all_but_last(true_labels)
         mask = _flatten_all_but_last(mask)
-        weight = mask.sum() if mask else predicted.shape[0]
+        weight = mask.sum() if mask is not None else predicted.shape[0]
 
         scores[name].append((weight, sc(true_labels, predicted, mask)))
 
