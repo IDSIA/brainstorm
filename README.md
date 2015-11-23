@@ -42,6 +42,9 @@ cd brainstorm
 # Build local documentation (optional)
 sudo apt-get install python-sphinx
 make docs
+# Install visualization dependencies (optional)
+sudo apt-get install graphviz libgraphviz-dev pkg-config
+[sudo] pip install pygraphviz --install-option="--include-path=/usr/include/graphviz" --install-option="--library-path=/usr/lib/graphviz/"
 ```
 To use your CUDA installation with brainstorm:
 ```bash
