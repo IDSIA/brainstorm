@@ -160,7 +160,7 @@ class RMSpropStepper(TrainingStepper):
                                      self.net.buffer.parameters)
 
 class AdaDelta(TrainingStepper):
-    def __init__(self, learning_rate=1.0, alpha=0.95, epsilon=1e-6):
+    def __init__(self, learning_rate=1.0, alpha=0.95, eps=1e-6):
         super(AdaDelta, self).__init__()
         self.learning_rate = learning_rate
         self.alpha = alpha
