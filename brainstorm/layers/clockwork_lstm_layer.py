@@ -10,16 +10,15 @@ from brainstorm.structure.buffer_structure import BufferStructure, \
     StructureTemplate
 
 
-def ClockworkLstm(size, timing, activation='tanh', name=None):
+def ClockworkLstm(size, activation='tanh', name=None):
     return ConstructionWrapper.create(ClockworkLstmLayerImpl,
                                       size=size,
-                                      timing=timing,
                                       name=name,
                                       activation=activation)
 
 
 class ClockworkLstmLayerImpl(Layer):
-    expected_kwargs = {'size', 'timing', 'activation'}
+    expected_kwargs = {'size', 'activation'}
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
 
     computes_no_gradients_for = ['timing']
