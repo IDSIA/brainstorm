@@ -36,7 +36,7 @@ class BatchNormLayerImpl(Layer):
 
         outputs = OrderedDict()
         outputs['default'] = in_shapes['default']
-        
+
         parameters = OrderedDict()
         buf = BufferStructure(self.in_shapes['default'].feature_shape[-1])
         parameters['gamma'] = buf

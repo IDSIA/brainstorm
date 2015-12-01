@@ -123,9 +123,10 @@ def get_by_path(d, path):
         try:
             current_node = current_node[p]
         except KeyError:
-            raise KeyError('Path "{}" could not be resolved. Key "{}" missing.'
-                           ' Available keys are: [{}]'.format(
-                            path, p, ", ".join(sorted(current_node.keys()))))
+            raise KeyError(
+                'Path "{}" could not be resolved. Key "{}" missing. Available '
+                'keys are: [{}]'.format(
+                    path, p, ", ".join(sorted(current_node.keys()))))
     return current_node
 
 

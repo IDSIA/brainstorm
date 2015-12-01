@@ -444,7 +444,8 @@ class Minibatches(DataIterator):
                 self.seq_lens = _calculate_lengths_from_mask(
                     named_data[cut_according_to])
             else:
-                self.seq_lens = np.ones(nr_sequences, dtype=np.int) * time_steps
+                self.seq_lens = time_steps * np.ones(nr_sequences,
+                                                     dtype=np.int)
         else:
             self.seq_lens = np.array(cut_according_to)
             assert self.seq_lens.shape == (nr_sequences, )

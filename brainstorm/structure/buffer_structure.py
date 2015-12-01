@@ -34,7 +34,8 @@ class StructureTemplate(object):
 
     def validate(self):
         if len(self.shape) == 0:
-            raise StructureValidationError("shape must be non-empty (nr dims > 0)")
+            raise StructureValidationError(
+                "shape must be non-empty (nr dims > 0)")
 
         if 'T' in self.shape and self.shape[:2] != ('T', 'B'):
             raise StructureValidationError(
@@ -79,8 +80,8 @@ class StructureTemplate(object):
                 .format(self.context_size))
 
         if self.context_size and 'T' not in self.shape:
-            raise StructureValidationError("context_size is only available for "
-                                       "shapes that scale with time.")
+            raise StructureValidationError("context_size is only available for"
+                                           " shapes that scale with time.")
 
     def matches(self, shape):
         assert isinstance(shape, BufferStructure)
@@ -162,7 +163,8 @@ class BufferStructure(object):
 
     def validate(self):
         if len(self.shape) == 0:
-            raise StructureValidationError("shape must be non-empty (nr dims > 0)")
+            raise StructureValidationError(
+                "shape must be non-empty (nr dims > 0)")
 
         if self.scales_with_time and self.shape[:2] != ('T', 'B'):
             raise StructureValidationError(
@@ -193,8 +195,8 @@ class BufferStructure(object):
                 .format(self.context_size))
 
         if self.context_size and not self.scales_with_time:
-            raise StructureValidationError("context_size is only available for "
-                                       "shapes that scale with time.")
+            raise StructureValidationError("context_size is only available for"
+                                           "shapes that scale with time.")
 
     def to_json(self, i):
         descr = {

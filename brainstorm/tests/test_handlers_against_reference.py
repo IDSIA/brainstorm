@@ -257,7 +257,6 @@ def test_broadcast_t(handler):
         assert operation_check(handler, 'broadcast_t', ref_args)
 
 
-
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_clip_t(handler):
     list_a = get_random_arrays(some_nd_shapes)
@@ -653,7 +652,7 @@ def test_merge_tt(handler):
               ((1, 2, 1), (1, 2, 2)),
               ((10, 4, 3), (10, 4, 7)),
               ((1, 2, 3, 4), (1, 2, 3, 5)),
-              ((2049, 3), (2049, 1025)),]
+              ((2049, 3), (2049, 1025))]
     for sa, sb in shapes:
         a = np.random.randn(*sa).astype(ref_dtype)
         b = np.random.randn(*sb).astype(ref_dtype)
@@ -670,7 +669,7 @@ def test_split_add_tt(handler):
               ((1, 2, 1), (1, 2, 2)),
               ((10, 4, 3), (10, 4, 7)),
               ((1, 2, 3, 4), (1, 2, 3, 5)),
-              ((2049, 3), (2049, 1025)),]
+              ((2049, 3), (2049, 1025))]
     for sa, sb in shapes:
         a = np.zeros(sa, dtype=ref_dtype)
         b = np.ones(sb, dtype=ref_dtype)

@@ -179,7 +179,8 @@ def instantiate_layers_from_architecture(architecture):
                     get_normalized_path('outputs', c.output_name))
                 for c in incoming if c.input_name == input_name]
 
-            in_shapes[input_name] = combine_buffer_structures(incoming_out_shapes)
+            in_shapes[input_name] = combine_buffer_structures(
+                incoming_out_shapes)
 
         layers[layer_name] = LayerClass(layer_name, in_shapes, incoming,
                                         outgoing, **get_kwargs(layer))

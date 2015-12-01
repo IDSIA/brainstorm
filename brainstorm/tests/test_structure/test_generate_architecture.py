@@ -4,9 +4,9 @@ from __future__ import division, print_function, unicode_literals
 
 from brainstorm.layers.input_layer import InputLayerImpl
 from brainstorm.layers.noop_layer import NoOpLayerImpl
-from brainstorm.structure.architecture import (generate_architecture,
-                                               get_layer_description,
-                                               instantiate_layers_from_architecture)
+from brainstorm.structure.architecture import (
+    generate_architecture, get_layer_description,
+    instantiate_layers_from_architecture)
 from brainstorm.structure.buffer_structure import BufferStructure
 from brainstorm.structure.construction import ConstructionWrapper
 

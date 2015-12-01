@@ -47,7 +47,7 @@ class RecurrentLayerImpl(Layer):
         internals['dHb'] = BufferStructure('T', 'B', self.size, context_size=1,
                                            is_backward_only=True)
         return outputs, parameters, internals
-    
+
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler

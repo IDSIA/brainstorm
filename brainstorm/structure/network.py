@@ -3,7 +3,6 @@
 from __future__ import division, print_function, unicode_literals
 
 import json
-import re
 from collections import OrderedDict
 
 import h5py
@@ -14,8 +13,8 @@ from brainstorm.handlers import default_handler
 from brainstorm.initializers import ArrayInitializer, evaluate_initializer
 from brainstorm.layers.loss_layer import LossLayerImpl
 from brainstorm.randomness import Seedable
-from brainstorm.structure.architecture import (generate_architecture,
-                                               instantiate_layers_from_architecture)
+from brainstorm.structure.architecture import (
+    generate_architecture, instantiate_layers_from_architecture)
 from brainstorm.structure.buffer_views import BufferView
 from brainstorm.structure.buffers import BufferManager
 from brainstorm.structure.layout import create_layout
@@ -335,7 +334,7 @@ class Network(Seedable):
         >>> net.set_gradient_modifiers(
         ...    default=bs.value_modifiers.ClipValues(-1, 1)
         ...    FullyConnectedLayer={'W': [bs.value_modifiers.ClipValues(),
-        ...                               bs.value_modifiers.MaskValues(my_mask)]}
+        ...                               bs.value_modifiers.MaskValues(MASK)]}
         ...    )
 
         Note:

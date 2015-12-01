@@ -34,7 +34,8 @@ class ClockworkLayerImpl(Layer):
         in_size = self.in_shapes['default'].feature_size
 
         outputs = OrderedDict()
-        outputs['default'] = BufferStructure('T', 'B', self.size, context_size=1)
+        outputs['default'] = BufferStructure('T', 'B', self.size,
+                                             context_size=1)
 
         parameters = OrderedDict()
         parameters['W'] = BufferStructure(self.size, in_size)

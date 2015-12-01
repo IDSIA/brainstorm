@@ -34,7 +34,8 @@ class ClockworkLstmLayerImpl(Layer):
         in_size = in_shapes['default'].feature_size
 
         outputs = OrderedDict()
-        outputs['default'] = BufferStructure('T', 'B', self.size, context_size=1)
+        outputs['default'] = BufferStructure('T', 'B', self.size,
+                                             context_size=1)
 
         parameters = OrderedDict()
         parameters['Wz'] = BufferStructure(self.size, in_size)
@@ -177,9 +178,9 @@ class ClockworkLstmLayerImpl(Layer):
 
         (Wz, Wi, Wf, Wo,
          pi, pf, po,
-        Rz, Ri, Rf, Ro,
-        bz, bi, bf, bo,
-        timing) = buffers.parameters
+         Rz, Ri, Rf, Ro,
+         bz, bi, bf, bo,
+         timing) = buffers.parameters
 
         (Za, Zb, Ia, Ib, Fa, Fb, Oa, Ob, Ca, Cb,
          dZa, dZb, dIa, dIb, dFa, dFb, dOa, dOb, dCa, dCb) = buffers.internals

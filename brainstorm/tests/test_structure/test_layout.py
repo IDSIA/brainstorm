@@ -137,11 +137,11 @@ def test_merge_connections():
 
 def test_get_forward_closure():
     connections = [
-        ('A', 'B'),  # #       /-> C -\
-        ('B', 'C'),  # #      /        \
-        ('B', 'D'),  # # A -> B         -> E
-        ('C', 'E'),  # #      \        /
-        ('D', 'E'),  # #       \-> D -/--> F
+        ('A', 'B'),  # #       /-> C -+
+        ('B', 'C'),  # #      /       |
+        ('B', 'D'),  # # A -> B       +-> E
+        ('C', 'E'),  # #      \       |
+        ('D', 'E'),  # #       \-> D -+--> F
         ('D', 'F')
     ]
     assert get_forward_closure('A', connections) == ({'A'}, {'B'})
