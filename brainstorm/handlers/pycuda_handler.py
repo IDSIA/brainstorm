@@ -57,7 +57,8 @@ class PyCudaHandler(Handler):
         elif n < (max_blocks * max_threads):
             block_count = max_blocks
             grp = (n + min_threads - 1) // min_threads
-            threads_per_block = ((grp + max_blocks - 1) // max_blocks) * min_threads
+            threads_per_block = (((grp + max_blocks - 1) // max_blocks) *
+                                 min_threads)
         else:
             block_count = max_blocks
             threads_per_block = max_threads
@@ -481,7 +482,8 @@ index_m_by_v_kernel = ElementwiseKernel(
 
 modulo_tt_kernel = ElementwiseKernel(
     "float* a, float* b, float* out",
-    "out[i] =  (float)((int)((a >= 0) ? a[i]+0.5: a[i]-0.5) % (int)((b>=0) ? b[i]+0.5: b[i]-0.5))",
+    "out[i] =  (float)((int)((a >= 0) ? a[i]+0.5: a[i]-0.5) % (int)((b>=0) ? "
+    "b[i]+0.5: b[i]-0.5))",
     "modulo_tt_kernel"
 )
 
@@ -529,7 +531,8 @@ sigmoid_deriv_kernel = ElementwiseKernel(
 
 sigmoid_kernel = ElementwiseKernel(
     "float* x, float* y",
-    "y[i] = (x[i]>=0) ? 1.0/(1.0 + exp(-1.0*x[i])) : exp(1.0*x[i])/(1.0 + exp(1.0*x[i]))",
+    "y[i] = (x[i]>=0) ? 1.0/(1.0 + exp(-1.0*x[i])) : "
+    "exp(1.0*x[i])/(1.0 + exp(1.0*x[i]))",
     "sigmoid_kernel"
 )
 
@@ -562,7 +565,8 @@ __merge_kernel_code = """
     #include "float.h"
 
     __global__ void merge_kernel(float* a, float* b, float* out,
-                                 int n_rows, const int a_cols, const int b_cols) {
+                                 int n_rows, const int a_cols,
+                                 const int b_cols) {
         const int row = blockIdx.x * blockDim.x + threadIdx.x;
         const int n_cols = a_cols + b_cols;
         if (row >= n_rows)
@@ -584,7 +588,8 @@ __split_kernel_code = """
     #include "float.h"
 
     __global__ void split_kernel(float* x, float* out_a, float* out_b,
-                                 int n_rows, const int a_cols, const int b_cols) {
+                                 int n_rows, const int a_cols,
+                                 const int b_cols) {
         const int row = blockIdx.x * blockDim.x + threadIdx.x;
         const int n_cols = a_cols + b_cols;
         if (row >= n_rows)
@@ -658,7 +663,8 @@ _softmax_impl = _mod_softmax.get_function("softmax_kernel")
 
 __im2col_fp32_kernel_code = """
     __global__ void im2col_fp32_kernel(const int n, const float* data_im,
-        const int height, const int width, const int kernel_h, const int kernel_w,
+        const int height, const int width, const int kernel_h,
+        const int kernel_w,
         const int pad_t, const int pad_l,
         const int stride_h, const int stride_w,
         const int width_col, const int channels,
@@ -714,18 +720,19 @@ __col2im_fp32_kernel_code = """
         /*
         for (int h_col = h_col_start; h_col < h_col_end; ++h_col) {
           for (int w_col = w_col_start; w_col < w_col_end; ++w_col) {
-            int c_col = ((h - h_col * stride_h) * patch_w + w - w_col * stride_w) * channels + c;
-            val += data_col[(h_col * width_col + w_col) * channels_col + c_col];
+            int c_col = ((h - h_col * stride_h) * patch_w + w -
+                         w_col * stride_w) * channels + c;
+            val += data_col[(h_col*width_col + w_col) * channels_col + c_col];
           }
         }
         */
         // Equivalent of above
         int offset = (h * patch_w + w) * channels + c;
-        int coeff_h_col = width_col * channels_col - stride_h * patch_w * channels;
+        int coeff_h_col = width_col*channels_col - stride_h*patch_w*channels;
         int coeff_w_col = channels_col - stride_w * channels;
         for (int h_col = h_col_start; h_col < h_col_end; ++h_col) {
           for (int w_col = w_col_start; w_col < w_col_end; ++w_col) {
-            val += data_col[offset + h_col * coeff_h_col + w_col * coeff_w_col];
+            val += data_col[offset + h_col * coeff_h_col + w_col*coeff_w_col];
           }
         }
         data_im[index] += val;
@@ -790,7 +797,8 @@ __maxpool_bwd_fp32_kernel = """
            index += blockDim.x * gridDim.x) {
         if (!(mask[index] < 0.0)) {
           int image_id = (index / top_offset);
-          atomicAdd(bottom_diff + image_id * bottom_offset + (int)(mask[index]),top_diff[index]);
+          atomicAdd(bottom_diff + image_id * bottom_offset +
+                    (int)(mask[index]),top_diff[index]);
         }
       }
     }
@@ -804,7 +812,7 @@ __avepool_fwd_fp32_kernel = """
         const int num, const int height, const int width,
         const int channels, const int pooled_height, const int pooled_width,
         const int kernel_h, const int kernel_w, const int stride_h,
-        const int stride_w, const int pad_t, const int pad_l, float* top_data) {
+        const int stride_w, const int pad_t, const int pad_l, float* top_data){
       for (int index = blockIdx.x * blockDim.x + threadIdx.x;
            index < (nthreads);
            index += blockDim.x * gridDim.x) {
@@ -868,7 +876,7 @@ __avepool_bwd_fp32_kernel = """
             wstart = max(wstart, 0);
             int pool_size = (hend - hstart) * (wend - wstart);
             gradient +=
-                top_diff_slice[(ph * pooled_width + pw) * channels] / pool_size;
+                top_diff_slice[(ph*pooled_width + pw) * channels] / pool_size;
           }
         }
         bottom_diff[index] += gradient;

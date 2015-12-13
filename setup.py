@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import sys
-import numpy as np
 
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as _build_ext
@@ -51,8 +50,8 @@ class build_ext(_build_ext):
 # Cythonize pyx if possible, else compile C
 if use_cython:
     from Cython.Build import cythonize
-    extensions = cythonize([Extension("brainstorm.handlers._cpuop",
-                                     ["brainstorm/handlers/_cpuop.pyx"])])
+    extensions = cythonize([Extension('brainstorm.handlers._cpuop',
+                                      ['brainstorm/handlers/_cpuop.pyx'])])
 
 else:
     extensions = [
@@ -88,8 +87,11 @@ Documentation
 
 The full documentation is at http://brainstorm.rtfd.org."""
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
-
-tests_require = ['pytest', 'mock']
+live_viz = ['bokeh']
+draw_net = ['pygraphviz']
+tests = ['pytest', 'mock']
+pycuda = ['pycuda>=2015.1.3', 'scikit-cuda>=0.5.1']
+all_deps = live_viz + draw_net + tests + pycuda
 
 setup(
     name='brainstorm',
@@ -104,19 +106,23 @@ setup(
               'brainstorm.layers',
               'brainstorm.training',
               'brainstorm.handlers'],
-    setup_requires=['cython', 'numpy'],
-    install_requires=['cython', 'h5py', 'mock', 'numpy', 'six'],
+    setup_requires=['cython', 'numpy>=1.8'],
+    install_requires=['cython', 'h5py', 'mock', 'numpy>=1.8', 'six'],
     extras_require={
-        'live_viz':  ['bokeh'],
-        'draw_net': ['pygraphviz'],
-        'test': tests_require
+        'live_viz':  live_viz,
+        'draw_net': draw_net,
+        'test': tests,
+        'pycuda': pycuda,
+        'all': all_deps
     },
-    tests_require=tests_require,
+    tests_require=tests,
     cmdclass={'test': PyTest, 'build_ext': build_ext},
     license=about['__license__'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: Education',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 2.7',

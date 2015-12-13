@@ -40,13 +40,15 @@ def test_buffer_structures_nr_feature_dims(shape, feature_dims):
     assert st.feature_shape == feature_dims
 
 
-@pytest.mark.parametrize('shape, feature_size', zip(structures, feature_size_1))
+@pytest.mark.parametrize('shape, feature_size', zip(structures,
+                                                    feature_size_1))
 def test_buffer_structures_feature_size(shape, feature_size):
     st = BufferStructure(*shape)
     assert st.feature_size == feature_size
 
 
-@pytest.mark.parametrize('shape, scales_t', zip(structures, scales_with_time_1))
+@pytest.mark.parametrize('shape, scales_t', zip(structures,
+                                                scales_with_time_1))
 def test_buffer_structures_scales_with_time(shape, scales_t):
     st = BufferStructure(*shape)
     assert st.scales_with_time == scales_t
@@ -172,7 +174,7 @@ def test_structure_template_matches4(shape, expected):
 
 def test_combine_input_sizes_tuples():
     assert combine_buffer_structures([BufferStructure(1, 4)]) == \
-           BufferStructure(1, 4)
+        BufferStructure(1, 4)
 
     assert combine_buffer_structures([BufferStructure(4, 1),
                                       BufferStructure(4, 3),

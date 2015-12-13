@@ -10,17 +10,16 @@ from brainstorm.structure.buffer_structure import BufferStructure, \
     StructureTemplate
 
 
-def Clockwork(size, timing, activation='tanh', name=None):
+def Clockwork(size, activation='tanh', name=None):
     return ConstructionWrapper.create(ClockworkLayerImpl,
                                       size=size,
-                                      timing=timing,
                                       name=name,
                                       activation=activation)
 
 
 class ClockworkLayerImpl(Layer):
     expected_inputs = {'default': StructureTemplate('T', 'B', '...')}
-    expected_kwargs = {'size', 'timing', 'activation'}
+    expected_kwargs = {'size', 'activation'}
 
     computes_no_gradients_for = ['timing']
 
@@ -35,7 +34,8 @@ class ClockworkLayerImpl(Layer):
         in_size = self.in_shapes['default'].feature_size
 
         outputs = OrderedDict()
-        outputs['default'] = BufferStructure('T', 'B', self.size, context_size=1)
+        outputs['default'] = BufferStructure('T', 'B', self.size,
+                                             context_size=1)
 
         parameters = OrderedDict()
         parameters['W'] = BufferStructure(self.size, in_size)

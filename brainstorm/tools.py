@@ -84,18 +84,18 @@ def evaluate(network, iter, scorers=(), out_name='', targets_name='targets',
 
 def extract(network, iter, buffer_names):
     """Apply the network to some data and return the requested buffers.
-    
+
     Batches are returned as a dictionary, with one entry for each
     requested buffer, with the data in (T, B, ...) order.
-       
+
     Args:
-        network (brainstorm.structure.Network): Network using which the features
-                                            should be generated.
-        iter (brainstorm.DataIterator): A data iterator which produces the
-                                        data on which the features are
-                                        computed.
-        buffer_names (list[unicode]): Name of the buffer views to be saved (in
-                                      dotted notation).
+        network (brainstorm.structure.Network):
+            Network using which the features should be generated.
+        iter (brainstorm.DataIterator):
+            A data iterator which produces the data on which the features are
+            computed.
+        buffer_names (list[unicode]):
+            Name of the buffer views to be saved (in dotted notation).
     Returns:
         dict[unicode, np.ndarray]
     """
@@ -116,7 +116,8 @@ def extract(network, iter, buffer_names):
             if first_pass:
                 data_shape = (data.shape[0], nr_examples) + data.shape[2:]
                 return_data[buffer_name] = np.zeros(data_shape, data.dtype)
-            return_data[buffer_name][:, nr_items - data.shape[1]:nr_items, ...] = data
+            return_data[buffer_name][:, nr_items - data.shape[1]:nr_items] = \
+                data
     return return_data
 
 
@@ -136,15 +137,17 @@ def extract_and_save(network, iter, buffer_names, file_name):
         ...                   'Hid1.internals.H'],
         ...                  'network_features.hdf5')
     Args:
-        network (brainstorm.structure.Network): Network using which the features
-                                            should be generated.
-        iter (brainstorm.DataIterator): A data iterator which produces the
-                                        data on which the features are
-                                        computed.
-        buffer_names (list[unicode]): Name of the buffer views to be saved (in
-                                      dotted notation). See example.
-        file_name (unicode): Name of the hdf5 file (including extension) in
-                             which the features should be saved.
+        network (brainstorm.structure.Network):
+            Network using which the features should be generated.
+        iter (brainstorm.DataIterator):
+            A data iterator which produces the data on which the features are
+            computed.
+        buffer_names (list[unicode]):
+            Name of the buffer views to be saved (in dotted notation).
+            See example.
+        file_name (unicode):
+            Name of the hdf5 file (including extension) in which the features
+            should be saved.
     """
     iterator = iter(handler=network.handler)
     if isinstance(buffer_names, six.string_types):
@@ -298,7 +301,7 @@ def get_network_info(network):
             A network for which the details are printed.
     """
     network_string = ""
-    
+
     network_string += 'total number of parameters: '
     network_string += str(network.buffer.parameters.size) + "\n"
     for layer in network.layers.values():
@@ -321,7 +324,7 @@ def get_network_info(network):
             network_string += str(layer.out_shapes[view].feature_shape) + "\t"
         network_string += "\n"
         network_string += '-' * 80 + "\n"
-        
+
     return network_string
 
 
@@ -520,8 +523,9 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
         >>> net = create_net_from_spec('classification', 784, 10,
         ...                            'D.2 F1200 D F1200 D')
         The cifar10_cnn example can be shortened like this:
-        >>> net = create_net_from_spec('classification', (3, 32, 32), 10,
-        ...                            'C32:5p2 P3s2 C32:5p2 P3s2 C64:5p2 P3s2 F64')
+        >>> net = create_net_from_spec(
+        ...    'classification', (3, 32, 32), 10,
+        ...    'C32:5p2 P3s2 C32:5p2 P3s2 C64:5p2 P3s2 F64')
 
     Args:
         task_type (str):
@@ -639,5 +643,6 @@ def split(*args, **kwargs):
     split_idxs = np.hstack([[0], split_idxs])
     all_splits = []
     for start, stop in zip(split_idxs[:-1], split_idxs[1:]):
-        all_splits.append([None if A is None else A[:, start:stop] for A in args])
+        all_splits.append([None if A is None else A[:, start:stop]
+                           for A in args])
     return all_splits

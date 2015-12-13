@@ -157,7 +157,7 @@ def test_conv2d_forward_batch_pycuda():
                                 outputs = _h.get_numpy_copy(o_dev)
                                 passed = np.allclose(outputs, true_outputs)
                                 if not passed:
-                                    print("Checking Inputs:",(nr_images,) +
+                                    print("Checking Inputs:", (nr_images,) +
                                           input_shape + (nr_input_maps,))
                                     print("Filters:",
                                           (nr_filters,) + kernel_shape +

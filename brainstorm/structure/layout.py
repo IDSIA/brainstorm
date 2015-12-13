@@ -71,7 +71,8 @@ class Hub(object):
                 connection table
         """
         # set up connection table
-        self.connection_table = np.zeros((len(self.flat_sources), len(self.sinks)))
+        self.connection_table = np.zeros((len(self.flat_sources),
+                                          len(self.sinks)))
         for start, stop in connections:
             if start in self.flat_sources and stop in self.sinks:
                 start_idx = self.flat_sources.index(start)
@@ -107,8 +108,8 @@ class Hub(object):
 
         Args:
             connection_table (array_like):
-                2d array of zeros and ones representing the connectivity between
-                inputs and outputs of a hub.
+                2d array of zeros and ones representing the connectivity
+                between inputs and outputs of a hub.
 
         Returns:
             bool

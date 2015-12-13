@@ -545,8 +545,8 @@ class StopAfterThresholdReached(Hook):
     """
     Stop the training if a log entry reaches the given threshold
 
-    Can stop training when the log entry becomes sufficiently small (such as an error)
-    or sufficiently large (such as accuracy) according to the threshold.
+    Can stop training when the log entry becomes sufficiently small (such as an
+    error) or sufficiently large (such as accuracy) according to the threshold.
 
     Args:
         log_name:
@@ -575,21 +575,22 @@ class StopAfterThresholdReached(Hook):
     Examples:
         Stop training if validation set accuracy is at least 97 %:
 
-        >>> trainer.add_hook(bs.hooks.StopAfterThresholdReached('validation.Accuracy',
-        ...                                                     threshold=0.97,
-        ...                                                     criterion='max'))
+        >>> trainer.add_hook(StopAfterThresholdReached('validation.Accuracy',
+        ...                                            threshold=0.97,
+        ...                                            criterion='max'))
 
         Stop training if loss on validation set goes below 0.2:
 
-        >>> trainer.add_hook(bs.hooks.StopAfterThresholdReached('validation.total_loss',
-        ...                                                     threshold=0.2,
-        ...                                                     criterion='min'))
+        >>> trainer.add_hook(StopAfterThresholdReached('validation.total_loss',
+        ...                                            threshold=0.2,
+        ...                                            criterion='min'))
 
     """
 
     def __init__(self, log_name, threshold, criterion='min',
                  name=None, timescale='epoch', interval=1, verbose=None):
-        super(StopAfterThresholdReached, self).__init__(name, timescale, interval, verbose)
+        super(StopAfterThresholdReached, self).__init__(name, timescale,
+                                                        interval, verbose)
         self.log_name = log_name
         self.threshold = threshold
         if criterion not in ['min', 'max']:
@@ -606,8 +607,8 @@ class StopAfterThresholdReached(Hook):
             is_threshold_reached = True
         if is_threshold_reached:
             self.message("Stopping because {} has reached the threshold {} "
-                         "(criterion used : {})"
-                         .format(self.log_name, self.threshold, self.criterion))
+                         "(criterion used : {})".format(
+                             self.log_name, self.threshold, self.criterion))
             raise StopIteration()
 
 

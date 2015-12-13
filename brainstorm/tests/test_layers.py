@@ -153,19 +153,19 @@ def sigmoid_ce_layer(spec):
 
 def rnn_layer(spec):
     layer = RecurrentLayerImpl('RnnLayer',
-                         {'default': BufferStructure('T', 'B', 3)},
-                         NO_CON, NO_CON,
-                         size=4,
-                         activation=spec['activation'])
+                               {'default': BufferStructure('T', 'B', 3)},
+                               NO_CON, NO_CON,
+                               size=4,
+                               activation=spec['activation'])
     return layer, spec
 
 
 def rnn_layer_2d(spec):
     layer = RecurrentLayerImpl('RnnLayer',
-                         {'default': BufferStructure('T', 'B', 2, 1, 2)},
-                         NO_CON, NO_CON,
-                         size=3,
-                         activation=spec['activation'])
+                               {'default': BufferStructure('T', 'B', 2, 1, 2)},
+                               NO_CON, NO_CON,
+                               size=3,
+                               activation=spec['activation'])
     return layer, spec
 
 
@@ -306,11 +306,12 @@ def clockwork_lstm_layer(spec):
 
 
 def clockwork_lstm_layer_2d(spec):
-    layer = ClockworkLstmLayerImpl('ClockworkLstm',
-                                   {'default': BufferStructure('T', 'B', 1, 2, 2)},
-                                   NO_CON, NO_CON,
-                                   size=3,
-                                   activation=spec['activation'])
+    layer = ClockworkLstmLayerImpl(
+        'ClockworkLstm',
+        {'default': BufferStructure('T', 'B', 1, 2, 2)},
+        NO_CON, NO_CON,
+        size=3,
+        activation=spec['activation'])
 
     spec['inits'] = {'timing': np.array([1, 2, 3])}
     return layer, spec
@@ -482,7 +483,8 @@ def test_layer_backward_pass_insensitive_to_internal_state_init(layer_specs):
         for key, value in layer_buffers.input_deltas.items():
             assert np.allclose(deltas[key], HANDLER.get_numpy_copy(value),
                                rtol=eps, atol=eps), \
-                "Failed for internal.{} when inspecting {}".format(internal, key)
+                "Failed for internal.{} when inspecting {}".format(internal,
+                                                                   key)
 
 
 def test_layer_add_to_deltas(layer_specs):

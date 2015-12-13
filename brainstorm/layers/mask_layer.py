@@ -33,10 +33,10 @@ class MaskLayerImpl(Layer):
         else:
             raise LayerValidationError(
                 "Shape of the mask did not match shape of the default inputs. "
-                "Should be either ('T', 'B', 1) or {} or {}, but was {}".format(
-                    ('T', 'B') + expected_shape,
-                    in_shapes['default'].shape,
-                    in_shapes['mask']))
+                "Should be either ('T', 'B', 1) or {} or {}, but was {}"
+                .format(('T', 'B') + expected_shape,
+                        in_shapes['default'].shape,
+                        in_shapes['mask']))
         outputs = OrderedDict()
         outputs['default'] = in_shapes['default']
         return outputs, OrderedDict(), OrderedDict()

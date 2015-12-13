@@ -36,5 +36,3 @@ def run_layer_tests(layer, spec):
           ' of internals ...')
     test_layer_backward_pass_insensitive_to_internal_state_init((layer, spec))
     print("")
-
-

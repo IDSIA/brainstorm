@@ -204,10 +204,10 @@ def test_online_default():
     input_data = np.zeros((4, 5, 3))
     targets = np.ones((4, 5, 1))
     it = Minibatches(
-            batch_size=1,
-            my_data=input_data,
-            my_targets=targets,
-            shuffle=False)(default_handler)
+        batch_size=1,
+        my_data=input_data,
+        my_targets=targets,
+        shuffle=False)(default_handler)
     x = next(it)
     assert set(x.keys()) == {'my_data', 'my_targets'}
     assert x['my_data'].shape == (4, 1, 3)
@@ -236,10 +236,10 @@ def test_minibatch_default():
     input_data = np.zeros((4, 5, 3))
     targets = np.ones((4, 5, 1))
     it = Minibatches(
-            batch_size=3,
-            my_data=input_data,
-            my_targets=targets,
-            shuffle=False)(default_handler)
+        batch_size=3,
+        my_data=input_data,
+        my_targets=targets,
+        shuffle=False)(default_handler)
     x = next(it)
     assert set(x.keys()) == {'my_data', 'my_targets'}
     assert x['my_data'].shape == (4, 3, 3)
@@ -263,11 +263,11 @@ def test_minibatch_with_mask():
         [1, 1, 0, 0],
     ]).T[:, :, None]
     it = Minibatches(
-            batch_size=3,
-            my_data=input_data,
-            my_targets=targets,
-            mask=mask,
-            shuffle=False)(default_handler)
+        batch_size=3,
+        my_data=input_data,
+        my_targets=targets,
+        mask=mask,
+        shuffle=False)(default_handler)
     x = next(it)
     assert set(x.keys()) == {'my_data', 'my_targets', 'mask'}
     assert x['my_data'].shape == (3, 3, 3)
@@ -287,11 +287,11 @@ def test_minibatch_with_length():
     targets = np.ones((4, 5, 1))
     seq_lens = [2, 3, 4, 1, 2]
     it = Minibatches(
-            batch_size=3,
-            cut_according_to=seq_lens,
-            my_data=input_data,
-            my_targets=targets,
-            shuffle=False)(default_handler)
+        batch_size=3,
+        cut_according_to=seq_lens,
+        my_data=input_data,
+        my_targets=targets,
+        shuffle=False)(default_handler)
     x = next(it)
     assert set(x.keys()) == {'my_data', 'my_targets'}
     assert x['my_data'].shape == (4, 3, 3)

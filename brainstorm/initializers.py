@@ -62,7 +62,7 @@ class DenseSqrtFanIn(Initializer):
     over the interval [-scale/sqrt(n), scale/sqrt(n)] where n is the number of
     inputs to each unit. Uses scale=sqrt(6) by default which is appropriate
     for rel units.
-    
+
     When number of inputs and outputs are the same, this is equivalent to
     using ``DenseSqrtFanInOut``.
 
@@ -320,7 +320,7 @@ class SparseInputs(Initializer):
 
     Example:
         >>> net.initialize(FullyConnected=SparseInputs(Gaussian(),
-                                                       connections=10))
+        ...                                            connections=10))
     """
 
     def __init__(self, sub_initializer, connections=15):
