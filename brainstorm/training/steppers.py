@@ -195,10 +195,10 @@ class AdaDelta(TrainingStepper):
                                      out=self.accumulator)
 
         # dx = sqrt((delta_accumulator + eps) / (accumulator + eps)) * grad
-        self.net.handler.mult_st(self.eps,
+        self.net.handler.add_st(self.eps,
                                  self.delta_accumulator,
                                  out=self.scratch)
-        self.net.handler.mult_st(self.eps,
+        self.net.handler.add_st(self.eps,
                                  self.accumulator,
                                  out=self.scratch_2)
         self.net.handler.divide_tt(self.scratch,
