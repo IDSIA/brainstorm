@@ -225,7 +225,7 @@ class AdaDelta(TrainingStepper):
 
         # param -= dx
         self.net.handler.mult_add_st(-1,
-                                     self.delta_accumulator,
+                                     self.scratch_2,
                                      self.net.buffer.parameters)
 
 class NesterovStepper(MomentumStepper):
