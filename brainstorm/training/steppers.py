@@ -159,9 +159,9 @@ class RMSpropStepper(TrainingStepper):
                                      self.scratch,
                                      self.net.buffer.parameters)
 
-class AdaDelta(TrainingStepper):
+class AdaDeltaStepper(TrainingStepper):
     def __init__(self, learning_rate=1.0, alpha=0.95, eps=1e-6):
-        super(AdaDelta, self).__init__()
+        super(AdaDeltaStepper, self).__init__()
         self.learning_rate = learning_rate
         self.alpha = alpha
         self.eps = eps
@@ -171,7 +171,7 @@ class AdaDelta(TrainingStepper):
         self.scratch_2 = None
 
     def start(self, net):
-        super(AdaDelta, self).start(net)
+        super(AdaDeltaStepper, self).start(net)
         self.accumulator = net.handler.zeros(net.buffer.parameters.shape)
         self.delta_accumulator = net.handler.zeros(net.buffer.parameters.shape)
         self.scratch = net.handler.zeros(net.buffer.parameters.shape)

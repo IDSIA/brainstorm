@@ -8,4 +8,5 @@ from brainstorm.training.steppers import (
 from brainstorm.training.schedules import Linear, Exponential, MultiStep
 
 __all__ = ['Trainer', 'SgdStepper', 'MomentumStepper', 'NesterovStepper',
-           'RMSpropStepper', 'AdaDelta', 'Linear', 'Exponential', 'MultiStep']
+           'RMSpropStepper', 'AdaDeltaStepper', 'Linear', 'Exponential',
+           'MultiStep']
