@@ -228,7 +228,7 @@ class OneHot(DataIterator):
                                              new_data.shape[1],
                                              new_data.shape[3]))
                 data[name] = new_data
-                yield data
+            yield data
 
 
 class MultiHot(DataIterator):
@@ -270,7 +270,7 @@ class MultiHot(DataIterator):
                 vocab_size = self.vocab_size_dict[name]
                 new_data = np.eye(vocab_size, dtype=np.bool)[data[name]].max(2)
                 data[name] = new_data
-                yield data
+            yield data
 
 
 class Pad(DataIterator):
