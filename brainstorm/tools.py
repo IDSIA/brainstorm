@@ -564,8 +564,6 @@ def create_net_from_spec(task_type, in_shape, out_shape, spec,
     inp, outp = get_in_out_layers(task_type, in_shape, out_shape,
                                   data_name=data_name, mask_name=mask_name,
                                   targets_name=targets_name, use_conv=use_conv)
-    if task_type not in ['classification', 'multi-label']:
-        raise ValueError('Unknown task type {}'.format(task_type))
     output_name = 'Output.outputs.predictions'
 
     import re
