@@ -34,28 +34,30 @@ class Convolution2DLayerImpl(Layer):
                                         " for ConvolutionLayer"
         assert 'kernel_size' in kwargs, "kernel_size must be specified " \
                                         "for ConvolutionLayer"
-        self.num_filters = kwargs['num_filters']
-        self.kernel_size = kwargs['kernel_size']
-        self.stride = tuple(kwargs.get('stride', (1, 1)))
-        self.padding = kwargs.get('padding', 0)
-        assert type(self.padding) is int and self.padding >= 0, \
-            "Invalid padding: {}".format(self.padding)
-        assert type(self.kernel_size) in [list, tuple] and \
-            len(self.kernel_size) == 2, "Kernel size must be list or " \
-                                        "tuple  of length 2: {}".format(
-                                        self.kernel_size)
-        assert type(self.stride) in [list, tuple] and len(self.stride) == 2, \
-            "Stride must be list or tuple of length 2: {}".format(self.stride)
+        num_filters = kwargs['num_filters']
+        kernel_size = kwargs['kernel_size']
+        stride = kwargs.get('stride', (1, 1))
+        padding = kwargs.get('padding', 0)
+        assert type(padding) is int and padding >= 0, \
+            "Invalid padding: {}".format(padding)
+        assert type(kernel_size) in [list, tuple] and \
+            len(kernel_size) == 2, "Kernel size must be list or tuple  of " \
+                                   "length 2: {}".format(kernel_size)
+        assert type(stride) in [list, tuple] and len(stride) == 2, \
+            "Stride must be list or tuple of length 2: {}".format(stride)
         in_shape = self.in_shapes['default'].feature_shape
-        assert self.stride[0] >= 0 and self.stride[1] >= 0, \
-            "Invalid stride: {}".format(self.stride)
+        assert stride[0] >= 0 and stride[1] >= 0, \
+            "Invalid stride: {}".format(stride)
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "ConvolutionLayer2D must have 3 dimensional input but input " \
             "shape was {}".format(in_shape)
-        num_input_maps = in_shape[2]
-        num_filters = self.num_filters
+        self.num_filters = num_filters
+        self.kernel_size = tuple(kernel_size)
+        self.stride = tuple(stride)
+        self.padding = padding
         kernel_x, kernel_y = self.kernel_size
-        padding, stride = self.padding, self.stride
+        num_input_maps = in_shape[2]
+
         output_height = ((in_shape[0] + 2 * padding - kernel_x) //
                          stride[0]) + 1
         output_width = ((in_shape[1] + 2 * padding - kernel_y) //

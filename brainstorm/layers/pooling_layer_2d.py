@@ -29,29 +29,30 @@ class Pooling2DLayerImpl(Layer):
         assert 'kernel_size' in kwargs, "kernel_size must be specified for " \
                                         "Pooling2D"
         assert 'type' in kwargs, "type must be specified for Pooling2D"
-        self.kernel_size = kwargs['kernel_size']
-        self.type = kwargs['type']
-        self.padding = kwargs.get('padding', 0)
-        self.stride = kwargs.get('stride', (1, 1))
+        kernel_size = kwargs['kernel_size']
+        ptype = kwargs['type']
+        padding = kwargs.get('padding', 0)
+        stride = kwargs.get('stride', (1, 1))
         in_shape = self.in_shapes['default'].feature_shape
-        assert self.type in ('max', 'avg')
-        assert type(self.padding) is int and self.padding >= 0, \
-            "Invalid padding: {}".format(self.padding)
-        assert type(self.kernel_size) in [list, tuple] and \
-            len(self.kernel_size) == 2, "Kernel size must be list or " \
-                                        "tuple  of length 2: {}".format(
-                                        self.kernel_size)
-        assert type(self.stride) in [list, tuple] and len(self.stride) == 2, \
-            "Stride must be list or tuple of length 2: {}".format(self.stride)
-        assert self.stride[0] >= 0 and self.stride[1] >= 0, \
-            "Invalid stride: {}".format(self.stride)
+        assert ptype in ('max', 'avg')
+        assert type(padding) is int and padding >= 0, \
+            "Invalid padding: {}".format(padding)
+        assert type(kernel_size) in [list, tuple] and \
+            len(kernel_size) == 2, "Kernel size must be list or " \
+                                   "tuple  of length 2: {}".format(
+                                   kernel_size)
+        assert type(stride) in [list, tuple] and len(stride) == 2, \
+            "Stride must be list or tuple of length 2: {}".format(stride)
+        assert stride[0] >= 0 and stride[1] >= 0, \
+            "Invalid stride: {}".format(stride)
         assert isinstance(in_shape, tuple) and len(in_shape) == 3, \
             "PoolingLayer2D must have 3 dimensional input but input " \
             "shape was %s" % in_shape
 
-        kernel_size = self.kernel_size
-        padding = self.padding
-        stride = self.stride
+        self.kernel_size = tuple(kernel_size)
+        self.type = ptype
+        self.padding = padding
+        self.stride = tuple(stride)
         output_height = ((in_shape[0] + 2 * padding - kernel_size[0]) //
                          stride[0]) + 1
         output_width = ((in_shape[1] + 2 * padding - kernel_size[1]) //
