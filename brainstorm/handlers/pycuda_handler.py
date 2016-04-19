@@ -318,7 +318,7 @@ class PyCudaHandler(Handler):
         assert(a.shape[-1] + b.shape[-1] == out.shape[-1])
         n = int(np.prod(out.shape[:-1]))
         grid, block = self._get_gridsize(n)
-        _merge_impl(a.gpudata, b.gpudata, out.gpudata,
+        _merge_impl(a, b, out,
                     np.int32(n), np.int32(a.shape[-1]), np.int32(b.shape[-1]),
                     block=block, grid=grid)
 
@@ -358,7 +358,7 @@ class PyCudaHandler(Handler):
         assert(out_a.shape[-1] + out_b.shape[-1] == x.shape[-1])
         n = int(np.prod(x.shape[:-1]))
         grid, block = self._get_gridsize(n)
-        _split_add_impl(x.gpudata, out_a.gpudata, out_b.gpudata,
+        _split_add_impl(x, out_a, out_b,
                         np.int32(n), np.int32(out_a.shape[-1]),
                         np.int32(out_b.shape[-1]),
                         block=block, grid=grid)
