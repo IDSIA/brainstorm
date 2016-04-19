@@ -15,8 +15,8 @@ from brainstorm.utils import (LayerValidationError, flatten_time,
 def FullyConnected(size=None, activation='rel', name=None):
     """Create a Fully Connected (inner product) layer."""
     if size is None:
-        ConstructionWrapper.create(FullyConnectedLayerImpl, name=name,
-                                   activation=activation)
+        return ConstructionWrapper.create(FullyConnectedLayerImpl, name=name,
+                                          activation=activation)
     else:
         return ConstructionWrapper.create(FullyConnectedLayerImpl, size=size,
                                           name=name, activation=activation)
