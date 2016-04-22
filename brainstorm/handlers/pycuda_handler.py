@@ -388,6 +388,12 @@ class PyCudaHandler(Handler):
     def rel_deriv(self, x, y, dy, dx):
         rel_deriv_kernel(x, y, dy, dx)
 
+    def el(self, x, y):
+        el_kernel(x, y)
+
+    def el_deriv(self, x, y, dy, dx):
+        el_deriv_kernel(x, y, dy, dx)
+
     def sigmoid(self, x, y):
         sigmoid_kernel(x, y)
 
@@ -521,6 +527,18 @@ rel_kernel = ElementwiseKernel(
     "float* x, float* y",
     "if (x[i] > 0) y[i] = x[i]; else y[i] = 0.0;",
     "rel_kernel"
+)
+
+el_kernel = ElementwiseKernel(
+    "float* x, float* y",
+    "if (x[i] > 0) y[i] = x[i]; else y[i] = exp(x[i]) - 1.0;",
+    "el_kernel"
+)
+
+el_deriv_kernel = ElementwiseKernel(
+    "float* x, float* y, float* dy, float* dx",
+    "if (y[i] > 0) dx[i] = dy[i]; else dx[i] = dy[i] * (y[i] + 1.0);",
+    "el_deriv_kernel"
 )
 
 sigmoid_deriv_kernel = ElementwiseKernel(

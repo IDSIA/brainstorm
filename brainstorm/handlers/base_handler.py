@@ -44,6 +44,7 @@ class Handler(Describable):
             'rel': lambda x: self.rel(x, x),
             'tanh': lambda x: self.tanh(x, x),
             'linear': lambda x: None,
+            'el': lambda x: self.el(x, x)
         }
 
         self.inplace_act_func_deriv = {
@@ -51,20 +52,23 @@ class Handler(Describable):
             'rel': lambda y, dy: self.rel_deriv(y, y, dy, dy),
             'tanh': lambda y, dy: self.tanh_deriv(y, y, dy, dy),
             'linear': lambda y, dy: None,
+            'el': lambda y, dy: self.el_deriv(y, y, dy, dy)
         }
 
         self.act_func = {
             'sigmoid': self.sigmoid,
             'rel': self.rel,
             'tanh': self.tanh,
-            'linear': self.copy_to
+            'linear': self.copy_to,
+            'el': self.el
         }
 
         self.act_func_deriv = {
             'sigmoid': self.sigmoid_deriv,
             'rel': self.rel_deriv,
             'tanh': self.tanh_deriv,
-            'linear': lambda x, y, dy, dx: self.copy_to(dy, dx)
+            'linear': lambda x, y, dy, dx: self.copy_to(dy, dx),
+            'el': self.el_deriv
         }
 
     def __init_from_description__(self, description):
@@ -873,4 +877,49 @@ class Handler(Describable):
                              the inputs are placed.
         Returns:
             None
+        """
+
+    def el(self, x, y):
+        """
+        Compute exponential linear activation function.
+
+        f(x) = x if x > 0 else exp(x) - 1
+
+        Note that we chose to fix alpha to 1
+
+        Args:
+            x (array_type): Input Array.
+            y (array_type): Output Array
+
+        Returns:
+            None
+
+        References:
+            Clevert, D. A., Unterthiner, T., & Hochreiter, S. (2015).
+            Fast and Accurate Deep Network Learning by Exponential Linear Units.
+            arXiv preprint arXiv:1511.07289.
+        """
+
+    def el_deriv(self, x, y, dy, dx):
+        """Backpropagate derivatives through the exponential linear function.
+
+        f'(x) = 1 if x > 0 else f(x) + 1
+
+        Note that we chose to fix alpha to 1
+
+        Args:
+            x (array_type): Inputs to the exponential linear function.
+                            This argument is not used and is present only to
+                            conform with other activation functions.
+            y (array_type): Outputs of the exponential linear function.
+            dy (array_type): Derivatives with respect to the outputs.
+            dx (array_type): Array in which the derivatives with respect to
+                             the inputs are placed.
+        Returns:
+            None
+
+        References:
+            Clevert, D. A., Unterthiner, T., & Hochreiter, S. (2015).
+            Fast and Accurate Deep Network Learning by Exponential Linear Units.
+            arXiv preprint arXiv:1511.07289.
         """

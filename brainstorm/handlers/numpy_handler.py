@@ -299,3 +299,12 @@ class NumpyHandler(Handler):
 
     def tanh_deriv(self, x, y, dy, dx):
         dx[:] = dy * (1. - y * y)
+
+    def el(self, x, y):
+        # TODO: Optimize this implementation
+        y[:] = x * (x >= 0.) + (np.exp(x) - 1.) * (x < 0.)
+
+    def el_deriv(self, x, y, dy, dx):
+        # TODO: Optimize this implementation
+        dx[:] = dy * (y >= 0.) + dy * (y + 1.) * (y < 0.)
+

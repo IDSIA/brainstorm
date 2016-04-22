@@ -525,6 +525,22 @@ class DebugHandler(Handler):
         self.handler.rel_deriv(x, y.array, dy.array, dx.array)
 
     @check_for_inf_or_nan
+    def el(self, x, y):
+        assert_debug_arrays(x, y)
+        assert_shapes_equal(x, y)
+        self.handler.el(x.array, y.array)
+
+    @check_for_inf_or_nan
+    def el_deriv(self, x, y, dy, dx):
+        assert_debug_arrays(y, dy, dx)
+        assert_shapes_equal(y, dy, dx)
+        if x is not None:
+            assert_debug_arrays(x)
+            assert_shapes_equal(x, y)
+            x = x.array
+        self.handler.el_deriv(x, y.array, dy.array, dx.array)
+
+    @check_for_inf_or_nan
     def softmax_m(self, m, out):
         assert_debug_arrays(m, out)
         assert_shapes_equal(m, out)
