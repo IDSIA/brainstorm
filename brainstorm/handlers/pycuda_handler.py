@@ -562,7 +562,7 @@ sigmoid_kernel = ElementwiseKernel(
 
 softplus_kernel = ElementwiseKernel(
     "float* x, float* y",
-    "y[i] = log(1.0 + exp(x[i]))",
+    "y[i] = log(1.0 + exp(x[i]))",  # TODO: Numerical stability for x > 14.
     "softplus_kernel"
 )
 
