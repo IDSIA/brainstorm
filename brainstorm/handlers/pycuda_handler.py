@@ -417,7 +417,7 @@ class PyCudaHandler(Handler):
         softplus_kernel(x, y)
 
     def softplus_deriv(self, x, y, dy, dx):
-        softplus_deriv_kernel(x, y)
+        softplus_deriv_kernel(x, y, dy, dx)
 
 # --------------------------- Kernel Definitions ---------------------------- #
 
