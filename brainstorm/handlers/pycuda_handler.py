@@ -413,6 +413,12 @@ class PyCudaHandler(Handler):
     def tanh_deriv(self, x, y, dy, dx):
         tanh_deriv_kernel(x, y, dy, dx)
 
+    def softplus(self, x, y):
+        softplus_kernel(x, y)
+
+    def softplus_deriv(self, x, y, dy, dx):
+        softplus_deriv_kernel(x, y)
+
 # --------------------------- Kernel Definitions ---------------------------- #
 
 add_into_if_kernel = ElementwiseKernel(
@@ -552,6 +558,18 @@ sigmoid_kernel = ElementwiseKernel(
     "y[i] = (x[i]>=0) ? 1.0/(1.0 + exp(-1.0*x[i])) : "
     "exp(1.0*x[i])/(1.0 + exp(1.0*x[i]))",
     "sigmoid_kernel"
+)
+
+softplus_kernel = ElementwiseKernel(
+    "float* x, float* y",
+    "y[i] = ln(1.0 + exp(x[i]))",
+    "softplus_kernel"
+)
+
+softplus_deriv_kernel = ElementwiseKernel(
+    "float* x, float* y, float* dy, float* dx",
+    "dx[i] = dy[i] * (1.0 - exp(-y[i]))",
+    "softplus_deriv_kernel"
 )
 
 sign_kernel = ElementwiseKernel(

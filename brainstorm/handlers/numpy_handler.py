@@ -308,3 +308,8 @@ class NumpyHandler(Handler):
         # TODO: Optimize this implementation
         dx[:] = dy * (y >= 0.) + dy * (y + 1.) * (y < 0.)
 
+    def softplus(self, x, y):
+        y[:] = np.log(1 + np.exp(x))
+
+    def softplus_deriv(self, x, y, dy, dx):
+        dx[:] = dy * (1 - np.exp(y))
