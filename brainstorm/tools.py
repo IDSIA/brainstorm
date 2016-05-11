@@ -351,7 +351,9 @@ act_funcs = {
     's': 'sigmoid',
     't': 'tanh',
     'r': 'rel',
-    'l': 'linear'
+    'l': 'linear',
+    'p': 'softplus',
+    'e': 'el'
 }
 
 

@@ -71,6 +71,7 @@ class DenseSqrtFanIn(Initializer):
         * tanh: sqrt(3)
         * sigmoid: 4 * sqrt(3)
         * linear: 1
+        * softplus: sqrt(6)
 
     Args:
         scale (Optional(float or str)):
@@ -93,7 +94,9 @@ class DenseSqrtFanIn(Initializer):
                 'rel': np.sqrt(6),
                 'tanh': np.sqrt(3),
                 'sigmoid': 4 * np.sqrt(3),
-                'linear': 1
+                'linear': 1,
+                'el': np.sqrt(6),  # TODO: Check
+                'softplus': np.sqrt(6)  # TODO: Check
             }[self.scale]
         else:
             scale = self.scale
@@ -140,7 +143,9 @@ class DenseSqrtFanInOut(Initializer):
                 'rel': np.sqrt(12),
                 'tanh': np.sqrt(6),
                 'sigmoid': 4 * np.sqrt(6),
-                'linear': 1
+                'linear': 1,
+                'el': np.sqrt(12),  # TODO: Check
+                'softplus': np.sqrt(12)  # TODO: Check
             }[self.scale]
         else:
             scale = self.scale

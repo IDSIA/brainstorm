@@ -44,7 +44,8 @@ class Handler(Describable):
             'rel': lambda x: self.rel(x, x),
             'tanh': lambda x: self.tanh(x, x),
             'linear': lambda x: None,
-            'el': lambda x: self.el(x, x)
+            'el': lambda x: self.el(x, x),
+            'softplus': lambda x: self.softplus(x, x)
         }
 
         self.inplace_act_func_deriv = {
@@ -52,7 +53,8 @@ class Handler(Describable):
             'rel': lambda y, dy: self.rel_deriv(y, y, dy, dy),
             'tanh': lambda y, dy: self.tanh_deriv(y, y, dy, dy),
             'linear': lambda y, dy: None,
-            'el': lambda y, dy: self.el_deriv(y, y, dy, dy)
+            'el': lambda y, dy: self.el_deriv(y, y, dy, dy),
+            'softplus': lambda y, dy: self.softplus_deriv(y, y, dy, dy)
         }
 
         self.act_func = {
@@ -60,7 +62,8 @@ class Handler(Describable):
             'rel': self.rel,
             'tanh': self.tanh,
             'linear': self.copy_to,
-            'el': self.el
+            'el': self.el,
+            'softplus': self.softplus
         }
 
         self.act_func_deriv = {
@@ -68,7 +71,8 @@ class Handler(Describable):
             'rel': self.rel_deriv,
             'tanh': self.tanh_deriv,
             'linear': lambda x, y, dy, dx: self.copy_to(dy, dx),
-            'el': self.el_deriv
+            'el': self.el_deriv,
+            'softplus': self.softplus_deriv
         }
 
     def __init_from_description__(self, description):
@@ -922,4 +926,38 @@ class Handler(Describable):
             Clevert, D. A., Unterthiner, T., & Hochreiter, S. (2015).
             Fast and Accurate Deep Network Learning by Exponential Linear Units.
             arXiv preprint arXiv:1511.07289.
+        """
+
+    def softplus(self, x, y):
+        """
+        Compute the softplus function.
+
+        f(x) = ln(1 + exp(x))
+
+        Args:
+            x (array_type): Input Array.
+            y (array_type): Output Array
+
+        Returns:
+            None
+        """
+
+    def softplus_deriv(self, x, y, dy, dx):
+        """Backpropagate derivatives through the softplus function.
+
+        f'(x) = sigmoid(x) = 1 / (1 + exp(-x)
+
+        We chose to express the derivative in terms of the function outputs:
+        f'(x) = 1 - exp(-f(x))
+
+        Args:
+            x (array_type): Inputs to the softplus function.
+                            This argument is not used and is present only to
+                            conform with other activation functions.
+            y (array_type): Outputs of the softplus function.
+            dy (array_type): Derivatives with respect to the outputs.
+            dx (array_type): Array in which the derivatives with respect to
+                             the inputs are placed.
+        Returns:
+            None
         """

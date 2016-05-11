@@ -474,6 +474,27 @@ def test_el_deriv(handler):
         assert operation_check(handler, 'el_deriv', ref_args)
 
 
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_softplus(handler):
+    list_a = get_random_arrays(some_nd_shapes)
+
+    for a in list_a:
+        out = np.zeros_like(a, dtype=ref_dtype)
+        ref_args = (a, out)
+        assert operation_check(handler, 'softplus', ref_args)
+
+
+@pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
+def test_softplus_deriv(handler):
+    list_x = get_random_arrays(some_nd_shapes)
+    list_y = get_random_arrays(some_nd_shapes)
+    list_dy = get_random_arrays(some_nd_shapes)
+
+    for x, y, dy in zip(list_x, list_y, list_dy):
+        dx = np.zeros_like(x, dtype=ref_dtype)
+        ref_args = (x, y, dy, dx)
+        assert operation_check(handler, 'softplus_deriv', ref_args)
+
 
 @pytest.mark.parametrize("handler", non_default_handlers, ids=handler_ids)
 def test_conv2d_forward(handler):
