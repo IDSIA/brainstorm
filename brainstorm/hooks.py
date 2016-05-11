@@ -118,7 +118,7 @@ class SaveBestNetwork(Hook):
                                               interval, verbose)
         self.log_name = log_name
         self.filename = filename
-        self.parameters = None
+        self.best_parameters = None
         assert criterion == 'min' or criterion == 'max'
         self.best_so_far = np.inf if criterion == 'min' else -np.inf
         self.best_t = None
@@ -156,8 +156,8 @@ class SaveBestNetwork(Hook):
                          format(self.timescale, self.best_t, self.log_name,
                                 self.best_so_far))
 
-    def load_parameters(self):
-        return np.load(self.filename) if self.filename is not None \
+    def load_best_network(self):
+        return Network.from_hdf5(self.filename) if self.filename is not None \
             else self.parameters
 
 
