@@ -67,9 +67,23 @@ License
 
 MIT License. Please see the LICENSE file.
 
-Acknowledgements
-----------------
+Acknowledgements and Citation
+-----------------------------
 
 Klaus Greff and Rupesh Srivastava would like to thank Jürgen Schmidhuber for his continuous supervision and encouragement.
 Funding from EU projects NASCENCE (FP7-ICT-317662) and WAY (FP7-ICT-288551) was instrumental during the development of this project.
 We also thank Nvidia Corporation for their donation of GPUs.
+
+If you use Brainstorm in your research, please cite us as follows:
+
+Klaus Greff, Rupesh Kumar Srivastava and Jürgen Schmidhuber. 2016. Brainstorm: Fast, Flexible and Fun Neural Networks, Version 0.5. https://github.com/IDSIA/brainstorm
+
+Bibtex:
+```
+@misc{brainstorm2015,
+  author = {Klaus Greff and Rupesh Kumar Srivastava and Jürgen Schmidhuber},
+  title = {{Brainstorm: Fast, Flexible and Fun Neural Networks, Version 0.5}},
+  year = {2015},
+  url = {https://github.com/IDSIA/brainstorm}
+}
+```
