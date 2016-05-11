@@ -25,5 +25,6 @@ from brainstorm.layers.pooling_layer_2d import Pooling2D
 from brainstorm.layers.recurrent_layer import Recurrent
 from brainstorm.layers.sigmoid_ce_layer import SigmoidCE
 from brainstorm.layers.softmax_ce_layer import SoftmaxCE
+from brainstorm.layers.softmax_fiddle_layer import SoftmaxFiddle
 from brainstorm.layers.squared_difference_layer import SquaredDifference
 from brainstorm.layers.squared_error_layer import SquaredError

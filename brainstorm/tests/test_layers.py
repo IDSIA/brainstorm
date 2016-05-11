@@ -37,6 +37,7 @@ from brainstorm.layers.merge_layer import MergeLayerImpl
 
 from brainstorm.tests.helpers import (HANDLER, approx_fprime, run_deltas_test,
                                       run_gradients_test, set_up_layer)
+from layers.softmax_fiddle_layer import SoftmaxFiddleLayerImpl
 
 np.random.seed(1234)
 
@@ -146,6 +147,24 @@ def sigmoid_ce_layer(spec):
 
     layer = SigmoidCELayerImpl('SigmoidCELayer', in_shapes, NO_CON,
                                NO_CON)
+
+    spec['targets'] = targets
+    return layer, spec
+
+
+def softmax_fiddle_layer(spec):
+    time_steps = spec.get('time_steps', 3)
+    batch_size = spec.get('batch_size', 2)
+    feature_dim = (4,)
+    target_shape = (time_steps, batch_size) + feature_dim
+    targets = np.random.randint(0, 2, target_shape).astype(np.float)
+    targets /= np.clip(targets.sum(2)[:, :, None], 1, 10000)
+    print('TARGETS:', targets)
+    in_shapes = {'default': BufferStructure('T', 'B', *feature_dim),
+                 'targets': BufferStructure('T', 'B', *target_shape[2:])}
+
+    layer = SoftmaxFiddleLayerImpl('SoftmaxFiddleLayer', in_shapes, NO_CON,
+                                    NO_CON)
 
     spec['targets'] = targets
     return layer, spec
@@ -333,6 +352,7 @@ layers_to_test = [
     highway_layer,
     binomial_crossentropy_layer,
     softmax_ce_layer,
+    softmax_fiddle_layer,
     sigmoid_ce_layer,
     rnn_layer,
     rnn_layer_2d,

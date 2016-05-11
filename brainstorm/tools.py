@@ -261,6 +261,8 @@ def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
 
     if task_type == 'classification':
         out_layer = layers.SoftmaxCE(name=outlayer_name)
+    elif task_type == 'classifiddle':
+        out_layer = layers.SoftmaxFiddle(name=outlayer_name)
     elif task_type == 'multi-label':
         out_layer = layers.SigmoidCE(name=outlayer_name)
     elif task_type == 'regression':
