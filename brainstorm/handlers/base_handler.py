@@ -76,7 +76,7 @@ class Handler(Describable):
             'linear': lambda x, y, dy, dx: self.copy_to(dy, dx),
             'el': self.el_deriv,
             'softplus': self.softplus_deriv,
-            'guided_rel': self.guided_rel
+            'guided_rel': self.guided_rel_deriv
         }
 
     def __init_from_description__(self, description):
