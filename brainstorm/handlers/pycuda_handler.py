@@ -388,6 +388,9 @@ class PyCudaHandler(Handler):
     def rel_deriv(self, x, y, dy, dx):
         rel_deriv_kernel(x, y, dy, dx)
 
+    def guided_rel_deriv(self, x, y, dy, dx):
+        guided_rel_deriv_kernel(x, y, dy, dx)
+
     def el(self, x, y):
         el_kernel(x, y)
 
@@ -527,6 +530,12 @@ rel_deriv_kernel = ElementwiseKernel(
     "float* x, float* y, float* dy, float* dx",
     "if (y[i] > 0) dx[i] = dy[i]; else dx[i] = 0.0;",
     "rel_deriv_kernel"
+)
+
+guided_rel_deriv_kernel = ElementwiseKernel(
+    "float* x, float* y, float* dy, float* dx",
+    "if ((y[i] > 0) && (dy[i] > 0)) dx[i] = dy[i]; else dx[i] = 0.0;",
+    "guided_rel_deriv_kernel"
 )
 
 rel_kernel = ElementwiseKernel(

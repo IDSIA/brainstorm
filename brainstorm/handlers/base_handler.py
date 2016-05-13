@@ -45,7 +45,8 @@ class Handler(Describable):
             'tanh': lambda x: self.tanh(x, x),
             'linear': lambda x: None,
             'el': lambda x: self.el(x, x),
-            'softplus': lambda x: self.softplus(x, x)
+            'softplus': lambda x: self.softplus(x, x),
+            'guided_rel': lambda x: self.rel(x, x)
         }
 
         self.inplace_act_func_deriv = {
@@ -54,7 +55,8 @@ class Handler(Describable):
             'tanh': lambda y, dy: self.tanh_deriv(y, y, dy, dy),
             'linear': lambda y, dy: None,
             'el': lambda y, dy: self.el_deriv(y, y, dy, dy),
-            'softplus': lambda y, dy: self.softplus_deriv(y, y, dy, dy)
+            'softplus': lambda y, dy: self.softplus_deriv(y, y, dy, dy),
+            'guided_rel': lambda y, dy: self.guided_rel_deriv(y, y, dy, dy)
         }
 
         self.act_func = {
@@ -63,7 +65,8 @@ class Handler(Describable):
             'tanh': self.tanh,
             'linear': self.copy_to,
             'el': self.el,
-            'softplus': self.softplus
+            'softplus': self.softplus,
+            'guided_rel': self.rel
         }
 
         self.act_func_deriv = {
@@ -72,7 +75,8 @@ class Handler(Describable):
             'tanh': self.tanh_deriv,
             'linear': lambda x, y, dy, dx: self.copy_to(dy, dx),
             'el': self.el_deriv,
-            'softplus': self.softplus_deriv
+            'softplus': self.softplus_deriv,
+            'guided_rel': self.guided_rel
         }
 
     def __init_from_description__(self, description):
@@ -802,6 +806,22 @@ class Handler(Describable):
     @abc.abstractmethod
     def rel_deriv(self, x, y, dy, dx):
         """Backpropagate derivatives through the rectified linear function.
+
+        Args:
+            x (array_type): Inputs to the rel function.
+                            This argument is not used and is present only to
+                            conform with other activation functions.
+            y (array_type): Outputs of the rel function.
+            dy (array_type): Derivatives with respect to the outputs.
+            dx (array_type): Array in which the derivatives with respect to
+                             the inputs are placed.
+        Returns:
+            None
+        """
+
+    @abc.abstractmethod
+    def rel_deriv(self, x, y, dy, dx):
+        """ "Guided backpropagation" through the rectified linear function.
 
         Args:
             x (array_type): Inputs to the rel function.

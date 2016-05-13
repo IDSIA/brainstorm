@@ -353,7 +353,8 @@ act_funcs = {
     'r': 'rel',
     'l': 'linear',
     'p': 'softplus',
-    'e': 'el'
+    'e': 'el',
+    'g': 'guided_rel'
 }
 
 

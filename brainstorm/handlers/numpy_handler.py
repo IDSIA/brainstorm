@@ -280,6 +280,9 @@ class NumpyHandler(Handler):
     def rel_deriv(self, x, y, dy, dx):
         dx[:] = dy * (y > 0)
 
+    def guided_rel_deriv(self, x, y, dy, dx):
+        dx[:] = dy * (y > 0) * (dy > 0)
+
     def sigmoid(self, x, y):
         indices = x >= 0
         y[indices] = 1. / (1. + np.exp(-x[indices]))
