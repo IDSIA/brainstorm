@@ -57,3 +57,23 @@ Windows
 *******
 
 Instructions coming soon.
+
+******
+Docker
+******
+
+Builds of Brainstorm are available as `Docker <https://www.docker.com>`_
+images: `Brainstorm Docker (CPU) <https://hub.docker.com/r/kaixhin/brainstorm/>`_ or
+`Brainstorm Docker (CUDA) <https://hub.docker.com/r/kaixhin/cuda-brainstorm/>`_. These
+are updated on a weekly basis with bleeding-edge builds of Brainstorm.
+Examples of running bash in a Docker container are as follows:
+
+.. code-block:: bash
+
+    sudo docker run -it kaixhin/brainstorm
+    sudo nvidia-docker run -it kaixhin/cuda-brainstorm:7.0
+
+For a guide to Docker, see the `official docs <https://docs.docker.com>`_.
+CUDA support requires `NVIDIA Docker <https://github.com/NVIDIA/nvidia-docker>`_.
+For more details on how to use the Brainstorm Docker images,
+consult the `source project <https://github.com/Kaixhin/dockerfiles>`_.
