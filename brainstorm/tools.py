@@ -103,6 +103,7 @@ def extract(network, iter, buffer_names):
     if isinstance(buffer_names, six.string_types):
         buffer_names = [buffer_names]
 
+    time_steps = iter.data_shapes.values()[0][0] 
     nr_examples = iter.data_shapes.values()[0][1]
     return_data = {}
     nr_items = 0
@@ -114,9 +115,9 @@ def extract(network, iter, buffer_names):
             if num == 0:
                 nr_items += data.shape[1]
             if first_pass:
-                data_shape = (data.shape[0], nr_examples) + data.shape[2:]
+                data_shape = (time_steps, nr_examples) + data.shape[2:]
                 return_data[buffer_name] = np.zeros(data_shape, data.dtype)
-            return_data[buffer_name][:, nr_items - data.shape[1]:nr_items] = \
+            return_data[buffer_name][0:data.shape[0], nr_items - data.shape[1]:nr_items] = \
                 data
     return return_data
 
@@ -149,32 +150,14 @@ def extract_and_save(network, iter, buffer_names, file_name):
             Name of the hdf5 file (including extension) in which the features
             should be saved.
     """
-    iterator = iter(handler=network.handler)
-    if isinstance(buffer_names, six.string_types):
-        buffer_names = [buffer_names]
-    nr_items = 0
-    ds = []
-
+     
+    extracted_data = extract(network,iter,buffer_names)
     with h5py.File(file_name, 'w') as f:
         f.attrs.create('info', get_brainstorm_info())
         f.attrs.create('format', b'Buffers file v1.0')
-
-        for _ in run_network(network, iterator, all_inputs=False):
-            network.forward_pass()
-            first_pass = False if len(ds) > 0 else True
-            for num, buffer_name in enumerate(buffer_names):
-                data = network.get(buffer_name)
-                if num == 0:
-                    nr_items += data.shape[1]
-                if first_pass:
-                    ds.append(f.create_dataset(
-                        buffer_name, data.shape, data.dtype, chunks=data.shape,
-                        maxshape=(data.shape[0], None) + data.shape[2:]))
-                    ds[-1][:] = data
-                else:
-                    ds[num].resize(size=nr_items, axis=1)
-                    ds[num][:, nr_items - data.shape[1]:nr_items, ...] = data
-
+        
+        for buffer_name in buffer_names:
+            f.create_dataset(buffer_name,data=extracted_data[buffer_name])
 
 def get_in_out_layers(task_type, in_shape, out_shape, data_name='default',
                       targets_name='targets', projection_name=None,
