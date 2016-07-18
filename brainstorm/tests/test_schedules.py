@@ -5,8 +5,9 @@ from __future__ import division, print_function, unicode_literals
 
 import pytest
 import six
+import numpy as np
 
-from brainstorm.training.schedules import Exponential, Linear, MultiStep
+from brainstorm.training.schedules import Exponential, Linear, MultiStep, DecreaseAfterEpoch
 
 
 def test_linear():
@@ -61,3 +62,13 @@ def test_multistep():
 
     with pytest.raises(AssertionError):
         _ = sch(0, 0, 'update', 3, None, None, None)
+
+
+def test_decrease_after_epoch():
+  sch = DecreaseAfterEpoch(initial_value=0.02, T=6)
+  epochs = range(10)
+  updates = range(10)
+
+  values = [sch(epoch, update, 'epoch', 0, None, None, None)
+              for epoch, update in six.moves.zip(epochs, updates)]
+  assert np.allclose(values, [0.02] * 6 + [0.0171428, 0.015, 0.0133333, 0.012])

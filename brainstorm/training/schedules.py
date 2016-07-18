@@ -144,3 +144,31 @@ class MultiStep(Describable):
                 step_number = i - 1
                 break
         return self.values[step_number]
+
+
+class DecreaseAfterEpoch(Describable):
+    """
+    A schedule for decreasing a quantity after T epochs have passed.
+    The rate is specified by the initial value divided by the number
+    of epochs.
+
+    For example:
+    DecreaseAfterEpoch(0.05, T=25)
+    will keep the quantity constant for the first 25 epochs. Afterwards
+    the quantity changes according to 1/epoch_nr.
+    """
+
+    def __init__(self, initial_value, T):
+        """
+        Args:
+            initial_value (float):
+                Initial value of the parameter
+            T (int):
+                Number of epochs before the learning rate starts to decrease
+        """
+        self.T = T
+        self.initial_value = initial_value
+
+    def __call__(self, epoch_nr, update_nr, timescale, interval,
+                 net, stepper, logs):
+        return (self.initial_value * self.T) / np.max([epoch_nr+1, self.T])
