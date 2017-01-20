@@ -81,8 +81,8 @@ def test_conv2d_forward_batch_numpy():
                                      kernel_shape[1]) / stride[1] + 1
 
                                 outputs = np.zeros((nr_images,
-                                                    output_height,
-                                                    output_width,
+                                                    int(output_height),
+                                                    int(output_width),
                                                     nr_filters), dtype=dtype)
                                 true_outputs = np.zeros_like(outputs)
 

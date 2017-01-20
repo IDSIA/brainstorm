@@ -17,7 +17,7 @@ if has_pycuda:
 def test_limit_incoming_weights_squared():
     for orig in (np.random.rand(4, 5), np.random.randn(3, 5, 4, 6)):
         for limit in [0.00001, 1, 10, 10000]:
-            x = orig.reshape(orig.shape[0], orig.size / orig.shape[0]).copy()
+            x = orig.reshape(orig.shape[0], int(orig.size / orig.shape[0])).copy()
             divisor = (x * x).sum(axis=1, keepdims=True) ** 0.5 / limit
             divisor[divisor < 1] = 1
             out = (x / divisor).reshape(orig.shape)
