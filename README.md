@@ -1,6 +1,11 @@
 Brainstorm
 ==========
 
+| **Discontinuation Notice**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Brainstorm is no longer being maintained, so we recommend using one of the many other,available frameworks, such as Tensorflow or Chainer. These and similar large projects are supported much more actively by a larger number of contributors.  They provide, or plan to provide many available and planned features of brainstorm, and have several advantages, particularly in speed. In order to avoid fragmentation and waste of effort, we have decided to discontinue the brainstorm project and contribute to other frameworks and related projects such as [Sacred](https://github.com/IDSIA/sacred) instead.  Many thanks to everyone who contributed! For us it has been a thoroughly enjoyable and educational experience. |
+
+
 [![Documentation Status](https://img.shields.io/badge/docs-latest-brightgreen.svg?style=flat-square)](http://brainstorm.readthedocs.org/en/latest)
 [![PyPi Version](https://img.shields.io/pypi/v/brainstorm.svg?style=flat-square)](https://pypi.python.org/pypi/brainstorm)
 [![MIT license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)](http://choosealicense.com/licenses/mit)
@@ -19,7 +24,7 @@ If you wish, you can also run the data preparation scripts (``data`` directory) 
 
 Status
 ------
-Brainstorm is under active development and is currently in beta. 
+Brainstorm is discontinued. 
 
 The currently available feature set includes recurrent (simple, LSTM, Clockwork), 2D convolution/pooling, Highway and batch normalization layers. API documentation is fairly complete and we are currently working on tutorials and usage guides.
 
