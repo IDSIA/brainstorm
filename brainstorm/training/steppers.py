@@ -2,6 +2,8 @@
 # coding=utf-8
 from __future__ import division, print_function, unicode_literals
 
+import math
+
 from brainstorm.describable import Describable
 
 
@@ -113,6 +115,178 @@ class MomentumStepper(TrainingStepper):
                                 self.net.buffer.parameters,
                                 out=self.net.buffer.parameters)
 
+class RMSpropStepper(TrainingStepper):
+    def __init__(self, learning_rate=0.001, alpha=0.9, eps=1e-6):
+        super(RMSpropStepper, self).__init__()
+        self.learning_rate = learning_rate
+        self.alpha = alpha
+        self.eps = eps
+        self.update = None
+        self.scratch = None
+
+    def start(self, net):
+        super(RMSpropStepper, self).start(net)
+        self.update = net.handler.zeros(net.buffer.parameters.shape)
+        self.scratch = net.handler.zeros(net.buffer.parameters.shape)
+
+    def run(self):
+        self.net.forward_pass(training_pass=True)
+        self.net.backward_pass()
+
+        #self.update *= self.alpha
+        self.net.handler.mult_st(self.alpha,
+                                 self.update,
+                                 out=self.update)
+
+        #self.update += (1 - self.alpha) * grad * grad
+        self.net.handler.mult_tt(self.net.buffer.gradients,
+                                 self.net.buffer.gradients,
+                                 out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.alpha,
+                                     self.scratch,
+                                     out=self.update)
+
+        # grad / sqrt(update + self.eps)
+        self.net.handler.add_st(self.eps,
+                                self.update,
+                                out=self.scratch)
+        self.net.handler.sqrt_t(self.scratch,
+                                out=self.scratch)
+        self.net.handler.divide_tt(self.net.buffer.gradients,
+                                   self.scratch,
+                                   out=self.scratch)
+
+        # param -= learning_rate * grad / sqrt(update + self.eps)
+        self.net.handler.mult_add_st(-self.learning_rate,
+                                     self.scratch,
+                                     self.net.buffer.parameters)
+
+class AdaDeltaStepper(TrainingStepper):
+    def __init__(self, learning_rate=1.0, alpha=0.95, eps=1e-6):
+        super(AdaDeltaStepper, self).__init__()
+        self.learning_rate = learning_rate
+        self.alpha = alpha
+        self.eps = eps
+        self.accumulator = None
+        self.delta_accumulator = None
+        self.scratch = None
+        self.scratch_2 = None
+
+    def start(self, net):
+        super(AdaDeltaStepper, self).start(net)
+        self.accumulator = net.handler.zeros(net.buffer.parameters.shape)
+        self.delta_accumulator = net.handler.zeros(net.buffer.parameters.shape)
+        self.scratch = net.handler.zeros(net.buffer.parameters.shape)
+        self.scratch_2 = net.handler.zeros(net.buffer.parameters.shape)
+
+    def run(self):
+        self.net.forward_pass(training_pass=True)
+        self.net.backward_pass()
+
+        # accumulator *= self.alpha
+        self.net.handler.mult_st(self.alpha,
+                                 self.accumulator,
+                                 out=self.accumulator)
+
+        # accumulator += (1 - self.alpha) * grad * grad
+        self.net.handler.mult_tt(self.net.buffer.gradients,
+                                 self.net.buffer.gradients,
+                                 out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.alpha,
+                                     self.scratch,
+                                     out=self.accumulator)
+
+        # dx = sqrt((delta_accumulator + eps) / (accumulator + eps)) * grad
+        self.net.handler.add_st(self.eps,
+                                 self.delta_accumulator,
+                                 out=self.scratch)
+        self.net.handler.add_st(self.eps,
+                                 self.accumulator,
+                                 out=self.scratch_2)
+        self.net.handler.divide_tt(self.scratch,
+                                   self.scratch_2,
+                                   out=self.scratch)
+        self.net.handler.sqrt_t(self.scratch,
+                                out=self.scratch)
+        self.net.handler.mult_tt(self.net.buffer.gradients,
+                                 self.scratch,
+                                 out=self.scratch_2)
+
+        # delta_accumulator *= self.alpha
+        self.net.handler.mult_st(self.alpha,
+                                 self.delta_accumulator,
+                                 out=self.delta_accumulator)
+
+        # delta_accumulator += (1 - self.alpha) * dx * dx
+        self.net.handler.mult_tt(self.scratch_2,
+                                 self.scratch_2,
+                                 out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.alpha,
+                                     self.scratch,
+                                     out=self.delta_accumulator)
+
+        # param -= dx
+        self.net.handler.mult_add_st(-1,
+                                     self.scratch_2,
+                                     self.net.buffer.parameters)
+
+class AdamStepper(TrainingStepper):
+    def __init__(self, learning_rate=0.001, beta_1=0.9, beta_2=0.999,
+                 eps=1e-8):
+        super(AdamStepper, self).__init__()
+        self.learning_rate = learning_rate
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        self.eps = eps
+        self.t = None
+        self.v = None
+        self.m = None
+        self.scratch = None
+
+    def start(self, net):
+        super(AdamStepper, self).start(net)
+        self.t = 0
+        self.v = net.handler.zeros(net.buffer.parameters.shape)
+        self.m = net.handler.zeros(net.buffer.parameters.shape)
+        self.scratch = net.handler.zeros(net.buffer.parameters.shape)
+
+    def run(self):
+        self.net.forward_pass(training_pass=True)
+        self.net.backward_pass()
+        self.t += 1
+
+        # alpha_t = learning_rate*sqrt(1-beta_2**t)/(1-beta_1**t)
+        alpha_t = self.learning_rate*math.sqrt(1-self.beta_2**self.t)/(1-self.beta_1**self.t)
+
+        # m += (1 - self.beta_1) * (grad - self.m)
+        self.net.handler.subtract_tt(self.net.buffer.gradients,
+                                     self.m, out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.beta_1,
+                                     self.scratch,
+                                     out=self.m)
+
+        # v += (1 - self.beta_2) * (grad * grad - v)
+        self.net.handler.mult_tt(self.net.buffer.gradients,
+                                 self.net.buffer.gradients,
+                                 out=self.scratch)
+        self.net.handler.subtract_tt(self.scratch,
+                                     self.v, out=self.scratch)
+        self.net.handler.mult_add_st(1.0 - self.beta_2,
+                                     self.scratch,
+                                     out=self.v)
+
+        # param -= alpha_t * m / (sqrt(v) + self.eps)
+        self.net.handler.sqrt_t(self.v,
+                                out=self.scratch)
+        self.net.handler.add_st(self.eps,
+                                 self.scratch,
+                                 out=self.scratch)
+        self.net.handler.divide_tt(self.m,
+                                   self.scratch,
+                                   out=self.scratch)
+        self.net.handler.mult_add_st(-alpha_t,
+                                     self.scratch,
+                                     self.net.buffer.parameters)
 
 class NesterovStepper(MomentumStepper):
     """
