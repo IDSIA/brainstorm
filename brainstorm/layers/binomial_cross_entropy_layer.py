@@ -39,12 +39,12 @@ class BinomialCrossEntropyLayerImpl(Layer):
     computes_no_input_deltas_for = ['targets']
 
     def setup(self, kwargs, in_shapes):
-        if in_shapes['default'] != in_shapes['targets']:
+        if in_shapes['default'].feature_size != in_shapes['targets'].feature_size:
             raise LayerValidationError("{}: default and targets must have the "
                                        "same shapes but got {} and {}"
                                        .format(self.name,
-                                               in_shapes['default'],
-                                               in_shapes['targets']))
+                                               in_shapes['default'].feature_shape,
+                                               in_shapes['targets'].feature_shape))
         outputs = OrderedDict()
         outputs['default'] = BufferStructure('T', 'B', 1)
 
@@ -59,10 +59,10 @@ class BinomialCrossEntropyLayerImpl(Layer):
     def forward_pass(self, buffers, training_pass=True):
         # prepare
         _h = self.handler
-        y = buffers.inputs.default
-        t = buffers.inputs.targets
-        cee = buffers.internals.cee
-        cee_sum = buffers.outputs.default
+        y = flatten_time_and_features(buffers.inputs.default)
+        t = flatten_time_and_features(buffers.inputs.targets)
+        cee = flatten_time_and_features(buffers.internals.cee)
+        cee_sum = flatten_time(buffers.outputs.default)
 
         # the binomial cross entropy error is given by
         # - t * ln(y) - (1-t) * ln(1-y)
@@ -79,9 +79,7 @@ class BinomialCrossEntropyLayerImpl(Layer):
 
         _h.add_tt(tmp, cee, cee)        # cee = (1-t) * ln(1-y) + t * ln(y)
 
-        # reshape for summation
-        cee = flatten_time_and_features(cee)
-        cee_sum = flatten_time(cee_sum)
+        # summation
         _h.sum_t(cee, axis=1, out=cee_sum)
         _h.mult_st(-1, cee_sum, cee_sum)  # * -1
 
@@ -90,12 +88,13 @@ class BinomialCrossEntropyLayerImpl(Layer):
         _h = self.handler
         ceed_sum = buffers.output_deltas.default
         ceed = buffers.internals.ceed
+        tmp2 = _h.allocate(ceed.shape)
+        ceed = flatten_time_and_features(ceed)
         tmp = _h.allocate(ceed.shape)
+        y = flatten_time_and_features(buffers.inputs.default)
+        t = flatten_time_and_features(buffers.inputs.targets)
 
-        y = buffers.inputs.default
-        t = buffers.inputs.targets
-
-        yd = buffers.input_deltas.default
+        yd = flatten_time_and_features(buffers.input_deltas.default)
 
         # the derivative of the binomial cross entropy error is given by
         # (y - t) / (y - y²)
@@ -110,7 +109,7 @@ class BinomialCrossEntropyLayerImpl(Layer):
 
         # ceed_sum has only one feature dimension due to summation,
         # so we broadcast to all feature dimensions
-        _h.broadcast_t(ceed_sum, 2, tmp)
-        _h.mult_tt(ceed, tmp, ceed)
 
-        _h.add_tt(ceed, yd, yd)
+        _h.broadcast_t(ceed_sum, 2, tmp2)
+        tmp2 = flatten_time(tmp2)
+        _h.mult_add_tt(ceed, tmp2, yd)
