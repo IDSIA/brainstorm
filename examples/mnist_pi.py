@@ -45,7 +45,7 @@ network.set_weight_modifiers({"FC": bs.value_modifiers.ConstrainL2Norm(1)})
 
 trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.1, momentum=0.9))
 trainer.add_hook(bs.hooks.ProgressBar())
-scorers = [bs.scorers.Accuracy(out_name='Output.outputs.predictions')]
+scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
 trainer.add_hook(bs.hooks.SaveBestNetwork('validation.Accuracy',

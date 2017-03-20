@@ -32,7 +32,8 @@ Brainstorm abstracts computations via *handlers* with a consistent API. Currentl
 
 Installation
 ------------
-Here are some quick instructions for installing the latest master branch on Ubuntu.
+
+### Ubuntu:
 
 ```bash
 # Install pre-requisites
@@ -59,6 +60,35 @@ Set location for storing datasets:
 ```bash
 echo "export BRAINSTORM_DATA_DIR=/home/my_data_dir/" >> ~/.bashrc
 ```
+
+### Windows (7, 8.x, 10): 
+
+**Before installation:**
+
+- You will need a copy of MinGW (version 4.7.x or later) installed and properly configured on your machine. To learn about installing MinGW, see [MinGW - Getting Started](http://www.mingw.org/wiki/Getting_Started).
+- If you have a 64-bit machine, you will need to install the 64-bit Windows binary package for H5PY that matches your version of Python from Christoph Gohlke's [Collection of Windows Binaries](http://www.lfd.uci.edu/~gohlke/pythonlibs/#h5py).
+
+**To install:**
+
+```bash
+git clone  https://github.com/IDSIA/brainstorm
+cd brainstorm
+pip install -r requirements.txt
+pip install -r pycuda_requirements.txt [Only if you have PyCUDA installed!]
+python setup.py install
+```
+
+**Post-Installation:**
+
+Add `BRAINSTORM_DATA_DIR` to your System Variables, pointing to a location of your choice.
+
+**CUDA Requirements:**
+
+[TO DO: WHEN I get this up and running on ASUS laptop, also make separate following paragraph of what’s needed for that, which will hopefully be:]
+
+- CUDA 7.0 or later
+- PyCUDA 2015.1.3
+
 
 Help and Support
 ----------------

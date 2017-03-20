@@ -103,10 +103,10 @@ network.initialize(bs.initializers.Gaussian(0.01))
 trainer = bs.Trainer(bs.training.MomentumStepper(learning_rate=0.01,
                                                  momentum=0.9))
 trainer.add_hook(bs.hooks.ProgressBar())
-scorers = [bs.scorers.Accuracy(out_name='Output.outputs.predictions')]
+scorers = [bs.scorers.Accuracy(out_name='Output.outputs.probabilities')]
 trainer.add_hook(bs.hooks.MonitorScores('valid_getter', scorers,
                                         name='validation'))
-trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy', patience=10, criterion='max'))
+trainer.add_hook(bs.hooks.EarlyStopper('validation.Accuracy', patience=10, name='max'))
 trainer.add_hook(bs.hooks.StopAfterEpoch(500))
 
 # -------------------------------- Train ------------------------------------ #
