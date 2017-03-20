@@ -9,9 +9,12 @@ import pytest
 from brainstorm.handlers import NumpyHandler
 from brainstorm.optional import has_pycuda
 
+import pycuda
+
 # np.random.seed(1234)
 dtype = np.float32
 NO_CON = set()
+
 
 
 def _conv2d_forward_batch(inputs, weights, bias, outputs, padding, stride):
@@ -167,3 +170,132 @@ def test_conv2d_forward_batch_pycuda():
                                     print("Expected:\n", true_outputs)
                                     print("Obtained:\n", outputs)
                                 assert passed
+                                
+                                  
+@pytest.mark.skipif(has_pycuda is False, reason='requires PyCUDA+scikit-cuda')
+def test_strided_elementwise():
+    from brainstorm.handlers import PyCudaHandler
+    _h = PyCudaHandler()
+    rdm = np.random.RandomState(1345)
+    
+    def get_rdm_array(shape, dims):
+        if dims == 2: return rdm.randn(shape[0],shape[1])
+        elif dims == 3: return rdm.randn(shape[0],shape[1], shape[2])
+        else: return rdm.randn(shape[0],shape[1], shape[2], shape[3])
+        
+    for dims in range(2,5):
+        for i in range(10):
+            shape = rdm.randint(1,17,dims)            
+            a1 = np.float32(get_rdm_array(shape, dims))
+            a2 = np.float32(get_rdm_array(shape, dims))
+            a3 = np.float32(get_rdm_array(shape, dims))
+            a = np.vstack([a1,a2,a3])
+            original_shape = a.shape
+            a = a.reshape([int(original_shape[0]/3)] + list(original_shape[1:])+[3])
+            b = np.zeros_like(a, dtype=np.float32)
+            A = _h.create_from_numpy(a)
+            
+            
+            idx = rdm.randint(0,2)
+            func = ['logistic', 'tanh'][idx]
+        
+            _h.strided_elementwise_inplace(A, 1,func)            
+            outputs = _h.get_numpy_copy(A).reshape(original_shape)
+            
+            c1 = a1
+            c2 = 1./(1.+np.exp(a2)) if idx == 0 else np.tanh(a2)
+            c3 = a3
+            c = np.vstack([c1,c2,c3])
+            
+            passed = np.allclose(outputs, c)                
+            assert passed
+    
+def test_strided_elementwise_inplace():    
+    from brainstorm.handlers import PyCudaHandler
+    _h = PyCudaHandler()
+    rdm = np.random.RandomState(1345)
+    
+    def get_rdm_array(shape, dims):
+        if dims == 2: return rdm.randn(shape[0],shape[1])
+        elif dims == 3: return rdm.randn(shape[0],shape[1], shape[2])
+        else: return rdm.randn(shape[0],shape[1], shape[2], shape[3])
+        
+    for dims in range(2,5):
+        for i in range(10):
+            shape = rdm.randint(1,17,dims)            
+            a1 = np.float32(get_rdm_array(shape, dims))
+            a2 = np.float32(get_rdm_array(shape, dims))
+            a3 = np.float32(get_rdm_array(shape, dims))
+            a = np.vstack([a1,a2,a3])
+            original_shape = a.shape
+            a = a.reshape([int(original_shape[0]/3)] + list(original_shape[1:])+[3])
+            b = np.zeros_like(a, dtype=np.float32)
+            A = _h.create_from_numpy(a)
+            
+            _h.strided_elementwise_inplace(A, 1,'logistic')
+            _h.strided_elementwise_inplace(A, 0,'tanh')
+            outputs = _h.get_numpy_copy(A).reshape(original_shape)
+            
+            c1 = np.tanh(a1)
+            c2 = 1./(1.+np.exp(a2))
+            c3 = a3
+            c = np.vstack([c1,c2,c3])
+            
+            passed = np.allclose(outputs, c)                
+            assert passed
+    
+    
+    
+'''                                
+@pytest.mark.skipif(has_pycuda is False, reason='requires PyCUDA+scikit-cuda')
+def test_slice_copy_stride():
+    from brainstorm.handlers import PyCudaHandler
+    _h = PyCudaHandler()
+    #2 dim test
+    a = np.float32(np.random.rand(10,10))
+    start = 4
+    length = 2
+    segments = 3
+    stride = 1
+    slices = [start, length, segments, stride]
+    data = []
+    for seg in range(segments):        
+        row = np.int32(start/a.shape[1])
+        offset = start - (row*a.shape[0])
+        data += a[row,offset + (length*seg) + (seg*stride):offset + (length*seg) + (seg*stride) + length].tolist()
+    
+    
+    s = np.array(data, dtype=np.float32)
+    A = _h.create_from_numpy(a)
+    S = _h.create_from_numpy(np.zeros_like(s,dtype=np.float32))
+    slices_A =_h.create_from_numpy(np.array(slices,dtype=np.float32))
+    slices_B =_h.create_from_numpy(np.array([0,length*segments,1,0],dtype=np.float32))
+    _h.slice_copy_strided(A,S, slices_A, slices_B)
+    outputs = _h.get_numpy_copy(S)
+    passed = np.allclose(outputs, s)
+    assert passed
+    #3 dim test
+    a = np.float32(np.random.rand(10,10,10))
+    start = 50
+    length = 6
+    segments = 4
+    stride = 5
+    slices = [start, length, segments, stride]
+    data = []
+    for seg in range(segments):        
+        row = np.int32(start/(a.shape[1]*a.shape[2]))
+        col = np.int32(start/(a.shape[1]))
+        offset = start - (row*(a.shape[1]*a.shape[2])) - (col*(a.shape[1]))
+        data += a[row,col, offset + (length*seg) + (seg*stride):offset + (length*seg) + (seg*stride) + length].tolist()
+    
+    
+    s = np.array(data, dtype=np.float32)
+    A = _h.create_from_numpy(a)
+    S = _h.create_from_numpy(np.zeros_like(s,dtype=np.float32))
+    slices_A =_h.create_from_numpy(np.array(slices,dtype=np.float32))
+    slices_B =_h.create_from_numpy(np.array([0,length*segments,1,0],dtype=np.float32))
+    _h.slice_copy_strided(A,S, slices_A, slices_B)
+    outputs = _h.get_numpy_copy(S)
+    passed = np.allclose(outputs, s)
+    assert passed
+'''
