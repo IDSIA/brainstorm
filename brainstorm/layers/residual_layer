@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+# coding=utf-8
+from __future__ import division, print_function, unicode_literals
+
+from collections import OrderedDict
+
+from brainstorm.layers.base_layer import Layer
+from brainstorm.structure.buffer_structure import (BufferStructure,
+                                                   StructureTemplate)
+from brainstorm.structure.construction import ConstructionWrapper
+from brainstorm.utils import LayerValidationError
+
+
+def ResidualLayer(name=None):
+    """Create a Residual Learning layer."""
+    return ConstructionWrapper.create(ResidualLayerImpl, name=name)
+
+
+class ResidualLayerImpl(Layer):
+    expected_inputs = {'H': StructureTemplate('T', 'B', '...'),
+                       'x': StructureTemplate('T', 'B', '...')}
+
+    def setup(self, kwargs, in_shapes):
+        # 'H' and 'x' must have the same shape
+        if in_shapes['H'] != in_shapes['x']:
+            raise LayerValidationError(
+                "{}: H and x must have the same shape but got {} and {}"
+                .format(self.name, in_shapes['H'], in_shapes['x']))
+
+        outputs = OrderedDict()
+        outputs['default'] = BufferStructure(
+            'T', 'B', *self.in_shapes['x'].feature_shape)
+        return outputs, OrderedDict(), OrderedDict()
+
+    def forward_pass(self, buffers, training_pass=True):
+        # prepare
+        _h = self.handler
+        x = buffers.inputs.x
+        H = buffers.inputs.H
+        y = buffers.outputs.default
+
+        _h.add_tt(H, x, out=y)
+
+    def backward_pass(self, buffers):
+        # prepare
+        _h = self.handler
+        dx = buffers.input_deltas.x
+        dH = buffers.input_deltas.H
+        dy = buffers.output_deltas.default
+
+        _h.add_tt(dy, dx, dx)
+        _h.add_tt(dy, dH, dH)
