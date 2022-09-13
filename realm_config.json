@@ -1,0 +1,9 @@
+{
+    "app_id": "triggers-hkhzr",
+    "config_version": 20210101,
+    "name": "Triggers",
+    "location": "US-VA",
+    "provider_region": "aws-us-east-1",
+    "deployment_model": "GLOBAL",
+    "environment": "development"
+}
